@@ -1,6 +1,6 @@
 {
   "extends": "./common",
   "include": [
-    "../src/SessionMaster.ts"
+    "../src/Bridge.ts"
   ]
 }
