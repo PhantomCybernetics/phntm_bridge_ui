@@ -1,0 +1,31 @@
+{
+  "name": "phntm_cloud_bridge",
+  "version": "0.0.1",
+  "description": "Bridge node for fast AR HRI and data visualizations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/PhantomCybernetics/phntm_cloud_bridge.git"
+  },
+  "keywords": [
+    "ros",
+    "ros2",
+    "phntm",
+    "phantom",
+    "bridge",
+    "webrtc",
+    "socket.io",
+    "robot",
+    "operating",
+    "system"
+  ],
+  "author": "Mirek Burkon",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/PhantomCybernetics/phntm_cloud_bridge/issues"
+  },
+  "homepage": "https://github.com/PhantomCybernetics/phntm_cloud_bridge#readme"
+}

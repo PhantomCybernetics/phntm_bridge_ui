@@ -1,0 +1,680 @@
+{
+    "kafkaBrokerList": "127.0.0.1:9092",
+    "dbUrl": "mongodb://127.0.0.1:27017",
+    "dieOnException": true,
+    "newKafkaTopicReplicationFactor" : 1,
+
+    "adminSecret": "ABmmC9DiRFQxncgipvhMHN2n", //for rest api debug commands
+
+    "staticServerAddress": "http://10.0.0.224:8080",
+
+    "smtp": {
+        "host": "email-smtp.us-west-1.amazonaws.com",
+        "port": 465, //25, 465 or 587
+        "secure": true,
+        "user": "*******",
+        "pass": "*******",
+    },
+
+    "SESS.M": {
+        "ioPort": 1337,
+        "userRegisterSecret": "KY9oXRYjKHviiUU8EssjYtqo",
+        "verboseObjectUpdates": false,
+        "verboseUserUpdates": false,
+        "verboseMessages" : false,
+        "verbose": false,
+        "keepSessionsLoadedForMs": 30000, //30s, then unload
+        //newly registered users be initiated with these:
+        "defaultUserApps": [ 
+            "5db2341a35cf46af60b78685", //Welcome
+            "5db234ab35cf46af60b78686", //Settings
+            "5db2328bc332ff9a9a56c330", //Console
+            "5db2352235cf46af60b78687", //Recorder
+            "5db2357f35cf46af60b78688", //Account
+            "5cc651161c7490e982348145", //HelloCube
+            "5cc650da1c7490e982348144", //HelloCritter
+            "5cff1d7675896152c68aef8b"  //Domin'o'Matic
+        ]
+    },
+    
+    "FTR.R": {
+        "tcpReceiverPort": 2131,
+        "infoPort": 2130,
+        "verbose": true,
+        "verboseTcp": false,
+    },
+
+    "C.MNTR" : {
+        "infoPort": 1340,
+        "udpPort": 1341,
+        "verboseObjectUpdates": false,
+        "verboseUserUpdates": false
+    },
+
+    "APP.M" : {
+        "ioPort": 3333,
+        "udpPort": 3334,
+        "appRegisterSecret": "KY9oXRYjKHviiUU8EssjYtqo",
+        "verboseObjectUpdates": false,
+        "verboseUserUpdates": false,
+        "verboseMessages" : false
+    },
+
+    "APP.MNTR" : {
+        "infoPort": 2337,
+        "udpPort": 2341,
+        "verboseObjectUpdates": false,
+        "verboseUserUpdates": false
+    },
+
+    "SLM.W" : {
+        "ioPort": 2140,
+        "verbose": true,
+        "verboseViewpoints": true,
+        "verboseNormalEstimation": true,
+
+        "minFrameDiffDeviceClosedLoop": 0.20,
+
+        "octreeResolution": 0.3,
+        "normalSearchRadius": 0.3, // radius for neighbor search
+        "rawNormalSearchSurfaceFrameNeighbors": 100,
+
+        "maxFramesPerConnectionsSaveBatch": 10000,
+
+        "anchorFixVerbose": false,
+
+        "loopClosure": {
+            "testDistanceBeforeSrcFrameM": 1,
+            "testDistanceBeforeTargetFrameM": 1,
+
+            "testDistanceAfterSrcFrameM": 1,
+            "testDistanceAfterTargetFrameM": 1,
+
+            "maxSrcPointDistanceFromMatchCamera": 5,
+            "maxTargetPointDistanceFromMatchCamera": 5,
+
+            "verbosePclRegistration": true,
+            "verbosePclRegistrationLoop": false,
+
+            "minNumPointObservations" : 3, //only comparing strong pts
+            "maxPointObservationDistance": 3, //m
+
+            "debugInitialGuess": 0,  //0=identity, 1=visual camera transform
+
+            "debugReturnPoints": 5, //0=none,
+                                    // 1=filtered debug pts,
+                                    // 2=w ground colored,
+                                    // 3=ground and horizontal clusters colored 
+                                    // 4=all horizontal clusters colored separately
+                                    // 5=ground clusters colored + edge detection
+
+            "sor": {
+                "meanK": 10, //0=off // was 4-1
+                "stddevMulThreshold": 1.0
+            },
+
+            "ground": {
+                
+                "detect": true,
+
+                //first remove most obvious outlers
+                //"sorMeanK": 4, //0=off
+                //"sorStddevMulThreshold": 1,
+                
+                //then downsample to give preference to large planes
+                //"downsampleRadius": 0.00, //0.3, ?!?!
+
+                "minNormalY": 0.8, //<0=off
+                
+                "clusterMinSize": 50,
+                "clusterMaxSize": 0,
+                "clusterNumberOfNeighbours": 15,
+                "clusterSmoothnessThresholdDeg": 4.0,
+                "clusterCurvatureTreshold": 0.3,
+
+                "maxGroundAboveNeighborCluster": 0.35,
+
+                "clusterKdtreeResolution": 0.05,
+                "clusterBelowSearchThreshold": 0.10,
+                "clusterBelowSearchRadiusMul": 1.0,
+                "maxPointsBelowGroundClusterFraction": 0.05,
+
+                "useGround": false,
+
+                "preserveEdges": true,
+                "edgesClusterDownsampleRadius": 0.1, //downsample a bit before hull detection
+                "edgesConcaveHullAplha": 0.3, //m, (The method accepts facets only if the distance from any vertex to the facet->center (center of the voronoi cell) is smaller than alpha)
+                "edgesSearchAroundHullPointRadius": 1.0,
+                "edgesSearchBelowHullPoint": 0.10,
+                "edgesMinPointsBelowHullPoint": 10,
+                "edgesUnmarkAroundHullPointRadius": 0.2,
+
+                "planeDistanceThreshold": 0.1,
+                "planeNormalDistanceWeight": 0.6, //0-pi/2 -> ~30deg
+                "planeEpsAngleDeg": 20, //max ground slope
+                "planeOptimizeCoefficients": true,
+
+                "planeMinInliers": 5, //ignored
+                "projectOnPlane": false //defuncr
+
+                //"downsampleGroundDistance": 0.15, //max distance from detected plane
+                //"downsampleGroundRadius": 0.3,
+            },
+
+            //"downsampleRadius": 0.0, //non ground, 0=off
+            "pointColorSaturationAmount": 3, //boost difference
+
+            "icp": {
+
+                "maxCorrespondenceDistanceInitial": 3.0, //3m initially to bring together large diffrerences
+                "maxCorrespondenceDistance": 0.3, //30cm, max distance for correspondence to be selected for incremental calculation (finds closest tho)
+                "maxCorrespondenceColorDifference": 0.1, //0-1; ignore correspondences with larger color diff (after saturation)
+                "maxCorrespondenceNormalAngleDeg": 45, // ignore correspondences with larger normal angle diff 
+                "maxCorrespondenceSearchK": 150, //search this many closest until color within tolerance
+
+                "weighted": false, //weight by distance by default
+                "weightByColor": false,
+                
+                "maxIterations": 500,
+                "failOnMaxIterationsReached": true, //fail bcs probably stuck in local minimun and not reliable
+
+                //"useReciprocalCorrespondences": false, //distance reciprocality doesn't make sense with color check (not implemented)
+                "relativeMSE": 0.00001,
+                "translationThreshold": 0.00001, 
+                "rotationThresholdDeg": 0.00001,
+                
+                "maxDistanceForFitnessCheck": 0.5,
+
+                "maxAvgCorrespondenceDistance": -0.35, // max avg distance for all filtered points
+                "minCorrespondenceFraction": 0.02 //20% min
+            },
+        },
+
+        "maxDirtyPointsPerFragment": 5000
+    },
+
+    "G.W" : {
+
+        "verbose": true,
+        "verboseSegmentation": true,
+        "verboseHorizontals": true,
+        "verboseVerticals": true,
+        "verboseVerticalCompounds": true,
+        "verboseSessions": false,
+
+        "ioPort": 2345,
+
+        "debugKeepSessionsLoaded": true, // don't unload sessions on sess.m close (for fast re-analysis)
+        "debugAllowOldTimestamps": true, // process pts even if we get older frame numbers from pc.w (when reprocessing)
+
+        "octreeResolution": 0.30, // 30 cm binary tree for pt searches
+        // 30 cm voxel grid resolutio for processing optimizations
+        // horizontal planes (or steps) can be min voxelGridResolution apart
+        // palanes are segmented +/- 0.5x voxel height around steps
+        // planar noise is marked +/- 1.0x voxel height around plane
+        // a step (part of continuous segment) lies within 1 voxel height
+        "voxelGridResolution": 0.30,
+
+        //voxedl statistical outlier removat & downsample before segmentation
+        
+
+        // stops segmentation after rough voxel pre-analysis
+        // produces points with rough search clues in order to make debug possible
+        "debugDisableAnalysis": false,
+        "debugVoxelPreSegmentation": false,
+        
+        "maxVoxelsToProcess": 20, //limiting minimizes wait time during segmentation and allows voxels to update multiple times before final processing
+
+        "verticalPeakMinPoints": 20,
+        "verticalPeakMustPeakOverVoxels": 1,
+        "verticalPeakMaxNeighborPeakFraction": 0.4, 
+
+        "verticalPeakIfFractionCloseToAvgCenter": 0.4, // 40% must be ...
+        "verticalPeakFractionMaxAvgCenterDist": 0.05, //... withing m from avg center
+        //"verticalMaximaMinColumnPointsFraction": 0.30, // 30% percent of col points voxel must have to be checked for vertical peak
+        //"verticalMaximaMustPeakOverVoxelsAboveAndBelow": 2, // +/- this num voxels vertically 
+        //"verticalMaximaNeighborsMaxPeakFraction": 1.5, // +/- this num voxels points vertically 
+         // very gough approximation bcs still guessing max one overhang/peak per vertical voxel, then search around;
+         // likely missmatches above will be cheaply filtered out (not so effective actually)
+         // (by overhangs I mean e.g. ground + (desk||shelf||machine||etc) + something on it)
+        //"verticalMaximaAllowNumLowestOverhangs": 2,
+        //"verticalMaximaMinHorizontalNeighbors": 1, //disqualify from h-plane chech if not enough vertical peaks on the same y coord around
+        "maxPointsFractionBelowColumnGroundPeak": 0.5, //if lowest peak num points x this < num all points below, don't consider ground peak
+
+        "sorMeanK": 10,
+        "sorMinMeanThreshold": 0.2, //outliers removed if min avg distance < this
+        "sorStddevMulThreshold": 0.5,
+
+        "downsampleRadius": 0.3,
+
+        "regionGrowing": {
+            "minClusterSize": 50,
+            "maxClusterSize": 0,
+            "numberOfNeighbours": 20,
+            
+            "curvatureThreshold": 0.01,
+            "pointColorThreshold": 195075, //1225.0, //default 1225.0f
+            "regionColorThreshold": 195075, //10 //default 10.0f
+            "normalTestFlag": true,
+            "smoothModeFlag": true, // true = testing the angle between normal of the current point and it's neighbours normal. Otherwise, testing the angle between normal of the current point and normal of the initial point that was chosen for growing new segment.
+            "smoothnessThresholdDeg": 2.0,
+            "curvatureTestFlag": false,
+            "numberOfRegionNeighbours": 10,
+            "distanceThreshold": 0.01,
+            "residualTestFlag": false,
+            "residualThreshold": 0.1,
+
+            "minSegmentVoxelMatchForReuse": 0.8,
+            "debugSegmentColors": [
+                /*[ 255, 0, 0 ],
+                [ 0, 255, 0 ],
+                [ 0, 0, 255 ],
+                [ 0, 255, 255 ],
+                [ 0, 128, 128 ], //teal
+                [ 255, 69, 0 ], //orange
+                [ 0, 100, 0 ], //dark green
+                [ 128, 0, 128 ], //purple
+                [ 128, 0, 0 ], //maroon
+                [ 255, 255, 255 ],
+                [ 255, 0, 255 ], //magenta
+                [ 255, 255, 0 ], //yellow*/
+
+                [255,255,255],  
+                [255,0,0],
+                [0,255,0],
+                [0,0,255],
+                [255,255,0],
+                [0,255,255],
+                [255,0,255],
+                [192,192,192],
+                [128,128,128],
+                [128,0,0],
+                [128,128,0],
+                [0,128,0],
+                [128,0,128],
+                [0,128,128],
+                [0,0,128],
+                
+                /*[128,0,0],
+                [139,0,0],
+                [165,42,42],
+                [178,34,34],
+                [220,20,60],
+                [255,0,0],
+                [255,99,71],
+                [255,127,80],
+                [205,92,92],
+                [240,128,128],
+                [233,150,122],
+                [250,128,114],
+                [255,160,122],
+                [255,69,0],
+                [255,140,0],
+                [255,165,0],
+                [255,215,0],
+                [184,134,11],
+                [218,165,32],
+                [238,232,170],
+                [189,183,107],
+                [240,230,140],
+                [128,128,0],
+                [255,255,0],
+                [154,205,50],
+                [85,107,47],
+                [107,142,35],
+                [124,252,0],
+                [127,255,0],
+                [173,255,47],
+                [0,100,0],
+                [0,128,0],
+                [34,139,34],
+                [0,255,0],
+                [50,205,50],
+                [144,238,144],
+                [152,251,152],
+                [143,188,143],
+                [0,250,154],
+                [0,255,127],
+                [46,139,87],
+                [102,205,170],
+                [60,179,113],
+                [32,178,170],
+                [47,79,79],
+                [0,128,128],
+                [0,139,139],
+                [0,255,255],
+                [0,255,255],
+                [224,255,255],
+                [0,206,209],
+                [64,224,208],
+                [72,209,204],
+                [175,238,238],
+                [127,255,212],
+                [176,224,230],
+                [95,158,160],
+                [70,130,180],
+                [100,149,237],
+                [0,191,255],
+                [30,144,255],
+                [173,216,230],
+                [135,206,235],
+                [135,206,250],
+                [25,25,112],
+                [0,0,128],
+                [0,0,139],
+                [0,0,205],
+                [0,0,255],
+                [65,105,225],
+                [138,43,226],
+                [75,0,130],
+                [72,61,139],
+                [106,90,205],
+                [123,104,238],
+                [147,112,219],
+                [139,0,139],
+                [148,0,211],
+                [153,50,204],
+                [186,85,211],
+                [128,0,128],
+                [216,191,216],
+                [221,160,221],
+                [238,130,238],
+                [255,0,255],
+                [218,112,214],
+                [199,21,133],
+                [219,112,147],
+                [255,20,147],
+                [255,105,180],
+                [255,182,193],
+                [255,192,203],
+                [250,235,215],
+                [245,245,220],
+                [255,228,196],
+                [255,235,205],
+                [245,222,179],
+                [255,248,220],
+                [255,250,205],
+                [250,250,210],
+                [255,255,224],
+                [139,69,19],
+                [160,82,45],
+                [210,105,30],
+                [205,133,63],
+                [244,164,96],
+                [222,184,135],
+                [210,180,140],
+                [188,143,143],
+                [255,228,181],
+                [255,222,173],
+                [255,218,185],
+                [255,228,225],
+                [255,240,245],
+                [250,240,230],
+                [253,245,230],
+                [255,239,213],
+                [255,245,238],
+                [245,255,250],
+                [112,128,144],
+                [119,136,153],
+                [176,196,222],
+                [230,230,250],
+                [255,250,240],
+                [240,248,255],
+                [248,248,255],
+                [240,255,240],
+                [255,255,240],
+                [240,255,255],
+                [255,250,250],
+                [105,105,105],
+                [128,128,128],
+                [169,169,169],
+                [192,192,192],
+                [211,211,211],
+                [220,220,220],
+                [245,245,245],
+                [255,255,255],*/
+            ],
+            "debugProduceColoredSegments": true,
+        },
+
+        "verticalPlanes": {
+
+            "minColumnPointsForVerticality": 5,
+            "minVerticalVoxelPoints": 1,
+            "minColumnVerticalVoxelsForVerticality": 3,
+
+            "groundPeakMinPoints": 5,
+            "groundSearchVoxelRadius": 3,
+
+            "inspectVoxelColumnRadius": 1,
+
+            "ransacMinInliersSampleFracion": 0.2, //20% min
+            "ransacMaxAgleDiffDeg": 15.0, // allowing 5ded viversion from [0,1,0]
+            "ransacMaxDistDiff": 0.3, // 3cm to match the plane well
+            "ransacOptimizeCoefficients": true,
+            "ransacNormalDistanceWeight": 0.6, //0-pi/2
+
+            "noiseDistanceTreshold": 0.1 //clear +/- 10cm around a plane
+        },
+
+        "horizontalPlanes": {
+
+            "maxPeakDistanceFromGround": 1.5, //m
+            "maxNeighboringPeakSearchRadius": 1,
+
+            "inspectVoxelRadius": 3,
+
+            "ransacMinInliers": 50,
+            "ransacMaxAgleDiffDeg": 15.0, // allowing deg slope within horizontal segment
+            "ransacMaxDistDiff": 0.1, // 4cm to match the plane well
+            "ransacOptimizeCoefficients": true, // better results without it, imo (and faster too)
+            "ransacNormalDistanceWeight": 0.6, //0-pi/2
+
+            "ransacCrudeLineMaxDistDiff": 0.02, //2cm in all directions
+            "ransacCrudeLineMaxFractionOfPlane": 0.3, //30% and more is a crude line
+
+            "noiseDistanceTreshold": 0.2 //clear +/- 20cm around a plane            
+        },
+
+       
+    
+
+        //"minDirtyPointsToProduceFragment" : {
+        //    "500": 50, // when pc has up to 500 total pc points, at leat 50 dirty pts with normal 
+        //    "2000": 100, //etc
+        //    "above": 200 //regular chunks when above the highest limit
+        //},
+        "maxDirtyPointsPerFragment": 5000,
+        "maxPointsPerSaveBatch": 20000, //pts saved in batches to speed up loading (16 MB BSON limit)
+
+        //geometry
+        "smoothFragmentMaxTraceSamples": 20,
+
+        "maxPointFragmentPlaneNormalDiffDeg": 5.0,
+        "maxPointFragmentPlaneDistance": 0.1, //3cm on pc.w
+
+        "mergeDuplicatesAlongVoxelBorders": true,
+        //keep fairly relaxed here
+        "fragmentMergeHorizontalMaxAngleDiffDeg": 10.0, //10 deg
+        "fragmentMergeMaxDistance": 0.05, //5 cm to merge
+        "fragmentMergeVerticalMaxAngleDiffDeg": 10.0, //10 deg
+        "verticalFragmentMergePerpendicularMaxAngleDiffDeg": 10, //10 deg from perpendicular
+        "verticalFragmentMergeDiagonalMaxBoundingBoxSize": 999, //not used
+        "verticalFragmentMergeDiagonalMaxAngleDiffDeg": 45, // combined with bb check
+
+        "expandVoxelPlaneFragments": true,
+        "expandVerticalVoxelPlaneFragments": true,
+        "expandVerticalVoxelPlaneFragmentsDiagonally": true,
+
+        // strict
+        "fragmentNeighborExpandMinPoints": 2, //both must have at least (avoiding overlaps)
+        "fragmentHorizontalNeighborExpandMaxAngleDiffDeg": 10, //deg
+        "fragmentNeighborExpandMaxDistance": 0.1, // 5cm, much more strict above ground
+
+        //much more tolerant around ground
+        "fragmentGroundExpandMinPoints": 1, //one will expand
+        "fragmentGroundExpandMaxAngleDiffDeg": 20,
+        "fragmentGroundExpandMaxDistance": 0.15, //15 cm
+
+        //"fragmentVerticalNeighborExpandMinCombinedPoints": 1, // two frags must have at least this many pts combined to connect
+        "fragmentVerticalNeighborExpandMaxAngleDiffDeg": 5,
+        "fragmentVerticalExpandMaxDistance": 0.1,
+        "fragmentVerticalExpandSampleNeighborhoodDistance": 2,
+
+  
+        "horizontalPlaneMaxAgleDiffDeg": 5.0, //from perpendicular to [0,1,0]
+        "verticalPlaneMaxAgleDiffDeg": 5.0, //from [0,1,0]
+
+        "edgeMinHorizontalDrop": 0.05, //15 cm drop around fragment to consider edge
+        "edgeToGroundMinDistanceToConnect": 0.1,
+        "edgeMinHorizontalOverhang": 0.0, //something 5 cm above to consider edge
+        "edgeMaxHorizontalOverhang": 0.0, //something 30 cm above to consider edge
+        "edgeExpandNonEdgeMaxDrop": 0.05,
+
+        "edgeExpandMinPointsForKernelSearch": 10,
+        "edgeExpandMaxAvgDistToClosestNeighborForKernelSearch": 0.1,
+        "edgeMaxAvgPtDistanceFromAvgCenterFraction": 1.2, //1=max dist = avg to avg of all pts in fragment
+        "edgeMaxAvgPtDistanceFromKernelFraction": 0.8,
+        "edgeExpandMaxSteps": 200,
+        "edgeExpandMinNearestNeighborAvgDistanceMultiple": 2.5,
+
+        //"edgeExpandSweepSteps": 20, //0=sweep expansion off
+        //"edgeExpandStepSizeAvgNearestNeighborMultiple": 2, //sweep step is avg distance to closest x this
+        //"edgeExpandStepMinPointsFraction": 0.01, //25% must match in sweep step to expand radius around avg pt center
+
+        "edgeMatchMaxConnectionDistanceAvgFraction": 1.2, //0=no edge conections besides with the ground frags, 1=max dist is avg from all connections
+        "edgeMaxConnectionVerticalDistance": 0.03, //2cm at the closest point vertically to expand
+
+        //"edgeRefineMaxPointVerticalDistance": 0.0, //2cm
+        "refineSeams": true,
+        "refineSeamsMaxConnectionSearchDistance": 3,
+        "edgeRefineMaxPointToEdgeDistance": 0.02, //1cm
+        "pointOnEdgeTolerance": 0.001, 
+
+        "boudaryFilterMinPointDistance": 0.005, //5mm, remove boudnary pt if any other closer than this
+        "boudaryFilterMinPointAngularDistanceDeg": 3.0,
+
+        "verticalCompoundMinFragments": 5,
+        "verticalCompoundMinAverageRowWidth": 0.5,
+        "verticalCompoundMinHeight": 0.5,
+        "verticalCompoundMaxNormalAngleDiffDeg": 4.0,
+        "verticalCompoundMaxDistanceToGround": 2.0,
+        "verticalCompoundExpandToGroundMaxDistance": 1.0,
+
+        "verticalCompoundExpandToPlanarMaxAngleDiffDeg": 15.0,  
+        "verticalCompoundExpandToPlanarMaxBorderDistance": 3.0,  //m
+
+        "verticalCompoundExpandToPerpendicularMaxAngleDiffDeg": 15.0, //difference from right angle 
+        "verticalCompoundExpandToPerpendicularMaxBorderDistance": 1.0, //m, max distance from right angle intersection
+    
+        //"precisionMatchSearchVoxelRadius": 2, 
+        //"precisionMatchMaxAngleDiffDeg": 0, //0.5deg
+        //"precisionMatchMaxDistance": 0.00, //1cm
+
+    },
+
+    /*"LOCALIZER" : {
+        "infoPort": 2370,
+        "verbose": false,
+        "verboseRegistration": false,
+        "verboseViewpoints": false,
+        "sessionDirtyOnViewpoint": true, // for repeated debugging trigerred from sess.m
+        "minPcPointsToTry": 1500, // localization only begins when we have this at min in both src and target
+        "keepSessionsLoadedForMs": 30000,
+        
+        "markerPcPointsSearchRadius": 10.0, //only match points withing .5m around each shared marker 
+        "minPcPointsAroundMarkers": 100, //min pc points around src session shared markers to try to match
+        "ignoreHorizontalPlaneNoise": true,
+        "ignoreVerticalPlaneNoise": false,
+        "ignoreArbitraryPlaneNoise": false,
+        "ignoreLooseNoise": false,
+        "method": "icp", // 'icp' || 'scp' || 'markers' (=> only uses marker guess)
+        "icp": {
+            "maxCorrespondenceDistance": 0.3, //30cm, max distance for an inlier to match and be selected in incremental calculation
+            "maxIterations": 1000,
+            "useReciprocalCorrespondences": true,
+            "relativeMSE": 0,
+            "translationThreshold": 0.000001, 
+            "rotationThreshold": 0.99999998476, //(= cos(0.01deg)
+            "maxSqlErrorPerInlier": 0.000005 // max avg sqrt distance for one found correspondences
+        },
+
+        "scp": {
+            "maxCorrespondenceDistance": 0.1, //30cm, max distance for an inlier to match and be selected in incremental calculation
+            "ftrRadiusSearch": 0.3, // 20 cm but maybe should be more than radius for normal detection
+            "ftrNumberOfSamples": 4, // num of polygon verts for the prerejector
+            "ftrCorrespondenceRandomness": 5,
+            "ftrSimilarityThreshold": 0.99, //greediness when comparing ftr histogtams
+            "minInlierFraction": 0.0, //using absolute num below
+            "minInlierCount": 200, //these are points that have a matching counterpart after transformation to target within treshold
+            "maxIterations": 10000,
+            "maxSqlErrorPerInlier": 0.000005 // max avg sqrt distance for one found correspondences
+        }
+    },*/
+
+    
+
+    "FTR.P" : {
+        "infoPort": 2150,
+        "tcpProviderPort" : 2151,
+        "verbose": true,
+        "verboseTcp": true,
+        "minPcPtsPerPush": 100, //wait for this many to push
+        "maxPcPtsPerPush": 3000, //max 65535
+        "maxMarkersPerPush": 10, //max 256
+        "maxGeometryFtrsPerPush": 30, //max 256
+
+        "debugKeepSessionsLoaded": true, // don't unload sessions on sess.m close (for fast pc serving)
+        "debugAllowOldTimestamps": true // process even if we get older pc pt frame numbers from pc.w (reprocessing)
+
+        //"maxVisualsPerPush": 20 //nax 256
+    },
+
+    "VISUAL.W" : {
+        "ioPort": 2360,
+        "verbose": true,
+        "annotate": false, //google api
+        "imDir": "data/im/", //relative from server root
+        
+        //"verboseBlurr": true,
+        //"debugSaveBlurry": true, //saves blurry images for later inspection
+        //"discardAsBlurryIfDeviationUnder": 150.0,
+
+        "fastFeatures" : {
+            "surfMinHessian": 5000, // Threshold for the keypoint detector. Only features, whose hessian is larger than hessianThreshold are retained by the detector. Therefore, the larger the value, the less keypoints you will get. A good default value could be from 300 to 500, depending from the image contrast.
+            "surfNOctaves": 2, // The number of a gaussian pyramid octaves that the detector uses. It is set to 4 by default. If you want to get very large features, use the larger value. If you want just small features, decrease it.
+            "surfNOctaveLayers": 4, // The number of images within each octave of a gaussian pyramid. It is set to 2 by default.
+            "loweRatioTreshhold": 0.60, // Lowe's ratio test treshold for filtering bad descriptor matches
+            "numStrongKeypoints" : 32,
+            "minDescriptorMatches": 1, //min match to continue with fine keypoints / descs
+        },
+
+        "fineFeatures" : {
+            "surfMinHessian": 700, // Threshold for the keypoint detector. Only features, whose hessian is larger than hessianThreshold are retained by the detector. Therefore, the larger the value, the less keypoints you will get. A good default value could be from 300 to 500, depending from the image contrast.
+            "surfNOctaves": 4, // The number of a gaussian pyramid octaves that the detector uses. It is set to 4 by default. If you want to get very large features, use the larger value. If you want just small features, decrease it.
+            "surfNOctaveLayers": 2, // The number of images within each octave of a gaussian pyramid. It is set to 2 by default.
+            "loweRatioTreshhold": 0.60, // Lowe's ratio test treshold for filtering bad descriptor matches
+            "minDescriptorMatches": 30,
+        },
+
+       
+        "minDistanceForLoopClosureM": 3.0, //ignore frames closer than this 
+        "skipDistanceAfterLoopClosureM": 3.0,
+        //"bowKMeansCriteria": {
+        //    "type": 1, //1=COUNT; The type of termination criteria, one of cv::TermCriteria::Type
+        //    "maxCount": 0, //The maximum number of iterations or elements to compute
+        //    "epsilon": 0, //The desired accuracy or change in parameters at which the iterative algorithm stops
+        //},
+        //"bowKMeansClusterCount": 1000,
+        //"bowKMeansAttempts": 3,
+        //"bowKMeansFlags": 2, //2=cv::KMEANS_PP_CENTERS
+
+        "matchLoopClosures": false,
+        "verboseMatching": true,
+
+
+    },
+  
+   
+   
+}

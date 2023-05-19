@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "outDir": "./server/built",
+        "allowJs": true,
+        "target": "es5",
+        "lib": [
+            "es5",
+            "es2015.symbol"
+        ],
+        "noEmitOnError" : true,
+        "noImplicitAny" : true
+    },
+    "include": [
+        "./server/src/lib/*",
+        "./server/src/*.ts"
+    ],
+    "exclude" : [
+        "./server/src/Localizer.ts",
+        "node_modules"
+    ]
+}
