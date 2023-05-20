@@ -3,5 +3,6 @@ node_modules
 config.jsonc
 ssl/*.pem
 ssl/*.crt
-.swp
+*.swp
 build/
+data/*

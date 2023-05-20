@@ -8,7 +8,8 @@
             "es2015.symbol"
         ],
         "noEmitOnError" : true,
-        "noImplicitAny" : true
+        "noImplicitAny" : true,
+        "strictNullChecks": false
     },
     "include": [
         "./server/src/lib/*",

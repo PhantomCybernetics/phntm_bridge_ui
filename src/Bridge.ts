@@ -4,6 +4,7 @@ import { Debugger } from './lib/debugger';
 const $d:Debugger = Debugger.Get();
 
 import { GetCerts, UncaughtExceptionHandler } from './lib/helpers'
+const bcrypt = require('bcrypt-nodejs');
 
 // includes start //
 
@@ -11,7 +12,7 @@ const fs = require('fs');
 import * as Path from 'path';
 import * as C from 'colors'; C; //force import typings with string prototype extension
 
-import { Db, Collection, MongoError } from 'mongodb';
+const yaml = require('js-yaml');
 
 const _ = require('lodash');
 
@@ -21,11 +22,14 @@ const https = require('https');
 
 //import { AuthLib } from './lib/auth';
 
-const mongoClient = require('mongodb').MongoClient;
+//const { MongoClient } = require("mongodb");
+//MongoLogger.setLevel("debug");
+//const mongoClient = require('mongodb').MongoClient;
+import { MongoClient, Db, Collection, MongoError, InsertOneResult, ObjectId } from 'mongodb';
 
 // import { RouteObjectStateByKey, RouteAppCmdByKey, RouteAppStateByKey, RouteSessionStateByKey } from './lib/topicRouters';
 
-import { ObjectId } from 'bson';
+
 import * as SocketIO from "socket.io";
 
 // load config & ssl certs //
@@ -42,6 +46,7 @@ const defaultConfig = JSONC.parse(fs.readFileSync(dir+'/config.jsonc').toString(
 const CONFIG = _.merge(defaultConfig);
 
 const IO_PORT:number = CONFIG['BRIDGE'].ioPort;
+const PUBLIC_ADDRESS:number = CONFIG['BRIDGE'].address;
 const DB_URL:string = CONFIG.dbUrl;
 
 const DIE_ON_EXCEPTION:boolean = CONFIG.dieOnException;
@@ -68,7 +73,9 @@ console.log('----------------------------------------------------------------'.y
 let activeUsers : { [id:number]:any } = {}; // all users active in this region
 let activeLocations: { [id:number]:any } = {}; // all areas loaded and active in this region
 let activeRobots: { [iRobot:number]:any } = {}; // all areas loaded and active in this region
-
+let db:Db = null;
+let humansCollection:Collection = null;
+let robotsCollection:Collection = null;
 
 //let knownAppKeys:string[] = [];
 
@@ -108,14 +115,93 @@ expressApp.get('/info', function(req: any, res: any) {
     res.send(JSON.stringify({info:"todo"}, null, 4));
 });
 
+function errOut(msg:string, res: any) {
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(msg);
+}
 
-httpServer.listen(IO_PORT);
-$d.l('Server listening on port '+IO_PORT);
+expressApp.get('/robot/register', async function(req: any, res: any) {
+    let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+
+    let password:string = new ObjectId().toString();
+
+    const saltRounds = 10;
+    bcrypt.genSalt(saltRounds, async function (err:any, salt:string) {
+        if (err) { $d.err('Error while generating salt'); return errOut( 'Error while registering', res ); }
+
+        $d.log("Got salt "+ salt);
+        bcrypt.hash(password, salt, null, async function (err:any, hash:string) {
+            $d.log("Got hash "+ hash);
+            if (err) { $d.err('Error while hashing password'); return errOut( 'Error while registering', res ); }
+
+            let robotReg:InsertOneResult = await robotsCollection.insertOne({
+                registered: new Date(),
+                reg_ip: ip,
+                key_hash: hash
+            });
+
+            let new_config = {
+                id: robotReg.insertedId.toString(),
+                key: password,
+                sio_address: PUBLIC_ADDRESS,
+                sio_path: '/robot/socket.io',
+                sio_port: IO_PORT
+            };
+
+            if (req.query.yaml !== undefined) {
+                res.setHeader('Content-Type', 'application/text');
+                res.send(yaml.dump(new_config));
+            }
+
+            res.setHeader('Content-Type', 'application/json');
+            res.send(JSON.stringify(new_config, null, 4));
+
+        });
+
+
+
+
+    });
+
+
+
+
+
+
+});
+
+//const uri = "<connection string uri>";
+// $d.log('conecting to db');
+const mongoClient = new MongoClient(DB_URL);
+// $d.log(mongoClient.    );
+//const database = mongoClient.db('phntm');
+// $d.log(database);
+
+mongoClient.connect().then((client:MongoClient) => {
+    //DB_URL, , function(err:any,database:any) {
+    // if(err) {
+    //     $d.log("Error connecting to database!".red);
+
+    // }
+
+    $d.log("We are connected to", DB_URL);
+
+    db = client.db('phntm');
+    humansCollection = db.collection('humans');
+    robotsCollection = db.collection('robots');
+
+    httpServer.listen(IO_PORT);
+    $d.l('Server listening on port '+IO_PORT);
+}).catch(()=>{
+    $d.err("Error connecting to", DB_URL);
+    process.exit();
+});
+
 
 
 // Robot Socket.io
 
-sioRobots.on('connect', function(socket : SocketIO.Socket){
+sioRobots.on('connect', async function(socket : SocketIO.Socket){
 
     $d.log('Ohai robot! Opening Socket.io for', socket.handshake.address);
 
@@ -137,11 +223,40 @@ sioRobots.on('connect', function(socket : SocketIO.Socket){
     /*
      * client auth
      */
-    socket.on('auth', function(data, returnCallback) {
+    socket.on('auth', async function(data:{id:string, key:string}, returnCallback) {
 
-        $d.log('Got robot auth request', data);
+        //$d.log('Got robot auth request', data);
 
-        returnCallback(({'err':'lolo'}));
+        if (!ObjectId.isValid(data.id)) {
+            // $d.err('Invalid robot ID: '+data.id);
+            return returnCallback({'err':1});
+        }
+
+        let searchId = new ObjectId(data.id);
+        const robot = (await robotsCollection.findOne({_id: searchId }));
+
+        if (robot) {
+            //$d.l('Robot found...', robot)
+
+            bcrypt.compare(data.key, robot.key_hash, function(err:any, res:any) {
+                if (res) { //pass match => good
+                    $d.l(('Robot '+data.id+' connected').green);
+                    return returnCallback(({'robot': {
+                        id: robot._id.toString(),
+                        name: robot.name,
+                        type: robot.type ? robot.type.toString() : null
+                    }}));
+                } else {
+                    $d.l(('Robot key missmatch for id '+data.id).cyan);
+                    return returnCallback({'err':1});
+                }
+            });
+
+        } else {
+            $d.l(('Robot not found for id '+data.id).cyan);
+            return returnCallback({'err':1});
+        }
+
 
         /*if (user.loginInProgress) {
             return returnCallback({ res: 0, msg: 'Another login in progress' });
