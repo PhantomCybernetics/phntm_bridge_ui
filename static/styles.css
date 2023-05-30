@@ -4,64 +4,191 @@ body {
     margin: 20px;
   }
 
-  .msgTypes {
-      color: gray
-  }
+.msgTypes {
+    color: gray
+}
 
-  .offline {
-      color: red
-  }
+.offline {
+    color: red
+}
 
-  .online {
-      color: green
-  }
+.online {
+    color: green
+}
 
-  h1 {
+h1 {
+margin: 0px;
+}
+
+h3 {
     margin: 0px;
+    padding: 0px;
+    display: inline;
+}
+
+#msg_type_filter{
+width: 300px;
+text-align: right;
+float: right;
+}
+
+.prevent-select {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
   }
 
-  h3 {
-      margin: 0px;
-      padding: 0px;
-      display: inline;
-  }
-
-  #msg_type_filter{
-    width: 300px;
-    text-align: right;
-    float: right;
-  }
-
-  #topic_list {
+#topic_list {
     margin-top: 20px;
     width: 420px;
     overflow-x: hidden;
     float: left;
-    background: #ddd;
+    background: #deeeff;
     padding: 10px;
-  }
+    border-radius: 5px;
+}
 
-  #robot_stats {
-    width: 440px;
-  }
+#robot_stats {
+width: 440px;
+}
 
-  #monitors {
-    height: 10px;
+#monitors {
     margin-top: 20px;
-    float: right;
-    width: 60%;
-  }
+    margin-left: 450px;
+}
 
-    #topic_list A.topic {
+#topic_list A.topic {
 
-    }
+}
+
+.monitor_panel {
+    background: #98bd61;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.monitor_panel  .msg_types {
+    position: absolute;
+    right: 30px;
+    z-index: 1;
+    color: #3d3d3d;
+    margin-top: 3px;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.monitor_panel  .msg_types:hover {
+    text-decoration: underline;
+}
+
+.monitor_panel h3 {
+    background: #98bd61;
+    z-index: 2;
+    position: relative;
+    padding-right: 10px;
+}
 
 
-  #topic_list .topic.nonsubscribed {
-      color: gray;
-      text-decoration: none;;
-  }
 
-  #topic_list .topic.subscribed {
+#topic_list .topic.nonsubscribed {
+    color: gray;
+    text-decoration: none;;
+}
+
+#topic_list .topic.subscribed {
     color: rgb(0, 89, 255);
+}
+
+#topic_list .topic:hover {
+    color: rgb(255, 0, 212);
+}
+
+#topic_list .topic label{
+    cursor: pointer;
+}
+
+.monitor_panel .panel_content {
+    min-height: 1em;
+    margin-top: 10px;
+    padding: 12px;
+    word-wrap: break-word;
+    white-space: pre;
+    font-size: 12px;
+    font-family: monospace;
+    background: #073831;
+    color: #fff;
+    border-radius: 5px;
+    overflow: scroll;
+}
+
+.monitor_panel .panel_update {
+    position: absolute;
+    right: 10px;
+    margin-top: 4px;
+}
+
+.panel_msg_type {
+    background: #060606;
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre;
+    padding: 10px;
+    color: #00fff9;
+    border-radius: 5px;
+    display: none;
+}
+
+.panel_msg_type.err {
+    background: rgb(215 3 35);
+    font-weight: bold;
+    display: block !important;
+}
+
+#gamepad {
+    position: absolute;
+    right: 0;
+    top: 0;
+    display: none;
+}
+
+#gamepad.connected {
+    display: block;
+}
+
+#gamepad_status {
+    width: 50px;
+    height: 50px;
+}
+
+#gamepad.connected #gamepad_status {
+    background: url(/static/gamepad.png);
+    background-size: 100px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    background-position: 0px 3px;
+}
+
+#gamepad.connected #gamepad_status.active {
+    background-position: -50px 3px;
+}
+
+#gamepad #gamepad_debug {
+    position: absolute;
+    background: #767486;
+    width: 270px;
+    right: 0;
+    white-space: pre;
+    font-size: 12px;
+    color: white;
+    font-weight: normal;
+    padding: 10px;
+    border-radius: 5px;
+    top: 45px;
+    display: none
+}
+
+#gamepad.connected.debug_on #gamepad_debug {
+   display: block;
 }

@@ -13,6 +13,7 @@ const fs = require('fs');
 import * as C from 'colors'; C; //force import typings with string prototype extension
 
 
+//import { MessageReader } from "@foxglove/rosmsg2-serialization"
 
 const _ = require('lodash');
 
@@ -32,115 +33,8 @@ import { MongoClient, Db, Collection, MongoError, InsertOneResult, ObjectId } fr
 
 import * as SocketIO from "socket.io";
 
-class Robot {
-    id_robot: ObjectId;
-    name: string;
-    type: ObjectId;
-    isConnected: boolean;
-    isAuthentificated: boolean;
-    socket: SocketIO.Socket;
-    topics: {topic: string, subscribed:boolean, msgTypes:string[]}[];
-
-    static connectedRobots:Robot[] = [];
-
-    public AddToConnedted() {
-        if (Robot.connectedRobots.indexOf(this) == -1) {
-            Robot.connectedRobots.push(this);
-            this.StateToSubscribers();
-        }
-    }
-
-    public RemoveFromConnedted() {
-        let index = Robot.connectedRobots.indexOf(this);
-        if (index != -1) {
-            Robot.connectedRobots.splice(index, 1);
-            this.StateToSubscribers();
-        }
-    }
-
-    static GetStateData(id: ObjectId, robot?:Robot):any {
-        let data:any = {
-            id_robot: id.toString()
-        }
-        if (robot)
-            data['name'] =  robot.name ? robot.name : 'Unnamed Robot';
-        if (robot && robot.socket)
-            data['ip'] =  robot.socket.handshake.address;
-
-        return data;
-    }
-
-    public StateToSubscribers():void {
-        App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
-                app.socket.emit('robot', Robot.GetStateData(this.id_robot, this))
-            }
-        });
-    }
-
-    public TopicsToSubscribers():void {
-        let robotTopicsData:any = {}
-        robotTopicsData[this.id_robot.toString()] = this.topics;
-        App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
-                app.socket.emit('topics', robotTopicsData)
-            }
-        });
-    }
-
-
-    public static FindConnected(idSearch:ObjectId):Robot|null {
-        for (let i = 0; i < Robot.connectedRobots.length; i++)
-        {
-            if (!Robot.connectedRobots[i].id_robot)
-                continue;
-            if (Robot.connectedRobots[i].id_robot.equals(idSearch))
-                return Robot.connectedRobots[i];
-        }
-        return null;
-    }
-}
-
-
-
-class App {
-    id_app: ObjectId;
-    isConnected: boolean;
-    isAuthentificated: boolean;
-    socket: SocketIO.Socket;
-    robotSubscriptions: ObjectId[];
-
-    static connectedApps:App[] = [];
-
-    public AddToConnedted() {
-        if (App.connectedApps.indexOf(this) == -1) {
-            App.connectedApps.push(this);
-        }
-    }
-
-    public RemoveFromConnedted() {
-        let index = App.connectedApps.indexOf(this);
-        if (index != -1) {
-            App.connectedApps.slice(index, 1);
-        }
-    }
-
-    public SubScribeRobot(idRobot: ObjectId) {
-        for (let i = 0; i < this.robotSubscriptions.length; i++) {
-            if (this.robotSubscriptions[i].equals(idRobot))
-                return;
-        }
-        this.robotSubscriptions.push(idRobot);
-    }
-
-    public IsSubscribedToRobot(idRobot: ObjectId):boolean {
-        for (let i = 0; i < this.robotSubscriptions.length; i++) {
-            if (this.robotSubscriptions[i].equals(idRobot))
-                return true;
-        }
-        return false;
-    }
-}
+import { App } from './lib/app'
+import { Robot } from './lib/robot'
 
 // load config & ssl certs //
 
@@ -151,6 +45,10 @@ if (!fs.existsSync(dir+'/config.jsonc')) {
     process.exit();
 };
 
+import * as path from 'path'
+import * as ejs from 'ejs';
+import { off } from 'process';
+
 import * as JSONC from 'comment-json';
 const defaultConfig = JSONC.parse(fs.readFileSync(dir+'/config.jsonc').toString());
 const CONFIG = _.merge(defaultConfig);
@@ -160,26 +58,106 @@ const UI_PORT:number = CONFIG['BRIDGE'].webPort;
 const PUBLIC_ADDRESS:string = CONFIG['BRIDGE'].address;
 const DB_URL:string = CONFIG.dbUrl;
 
+const SSL_CERT_PRIVATE =  CONFIG['BRIDGE'].ssl.private;
+const SSL_CERT_PUBLIC =  CONFIG['BRIDGE'].ssl.public;
+
 const DIE_ON_EXCEPTION:boolean = CONFIG.dieOnException;
 
 const VERBOSE:boolean = CONFIG['BRIDGE'].verbose;
 
-const certFiles:string[] = GetCerts(dir+"/ssl/private.pem", dir+"/ssl/public.crt");
+const MSG_TYPES_DIR = CONFIG['BRIDGE'].msgTypesDir;
+const MSG_TYPES_JSON_FILE = CONFIG['BRIDGE'].msgTypesJsonFile;
+
+const certFiles:string[] = GetCerts(dir+"/"+SSL_CERT_PRIVATE, dir+"/"+SSL_CERT_PUBLIC);
 const HTTPS_SERVER_OPTIONS = {
     key: fs.readFileSync(certFiles[0]),
     cert: fs.readFileSync(certFiles[1]),
 };
 
+
+////////////////////////////////////////////////////////////////////////////////////
+
+import { MessageReader } from "@foxglove/rosmsg2-serialization"
+import { MessageWriter } from "@foxglove/rosmsg2-serialization";
+
+import { ImportMessageTypes } from './lib/messageTypesImporter';
+
+
+/*
+let def_Time = fs.readFileSync(dir+'/static/msg_types/buildin_interfaces/Time.msg').toString()
+const timeDefinitions:MessageDefinition[] = parse(def_Time, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
+//console.log('Time:', JSON.stringify(timeDefinition, null, 2));
+
+let def_Header = fs.readFileSync(dir+'/static/msg_types/std_msgs/Header.msg').toString()
+const headerDefinitions:MessageDefinition[] = parse(def_Header, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
+//console.log('Header:', JSON.stringify(headerDefinition, null, 2));
+
+
+let def_BatteryState = fs.readFileSync(dir+'/static/msg_types/sensor_msgs/BatteryState.msg').toString()
+const batteryStateDefinitions:MessageDefinition[] = parse(def_BatteryState, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
+
+let allDefinitions = [].concat(timeDefinitions).concat(headerDefinitions).concat(batteryStateDefinitions);
+*/
+
+
+// let hex = //'00 01 00 00 c5 f6 72 64 30 dc 73 10 08 00 00 00 62 61 74 74 65 72 79 00 c1 15 43 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00'
+//           '00 01 00 00 01 00 00 00 c1 f6 72 64 e7 47 6f 12 05 00 00 00 6f 64 6f 6d 00 6c 69 6e 0a 00 00 00 62 61 73 65 5f 6c 69 6e 6b 00 65 6c de 29 a7 a1 d4 48 53 bf d1 2e e8 8c 09 13 36 bf 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a4 b2 ec 4a 70 75 c2 3f 2f 80 36 04 5f aa ef 3f'
+//           ;
+// let msg_type = //'sensor_msgs/msg/BatteryState'
+//             'tf2_msgs/msg/TFMessage'
+//             ;
+
+// hex = hex.replace(' ', '');
+// let payload = new Uint8Array(hex.match(/[\da-f]{2}/gi).map(function (h) {
+//   return parseInt(h, 16)
+// }))
+
+// console.log('Payload '+payload.byteLength+'B: '+hex);
+
+
+// let msg_type_def = null;
+
+// for (let i = 0; i < allDefinitions.length; i++) {
+//     if (allDefinitions[i].name == msg_type) {
+//         msg_type_def = allDefinitions[i];
+//         break;
+//     }
+// }
+// if (!msg_type_def) {
+//     $d.err('No msg type def found for '+msg_type);
+//     process.exit(1)
+// }
+
+// try {
+//    const reader = new MessageReader( [] );
+//    const writer = new MessageWriter( [] );
+
+//     // // deserialize a buffer into an object
+//     const message = reader.readMessage(payload);
+
+//     console.log('message: ', message);
+
+// } catch (e) {
+//     $d.err('Error while reading: '+e.message);
+// }
+
+// process.exit(1)
+
+
+////////////////////////////////////////////////////////////////////////////////////
+
+
+
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE NODE'.yellow);
 console.log('');
-console.log((' https://localhost:'+SIO_PORT+'/info                     System info JSON').yellow);
-console.log((' https://localhost:'+SIO_PORT+'/robot/socket.io/         Robot API').green);
-console.log((' https://localhost:'+SIO_PORT+'/robot/register?yaml      Register new robot').green);
-console.log(('                                                         & download config YAML/JSON').green);
-console.log((' https://localhost:'+UI_PORT+'/robot/__ID__              Robot web UI').green);
-console.log((' https://localhost:'+SIO_PORT+'/human/socket.io/         Human API').red);
-console.log((' https://localhost:'+SIO_PORT+'/app/socket.io/           App API').green);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/info                     System info JSON').yellow);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/socket.io/         Robot API').green);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?yaml      Register new robot').green);
+console.log(('                                                          & download config YAML/JSON').green);
+console.log((' '+PUBLIC_ADDRESS+':'+UI_PORT+'/robot/__ID__              Robot web UI').green);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/         Human API').red);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/           App API').green);
 //console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
 console.log('----------------------------------------------------------------------'.yellow);
 
@@ -193,7 +171,10 @@ let robotsCollection:Collection = null;
 
 //let knownAppKeys:string[] = [];
 
+let imporrtedDefinitions = ImportMessageTypes(dir, MSG_TYPES_DIR, MSG_TYPES_JSON_FILE);
 
+const reader = new MessageReader( imporrtedDefinitions );
+const writer = new MessageWriter( imporrtedDefinitions );
 
 import * as express from "express";
 
@@ -346,6 +327,7 @@ sioRobots.on('connect', async function(robotSocket : SocketIO.Socket){
                     robot.isAuthentificated = true;
                     robot.name = data.name;
                     robot.AddToConnedted();
+                    //robot.WebRTCOfferToSubscribers()
 
                     return returnCallback(({'success': {
                         id: robot.id_robot.toString(),
@@ -420,8 +402,6 @@ sioRobots.on('connect', async function(robotSocket : SocketIO.Socket){
         });
 
         robot.TopicsToSubscribers();
-
-
     });
 
 
@@ -576,15 +556,30 @@ sioRobots.on('connect', async function(robotSocket : SocketIO.Socket){
 });
 
 
+// server-side
+sioApps.use((appSocket:SocketIO.Socket, next) => {
+
+    //err.data = { content: "Please retry later" }; // additional details
 
 
+    if (!ObjectId.isValid(appSocket.handshake.auth.id_app)) {
+        $d.err('Invalidid_app provided: '+appSocket.handshake.auth.id_app)
+        const err = new Error("Invalid id_app");
+        return next(err);
+    }
+
+    $d.l('App auth ok: '+appSocket.handshake.auth.id_app)
+    next();
+  });
 
 sioApps.on('connect', async function(appSocket : SocketIO.Socket){
 
     $d.log('Ohai app! Opening Socket.io for', appSocket.handshake.address);
 
-    let app:App = new App()
+    let app:App = new App();
+    app.id_app = new ObjectId(appSocket.handshake.auth.id_app)
     app.socket = appSocket;
+    app.isConnected = true;
     app.robotSubscriptions = [];
     // TODO handle auth with middleware
     // $d.log('AUTH:', socket.handshake.auth); // prints { token: "abcd" }
@@ -596,25 +591,26 @@ sioApps.on('connect', async function(appSocket : SocketIO.Socket){
         if (!ObjectId.isValid(data.id))
             return returnCallback({'err':1});
 
-        let searchId = new ObjectId(data.id);
+        let idRobot = new ObjectId(data.id);
 
 
-        let robot = Robot.FindConnected(searchId);
+        let robot = Robot.FindConnected(idRobot);
 
         if (!robot) {
             //check it exists
-            const dbRobot = (await robotsCollection.findOne({_id: searchId }));
+            const dbRobot = (await robotsCollection.findOne({_id: idRobot }));
             if (!dbRobot) {
-                return returnCallback({'err':1});
+                return returnCallback({'err':1}); //invalid id
             }
         }
 
-        app.SubScribeRobot(searchId);
+        app.SubScribeRobot(idRobot);
 
-        returnCallback(Robot.GetStateData(searchId, robot));
+        returnCallback(Robot.GetStateData(idRobot, robot));
 
         if (robot) {
-            robot.TopicsToSubscribers();
+            app.socket.emit('topics', robot.GetTopicsData());
+            // robot.ConnectWebRTC(app);
         }
 
         return;
@@ -653,19 +649,143 @@ sioApps.on('connect', async function(appSocket : SocketIO.Socket){
 
     });
 
+    appSocket.on('offer', async function (offer:{ id_robot:string, sdp:string, type:string, id_app?:string, id_instance?:string}, returnCallback) {
+
+        $d.log('App sending webrtc offer to robot', offer);
+
+        if (!offer.id_robot || !offer.sdp || !offer.type) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid offer data'
+                })
+            }
+            return;
+        }
+
+        if (!ObjectId.isValid(offer.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+offer.id_robot
+                })
+            }
+            return;
+        }
+        let id_robot = new ObjectId(offer.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete offer['id_robot'];
+        offer['id_app'] = app.id_app.toString();
+        offer['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('offer', offer, (answerData:{'sdp':string, 'type':string}) => {
+
+            $d.log('Got robot\'s answer:', answerData);
+
+            return returnCallback(answerData);
+
+            //if (i == 0 && returnCallback) { //only the 1st triggers reply (only 1 expected)
+            //    returnCallback(replyData)
+           // }
+        });
+
+    });
+
+    appSocket.on('subcribe', async function (data:{ id_robot:string, topics:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
+
+        $d.log('App setting subscription to robot with:', data);
+
+        if (!data.id_robot || !data.topics) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid subscription data'
+                })
+            }
+            return;
+        }
+
+        if (!ObjectId.isValid(data.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+data.id_robot
+                })
+            }
+            return;
+        }
+        let id_robot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('peer_subscription', data, (resData:any) => {
+
+            $d.log('Got robot\'s subscribe answer:', resData);
+
+            return returnCallback(resData);
+
+            //if (i == 0 && returnCallback) { //only the 1st triggers reply (only 1 expected)
+            //    returnCallback(replyData)
+           // }
+        });
+
+    });
+
+    // appSocket.on('answer', async function (app_answer_data:{ [id_robot:string]: {sdp:string, type:string}}, returnCallback) {
+    //     $d.log('App sending webrtc answer to robot', app_answer_data);
+
+    // });
+
+       /*
+     * client disconnected
+     */
+    appSocket.on('disconnect', (data:any) => {
+
+        $d.l(('Socket disconnect for app: '+data).red);
+        app.isAuthentificated = false;
+        app.isConnected = false;
+        app.socket = null;
+        app.RemoveFromConnected();
+
+        /*if (user != null && user.clientType == ClientType.PHNTM) {
+            $d.log((user+' at '+user.clientAddress+' disconnected').blue);
+            SessionHelpers.ClearUser(user, activeUsers, activeSessions, activeAreas, sessionObjects, activeObjects, kafkaProducer, VERBOSE);
+
+        } else if (user != null) {
+            $d.log((NodeTypeToName(user.clientType, [ user.regionPartition ]) +' at '+user.clientAddress+' disconnected'));
+        }*/
+
+        //SessionHelpers.ClientDisconnectHandler(user, activeUsers, activeSessions, sessionObjects, activeObjects, kafkaProducer);
+    });
+
     appSocket.on('disconnecting', (reason:any) => {
         $d.l(('Socket disconnecting from app: '+reason).gray);
-        app.RemoveFromConnedted();
     });
 });
 
 
-
-
-
-
-import * as path from 'path'
-import * as ejs from 'ejs';
 
 const webExpressApp = express();
 const webHttpServer = https.createServer(HTTPS_SERVER_OPTIONS, webExpressApp);
@@ -682,7 +802,7 @@ webExpressApp.get('/robot/:ID', async function(req:express.Request, res:express.
 
     res.setHeader('Content-Type', 'text/html');
 
-    res.render('robot', {
+    res.render('robot_ui', {
         //user: req.user, flashMessage: req.flash('info'), flashMessageError: req.flash('error'),
         //activeTab: 'models', title: 'Models',
         //models: modelItems

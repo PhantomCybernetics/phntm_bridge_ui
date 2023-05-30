@@ -29,11 +29,15 @@
   },
   "homepage": "https://github.com/PhantomCybernetics/phntm_cloud_bridge#readme",
   "dependencies": {
+    "@foxglove/rosmsg": "^4.2.2",
+    "@foxglove/tsconfig": "^2.0.0",
     "@types/ejs": "^3.1.2",
     "@types/express": "^4.17.17",
     "@types/js-yaml": "^4.0.5",
     "@types/mongodb": "^4.0.7",
+    "@types/nearley": "^2.11.2",
     "bcrypt-nodejs": "^0.0.3",
+    "browserify": "^17.0.0",
     "colors": "^1.4.0",
     "comment-json": "^4.2.3",
     "ejs": "^3.1.9",
@@ -41,10 +45,12 @@
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21",
     "mongodb": "^5.5.0",
+    "nearley": "^2.20.1",
     "path": "^0.12.7",
     "socket.io": "^4.6.1",
     "socket.io-client": "^4.6.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "xml-formatter": "^3.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.2.1",

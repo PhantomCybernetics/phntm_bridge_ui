@@ -1,0 +1,402 @@
+<%- include('partial/header.html', { extraLinks: [ '<a href="#" id="helpLink">?</a>' ] }); %>
+
+<h1 id="robot_name">Waiting for Connection...</h1>
+<div id="robot_info">Contacting <%= id_robot %>...</div>
+<br>
+<div id="robot_stats" style="display:none">
+    <h3 id="topics_heading"></h3>
+    <select id="msg_type_filter">
+        <option value="">-- All message types --</option>
+    </select>
+</div>
+<div id="topic_list" style="display:none"></div>
+<div id="monitors" style="display:none"></div>
+
+<div id="gamepad">
+    <div id="gamepad_status"></div>
+    <div id="gamepad_debug"></div>
+</div>
+
+<script type="text/javascript">
+
+    $(document ).ready(function() {
+
+        const socket = io("https://mrkbk.local:1337", {
+            path:'/app/socket.io/',
+            auth: {
+                id_app: '646fdeb9e2ebb3d8164fb824', //TODO proper app auth
+                key: 'xyyx'
+            },
+            autoConnect: false
+        });
+
+        let supported_msg_types = null;
+        let msg_types_src = '/static/msg_types.json'
+        fetch(msg_types_src)
+            .then((response) => response.json())
+            .then((json) => {
+                supported_msg_types=json;
+                console.log('Fetched '+json.length+' msg types from '+msg_types_src)
+
+                //proceed when we have msg types ready
+                socket.connect();
+            });
+
+
+        let config = {
+            sdpSemantics: 'unified-plan',
+            iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
+        };
+
+        let pc = new RTCPeerConnection(config);
+
+        pc.addTransceiver('video', {direction: 'recvonly'});
+
+        // pc.addTransceiver('audio', {direction: 'recvonly'});
+        // data_receiver = pc.createDataChannel('test')
+        // data_receiver.addEventListener("open", (evt) => {
+        //     console.log('data_receiver.open', evt)
+        // });
+        // data_receiver.addEventListener("error", (evt) => {
+        //     console.log('data_receiver.error', evt)
+        // });
+        // data_receiver.addEventListener("message", (evt) => {
+        //     console.log('data_receiver.MSG:', evt)
+        // });
+        //ordered=true, protocol='test.protocol/lala.hm'
+
+        // connect audio / video
+        pc.addEventListener('track', (evt) => {
+            // if (evt.track.kind == 'video') {
+            //     document.getElementById('video').srcObject = evt.streams[0];
+            // } else {
+            //     document.getElementById('audio').srcObject = evt.streams[0];
+            // }
+            console.log('New track added!', evt);
+        });
+
+        //let receiveChannel =
+        pc.createDataChannel('_ignore_'); //wouldn't otherwise open chanels
+
+        // connect data
+        pc.addEventListener('datachannel', (evt) => {
+
+            let receiveChannel = evt.channel;
+            receiveChannel.addEventListener("open", (open_evt) => {
+                console.log('receiveChannel.open', open_evt)
+            });
+            receiveChannel.addEventListener("error", (err_evt) => {
+                console.log('receiveChannel.error', err_evt)
+            });
+            receiveChannel.addEventListener("bufferedamountlow", (event) => {
+                console.log('receiveChannel.bufferedamountlow', event)
+            });
+
+            receiveChannel.addEventListener("close", (close_evt) => { console.log('receiveChannel.close', close_evt) });
+            receiveChannel.addEventListener("message", (msg_evt) => {
+                console.log(receiveChannel.label, msg_evt.data)
+            });
+
+            console.log('New data channel added!', receiveChannel);
+
+            // if (evt.track.kind == 'video') {
+            //     document.getElementById('video').srcObject = evt.streams[0];
+            // } else {
+            //     document.getElementById('audio').srcObject = evt.streams[0];
+            // }
+
+        });
+
+        pc.addEventListener('negotiationneeded', (evt) => {
+            console.log('negotiationneeded!', evt);
+        });
+
+        pc.addEventListener("connectionstatechange", (evt) => {
+            console.log('connectionstatechange: ',  evt.currentTarget.connectionState);
+            SetWebRTCSatusLabel()
+        });
+
+
+
+        $('#msg_type_filter').change(()=>{
+        let filter = $('#msg_type_filter').val();
+        //console.log('msg_type_filter='+filter);
+
+        let num_visible = 0;
+        $('#topic_list DIV.topic').each(function() {
+            console.log();
+            if (filter == '' || $(this).data('msg_types').indexOf(filter) != -1) {
+                $(this).css('display', 'block');
+                num_visible++;
+            }
+            else {
+                $(this).css('display', 'none');
+            }
+        });
+
+        if (!num_visible)
+            $('#topic_list_waiting').css('display', 'block').html('Waiting...');
+        else
+            $('#topic_list_waiting').css('display', 'none').empty();
+        });
+
+        // $('#topic_list INPUT:checkbox').change(()=>{
+        //     let filter = $(this).val();
+        //     //console.log('msg_type_filter='+filter);
+        // })
+
+
+
+        function SetWebRTCSatusLabel() {
+
+            let state = null;
+            if (pc)
+                state = pc.connectionState
+
+            if (state != null)
+                state = state.charAt(0).toUpperCase() + state.slice(1);
+            else
+                state = 'n/a'
+
+            if (state == 'Connected')
+                $('#webrtc_status').html('<span class="online">'+state+'</span>');
+            else
+                $('#webrtc_status').html('<span class="offline">'+state+'</span>');
+        }
+
+        function ProcessRobotData(robot_data) {
+            if (robot_data['err']) {
+                $('#robot_info').html('Error connecting to robot...');
+                return;
+            }
+
+            console.log('SIO got robot data', robot_data);
+
+            if (robot_data['name'])
+                $('#robot_name').html(robot_data['name']);
+
+            let robot_online = robot_data['ip'] ? true : false;
+
+            if (robot_online && (!pc || pc.connectionState != 'connected')) {
+                WebRTC_Negotiate(robot_data['id_robot']);
+            }
+
+            $('#robot_info').html('ID: '+ robot_data['id_robot']
+                                    + ' @ '
+                                    + (robot_online ? '<span class="online">'+robot_data['ip']+'</span>':'<span class="offline">Offline</span>')+' '
+                                    + 'WebRTC: <span id="webrtc_status"></span>'
+                                    );
+
+            SetWebRTCSatusLabel();
+
+        }
+
+        let panels = {}
+        let topics = {} // str id => { msg_types: str[]}
+
+        function TogglePanel(topic, state) {
+            let panel = panels[topic];
+            if (state) {
+                if (!panel) {
+                    panel = new Panel(topic, topics[topic].msg_types, supported_msg_types);
+                    panels[topic] = panel;
+                }
+            } else if (panel) {
+                panel.Close();
+                delete panels[topic];
+            }
+        }
+
+        function ToggleSubscription(topic, state) {
+            console.log((state ? 'Subscribing to ' : 'Unsubscribing from ') + topic);
+
+            let subscription_data = {
+                id_robot: '<%= id_robot %>',
+                topics: [ [ topic, state ? 1 : 0 ] ]
+            };
+
+            socket.emit('subcribe', subscription_data, (res) => {
+                console.log('Subscription res: ', res);
+                if (res['success']) {
+                    for (let i = 0; i < res['subscribed'].length; i++) {
+
+                        let topic = res['subscribed'][i][0];
+                        let id = res['subscribed'][i][1];
+
+                        console.log('locall DC '+topic+' id='+id)
+                        let dc = pc.createDataChannel(topic, {
+                            negotiated: true,
+                            id:id
+                        }); //wouldn't otherwise open chanels
+
+
+                        dc.addEventListener('open', (ev)=> {
+                            console.warn('DC '+topic+' open')
+                        });
+                        dc.addEventListener('close', (ev)=> {
+                            console.warn('DC '+topic+' close')
+                        });
+                        dc.addEventListener('message', (ev)=> {
+                            let panel = panels[topic];
+                            if (!panel)
+                                return;
+
+                            if (!$('#update_panel_'+panel.n).is(':checked'))
+                                return;
+
+                            panel.OnData(ev);
+                        });
+                        dc.addEventListener('error', (ev)=> {
+                            console.error('DC '+topic+' error', ev)
+                        });
+
+
+
+                    }
+                }
+            });
+        }
+
+
+
+        // client-side
+        socket.on("connect", () => {
+            console.log('SIO connected w id'+socket.id); // x8WIv7-mJelg7on_ALbx
+
+            socket.emit('robot', { id: '<%= id_robot %>' },
+                ProcessRobotData
+            );
+        });
+
+        socket.on('robot', ProcessRobotData);
+
+        socket.on('topics', (topics_data) => {
+            $('#topic_list').empty();
+
+            $('#robot_stats').css('display', 'block');
+            $('#topic_list').css('display', 'block');
+            $('#monitors').css('display', 'block');
+
+            let msg_type_filter_val = $('#msg_type_filter').val();
+            $("#msg_type_filter option[value!='']").each(function() {
+                $(this).remove();
+            });
+
+            console.log('Topics:', topics_data);
+
+            let msg_type_filters = [];
+            topics = {};
+
+            let i = 0;
+            Object.keys(topics_data).forEach((id_robot) => {
+
+                if (!topics_data[id_robot])
+                    return;
+
+                $('#topics_heading').html(topics_data[id_robot].length+' topics');
+
+                topics_data[id_robot].forEach((topic)=>{
+
+                    topics[topic.topic] = {
+                        msg_types: topic.msgTypes
+                    }
+
+                    $('#topic_list').append('<div class="topic" data-topic="'+topic.topic+'" data-msg_types="'+topic.msgTypes.join(',')+'">'
+                        + '<input type="checkbox" id="cb_topic_'+i+'"'
+                        + (!topic.subscribed?' disabled':'')
+                        + (panels[topic.topic] ? ' checked': '' )
+                        + '/> '
+                        + '<span '
+                        + 'class="topic '+(topic.subscribed?'subscribed':'nonsubscribed')+'" '
+                        + 'title="'+topic.msgTypes.join('; ')+'"'
+                        + '>'
+                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.topic+'</label>'
+                        + '</span>'
+                        + '</div>'
+                    );
+
+                    topic.msgTypes.forEach((msgType)=>{
+                        if (msg_type_filters.indexOf(msgType) == -1)
+                            msg_type_filters.push(msgType);
+                    });
+
+                    i++;
+
+                });
+            });
+
+            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
+
+            if (msg_type_filter_val && msg_type_filters.indexOf(msg_type_filter_val) == -1) {
+                msg_type_filters.push(msg_type_filter_val);
+            }
+            msg_type_filters.sort();
+            msg_type_filters.forEach((msgType)=>{
+                $("#msg_type_filter").append('<option value="'+msgType+'">'+msgType+'</option>');
+            });
+            $('#msg_type_filter').val(msg_type_filter_val).change();
+            //console.log('topics reloaded, msg_type_filter_val='+msg_type_filter_val)
+
+            $('#topic_list INPUT:checkbox').change(function(event) {
+                let topic = $(this).parent('DIV.topic').data('topic');
+                let val = this.checked;
+                TogglePanel(topic, val);
+                ToggleSubscription(topic, val);
+            });
+
+        });
+
+        // socket.on('offer', (offer_data) => {
+        //     console.log('Got webrtc offer:', offer_data)
+        //     let id_robot = Object.keys(offer_data)[0];
+        //     OnWebRTCOffer(id_robot, offer_data[id_robot]);
+        // });
+
+        socket.on("disconnect", () => {
+            console.log('SIO id '+socket.id+' disconnected'); // undefined
+        });
+
+
+        function WebRTC_Negotiate(id_robot)
+        {
+            console.log('WebRTC negotiating... ');
+
+            return pc.createOffer().then(function(offer) {
+                return pc.setLocalDescription(offer);
+            }).then(function() {
+                // wait for ICE gathering to complete
+                return new Promise(function(resolve) {
+                    if (pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        function checkState() {
+                            if (pc.iceGatheringState === 'complete') {
+                                pc.removeEventListener('icegatheringstatechange', checkState);
+                                resolve();
+                            }
+                        }
+                        pc.addEventListener('icegatheringstatechange', checkState);
+                    }
+                });
+            }).then(function() {
+                let offer = pc.localDescription;
+                console.log('ICE gathering done, sending local offer: ', offer)
+                socket.emit('offer', { 'id_robot': id_robot, 'sdp': offer.sdp, 'type': offer.type}, (answer) => {
+                    if (answer.err) {
+                        console.error('Offer returned error', answer);
+                        return;
+                    }
+                    console.log('Setting remote answer:', answer);
+                    return pc.setRemoteDescription(answer);
+                });
+            });
+
+        }
+
+    });
+
+
+
+</script>
+
+<%- include('partial/footer.html'); %>
