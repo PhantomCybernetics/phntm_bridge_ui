@@ -150,15 +150,16 @@
         }
 
         function ToggleSubscription(topic, state) {
-            console.log((state ? 'Subscribing to ' : 'Unsubscribing from ') + topic);
+            console.log((state ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topic);
 
             let subscription_data = {
                 id_robot: '<%= id_robot %>',
                 topics: [ [ topic, state ? 1 : 0 ] ]
             };
 
-            socket.emit('subcribe', subscription_data, (res) => {
-                console.log('Subscription res: ', res);
+            // toggle read subscription
+            socket.emit('subcribe:read', subscription_data, (res) => {
+                console.log('Read subscription res: ', res);
                 if (res['success']) {
                     for (let i = 0; i < res['subscribed'].length; i++) {
 
@@ -240,6 +241,18 @@
                 if (!topics_data[id_robot])
                     return;
 
+                //sort by topic
+                topics_data[id_robot].sort((a, b) => {
+                    if (a.topic < b.topic) {
+                        return -1;
+                    }
+                    if (a.topic > b.topic) {
+                        return 1;
+                    }
+                    // a must be equal to b
+                    return 0;
+                });
+
                 $('#topics_heading').html(topics_data[id_robot].length+' topics');
 
                 topics_data[id_robot].forEach((topic)=>{
@@ -250,11 +263,11 @@
 
                     $('#topic_list').append('<div class="topic" data-topic="'+topic.topic+'" data-msg_types="'+topic.msgTypes.join(',')+'">'
                         + '<input type="checkbox" id="cb_topic_'+i+'"'
-                        + (!topic.subscribed?' disabled':'')
+                        //+ (!topic.robotTubscribed?' disabled':'')
                         + (panels[topic.topic] ? ' checked': '' )
                         + '/> '
                         + '<span '
-                        + 'class="topic '+(topic.subscribed?'subscribed':'nonsubscribed')+'" '
+                        + 'class="topic" '
                         + 'title="'+topic.msgTypes.join('; ')+'"'
                         + '>'
                         + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.topic+'</label>'

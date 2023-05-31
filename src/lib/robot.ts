@@ -16,7 +16,7 @@ export class Robot {
     isConnected: boolean;
     isAuthentificated: boolean;
     socket: RobotSocket;
-    topics: {topic: string, subscribed:boolean, msgTypes:string[]}[];
+    topics: {topic: string, robotSubscribed:boolean, msgTypes:string[]}[];
 
     static connectedRobots:Robot[] = [];
 

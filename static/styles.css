@@ -89,14 +89,7 @@ width: 440px;
     padding-right: 10px;
 }
 
-
-
-#topic_list .topic.nonsubscribed {
-    color: gray;
-    text-decoration: none;;
-}
-
-#topic_list .topic.subscribed {
+#topic_list .topic {
     color: rgb(0, 89, 255);
 }
 

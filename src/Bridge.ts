@@ -355,7 +355,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         $d.l("Got topics from "+robot.id_robot+":");
         allTopics.forEach(topicData => {
             let topic = topicData[0];
-            let subscribed:boolean = topicData[1];
+            let robotSubscribed:boolean = topicData[1];
             let msgTypes = [];
             for (let i = 2; i < topicData.length; i++) {
                 msgTypes.push(topicData[i]); //msg types all the way
@@ -372,14 +372,14 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             if (!currTopic) {
                 robot.topics.push({
                     topic: topic,
-                    subscribed: subscribed,
+                    robotSubscribed: robotSubscribed,
                     msgTypes: msgTypes
                 });
                 report = true;
             } else {
-                if (currTopic.subscribed != subscribed) {
-                    currTopic.subscribed = subscribed;
-                    report = true;
+                if (currTopic.robotSubscribed != robotSubscribed) {
+                    currTopic.robotSubscribed = robotSubscribed;
+                    // report = true;
                 }
                 if (currTopic.msgTypes.length != msgTypes.length) {
                     currTopic.msgTypes = msgTypes;
@@ -395,8 +395,8 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             }
 
             if (report) {
-                let out = " "+topic+" ("+msgTypes.join(', ')+")";
-                $d.l(subscribed ? out.green : out.gray);
+                let out = " Topic "+topic+" ("+msgTypes.join(', ')+", robotSubscribed="+robotSubscribed+")";
+                $d.l(out.gray);
             }
 
         });
@@ -574,7 +574,6 @@ sioApps.use(async (appSocket:AppSocket, next) => {
         return next(err);
     }
 
-
     let searchId = new ObjectId(idApp);
     const dbApp = (await appsCollection.findOne({_id: searchId }));
 
@@ -608,11 +607,8 @@ sioApps.on('connect', async function(appSocket : AppSocket){
     app.isConnected = true;
     app.robotSubscriptions = [];
 
-    //$d.log(('App '' connected to Socket.io, ohai '+app.name+' aka '+app.id_app.toString()).cyan);
     $d.log(('Ohi, app '+app.name+' aka '+app.id_app.toString()+' (inst '+app.id_instance.toString()+') connected to Socket.io').cyan);
 
-    // TODO handle auth with middleware
-    // $d.log('AUTH:', socket.handshake.auth); // prints { token: "abcd" }
     app.AddToConnedted();
 
     appSocket.on('robot', async function (data:{id:string}, returnCallback) {
@@ -639,43 +635,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
         if (robot) {
             app.socket.emit('topics', robot.GetTopicsData());
-            // robot.ConnectWebRTC(app);
         }
-
-        return;
-
-        /*
-        let connectedRobot:RobotSocket = null;
-        for (let i = 0; i < connectedRobots.length; i++) {
-            if (connectedRobots[i].id_robot.equals(searchId)) {
-                connectedRobot = connectedRobots[i];
-                break;
-            }
-        }
-
-
-
-        if (!robot)
-            return res.send('Robot not found');
-
-        bcrypt.compare(req.query.key, robot.key_hash, function(errBcrypt:any, resBcrypt:any) {
-            if (!resBcrypt)
-                return res.send('Access denied');
-
-            if (!connectedRobot)
-                return res.send('Robot not connected');
-
-            let robot_data = {
-                id_robot: connectedRobot.id_robot,
-                ip: connectedRobot.handshake.address,
-                topics: connectedRobot.robotTopics
-            }
-            //res.send(JSON.stringify(robot_data, null, 4));
-
-
-        });
-        */
-
     });
 
     appSocket.on('offer', async function (offer:{ id_robot:string, sdp:string, type:string, id_app?:string, id_instance?:string}, returnCallback) {
@@ -730,9 +690,9 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    appSocket.on('subcribe', async function (data:{ id_robot:string, topics:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
+    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
 
-        $d.log('App setting subscription to robot with:', data);
+        $d.log('App setting read subscription to robot with:', data);
 
         if (!data.id_robot || !data.topics) {
             if (returnCallback) {
@@ -769,15 +729,11 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         data['id_app'] = app.id_app.toString();
         data['id_instance'] = app.id_instance.toString();
 
-        robot.socket.emit('peer_subscription', data, (resData:any) => {
+        robot.socket.emit('subscription:read', data, (resData:any) => {
 
-            $d.log('Got robot\'s subscribe answer:', resData);
+            $d.log('Got robot\'s read subscription answer:', resData);
 
             return returnCallback(resData);
-
-            //if (i == 0 && returnCallback) { //only the 1st triggers reply (only 1 expected)
-            //    returnCallback(replyData)
-           // }
         });
 
     });
