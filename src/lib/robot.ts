@@ -5,13 +5,17 @@ import * as SocketIO from "socket.io";
 import { ObjectId } from 'mongodb';
 import { App } from './app'
 
+export class RobotSocket extends SocketIO.Socket {
+    dbData?: any;
+}
+
 export class Robot {
     id_robot: ObjectId;
     name: string;
     type: ObjectId;
     isConnected: boolean;
     isAuthentificated: boolean;
-    socket: SocketIO.Socket;
+    socket: RobotSocket;
     topics: {topic: string, subscribed:boolean, msgTypes:string[]}[];
 
     static connectedRobots:Robot[] = [];

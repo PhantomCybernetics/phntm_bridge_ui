@@ -176,9 +176,9 @@ width: 440px;
 
 #gamepad #gamepad_debug {
     position: absolute;
-    background: #767486;
+    background: #5d53b0e3;
     width: 270px;
-    right: 0;
+    right: -10px;
     white-space: pre;
     font-size: 12px;
     color: white;
@@ -186,7 +186,8 @@ width: 440px;
     padding: 10px;
     border-radius: 5px;
     top: 45px;
-    display: none
+    display: none;
+    z-index: 2;
 }
 
 #gamepad.connected.debug_on #gamepad_debug {

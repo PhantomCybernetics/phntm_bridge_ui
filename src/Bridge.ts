@@ -3,7 +3,7 @@ const startupTime:number = Date.now();
 import { Debugger } from './lib/debugger';
 const $d:Debugger = Debugger.Get('[Bridge]');
 
-import { RegisterRobot, GetCerts, UncaughtExceptionHandler } from './lib/helpers'
+import { RegisterRobot, RegisterApp, GetCerts, UncaughtExceptionHandler } from './lib/helpers'
 const bcrypt = require('bcrypt-nodejs');
 
 // includes start //
@@ -33,8 +33,8 @@ import { MongoClient, Db, Collection, MongoError, InsertOneResult, ObjectId } fr
 
 import * as SocketIO from "socket.io";
 
-import { App } from './lib/app'
-import { Robot } from './lib/robot'
+import { App, AppSocket } from './lib/app'
+import { Robot, RobotSocket } from './lib/robot'
 
 // load config & ssl certs //
 
@@ -158,6 +158,7 @@ console.log(('                                                          & downlo
 console.log((' '+PUBLIC_ADDRESS+':'+UI_PORT+'/robot/__ID__              Robot web UI').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/         Human API').red);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/           App API').green);
+console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/register             Register new App').green);
 //console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
 console.log('----------------------------------------------------------------------'.yellow);
 
@@ -168,6 +169,7 @@ let activeRobots: { [iRobot:number]:any } = {}; // all areas loaded and active i
 let db:Db = null;
 let humansCollection:Collection = null;
 let robotsCollection:Collection = null;
+let appsCollection:Collection = null;
 
 //let knownAppKeys:string[] = [];
 
@@ -246,6 +248,13 @@ sioExpressApp.get('/robot/register', async function(req:express.Request, res:exp
     );
 });
 
+sioExpressApp.get('/app/register', async function(req:express.Request, res:express.Response) {
+    return RegisterApp(
+        req, res, new ObjectId().toString(),
+        appsCollection
+    );
+});
+
 
 //const uri = "<connection string uri>";
 // $d.log('conecting to db');
@@ -266,6 +275,7 @@ mongoClient.connect().then((client:MongoClient) => {
     db = client.db('phntm');
     humansCollection = db.collection('humans');
     robotsCollection = db.collection('robots');
+    appsCollection = db.collection('apps');
 
     sioHttpServer.listen(SIO_PORT);
     webHttpServer.listen(UI_PORT);
@@ -275,77 +285,67 @@ mongoClient.connect().then((client:MongoClient) => {
     process.exit();
 });
 
+
+
 // Robot Socket.io
+sioRobots.use(async(robotSocket:RobotSocket, next) => {
 
-sioRobots.on('connect', async function(robotSocket : SocketIO.Socket){
+    //err.data = { content: "Please retry later" }; // additional details
+    let idRobot = robotSocket.handshake.auth.id_robot;
 
-    $d.log('Ohai robot! Opening Socket.io for', robotSocket.handshake.address);
+    if (!ObjectId.isValid(idRobot)) {
+        $d.err('Invalidid id_robot provided: '+idRobot)
+        const err = new Error("Access denied");
+        return next(err);
+    }
+    if (!robotSocket.handshake.auth.key) {
+        $d.err('Missin key from: '+idRobot)
+        const err = new Error("Missing auth key");
+        return next(err);
+    }
+
+    let searchId = new ObjectId(idRobot);
+    const dbRobot = (await robotsCollection.findOne({_id: searchId }));
+
+    if (dbRobot) {
+        bcrypt.compare(robotSocket.handshake.auth.key, dbRobot.key_hash, function(err:any, res:any) {
+            if (res) { //pass match => good
+                $d.l(('Robot '+idRobot+' connected from '+robotSocket.handshake.address).green);
+                robotSocket.dbData = dbRobot;
+                return next();
+
+            } else { //invalid key
+                $d.l(('Robot '+idRobot+' auth failed for '+robotSocket.handshake.address).red);
+                const err = new Error("Access denied");
+                return next(err);
+            }
+        });
+
+    } else { //robot not found
+        $d.l(('Robot '+idRobot+' not found in db for '+robotSocket.handshake.address).red);
+        const err = new Error("Access denied");
+        return next(err);
+    }
+});
+
+sioRobots.on('connect', async function(robotSocket : RobotSocket){
 
     let robot:Robot = new Robot()
+    robot.id_robot = robotSocket.dbData._id;
+    robot.name = robotSocket.handshake.auth.name ?
+                    robotSocket.handshake.auth.name :
+                        (robotSocket.dbData.name ? robotSocket.dbData.name : 'Unnamed Robot' );
+
+    $d.log(('Ohi, robot '+robot.name+' aka '+robot.id_robot.toString()+' connected to Socket.io').cyan);
+
+    robot.isAuthentificated = true;
 
     robot.isConnected = true;
-    robot.isAuthentificated = false;
-    robot.id_robot = null;
+
     robot.topics = [];
     robot.socket = robotSocket;
-    //$d.log(socket);
 
-    /*let user : User = new User(socket);
-    user.isConnected = true;
-    user.regionPartition = REGION_PARTITION;
-    user.isAuthentificated = false;
-
-    user.idSession = null; //generated on login
-    user.shortUserId = 0; //generated on login, short sess pass / id
-
-    //init cave fix to zero
-    //user.caveFix = mat4.create(); mat4.identity(user.caveFix);
-
-    socket.user = user;
-    */
-    /*
-     * client auth
-     */
-    robotSocket.on('auth', async function(data:{id:string, key:string, name?:string}, returnCallback) {
-
-        robot.isAuthentificated = false;
-
-        if (!ObjectId.isValid(data.id)) {
-
-            return returnCallback({'err':1});
-        }
-
-        let searchId = new ObjectId(data.id);
-        const dbRobot = (await robotsCollection.findOne({_id: searchId }));
-
-        if (dbRobot) {
-            bcrypt.compare(data.key, dbRobot.key_hash, function(err:any, res:any) {
-                if (res) { //pass match => good
-                    $d.l(('Robot '+data.id+' connected from '+robotSocket.handshake.address).green);
-
-                    robot.id_robot = dbRobot._id;
-                    robot.isAuthentificated = true;
-                    robot.name = data.name;
-                    robot.AddToConnedted();
-                    //robot.WebRTCOfferToSubscribers()
-
-                    return returnCallback(({'success': {
-                        id: robot.id_robot.toString(),
-                        name: robot.name,
-                        type: robot.type ? robot.type.toString() : null
-                    }}));
-                } else {
-                    $d.l(('Robot key missmatch for id '+data.id).cyan);
-                    return returnCallback({'err':1});
-
-                }
-            });
-
-        } else {
-            $d.l(('Robot not found for id '+data.id).cyan);
-            return returnCallback({'err':1});
-        }
-    });
+    robot.AddToConnedted(); //sends update to subscribers
 
     robotSocket.on('topics', async function(allTopics:any[]) {
 
@@ -555,32 +555,62 @@ sioRobots.on('connect', async function(robotSocket : SocketIO.Socket){
 
 });
 
-
-// server-side
-sioApps.use((appSocket:SocketIO.Socket, next) => {
+// App Socket.io
+sioApps.use(async (appSocket:AppSocket, next) => {
 
     //err.data = { content: "Please retry later" }; // additional details
+    let idApp = appSocket.handshake.auth.id_app;
+    let key = appSocket.handshake.auth.key;
 
-
-    if (!ObjectId.isValid(appSocket.handshake.auth.id_app)) {
-        $d.err('Invalidid_app provided: '+appSocket.handshake.auth.id_app)
-        const err = new Error("Invalid id_app");
+    if (!ObjectId.isValid(idApp)) {
+        $d.err('Invalidid id_app provided: '+idApp)
+        const err = new Error("Access denied");
         return next(err);
     }
 
-    $d.l('App auth ok: '+appSocket.handshake.auth.id_app)
-    next();
-  });
+    if (!appSocket.handshake.auth.key) {
+        $d.err('Missin key from: '+idApp)
+        const err = new Error("Missing auth key");
+        return next(err);
+    }
 
-sioApps.on('connect', async function(appSocket : SocketIO.Socket){
 
-    $d.log('Ohai app! Opening Socket.io for', appSocket.handshake.address);
+    let searchId = new ObjectId(idApp);
+    const dbApp = (await appsCollection.findOne({_id: searchId }));
 
-    let app:App = new App();
+    if (dbApp) {
+        bcrypt.compare(appSocket.handshake.auth.key, dbApp.key_hash, function(err:any, res:any) {
+            if (res) { //pass match => good
+                $d.l(('App '+idApp+' connected from '+appSocket.handshake.address).green);
+                appSocket.dbData = dbApp;
+                return next();
+
+            } else { //invalid key
+                $d.l(('App '+idApp+' auth failed for '+appSocket.handshake.address).red);
+                const err = new Error("Access denied");
+                return next(err);
+            }
+        });
+
+    } else { //app not found
+        $d.l(('App '+idApp+' not found in db for '+appSocket.handshake.address).red);
+        const err = new Error("Access denied");
+        return next(err);
+    }
+});
+
+sioApps.on('connect', async function(appSocket : AppSocket){
+
+    let app:App = new App(); //id instance generated in constructor
     app.id_app = new ObjectId(appSocket.handshake.auth.id_app)
+    app.name = appSocket.dbData.name;
     app.socket = appSocket;
     app.isConnected = true;
     app.robotSubscriptions = [];
+
+    //$d.log(('App '' connected to Socket.io, ohai '+app.name+' aka '+app.id_app.toString()).cyan);
+    $d.log(('Ohi, app '+app.name+' aka '+app.id_app.toString()+' (inst '+app.id_instance.toString()+') connected to Socket.io').cyan);
+
     // TODO handle auth with middleware
     // $d.log('AUTH:', socket.handshake.auth); // prints { token: "abcd" }
     app.AddToConnedted();
@@ -592,7 +622,6 @@ sioApps.on('connect', async function(appSocket : SocketIO.Socket){
             return returnCallback({'err':1});
 
         let idRobot = new ObjectId(data.id);
-
 
         let robot = Robot.FindConnected(idRobot);
 

@@ -13,7 +13,7 @@
 <div id="monitors" style="display:none"></div>
 
 <div id="gamepad">
-    <div id="gamepad_status"></div>
+    <div id="gamepad_status" title="Gamepad Settings"></div>
     <div id="gamepad_debug"></div>
 </div>
 
@@ -21,16 +21,8 @@
 
     $(document ).ready(function() {
 
-        const socket = io("https://mrkbk.local:1337", {
-            path:'/app/socket.io/',
-            auth: {
-                id_app: '646fdeb9e2ebb3d8164fb824', //TODO proper app auth
-                key: 'xyyx'
-            },
-            autoConnect: false
-        });
-
         let supported_msg_types = null;
+
         let msg_types_src = '/static/msg_types.json'
         fetch(msg_types_src)
             .then((response) => response.json())
@@ -41,14 +33,6 @@
                 //proceed when we have msg types ready
                 socket.connect();
             });
-
-
-        let config = {
-            sdpSemantics: 'unified-plan',
-            iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
-        };
-
-        let pc = new RTCPeerConnection(config);
 
         pc.addTransceiver('video', {direction: 'recvonly'});
 
@@ -99,6 +83,8 @@
 
             console.log('New data channel added!', receiveChannel);
 
+
+
             // if (evt.track.kind == 'video') {
             //     document.getElementById('video').srcObject = evt.streams[0];
             // } else {
@@ -114,6 +100,8 @@
         pc.addEventListener("connectionstatechange", (evt) => {
             console.log('connectionstatechange: ',  evt.currentTarget.connectionState);
             SetWebRTCSatusLabel()
+
+
         });
 
 
@@ -144,52 +132,6 @@
         //     let filter = $(this).val();
         //     //console.log('msg_type_filter='+filter);
         // })
-
-
-
-        function SetWebRTCSatusLabel() {
-
-            let state = null;
-            if (pc)
-                state = pc.connectionState
-
-            if (state != null)
-                state = state.charAt(0).toUpperCase() + state.slice(1);
-            else
-                state = 'n/a'
-
-            if (state == 'Connected')
-                $('#webrtc_status').html('<span class="online">'+state+'</span>');
-            else
-                $('#webrtc_status').html('<span class="offline">'+state+'</span>');
-        }
-
-        function ProcessRobotData(robot_data) {
-            if (robot_data['err']) {
-                $('#robot_info').html('Error connecting to robot...');
-                return;
-            }
-
-            console.log('SIO got robot data', robot_data);
-
-            if (robot_data['name'])
-                $('#robot_name').html(robot_data['name']);
-
-            let robot_online = robot_data['ip'] ? true : false;
-
-            if (robot_online && (!pc || pc.connectionState != 'connected')) {
-                WebRTC_Negotiate(robot_data['id_robot']);
-            }
-
-            $('#robot_info').html('ID: '+ robot_data['id_robot']
-                                    + ' @ '
-                                    + (robot_online ? '<span class="online">'+robot_data['ip']+'</span>':'<span class="offline">Offline</span>')+' '
-                                    + 'WebRTC: <span id="webrtc_status"></span>'
-                                    );
-
-            SetWebRTCSatusLabel();
-
-        }
 
         let panels = {}
         let topics = {} // str id => { msg_types: str[]}
@@ -231,7 +173,12 @@
 
 
                         dc.addEventListener('open', (ev)=> {
-                            console.warn('DC '+topic+' open')
+                            console.warn('DC '+topic+' open', dc)
+
+                            if (topic == '/joy') {
+                                window.gamepadWriter = new GamepadWriter(pc, '/joy', dc, supported_msg_types);
+                            }
+
                         });
                         dc.addEventListener('close', (ev)=> {
                             console.warn('DC '+topic+' close')
@@ -262,7 +209,7 @@
         // client-side
         socket.on("connect", () => {
             console.log('SIO connected w id'+socket.id); // x8WIv7-mJelg7on_ALbx
-
+            SetSocketIOSatusLabel();
             socket.emit('robot', { id: '<%= id_robot %>' },
                 ProcessRobotData
             );
@@ -354,44 +301,9 @@
 
         socket.on("disconnect", () => {
             console.log('SIO id '+socket.id+' disconnected'); // undefined
+            SetSocketIOSatusLabel();
         });
 
-
-        function WebRTC_Negotiate(id_robot)
-        {
-            console.log('WebRTC negotiating... ');
-
-            return pc.createOffer().then(function(offer) {
-                return pc.setLocalDescription(offer);
-            }).then(function() {
-                // wait for ICE gathering to complete
-                return new Promise(function(resolve) {
-                    if (pc.iceGatheringState === 'complete') {
-                        resolve();
-                    } else {
-                        function checkState() {
-                            if (pc.iceGatheringState === 'complete') {
-                                pc.removeEventListener('icegatheringstatechange', checkState);
-                                resolve();
-                            }
-                        }
-                        pc.addEventListener('icegatheringstatechange', checkState);
-                    }
-                });
-            }).then(function() {
-                let offer = pc.localDescription;
-                console.log('ICE gathering done, sending local offer: ', offer)
-                socket.emit('offer', { 'id_robot': id_robot, 'sdp': offer.sdp, 'type': offer.type}, (answer) => {
-                    if (answer.err) {
-                        console.error('Offer returned error', answer);
-                        return;
-                    }
-                    console.log('Setting remote answer:', answer);
-                    return pc.setRemoteDescription(answer);
-                });
-            });
-
-        }
 
     });
 

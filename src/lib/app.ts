@@ -4,18 +4,23 @@ const $d:Debugger = Debugger.Get();
 import * as SocketIO from "socket.io";
 import { ObjectId } from 'mongodb';
 
+export class AppSocket extends SocketIO.Socket {
+    dbData?: any;
+}
+
 export class App {
     id_app: ObjectId;
     id_instance: ObjectId;
+    name: string;
     isConnected: boolean;
     isAuthentificated: boolean;
-    socket: SocketIO.Socket;
+    socket: AppSocket;
     robotSubscriptions: ObjectId[];
 
     static connectedApps:App[] = [];
 
     constructor() {
-        this.id_instance = new ObjectId();
+        this.id_instance = new ObjectId(); //generated here
     }
 
     public AddToConnedted() {

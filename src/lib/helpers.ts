@@ -65,6 +65,35 @@ export function RegisterRobot(req:express.Request, res:express.Response, set_pas
     });
 }
 
+export function RegisterApp(req:express.Request, res:express.Response, set_password:string, appsCollection:Collection) {
+    let remote_ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
+    const saltRounds = 10;
+    bcrypt.genSalt(saltRounds, async function (err:any, salt:string) {
+        if (err) { $d.err('Error while generating salt'); return ErrOutText( 'Error while registering', res ); }
+
+        bcrypt.hash(set_password, salt, null, async function (err:any, hash:string) {
+            if (err) { $d.err('Error while hashing password'); return ErrOutText( 'Error while registering', res ); }
+
+            let dateRegistered = new Date();
+
+            let appReg:InsertOneResult = await appsCollection.insertOne({
+                registered: dateRegistered,
+                reg_ip: remote_ip,
+                key_hash: hash
+            });
+
+            let new_config:any = {
+                id_app: appReg.insertedId.toString(),
+                key: set_password
+            };
+
+            res.setHeader('Content-Type', 'application/json');
+            res.send(JSON.stringify(new_config, null, 4));
+            return;
+
+        });
+    });
+}
 
 export function GetCerts (priv: string, pub: string) : string[] {
     let certFiles : string[] = [priv, pub];
