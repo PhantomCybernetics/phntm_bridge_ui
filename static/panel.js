@@ -59,9 +59,9 @@ class Panel {
                 let decoded = this.msg_reader.readMessage(v);
                 if (this.msg_types[0] == 'std_msgs/msg/String' && decoded.data) {
                     if (decoded.data.indexOf('xml') !== -1)  {
-                        datahr = escapeHtml(window.xmlFormatter(decoded.data));
+                        datahr = linkifyURLs(escapeHtml(window.xmlFormatter(decoded.data)), true);
                     } else {
-                        datahr = escapeHtml(decoded.data);
+                        datahr = linkifyURLs(escapeHtml(decoded.data));
                     }
                     //console.log(window.xmlFormatter)
 

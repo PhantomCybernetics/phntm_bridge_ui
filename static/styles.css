@@ -115,6 +115,14 @@ width: 440px;
     overflow: scroll;
 }
 
+.monitor_panel .panel_content A {
+    color: #fff;
+}
+
+.monitor_panel .panel_content A:hover {
+    color: #30f104;
+}
+
 .monitor_panel .panel_update {
     position: absolute;
     right: 10px;
@@ -143,36 +151,37 @@ width: 440px;
     position: absolute;
     right: 0;
     top: 0;
-    display: none;
+    display: block;
 }
 
 #gamepad.connected {
-    display: block;
+
 }
 
 #gamepad_status {
     width: 50px;
     height: 50px;
-}
-
-#gamepad.connected #gamepad_status {
     background: url(/static/gamepad.png);
     background-size: 100px;
     background-repeat: no-repeat;
     cursor: pointer;
     background-position: 0px 3px;
+    filter: grayscale(1) opacity(.2);
+}
+
+#gamepad.connected #gamepad_status {
+    filter: grayscale(0);
 }
 
 #gamepad.connected #gamepad_status.active {
     background-position: -50px 3px;
 }
 
-#gamepad #gamepad_debug {
+#gamepad #gamepad_settings {
     position: absolute;
     background: #5d53b0e3;
     width: 270px;
     right: -10px;
-    white-space: pre;
     font-size: 12px;
     color: white;
     font-weight: normal;
@@ -183,6 +192,17 @@ width: 440px;
     z-index: 2;
 }
 
-#gamepad.connected.debug_on #gamepad_debug {
+#gamepad #gamepad_debug {
+    white-space: pre;
+    background: #001649;
+    padding: 5px;
+    border-radius: 5px;
+    margin-top: 10px;
+    margin-left: -5px;
+    margin-right: -5px;
+    margin-bottom: -5px;
+}
+
+#gamepad.connected.debug_on #gamepad_settings {
    display: block;
 }

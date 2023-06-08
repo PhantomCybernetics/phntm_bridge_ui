@@ -14,7 +14,10 @@
 
 <div id="gamepad">
     <div id="gamepad_status" title="Gamepad Settings"></div>
-    <div id="gamepad_debug"></div>
+    <div id="gamepad_settings">
+        <input type="checkbox" id="gamepad_enabled" checked="checked"/> <label for="gamepad_enabled">Transmitting</label>
+        <div id="gamepad_debug"></div>
+    </div>
 </div>
 
 <script type="text/javascript">
@@ -29,6 +32,8 @@
             .then((json) => {
                 supported_msg_types=json;
                 console.log('Fetched '+json.length+' msg types from '+msg_types_src)
+
+                window.gamepadWriter = new GamepadWriter(pc, '/joy', '<%= id_robot %>', socket, supported_msg_types);
 
                 //proceed when we have msg types ready
                 socket.connect();
@@ -101,7 +106,9 @@
             console.log('connectionstatechange: ',  evt.currentTarget.connectionState);
             SetWebRTCSatusLabel()
 
-
+            if (evt.currentTarget.connectionState == 'connected') {
+               window.gamepadWriter.InitProducer()
+            }
         });
 
 
@@ -160,6 +167,7 @@
             // toggle read subscription
             socket.emit('subcribe:read', subscription_data, (res) => {
                 console.log('Read subscription res: ', res);
+
                 if (res['success']) {
                     for (let i = 0; i < res['subscribed'].length; i++) {
 
@@ -175,11 +183,6 @@
 
                         dc.addEventListener('open', (ev)=> {
                             console.warn('DC '+topic+' open', dc)
-
-                            if (topic == '/joy') {
-                                window.gamepadWriter = new GamepadWriter(pc, '/joy', dc, supported_msg_types);
-                            }
-
                         });
                         dc.addEventListener('close', (ev)=> {
                             console.warn('DC '+topic+' close')

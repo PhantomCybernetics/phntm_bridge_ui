@@ -71,6 +71,35 @@ var prettifyXml = function(sourceXml)
     return resultXml;
 };
 
+function GetFile(url) {
+    alert('TODO:\n'+url+'');
+}
+
+function linkifyURLs(text, is_xhtml) {
+    const options = {
+        //rel: 'nofollow noreferrer noopener',
+        formatHref: {
+          hashtag: (val) => `https://www.twitter.com/hashtag/${val.substr(1)}`,
+          mention: (val) => `https://github.com/${val.substr(1)}`
+        },
+        render: ({ tagName, attributes, content }) => {
+            let attrs = "";
+            tagName = 'A';
+            for (const attr in attributes) {
+                if (attr == 'href') {
+                    attrs += ` ${attr}=javascript:GetFile(\'${attributes[attr]}\');`;
+                } else
+                    attrs += ` ${attr}=${attributes[attr]}`;
+            }
+            return `<${tagName}${attrs}>${content}</${tagName}>`;
+        },
+      }
+
+      if (is_xhtml)
+        return linkifyHtml(text, options)
+    else
+        return linkifyStr(text, options)
+}
 
 function SetWebRTCSatusLabel() {
 
