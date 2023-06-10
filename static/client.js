@@ -12,7 +12,10 @@ let config = {
     iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
 };
 let pc = new RTCPeerConnection(config);
+let pc_connected = false;
 
+let panels = {}
+let topics = {} // str id => { msg_types: str[]}
 
 function FindMessageType(search, msg_types) {
     for (let i = 0; i < msg_types.length; i++) {
@@ -140,6 +143,8 @@ function ProcessRobotData(robot_data) {
     if (robot_data['name'])
         $('#robot_name').html(robot_data['name']);
 
+    console.log('Robot data: ', robot_data);
+
     let robot_online = robot_data['ip'] ? true : false;
 
     if (robot_online && (!pc || pc.connectionState != 'connected')) {
@@ -148,7 +153,7 @@ function ProcessRobotData(robot_data) {
 
     $('#robot_info').html('ID: '+ robot_data['id_robot']
                             + ' @ '
-                            + (robot_online ? '<span class="online">'+robot_data['ip']+'</span>':'<span class="offline">Offline</span>')+' '
+                            + (robot_online ? '<span class="online">'+robot_data['ip'].replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+' '
                             + 'WebRTC: <span id="webrtc_status"></span> '
                             + 'Socket.io: <span id="socketio_status"></span>'
                             );
@@ -191,4 +196,78 @@ function WebRTC_Negotiate(id_robot)
         });
     });
 
+}
+
+let topic_dcs = {};
+
+function ToggleReadTopicSubscription(id_robot, topic, state) {
+    console.warn((state ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topic);
+
+    let subscription_data = {
+        id_robot: id_robot,
+        topics: [ [ topic, state ? 1 : 0 ] ]
+    };
+
+    // toggle read subscription
+    socket.emit('subcribe:read', subscription_data, (res) => {
+        console.log('Read subscription res: ', res);
+
+        if (res['success']) {
+            for (let i = 0; i < res['subscribed'].length; i++) {
+
+                let topic = res['subscribed'][i][0];
+                let id = res['subscribed'][i][1];
+
+                if (topic_dcs[topic]) {
+                    console.warn('Closing local read DC '+topic);
+                    topic_dcs[topic].close();
+                    delete topic_dcs[topic];
+                }
+
+                console.log('Opening local read DC '+topic+' id='+id)
+                let dc = pc.createDataChannel(topic, {
+                    negotiated: true,
+                    id:id
+                });
+
+                topic_dcs[topic] = dc;
+
+                dc.addEventListener('open', (ev)=> {
+                    console.warn('DC '+topic+' open', dc)
+                });
+                dc.addEventListener('close', (ev)=> {
+                    console.warn('DC '+topic+' close')
+                    delete topic_dcs[topic];
+                });
+                dc.addEventListener('error', (ev)=> {
+                    console.error('DC '+topic+' error', ev)
+                    delete topic_dcs[topic]
+                });
+                dc.addEventListener('message', (ev)=> {
+                    let panel = panels[topic];
+                    if (!panel)
+                        return;
+
+                    if (!$('#update_panel_'+panel.n).is(':checked'))
+                        return;
+
+                    panel.OnData(ev);
+                });
+
+
+            }
+
+            for (let i = 0; i < res['unsubscribed'].length; i++) {
+
+                let topic = res['unsubscribed'][i][0];
+                let id = res['unsubscribed'][i][1];
+
+                if (topic_dcs[topic]) {
+                    console.warn('Closing local read DC '+topic);
+                    topic_dcs[topic].close();
+                    delete topic_dcs[topic];
+                }
+            }
+        }
+    });
 }

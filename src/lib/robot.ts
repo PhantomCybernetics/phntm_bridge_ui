@@ -42,7 +42,7 @@ export class Robot {
         if (robot)
             data['name'] =  robot.name ? robot.name : 'Unnamed Robot';
         if (robot && robot.socket)
-            data['ip'] =  robot.socket.handshake.address;
+            data['ip'] =  robot.socket.conn.remoteAddress;
 
         return data;
     }

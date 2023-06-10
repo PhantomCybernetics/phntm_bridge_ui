@@ -35,10 +35,6 @@ class GamepadWriter {
         this.msg_writer = new Writer( [ this.joy_msg_type ].concat(supported_msg_types) );
 
         this.dc = null;
-        // this.dc = pc.createDataChannel(topic, {
-        //     negotiated: false,
-        //     //id:id
-        // }); //wouldn't otherwise open chanels
 
         let that = this;
         window.addEventListener('gamepadconnected', (event) => {
@@ -85,30 +81,21 @@ class GamepadWriter {
                     this.dc = pc.createDataChannel(topic, {
                         negotiated: true,
                         id:id
-                    }); //wouldn't otherwise open chanels
-
+                    });
 
                     this.dc.addEventListener('open', (ev)=> {
-                        console.warn('DC '+topic+'/W opened', this.dc)
+                        console.info('DC '+topic+'/W opened', this.dc)
                     });
                     this.dc.addEventListener('close', (ev)=> {
-                        console.warn('DC '+topic+'/W closed')
+                        console.info('DC '+topic+'/W closed')
                         this.dc = null;
                     });
                     this.dc.addEventListener('message', (ev)=> {
-                        console.warn('DC '+topic+'/W message!!', ev)
-                        // let panel = panels[topic];
-                        // if (!panel)
-                        //     return;
-
-                        // if (!$('#update_panel_'+panel.n).is(':checked'))
-                        //     return;
-
-                        // panel.OnData(ev);
+                        console.warn('DC '+topic+'/W message!!', ev); //this should not be as we use separate r/w channels
                     });
                     this.dc.addEventListener('error', (ev)=> {
                         console.error('DC '+topic+'/W error', ev)
-                        dc = null;
+                        this.dc = null;
                     });
 
                 }
@@ -116,6 +103,14 @@ class GamepadWriter {
                 console.error('Write subscription err: ', res);
             }
         });
+    }
+
+    ClearProducer() {
+        if (!this.dc)
+            return;
+
+        this.dc.close();
+        this.dc = null;
     }
 
     Write (msg) {
@@ -155,18 +150,23 @@ class GamepadWriter {
             axes: [],
             buttons: []
         }
-        for (let id_axis in gamepad_mapping.axes) {
-            let sign = 1.0;
-            if (gamepad_mapping.axes[id_axis].length > 2)
-                sign = gamepad_mapping.axes[id_axis][2];
-
-            let a = axes[gamepad_mapping.axes[id_axis][0]];
-            msg.axes[gamepad_mapping.axes[id_axis][1]] = a * sign;
+        for (let id_axis = 0; id_axis < axes.length; id_axis++) { //sending all input regardless of mapping
+            let scale = 1.0;
+            let id_target_axis = id_axis;
+            if (browser2joy_mapping.axes[id_axis]){
+                id_target_axis = browser2joy_mapping.axes[id_axis][0];
+                if (browser2joy_mapping.axes[id_axis].length > 1)
+                    scale = browser2joy_mapping.axes[id_axis][1];
+            }
+            msg.axes[id_target_axis] = axes[id_axis] * scale;
         }
         let dead_man_switch = false;
-        for (let id_btn in gamepad_mapping.buttons) {
-            let pressed = buttons[gamepad_mapping.buttons[id_btn][0]].pressed;
-            msg.buttons[gamepad_mapping.buttons[id_btn][1]] = pressed;
+        for (let id_btn = 0; id_btn < buttons.length; id_btn++) { //sending all input regardless of mapping
+            let pressed = buttons[id_btn].pressed;
+            let id_target_btn = id_btn;
+            if (browser2joy_mapping.buttons[id_btn])
+                id_target_btn = browser2joy_mapping.buttons[id_btn];
+            msg.buttons[id_target_btn] = pressed;
             if (id_btn == 'dead_man_switch') {
                 dead_man_switch = pressed;
             }
@@ -191,25 +191,26 @@ class GamepadWriter {
         }
         $('#gamepad_debug').html(
             JSON.stringify(msg, null, 2)
-            + '<br>' + JSON.stringify(debug, null, 2)
+            //+ '<br>' + JSON.stringify(debug, null, 2)
         );
-        if (transmitting)
+        if (transmitting && window.gamepadWriter.dc && window.gamepadWriter.dc.readyState == 'open')
             window.gamepadWriter.Write(msg);
 
         requestAnimationFrame(window.gamepadWriter.UpdateLoop);
     }
 }
 
-const gamepad_mapping = {
+// browser => joy remapping
+const browser2joy_mapping = {
     buttons: {
-        'dead_man_switch': [ 8, 5 ], //browser => joy
-        'fast_mode': [ 4, 3 ],
-        'slow_mode': [ 1, 1 ],
+        8: 5, // dead man switch
+        4: 3, // fast_mode
+        1: 1  // slow_mode
     },
     axes: {
-        'angular_z_axis': [ 0, 0, -1.0 ], //speed => fw back
-        'linear_x_axis': [ 1, 1, -1.0 ], //turn l/r
-        'linear_y_axis': [ 2, 4 ] //strafe
+        0 : [ 0, -1.0], // angular_z_axiss (peed => fw back)
+        1 : [ 1, -1.0], // linear_x_axis (turn l/r)
+        2 : [ 4 ] // linear_y_axis (strafe)
     }
 }
 

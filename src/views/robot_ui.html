@@ -102,12 +102,19 @@
             console.log('negotiationneeded!', evt);
         });
 
+
         pc.addEventListener("connectionstatechange", (evt) => {
             console.log('connectionstatechange: ',  evt.currentTarget.connectionState);
             SetWebRTCSatusLabel()
 
             if (evt.currentTarget.connectionState == 'connected') {
-               window.gamepadWriter.InitProducer()
+                if (!pc_connected) {
+                    pc_connected = true;
+                    window.gamepadWriter.InitProducer()
+                }
+            } else if (pc_connected) {
+                pc_connected = false;
+                window.gamepadWriter.ClearProducer();
             }
         });
 
@@ -140,8 +147,7 @@
         //     //console.log('msg_type_filter='+filter);
         // })
 
-        let panels = {}
-        let topics = {} // str id => { msg_types: str[]}
+
 
         function TogglePanel(topic, state) {
             let panel = panels[topic];
@@ -155,60 +161,6 @@
                 delete panels[topic];
             }
         }
-
-        function ToggleSubscription(topic, state) {
-            console.log((state ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topic);
-
-            let subscription_data = {
-                id_robot: '<%= id_robot %>',
-                topics: [ [ topic, state ? 1 : 0 ] ]
-            };
-
-            // toggle read subscription
-            socket.emit('subcribe:read', subscription_data, (res) => {
-                console.log('Read subscription res: ', res);
-
-                if (res['success']) {
-                    for (let i = 0; i < res['subscribed'].length; i++) {
-
-                        let topic = res['subscribed'][i][0];
-                        let id = res['subscribed'][i][1];
-
-                        console.log('locall DC '+topic+' id='+id)
-                        let dc = pc.createDataChannel(topic, {
-                            negotiated: true,
-                            id:id
-                        }); //wouldn't otherwise open chanels
-
-
-                        dc.addEventListener('open', (ev)=> {
-                            console.warn('DC '+topic+' open', dc)
-                        });
-                        dc.addEventListener('close', (ev)=> {
-                            console.warn('DC '+topic+' close')
-                        });
-                        dc.addEventListener('message', (ev)=> {
-                            let panel = panels[topic];
-                            if (!panel)
-                                return;
-
-                            if (!$('#update_panel_'+panel.n).is(':checked'))
-                                return;
-
-                            panel.OnData(ev);
-                        });
-                        dc.addEventListener('error', (ev)=> {
-                            console.error('DC '+topic+' error', ev)
-                        });
-
-
-
-                    }
-                }
-            });
-        }
-
-
 
         // client-side
         socket.on("connect", () => {
@@ -236,6 +188,7 @@
             console.log('Topics:', topics_data);
 
             let msg_type_filters = [];
+            let old_topics = topics;
             topics = {};
 
             let i = 0;
@@ -283,8 +236,19 @@
                             msg_type_filters.push(msgType);
                     });
 
-                    i++;
+                    //if (!old_topics[topic.topic]) {
+                    let subscribe = $('#cb_topic_'+i).is(':checked')
+                    if (subscribe) {
+                        //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                        ToggleReadTopicSubscription('<%= id_robot %>', topic.topic, true);
+                    } else {
+                        //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                    }
 
+                    //TogglePanel(topic.topic, true);
+                    //}
+
+                    i++;
                 });
             });
 
@@ -304,7 +268,7 @@
                 let topic = $(this).parent('DIV.topic').data('topic');
                 let val = this.checked;
                 TogglePanel(topic, val);
-                ToggleSubscription(topic, val);
+                ToggleReadTopicSubscription('<%= id_robot %>', topic, val);
             });
 
         });
@@ -316,7 +280,7 @@
         // });
 
         socket.on("disconnect", () => {
-            console.log('SIO id '+socket.id+' disconnected'); // undefined
+            console.log('SIO disconnected'); // undefined
             SetSocketIOSatusLabel();
         });
 
