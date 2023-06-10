@@ -66,6 +66,8 @@ width: 440px;
     border-radius: 4px;
     padding: 10px;
     margin-bottom: 10px;
+    float: right;
+    width: -webkit-fill-available;
 }
 
 .monitor_panel  .msg_types {
@@ -205,4 +207,28 @@ width: 440px;
 
 #gamepad.connected.debug_on #gamepad_settings {
    display: block;
+}
+
+.panel_widget {
+    background: white;
+    width: 50%;
+    min-height: 40px;
+    float: right;
+    clear: right;
+    margin-top: 30px;
+    margin-left: 5px;
+    border-radius: 5px;
+    display: none;
+}
+
+.panel_widget.enabled {
+    display: block;
+}
+
+
+.cleaner {
+    clear: both;
+    position: relative;
+    display: block;
+    height: 0px;
 }

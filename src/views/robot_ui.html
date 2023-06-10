@@ -24,14 +24,26 @@
 
     $(document ).ready(function() {
 
-        let supported_msg_types = null;
-
         let msg_types_src = '/static/msg_types.json'
         fetch(msg_types_src)
             .then((response) => response.json())
             .then((json) => {
                 supported_msg_types=json;
                 console.log('Fetched '+json.length+' msg types from '+msg_types_src)
+
+                let hash = window.location.hash;
+                if (hash.length) {
+                    hash = hash.substr(1);
+                    let hashArr = hash.split(';');
+                    for (let i = 0; i < hashArr.length; i++) {
+                        let topic = hashArr[i].trim();
+                        if (!topic)
+                            continue;
+                        console.info('Opening panel for ', topic);
+                        TogglePanel(topic, true)
+                    }
+                }
+
 
                 window.gamepadWriter = new GamepadWriter(pc, '/joy', '<%= id_robot %>', socket, supported_msg_types);
 
@@ -111,6 +123,13 @@
                 if (!pc_connected) {
                     pc_connected = true;
                     window.gamepadWriter.InitProducer()
+                    let panelTopics = Object.keys(panels);
+                    for (let i = 0; i < panelTopics.length; i++) {
+                        let topic = panelTopics[i];
+                        if (!topic_dcs[topic]) {
+                            ToggleReadTopicSubscription('<%= id_robot %>', topic, true);
+                        }
+                    }
                 }
             } else if (pc_connected) {
                 pc_connected = false;
@@ -149,18 +168,7 @@
 
 
 
-        function TogglePanel(topic, state) {
-            let panel = panels[topic];
-            if (state) {
-                if (!panel) {
-                    panel = new Panel(topic, topics[topic].msg_types, supported_msg_types);
-                    panels[topic] = panel;
-                }
-            } else if (panel) {
-                panel.Close();
-                delete panels[topic];
-            }
-        }
+
 
         // client-side
         socket.on("connect", () => {
@@ -236,8 +244,15 @@
                             msg_type_filters.push(msgType);
                     });
 
+                    let subscribe = $('#cb_topic_'+i).is(':checked');
+
+                    if (panels[topic.topic] && !panels[topic.topic].initialized) {
+                        panels[topic.topic].Init(topic.msgTypes);
+                        subscribe = true;
+                    }
+
                     //if (!old_topics[topic.topic]) {
-                    let subscribe = $('#cb_topic_'+i).is(':checked')
+
                     if (subscribe) {
                         //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
                         ToggleReadTopicSubscription('<%= id_robot %>', topic.topic, true);
@@ -247,6 +262,9 @@
 
                     //TogglePanel(topic.topic, true);
                     //}
+
+
+
 
                     i++;
                 });
@@ -266,10 +284,12 @@
 
             $('#topic_list INPUT:checkbox').change(function(event) {
                 let topic = $(this).parent('DIV.topic').data('topic');
-                let val = this.checked;
-                TogglePanel(topic, val);
-                ToggleReadTopicSubscription('<%= id_robot %>', topic, val);
+                let state = this.checked;
+                TogglePanel(topic, state);
+                ToggleReadTopicSubscription('<%= id_robot %>', topic, state);
             });
+
+
 
         });
 

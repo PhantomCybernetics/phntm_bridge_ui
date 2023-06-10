@@ -100,7 +100,7 @@ class GamepadWriter {
 
                 }
             } else {
-                console.error('Write subscription err: ', res);
+                console.error('Error setting up gamepad publisher: ', res);
             }
         });
     }
@@ -167,7 +167,7 @@ class GamepadWriter {
             if (browser2joy_mapping.buttons[id_btn])
                 id_target_btn = browser2joy_mapping.buttons[id_btn];
             msg.buttons[id_target_btn] = pressed;
-            if (id_btn == 'dead_man_switch') {
+            if (id_btn == id_dead_man_switch_btn) {
                 dead_man_switch = pressed;
             }
         }
@@ -201,6 +201,7 @@ class GamepadWriter {
 }
 
 // browser => joy remapping
+const id_dead_man_switch_btn = 8;
 const browser2joy_mapping = {
     buttons: {
         8: 5, // dead man switch

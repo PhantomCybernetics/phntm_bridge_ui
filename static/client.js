@@ -11,11 +11,15 @@ let config = {
     sdpSemantics: 'unified-plan',
     iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
 };
+
+let supported_msg_types = null; //fetched static
+
 let pc = new RTCPeerConnection(config);
 let pc_connected = false;
 
 let panels = {}
 let topics = {} // str id => { msg_types: str[]}
+let topic_dcs = {}; //str id => RTCDataChannel
 
 function FindMessageType(search, msg_types) {
     for (let i = 0; i < msg_types.length; i++) {
@@ -132,6 +136,19 @@ function SetSocketIOSatusLabel() {
         $('#socketio_status').html('<span class="offline">'+state+'</span>');
 }
 
+function lerpColor(a, b, amount) {
+
+    var ah = parseInt(a.replace(/#/g, ''), 16),
+        ar = ah >> 16, ag = ah >> 8 & 0xff, ab = ah & 0xff,
+        bh = parseInt(b.replace(/#/g, ''), 16),
+        br = bh >> 16, bg = bh >> 8 & 0xff, bb = bh & 0xff,
+        rr = ar + amount * (br - ar),
+        rg = ag + amount * (bg - ag),
+        rb = ab + amount * (bb - ab);
+
+    return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
+}
+
 function ProcessRobotData(robot_data) {
     if (robot_data['err']) {
         $('#robot_info').html('Error connecting to robot...');
@@ -198,7 +215,7 @@ function WebRTC_Negotiate(id_robot)
 
 }
 
-let topic_dcs = {};
+
 
 function ToggleReadTopicSubscription(id_robot, topic, state) {
     console.warn((state ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topic);
@@ -210,7 +227,6 @@ function ToggleReadTopicSubscription(id_robot, topic, state) {
 
     // toggle read subscription
     socket.emit('subcribe:read', subscription_data, (res) => {
-        console.log('Read subscription res: ', res);
 
         if (res['success']) {
             for (let i = 0; i < res['subscribed'].length; i++) {
@@ -268,6 +284,35 @@ function ToggleReadTopicSubscription(id_robot, topic, state) {
                     delete topic_dcs[topic];
                 }
             }
+        } else {
+            console.error('Read subscription err: ', res);
+
         }
     });
+}
+
+function TogglePanel(topic, state) {
+    let panel = panels[topic];
+    if (state) {
+        if (!panel) {
+            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null);
+            panels[topic] = panel;
+        }
+    } else if (panel) {
+        panel.Close();
+        delete panels[topic];
+    }
+
+    UpdateUrlHash();
+}
+
+function UpdateUrlHash() {
+    let hash = [];
+    for (let topic in panels) {
+        hash.push(topic);
+    }
+    if (hash.length > 0)
+        window.location.hash = ''+hash.join(';');
+    else
+        window.location.hash = '';
 }
