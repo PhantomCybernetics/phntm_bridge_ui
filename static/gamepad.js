@@ -100,7 +100,7 @@ class GamepadWriter {
 
                 }
             } else {
-                console.error('Error setting up gamepad publisher: ', res);
+                console.warn('Error setting up gamepad publisher: ', res);
             }
         });
     }

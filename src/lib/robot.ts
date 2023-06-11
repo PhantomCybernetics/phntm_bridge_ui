@@ -17,6 +17,7 @@ export class Robot {
     isAuthentificated: boolean;
     socket: RobotSocket;
     topics: {topic: string, robotSubscribed:boolean, msgTypes:string[]}[];
+    services: {service: string, msgType:string}[];
 
     static connectedRobots:Robot[] = [];
 
@@ -66,6 +67,22 @@ export class Robot {
         App.connectedApps.forEach(app => {
             if (app.IsSubscribedToRobot(this.id_robot)) {
                 app.socket.emit('topics', robotTopicsData)
+            }
+        });
+    }
+
+    public GetServicesData():any {
+        let robotServicessData:any = {}
+        robotServicessData[this.id_robot.toString()] = this.services;
+        return robotServicessData;
+    }
+
+    public ServicesToSubscribers():void {
+        let robotServicessData = this.GetServicesData();
+        App.connectedApps.forEach(app => {
+            if (app.IsSubscribedToRobot(this.id_robot)) {
+                $d.l('emitting services to app', robotServicessData);
+                app.socket.emit('services', robotServicessData)
             }
         });
     }

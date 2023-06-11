@@ -4,12 +4,22 @@
 <div id="robot_info">Contacting <%= id_robot %>...</div>
 <br>
 <div id="robot_stats" style="display:none">
-    <h3 id="topics_heading"></h3>
-    <select id="msg_type_filter">
-        <option value="">-- All message types --</option>
-    </select>
+
 </div>
-<div id="topic_list" style="display:none"></div>
+<div id="sidebar">
+
+    <div id="topic_controls">
+        <h3 id="topics_heading"></h3>
+        <select id="msg_type_filter">
+            <option value="">-- All message types --</option>
+        </select>
+        <div id="topic_list" style="display:none"></div>
+    </div>
+
+    <div id="service_controls">
+        <div id="service_list" style="display:none"></div>
+    </div>
+</div>
 <div id="monitors" style="display:none"></div>
 
 <div id="gamepad">
@@ -94,6 +104,58 @@
         });
 
         socket.on('robot', ProcessRobotData);
+
+        socket.on('services', (services_data) => {
+            $('#service_list').empty();
+            $('#service_list').css('display', 'block');
+
+            console.log('Services:', services_data);
+
+            services = {};
+
+            let i = 0;
+            Object.keys(services_data).forEach((id_robot) => {
+
+                if (!services_data[id_robot])
+                    return;
+
+                //sort by topic
+                services_data[id_robot].sort((a, b) => {
+                    if (a.service < b.service) {
+                        return -1;
+                    }
+                    if (a.service > b.service) {
+                        return 1;
+                    }
+                    // a must be equal to b
+                    return 0;
+                });
+
+                //$('#topics_heading').html(topics_data[id_robot].length+' topics');
+
+                services_data[id_robot].forEach((service)=>{
+
+                    services[service.service] = {
+                        msg_type: service.msgType
+                    }
+
+                    $('#service_list').append('<div class="service" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
+                        + '<div '
+                        + 'class="service_heading" '
+                        + 'title="'+service.msgType+'"'
+                        + '>'
+                        + service.service
+                        + '</div>'
+                        + '<div class="service_input" id="service_input_'+i+'">' + service.msgType + '</div>'
+                        + '</div>'
+                    );
+
+                    i++;
+                });
+            });
+
+        });
+
 
         socket.on('topics', (topics_data) => {
             $('#topic_list').empty();

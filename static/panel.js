@@ -19,11 +19,14 @@ class Panel {
         this.topic = topic;
         console.log('Panel created for '+this.topic)
 
+        let display_source = false;
+
         $('#monitors').append(
             '<div class="monitor_panel" data-topic="'+topic+'">' +
             '<h3>'+topic+'</h3>' +
             '<a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a>' +
             '<input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/>' +
+            '<label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(display_source?' checked':'')+' title="Display source data">Source</label>' +
             '<div class="panel_widget" id="panel_widget_'+this.n+'"></div>' +
             '<div class="panel_content" id="panel_content_'+this.n+'">Waiting for data...</div>' +
             '<div class="cleaner"></div>' +
@@ -41,6 +44,18 @@ class Panel {
                 el.css('display', 'none');
             ev.cancelBubble = true;
             ev.preventDefault();
+        });
+
+        $('#display_panel_source_'+this.n).change(function(ev) {
+            let el = $('#panel_content_'+that.n);
+            let widget = $('#panel_widget_'+that.n);
+            if ($(this).prop('checked')) {
+                el.addClass('enabled');
+                widget.addClass('content_enabled');
+            } else {
+                el.removeClass('enabled');
+                widget.removeClass('content_enabled');
+            }
         });
 
         if (msg_types)
@@ -65,6 +80,15 @@ class Panel {
             let Reader = window.Serialization.MessageReader;
             this.msg_reader = new Reader( [ this.msg_type ].concat(supported_msg_types) );
         }
+
+        let hasWidget = (widgets[this.msg_types[0]] != undefined);
+
+        if (hasWidget) {
+            $('#display_panel_source_label_'+this.n).addClass('enabled');
+        } else {
+            $('#panel_content_'+this.n).addClass('enabled');
+        }
+
     }
 
 
@@ -104,171 +128,9 @@ class Panel {
                 datahr
             );
 
-            // BATTERY VISUALIZATION
-            if (this.msg_types[0] == 'sensor_msgs/msg/BatteryState') {
+            if (widgets[this.msg_types[0]])
+                widgets[this.msg_types[0]](this, decoded);
 
-                this.chart_trace.push({
-                    x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
-                    y: decoded.voltage
-                });
-
-                if (this.chart_trace.length > this.max_trace_length) {
-                    this.chart_trace.shift();
-                }
-
-                if (!this.chart) {
-                    $('#panel_widget_'+this.n).addClass('enabled');
-
-                    //const div = d3.selectAll();
-                    //console.log('d3 div', div)
-
-                    let width = $('#panel_widget_'+this.n).width();
-                    let height = $('#panel_content_'+this.n).innerHeight();
-
-                    let options = {
-                        series: [],
-                        chart: {
-                            height: height,
-                            type: 'line',
-                            zoom: {
-                                enabled: false
-                            },
-                            animations: {
-                                //enabled: false,
-                                dynamicAnimation: {
-                                    enabled: false
-                                }
-                            },
-                        },
-                        dataLabels: {
-                            enabled: false
-                        },
-                        stroke: {
-                            curve: 'straight'
-                        },
-                        // title: {
-                        //     text: 'Voltage over time',
-                        //     align: 'left'
-                        // },
-                        grid: {
-                            row: {
-                                colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
-                                opacity: 0.5
-                            },
-                        },
-                        xaxis: {
-                            //categories: this.labels_trace,
-                            tickAmount: 10,
-                            decimalsInFloat: 5,
-                            labels: {
-                                show: false,
-                            }
-                        },
-                        yaxis: {
-                            decimalsInFloat: 2,
-                            labels: {
-                                formatter: function (value) {
-                                  return value.toFixed(2) + " V";
-                                }
-                            },
-                        }
-                    };
-
-                    this.chart = new ApexCharts(document.querySelector('#panel_widget_'+this.n), options);
-                    this.chart.render();
-                }
-
-                this.chart.updateSeries([{
-                    name: 'Voltage',
-                    data: this.chart_trace
-                }]);
-
-            }
-
-            // RANGE VISUALIZATION
-            if (this.msg_types[0] == 'sensor_msgs/msg/Range') {
-
-                this.chart_trace = [ decoded.range > decoded.max_range ? -1 : decoded.range ];
-
-                //let fullScale = decoded.max_range;
-                let gageVal = 100.0 - (Math.min(Math.max(decoded.range, 0), decoded.max_range) * 100.0 / decoded.max_range);
-
-                let width = $('#panel_widget_'+this.n).width();
-                let height = $('#panel_content_'+this.n).innerHeight();
-                let that = this;
-
-
-                let c = lerpColor('#259FFB', '#ff0000', gageVal / 100.0);
-
-                let options = {
-                    chart: {
-                        height: height,
-                        type: "radialBar"
-                    },
-                    series: [ 0 ],
-                    colors: [ c ],
-
-                    plotOptions: {
-                        radialBar: {
-                        hollow: {
-                            margin: 15,
-                            size: "70%"
-                        },
-                        track: {
-                            show: true,
-
-                        },
-
-                        startAngle: -135,
-                        endAngle: 135,
-                        dataLabels: {
-                            showOn: "always",
-                            name: {
-                                offsetY: -10,
-                                show: true,
-                                color: "#888",
-                                fontSize: "13px"
-                            },
-                            value: {
-                                color: "#111",
-                                fontSize: "30px",
-                                show: true,
-                                formatter: function(val) {
-                                    //console.log(that.chart_trace);
-                                    if (that.chart_trace[0] < 0)
-                                        return "> "+decoded.max_range.toFixed(1) +" m";
-                                    else
-                                        return that.chart_trace[0].toFixed(3) + " m";
-                                }
-                            }
-                        }
-                        }
-                    },
-
-                    stroke: {
-                        lineCap: "round",
-                    },
-                    labels: ["Distance"]
-                };
-
-                if (!this.chart) {
-                    $('#panel_widget_'+this.n).addClass('enabled');
-
-                    //const div = d3.selectAll();
-                    //console.log('d3 div', div)
-                    this.chart = new ApexCharts(document.querySelector('#panel_widget_'+this.n), options);
-
-                    this.chart.render();
-                }
-
-                options.series = [ gageVal ];
-                this.chart.updateOptions(options);
-                // this.chart.updateSeries([
-                //     100.0 - gageVal
-                // ]);
-
-
-            }
 
         } else {
             let datahr = ev.data;

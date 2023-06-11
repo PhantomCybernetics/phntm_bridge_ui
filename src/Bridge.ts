@@ -343,6 +343,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
     robot.isConnected = true;
 
     robot.topics = [];
+    robot.services = [];
     robot.socket = robotSocket;
 
     robot.AddToConnedted(); //sends update to subscribers
@@ -402,6 +403,49 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         });
 
         robot.TopicsToSubscribers();
+    });
+
+    robotSocket.on('services', async function(allServices:any[]) {
+
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
+
+        $d.l("Got services from "+robot.id_robot+":");
+        allServices.forEach(serviceData => {
+            let service = serviceData[0];
+            //let robotSubscribed:boolean = topicData[1];
+            let msgType = serviceData[1];
+
+            let report = false;
+            let currService = null;
+            for (let i = 0; i < robot.services.length; i++) {
+                if (robot.services[i].service == service) {
+                    currService = robot.services[i];
+                    break;
+                }
+            }
+            if (!currService) {
+                robot.services.push({
+                    service: service,
+                    msgType: msgType
+                });
+                report = true;
+            } else {
+
+                if (currService.msgType !== msgType) {
+                    currService.msgType = msgType;
+                    report = true;
+                }
+            }
+
+            if (report) {
+                let out = " Service "+service+" ("+msgType+")";
+                $d.l(out.gray);
+            }
+
+        });
+
+        robot.ServicesToSubscribers();
     });
 
 
@@ -530,6 +574,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.isAuthentificated = false;
         robot.isConnected = false;
         robot.topics = null;
+        robot.services = null;
         robot.socket = null;
         robot.RemoveFromConnedted();
 
@@ -635,6 +680,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
         if (robot) {
             app.socket.emit('topics', robot.GetTopicsData());
+            app.socket.emit('services', robot.GetServicesData());
         }
     });
 

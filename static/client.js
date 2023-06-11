@@ -17,10 +17,10 @@ let supported_msg_types = null; //fetched static
 let pc = null;
 let pc_connected = false;
 
-let panels = {}
+let panels = {};
 let topics = {} // str id => { msg_types: str[]}
 let topic_dcs = {}; //str id => RTCDataChannel
-
+let services = {}; // str id => { msg_type: str}
 
 function InitPeerConnection(id_robot) {
     let pc_ = new RTCPeerConnection(config);
@@ -389,7 +389,7 @@ function ToggleReadTopicSubscription(id_robot, topic, state) {
                 }
             }
         } else {
-            console.error('Read subscription err: ', res);
+            console.warn('Read subscription err: ', res);
 
         }
     });
