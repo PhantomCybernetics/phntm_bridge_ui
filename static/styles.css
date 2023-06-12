@@ -81,6 +81,31 @@ float: right;
     font-size: 12px;
 }
 
+.service_button {
+    background: #0051ff;
+    color: white;
+    font-weight: bold;
+    border: 0px;
+    border-radius: 5px;
+    padding: 5px 20px;
+    margin: 5px 5px 0px 0px;
+}
+.service_button:hover {
+    background: #006dff;
+}
+.service_button.true {
+    background: #008700;
+}
+.service_button.true:hover {
+    background: #00a100;
+}
+.service_button.false {
+    background: #a20101;
+}
+.service_button.false:hover {
+    background: #c20000;
+}
+
 #robot_stats {
 width: 440px;
 }
@@ -221,6 +246,27 @@ width: 440px;
     float: right;
     margin-top: 30px;
     margin-left: 5px;
+}
+
+.panel_widget.laser_scan {
+    background-color: #072038;
+}
+
+.panel_widget.log {
+    background: black;
+    color: #fff;
+    font-size: 12px;
+    padding: 10px;
+    max-height: 200px;
+    overflow: scroll;
+}
+
+.panel_widget.log .log_line {
+    padding: 1px 0px;
+}
+
+.panel_widget.log .log_line:hover {
+    background: rgb(49, 49, 49);
 }
 
 .panel_widget.enabled {

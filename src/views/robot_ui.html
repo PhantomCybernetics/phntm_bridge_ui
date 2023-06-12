@@ -142,7 +142,9 @@
                     services_list.forEach((service)=>{
 
                         services[service.service] = {
-                            msg_type: service.msgType
+                            service: service.service,
+                            msg_type: service.msgType,
+                            n: i
                         }
 
                         $('#service_list').append('<div class="service" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
@@ -156,6 +158,10 @@
                             + '<div class="service_input" id="service_input_'+i+'"></div>'
                             + '</div>'
                         );
+
+                        if (input_widgets[service.msgType] != undefined) {
+                            input_widgets[service.msgType]($('#service_input_'+i), services[service.service], '<%= id_robot %>', socket, supported_msg_types);
+                        }
 
                         i++;
 

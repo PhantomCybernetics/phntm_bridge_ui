@@ -2,6 +2,7 @@ let panel_widgets = {
     'sensor_msgs/msg/BatteryState' : BatteryStateWidget,
     'sensor_msgs/msg/Range' : RangeWidget,
     'sensor_msgs/msg/LaserScan' : LaserScanWidget,
+    'rcl_interfaces/msg/Log' : LogWidget,
 }
 
 
@@ -170,84 +171,12 @@ function RangeWidget(panel, decoded) {
 
 }
 
-function GetAvailableWidgetSize(panel) {
-
-    let sourceDisplayed = $('#panel_content_'+panel.n).hasClass('enabled');
-
-    let w = $('#panel_widget_'+panel.n).width();
-    //console.log('w', w, $('#panel_content_'+panel.n).innerWidth())
-    //if (sourceDisplayed)
-    //    w -= $('#panel_content_'+panel.n).innerWidth();
-
-    let h = $('#panel_content_'+panel.n).innerHeight();
-    h = Math.min(h, w);
-    h = Math.min(h, 500);
-
-    return [w, h];
-}
-
-function ResizeWidget (panel) {
-    [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
-    $('#panel_widget_'+panel.n+' CANVAS')
-        .attr('width', panel.widget_width)
-        .attr('height', panel.widget_height)
-    ;
-}
-
-function RenderScan(panel) {
-
-    let frame = [
-        panel.widget_width/2.0,
-        panel.widget_height/2.0
-    ];
-
-    panel.chart.fillStyle = "#fff";
-    panel.chart.fillRect(0, 0, panel.widget_width, panel.widget_height);
-
-    for (let i = 0; i < panel.chart_trace.length; i++) {
-        let pts = panel.chart_trace[i];
-
-        for (let j = 0; j < pts.length; j++) {
-            let = p = pts[j];
-            panel.chart.fillStyle = (i == panel.chart_trace.length-1 ? "#ff0000" : "#ff00ff");
-            panel.chart.beginPath();
-            panel.chart.arc(frame[0]+p[0], frame[1]+p[1], 1.5, 0, 2 * Math.PI);
-            panel.chart.fill();
-        }
-    }
-
-    //lines
-    let range_int = Math.floor(panel.range_max);
-    for (let x = -range_int; x < range_int+1; x++) {
-        panel.chart.beginPath();
-        panel.chart.setLineDash(x == 0 ? [] : [panel.scale/20, panel.scale/10]);
-        panel.chart.strokeStyle = x == 0 ? '#aaa' : '#ccc' ;
-
-        //vertical
-        //panel.widget_height
-        let dd = Math.sqrt(Math.pow(range_int*panel.scale, 2) - Math.pow(x*panel.scale, 2));
-        panel.chart.moveTo(frame[0]+(x*panel.scale), frame[1]-dd);
-        panel.chart.lineTo(frame[0]+(x*panel.scale), frame[1]+dd);
-        panel.chart.stroke();
-
-        //horizontal
-        panel.chart.moveTo(frame[0]-dd, frame[1]+(x*panel.scale));
-        panel.chart.lineTo(frame[0]+dd, frame[1]+(x*panel.scale));
-        panel.chart.stroke();
-    }
-
-    //frame dot on top
-    panel.chart.fillStyle = "#259FFB";
-    panel.chart.beginPath();
-    panel.chart.arc(frame[0], frame[1], 5, 0, 2 * Math.PI);
-    panel.chart.fill();
-}
-
+//laser scan visualization
 function LaserScanWidget(panel, decoded) {
 
     if (!panel.chart) {
         panel.max_trace_length = 5;
-        $('#panel_widget_'+panel.n).addClass('enabled');
+        $('#panel_widget_'+panel.n).addClass('enabled laser_scan');
         [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
         const canvas = $('#panel_widget_'+panel.n).html('<canvas width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
         const ctx = canvas.getContext("2d");
@@ -311,6 +240,108 @@ function LaserScanWidget(panel, decoded) {
 
     RenderScan(panel);
 }
+
+const ScrollSmoothlyToBottom = (el) => {
+    el.animate({
+        scrollTop: el.prop("scrollHeight")
+    }, 500);
+}
+
+function LogWidget(panel, decoded) {
+
+    if (!$('#panel_widget_'+panel.n).hasClass('enabled')) {
+        $('#panel_widget_'+panel.n).addClass('enabled log');
+    }
+
+    let line = '<div class="log_line">['+decoded.name+'] '+decoded.stamp.sec+':'+decoded.stamp.nanosec+': '+decoded.msg+'</div>';
+    $('#panel_widget_'+panel.n).append(line);
+
+    ScrollSmoothlyToBottom($('#panel_widget_'+panel.n));
+
+    // panel.chart_trace.push({
+    //     x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
+    //     y: decoded.voltage
+    // });
+
+    // if (panel.chart_trace.length > panel.max_trace_length) {
+    //     panel.chart_trace.shift();
+    // }
+}
+
+function GetAvailableWidgetSize(panel) {
+
+    let sourceDisplayed = $('#panel_content_'+panel.n).hasClass('enabled');
+
+    let w = $('#panel_widget_'+panel.n).width();
+    //console.log('w', w, $('#panel_content_'+panel.n).innerWidth())
+    //if (sourceDisplayed)
+    //    w -= $('#panel_content_'+panel.n).innerWidth();
+
+    let h = $('#panel_content_'+panel.n).innerHeight();
+    h = Math.min(h, w);
+    h = Math.min(h, 500);
+
+    return [w, h];
+}
+
+function ResizeWidget (panel) {
+    [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
+    $('#panel_widget_'+panel.n+' CANVAS')
+        .attr('width', panel.widget_width)
+        .attr('height', panel.widget_height)
+    ;
+}
+
+function RenderScan(panel) {
+
+    let frame = [
+        panel.widget_width/2.0,
+        panel.widget_height/2.0
+    ];
+
+    //panel.chart.fillStyle = "#fff";
+    panel.chart.clearRect(0, 0, panel.widget_width, panel.widget_height);
+
+    for (let i = 0; i < panel.chart_trace.length; i++) {
+        let pts = panel.chart_trace[i];
+
+        for (let j = 0; j < pts.length; j++) {
+            let = p = pts[j];
+            panel.chart.fillStyle = (i == panel.chart_trace.length-1 ? "#ff0000" : "#aa0000");
+            panel.chart.beginPath();
+            panel.chart.arc(frame[0]+p[0], frame[1]+p[1], 1.5, 0, 2 * Math.PI);
+            panel.chart.fill();
+        }
+    }
+
+    //lines
+    let range_int = Math.floor(panel.range_max);
+    for (let x = -range_int; x < range_int+1; x++) {
+        panel.chart.beginPath();
+        panel.chart.setLineDash(x == 0 ? [] : [panel.scale/20, panel.scale/10]);
+        panel.chart.strokeStyle = x == 0 ? 'rgba(100,100,100,0.3)' : '#0c315480' ;
+
+        //vertical
+        //panel.widget_height
+        let dd = Math.sqrt(Math.pow(range_int*panel.scale, 2) - Math.pow(x*panel.scale, 2));
+        panel.chart.moveTo(frame[0]+(x*panel.scale), frame[1]-dd);
+        panel.chart.lineTo(frame[0]+(x*panel.scale), frame[1]+dd);
+        panel.chart.stroke();
+
+        //horizontal
+        panel.chart.moveTo(frame[0]-dd, frame[1]+(x*panel.scale));
+        panel.chart.lineTo(frame[0]+dd, frame[1]+(x*panel.scale));
+        panel.chart.stroke();
+    }
+
+    //frame dot on top
+    panel.chart.fillStyle = "#26a0fc";
+    panel.chart.beginPath();
+    panel.chart.arc(frame[0], frame[1], 5, 0, 2 * Math.PI);
+    panel.chart.fill();
+}
+
+
 
 function deg2rad(degrees)
 {
