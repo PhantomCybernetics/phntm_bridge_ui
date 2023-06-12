@@ -9,6 +9,9 @@ let panel_widgets = {
 // BATTERY VISUALIZATION
 function BatteryStateWidget(panel, decoded) {
 
+    let minVoltage = 3.2*3;
+    let maxVoltage = 4.2*3;
+
     panel.chart_trace.push({
         x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
         y: decoded.voltage
@@ -67,14 +70,51 @@ function BatteryStateWidget(panel, decoded) {
                 }
             },
             yaxis: {
+                min: minVoltage-0.2,
+                max: maxVoltage+0.2,
                 decimalsInFloat: 2,
                 labels: {
                     formatter: function (value) {
                       return value.toFixed(2) + " V";
                     }
                 },
-            }
+            },
+            annotations: {
+                yaxis: [
+
+                ]
+              }
         };
+
+            if (maxVoltage > 0) {
+                options.annotations.yaxis.push({
+                    y: maxVoltage,
+                    borderColor: '#00E396',
+                    label: {
+                      borderColor: '#00E396',
+                      style: {
+                        color: '#fff',
+                        background: '#00E396'
+                      },
+                      text: 'Full'
+                    }
+                  });
+            }
+            if (minVoltage > 0) {
+                options.annotations.yaxis.push({
+                    y: minVoltage,
+                    borderColor: '#ff0000',
+                    label: {
+                      borderColor: '#ff0000',
+                      style: {
+                        color: '#fff',
+                        background: '#ff0000'
+                      },
+                      text: 'Empty'
+                    }
+                });
+            }
+
 
         panel.chart = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
         panel.chart.render();
@@ -253,7 +293,7 @@ function LogWidget(panel, decoded) {
         $('#panel_widget_'+panel.n).addClass('enabled log');
     }
 
-    let line = '<div class="log_line">['+decoded.name+'] '+decoded.stamp.sec+':'+decoded.stamp.nanosec+': '+decoded.msg+'</div>';
+    let line = '<div class="log_line">[<span class="name">'+decoded.name+'</span>] <span class="time">'+decoded.stamp.sec+'.'+decoded.stamp.nanosec+'</span>: '+decoded.msg+'</div>';
     $('#panel_widget_'+panel.n).append(line);
 
     ScrollSmoothlyToBottom($('#panel_widget_'+panel.n));

@@ -269,6 +269,14 @@ width: 440px;
     background: rgb(49, 49, 49);
 }
 
+.panel_widget.log .log_line .name {
+    color: #006dff;
+}
+
+.panel_widget.log .log_line .time {
+    color: #8c0361;
+}
+
 .panel_widget.enabled {
     display: block;
 }

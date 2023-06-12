@@ -3,13 +3,30 @@ let input_widgets = {
     'std_srvs/srv/SetBool' : ServiceCallInput_Bool
 }
 
+function ServiceCall(id_robot, service, msg, socket, cb) {
+    let req = {
+        id_robot: id_robot,
+        service: service,
+        msg: msg
+    }
+    console.warn('service request', req);
+    socket.emit('service', req, (reply)=> {
+        console.log('service reply', reply);
+        if (cb)
+            cb(reply);
+    });
+}
 
 function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_types) {
 
     $(el).html('<button class="service_button" id="service_btn_'+service.n+'">Call</button>');
 
     $('#service_btn_'+service.n).click(()=>{
-        console.log('clicked '+service.service);
+        let msg = FindMessageType(service.msg_type+'_Request', supported_msg_types);
+        console.log('clicked '+service.service, msg);
+
+        ServiceCall(id_robot, service.service, null, socket);
+
     });
 }
 
@@ -20,9 +37,15 @@ function ServiceCallInput_Bool(el, service, id_robot, socket, supported_msg_type
     );
 
     $('#service_btn_'+service.n+'_true').click(()=>{
-        console.log('true clicked '+service.service);
+        let msg = FindMessageType(service.msg_type+'_Request', supported_msg_types);
+        console.log('true clicked '+service.service, msg);
+
+        ServiceCall(id_robot, service.service, true, socket);
     });
     $('#service_btn_'+service.n+'_false').click(()=>{
-        console.log('false clicked '+service.service);
+        let msg = FindMessageType(service.msg_type+'_Request', supported_msg_types);
+        console.log('false clicked '+service.service, msg);
+
+        ServiceCall(id_robot, service.service, false, socket);
     });
 }
