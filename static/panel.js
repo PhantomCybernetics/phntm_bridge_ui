@@ -81,7 +81,7 @@ class Panel {
             this.msg_reader = new Reader( [ this.msg_type ].concat(supported_msg_types) );
         }
 
-        let hasWidget = (widgets[this.msg_types[0]] != undefined);
+        let hasWidget = (panel_widgets[this.msg_types[0]] != undefined);
 
         if (hasWidget) {
             $('#display_panel_source_label_'+this.n).addClass('enabled');
@@ -128,8 +128,8 @@ class Panel {
                 datahr
             );
 
-            if (widgets[this.msg_types[0]])
-                widgets[this.msg_types[0]](this, decoded);
+            if (panel_widgets[this.msg_types[0]])
+                panel_widgets[this.msg_types[0]](this, decoded);
 
 
         } else {

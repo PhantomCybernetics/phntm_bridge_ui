@@ -208,12 +208,9 @@ width: 440px;
 
 .panel_widget {
     background: white;
-
     min-height: 40px;
-
     clear: right;
     margin-top: 9px;
-    margin-left: 5px;
     border-radius: 5px;
     display: none;
     overflow: hidden;
@@ -223,6 +220,7 @@ width: 440px;
     width: 50%;
     float: right;
     margin-top: 30px;
+    margin-left: 5px;
 }
 
 .panel_widget.enabled {

@@ -119,39 +119,53 @@
                 if (!services_data[id_robot])
                     return;
 
-                //sort by topic
-                services_data[id_robot].sort((a, b) => {
-                    if (a.service < b.service) {
-                        return -1;
-                    }
-                    if (a.service > b.service) {
-                        return 1;
-                    }
-                    // a must be equal to b
-                    return 0;
+                let handled_services = [];
+                let other_services = [];
+                for (let i = 0; i < services_data[id_robot].length; i++) {
+                    if (input_widgets[services_data[id_robot][i].msgType] != undefined)
+                        handled_services.push(services_data[id_robot][i]);
+                    else
+                        other_services.push(services_data[id_robot][i]);
+                }
+
+                [ handled_services, other_services ].forEach((services_list)=>{
+                    services_list.sort((a, b) => {
+                        if (a.service < b.service) {
+                            return -1;
+                        }
+                        if (a.service > b.service) {
+                            return 1;
+                        }
+                        return 0;
+                    });
+
+                    services_list.forEach((service)=>{
+
+                        services[service.service] = {
+                            msg_type: service.msgType
+                        }
+
+                        $('#service_list').append('<div class="service" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
+                            + '<div '
+                            + 'class="service_heading" '
+                            + 'title="'+service.msgType+'"'
+                            + '>'
+                            + service.service
+                            + '</div>'
+                            + '<div class="service_input" id="service_input_type'+i+'">' + service.msgType + '</div>'
+                            + '<div class="service_input" id="service_input_'+i+'"></div>'
+                            + '</div>'
+                        );
+
+                        i++;
+
+                    });
+
                 });
 
-                //$('#topics_heading').html(topics_data[id_robot].length+' topics');
 
-                services_data[id_robot].forEach((service)=>{
 
-                    services[service.service] = {
-                        msg_type: service.msgType
-                    }
 
-                    $('#service_list').append('<div class="service" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
-                        + '<div '
-                        + 'class="service_heading" '
-                        + 'title="'+service.msgType+'"'
-                        + '>'
-                        + service.service
-                        + '</div>'
-                        + '<div class="service_input" id="service_input_'+i+'">' + service.msgType + '</div>'
-                        + '</div>'
-                    );
-
-                    i++;
-                });
             });
 
         });
