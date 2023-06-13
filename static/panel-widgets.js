@@ -1,10 +1,9 @@
 let panel_widgets = {
-    'sensor_msgs/msg/BatteryState' : BatteryStateWidget,
-    'sensor_msgs/msg/Range' : RangeWidget,
-    'sensor_msgs/msg/LaserScan' : LaserScanWidget,
-    'rcl_interfaces/msg/Log' : LogWidget,
+    'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,
+    'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
+    'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
+    'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
 }
-
 
 // BATTERY VISUALIZATION
 function BatteryStateWidget(panel, decoded) {
@@ -21,109 +20,116 @@ function BatteryStateWidget(panel, decoded) {
         panel.chart_trace.shift();
     }
 
+    let width = $('#panel_widget_'+panel.n).width();
+    let height = $('#panel_widget_'+panel.n).parent().innerHeight()-30;
+
+    let options = {
+        series: [],
+        chart: {
+            height: height,
+            width: width,
+            type: 'line',
+            zoom: {
+                enabled: false
+            },
+            animations: {
+                //enabled: false,
+                dynamicAnimation: {
+                    enabled: false
+                }
+            },
+        },
+        dataLabels: {
+            enabled: false
+        },
+        stroke: {
+            curve: 'straight'
+        },
+        // title: {
+        //     text: 'Voltage over time',
+        //     align: 'left'
+        // },
+        grid: {
+            row: {
+                colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+                opacity: 0.5
+            },
+        },
+        xaxis: {
+            //categories: panel.labels_trace,
+            tickAmount: 10,
+            decimalsInFloat: 5,
+            labels: {
+                show: false,
+            }
+        },
+        yaxis: {
+            min: minVoltage-0.2,
+            max: maxVoltage+0.2,
+            decimalsInFloat: 2,
+            labels: {
+                formatter: function (value) {
+                  return value.toFixed(2) + " V";
+                }
+            },
+        },
+        annotations: {
+            yaxis: [
+
+            ]
+          }
+    };
+
+    if (maxVoltage > 0) {
+        options.annotations.yaxis.push({
+            y: maxVoltage,
+            borderColor: '#00E396',
+            label: {
+                borderColor: '#00E396',
+                style: {
+                color: '#fff',
+                background: '#00E396'
+                },
+                text: 'Full'
+            }
+            });
+    }
+    if (minVoltage > 0) {
+        options.annotations.yaxis.push({
+            y: minVoltage,
+            borderColor: '#ff0000',
+            label: {
+                borderColor: '#ff0000',
+                style: {
+                color: '#fff',
+                background: '#ff0000'
+                },
+                text: 'Empty'
+            }
+        });
+    }
+
     if (!panel.chart) {
-        $('#panel_widget_'+panel.n).addClass('enabled');
+        $('#panel_widget_'+panel.n).addClass('enabled battery');
 
         //const div = d3.selectAll();
         //console.log('d3 div', div)
-
-        let width = $('#panel_widget_'+panel.n).width();
-        let height = $('#panel_content_'+panel.n).innerHeight();
-
-        let options = {
-            series: [],
-            chart: {
-                height: height,
-                type: 'line',
-                zoom: {
-                    enabled: false
-                },
-                animations: {
-                    //enabled: false,
-                    dynamicAnimation: {
-                        enabled: false
-                    }
-                },
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'straight'
-            },
-            // title: {
-            //     text: 'Voltage over time',
-            //     align: 'left'
-            // },
-            grid: {
-                row: {
-                    colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
-                    opacity: 0.5
-                },
-            },
-            xaxis: {
-                //categories: panel.labels_trace,
-                tickAmount: 10,
-                decimalsInFloat: 5,
-                labels: {
-                    show: false,
-                }
-            },
-            yaxis: {
-                min: minVoltage-0.2,
-                max: maxVoltage+0.2,
-                decimalsInFloat: 2,
-                labels: {
-                    formatter: function (value) {
-                      return value.toFixed(2) + " V";
-                    }
-                },
-            },
-            annotations: {
-                yaxis: [
-
-                ]
-              }
-        };
-
-            if (maxVoltage > 0) {
-                options.annotations.yaxis.push({
-                    y: maxVoltage,
-                    borderColor: '#00E396',
-                    label: {
-                      borderColor: '#00E396',
-                      style: {
-                        color: '#fff',
-                        background: '#00E396'
-                      },
-                      text: 'Full'
-                    }
-                  });
-            }
-            if (minVoltage > 0) {
-                options.annotations.yaxis.push({
-                    y: minVoltage,
-                    borderColor: '#ff0000',
-                    label: {
-                      borderColor: '#ff0000',
-                      style: {
-                        color: '#fff',
-                        background: '#ff0000'
-                      },
-                      text: 'Empty'
-                    }
-                });
-            }
-
 
         panel.chart = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
         panel.chart.render();
     }
 
-    panel.chart.updateSeries([{
-        name: 'Voltage',
-        data: panel.chart_trace
-    }]);
+
+    options.series = [{
+            name: 'Voltage',
+            data: panel.chart_trace
+        }];
+    panel.chart.updateOptions(options);
+
+    // panel.chart.updateSeries([{
+    //     name: 'Voltage',
+    //     data: panel.chart_trace
+    // }]);
 
 }
 
@@ -137,14 +143,16 @@ function RangeWidget(panel, decoded) {
     let gageVal = 100.0 - (Math.min(Math.max(decoded.range, 0), decoded.max_range) * 100.0 / decoded.max_range);
 
     let width = $('#panel_widget_'+panel.n).width();
-    let height = $('#panel_content_'+panel.n).innerHeight();
+    let height = $('#panel_widget_'+panel.n).height();
 
     let c = lerpColor('#259FFB', '#ff0000', gageVal / 100.0);
 
     let options = {
         chart: {
-            height: height,
-            type: "radialBar"
+            height: 'auto',
+            width: width,
+            type: "radialBar",
+            offsetY: -10,
         },
         series: [ 0 ],
         colors: [ c ],
@@ -172,7 +180,7 @@ function RangeWidget(panel, decoded) {
                 },
                 value: {
                     color: "#111",
-                    fontSize: "30px",
+                    fontSize: "20px",
                     show: true,
                     formatter: function(val) {
                         //console.log(panel.chart_trace);
@@ -193,7 +201,7 @@ function RangeWidget(panel, decoded) {
     };
 
     if (!panel.chart) {
-        $('#panel_widget_'+panel.n).addClass('enabled');
+        $('#panel_widget_'+panel.n).addClass('enabled range');
 
         //const div = d3.selectAll();
         //console.log('d3 div', div)
@@ -236,6 +244,11 @@ function LaserScanWidget(panel, decoded) {
             ResizeWidget(panel);
             RenderScan(panel);
         });
+        panel.resize_event_handler = function () {
+            console.log('laser resized');
+            ResizeWidget(panel);
+            RenderScan(panel);
+        };
     }
 
 
@@ -281,8 +294,8 @@ function LaserScanWidget(panel, decoded) {
     RenderScan(panel);
 }
 
-const ScrollSmoothlyToBottom = (el) => {
-    el.animate({
+function ScrollSmoothlyToBottom (el) {
+    return el.animate({
         scrollTop: el.prop("scrollHeight")
     }, 500);
 }
@@ -296,7 +309,12 @@ function LogWidget(panel, decoded) {
     let line = '<div class="log_line">[<span class="name">'+decoded.name+'</span>] <span class="time">'+decoded.stamp.sec+'.'+decoded.stamp.nanosec+'</span>: '+decoded.msg+'</div>';
     $('#panel_widget_'+panel.n).append(line);
 
-    ScrollSmoothlyToBottom($('#panel_widget_'+panel.n));
+    if (panel.animation != null && panel.animation != undefined && !panel.animation.pla) {
+        //console.log('cancel animation ', panel.animation)
+        panel.animation.stop();
+    }
+
+    panel.animation = ScrollSmoothlyToBottom($('#panel_widget_'+panel.n));
 
     // panel.chart_trace.push({
     //     x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
@@ -317,9 +335,9 @@ function GetAvailableWidgetSize(panel) {
     //if (sourceDisplayed)
     //    w -= $('#panel_content_'+panel.n).innerWidth();
 
-    let h = $('#panel_content_'+panel.n).innerHeight();
-    h = Math.min(h, w);
-    h = Math.min(h, 500);
+    let h = $('#panel_widget_'+panel.n).innerHeight();
+    //h = Math.min(h, w);
+    //h = Math.min(h, 500);
 
     return [w, h];
 }

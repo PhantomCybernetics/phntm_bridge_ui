@@ -832,6 +832,55 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
+    appSocket.on('service', async function (data:{ id_robot:string, service:string, msg:any, id_app?:string, id_instance?:string}, returnCallback) {
+
+        $d.log('App calling robot service:', data);
+
+        if (!data.id_robot || !data.service) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid service call data'
+                })
+            }
+            return;
+        }
+
+        if (!ObjectId.isValid(data.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+data.id_robot
+                })
+            }
+            return;
+        }
+        let id_robot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('service', data, (resData:any) => {
+
+            $d.log('Got robot\'s service call answer:', resData);
+
+            if (returnCallback)
+                return returnCallback(resData);
+        });
+
+    });
+
     // appSocket.on('answer', async function (app_answer_data:{ [id_robot:string]: {sdp:string, type:string}}, returnCallback) {
     //     $d.log('App sending webrtc answer to robot', app_answer_data);
 

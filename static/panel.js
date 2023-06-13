@@ -13,26 +13,34 @@ class Panel {
     chart_trace = [];
     max_trace_length = 100;
 
-    initiated = false;
+    grid_widget = null;
 
-    constructor(topic, msg_types) {
+    initiated = false;
+    resize_event_handler = null;
+    //const event = new Event("build");
+
+    constructor(topic, msg_types, w, h, x = null, y = null) {
         this.topic = topic;
         console.log('Panel created for '+this.topic)
 
         let display_source = false;
 
-        $('#monitors').append(
+        let html =
             '<div class="monitor_panel" data-topic="'+topic+'">' +
-            '<h3>'+topic+'</h3>' +
-            '<a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a>' +
-            '<input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/>' +
-            '<label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(display_source?' checked':'')+' title="Display source data">Source</label>' +
-            '<div class="panel_widget" id="panel_widget_'+this.n+'"></div>' +
-            '<div class="panel_content" id="panel_content_'+this.n+'">Waiting for data...</div>' +
-            '<div class="cleaner"></div>' +
-            '<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
+                '<h3>'+topic+'</h3>' +
+                '<a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a>' +
+                '<input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/>' +
+                '<label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(display_source?' checked':'')+' title="Display source data">Source</label>' +
+                '<div class="panel_widget" id="panel_widget_'+this.n+'"></div>' +
+                '<div class="panel_content" id="panel_content_'+this.n+'">Waiting for data...</div>' +
+                '<div class="cleaner"></div>' +
+                '<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
-        );
+
+        let opts = {w: w, h:h, content: html};
+        if (x != null && x != undefined) opts.x = x;
+        if (y != null && y != undefined) opts.y = y;
+        this.grid_widget = grid.addWidget(opts);
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
@@ -89,8 +97,22 @@ class Panel {
             $('#panel_content_'+this.n).addClass('enabled');
         }
 
+        this.OnResize();
     }
 
+    OnResize() {
+        // let h = $('#panel_content_'+this.n).parent().parent('.grid-stack-item-content').innerHeight();
+        // let t = $('#panel_content_'+this.n).position().top;
+        // let pt = parseInt($('#panel_content_'+this.n).css('padding-top'));
+        // let pb = parseInt($('#panel_content_'+this.n).css('padding-bottom'));
+        // let mt = parseInt($('#panel_content_'+this.n).css('margin-top'));
+        // let mb = parseInt($('#panel_content_'+this.n).css('margin-bottom'));
+        // console.log('resize ', h, t, pt, pb, mt, mb)
+        //$('#panel_content_'+this.n).css('height', h-t-pt-pb-mt-mb);
+
+       if (this.resize_event_handler != null)
+           this.resize_event_handler();
+    }
 
     OnData(ev) {
 
@@ -98,7 +120,7 @@ class Panel {
         let decoded = null;
 
         //let oldh = $('#panel_content_'+this.n).height();
-        $('#panel_content_'+this.n).height('auto');
+        //$('#panel_content_'+this.n).height('auto');
         if (rawData instanceof ArrayBuffer) {
 
             let datahr = '';
@@ -129,7 +151,7 @@ class Panel {
             );
 
             if (panel_widgets[this.msg_types[0]])
-                panel_widgets[this.msg_types[0]](this, decoded);
+                panel_widgets[this.msg_types[0]].widget(this, decoded);
 
 
         } else {
@@ -147,7 +169,7 @@ class Panel {
         if (newh > this.max_height) {
             this.max_height = newh;
         }
-        $('#panel_content_'+this.n).height(this.max_height);
+        //$('#panel_content_'+this.n).height(this.max_height);
 
 
     }

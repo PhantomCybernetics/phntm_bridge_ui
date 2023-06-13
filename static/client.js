@@ -17,6 +17,7 @@ let supported_msg_types = null; //fetched static
 let pc = null;
 let pc_connected = false;
 
+let grid = null;
 let panels = {};
 let topics = {} // str id => { msg_types: str[]}
 let topic_dcs = {}; //str id => RTCDataChannel
@@ -395,11 +396,11 @@ function ToggleReadTopicSubscription(id_robot, topic, state) {
     });
 }
 
-function TogglePanel(topic, state) {
+function TogglePanel(topic, state, w, h, x = null, y = null) {
     let panel = panels[topic];
     if (state) {
         if (!panel) {
-            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null);
+            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null, w, h, x, y);
             panels[topic] = panel;
         }
     } else if (panel) {
@@ -407,14 +408,29 @@ function TogglePanel(topic, state) {
         delete panels[topic];
     }
 
-    UpdateUrlHash();
+    //UpdateUrlHash();
 }
 
 function UpdateUrlHash() {
     let hash = [];
-    for (let topic in panels) {
-        hash.push(topic);
-    }
+
+    //console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
+
+    $('#grid-stack').children('.grid-stack-item').each(function () {
+        widget = this;
+        let x = $(widget).attr('gs-x');
+        let y = $(widget).attr('gs-y');
+        let w = $(widget).attr('gs-w');
+        let h = $(widget).attr('gs-h');
+        let topic = $(widget).find('.monitor_panel').attr('data-topic');
+        let topicBits = [
+            topic,
+            [x, y].join('x'),
+            [w, h].join('x')
+        ];
+        hash.push(topicBits.join(':'));
+    });
+
     if (hash.length > 0)
         window.location.hash = ''+hash.join(';');
     else
