@@ -97,7 +97,8 @@ h3 {
     color: #fff;
 }
 
-#service_controls:hover {
+#service_controls:hover,
+#service_controls.setting_shortcuts {
     border-radius: 5px 5px 0px 0px;
 }
 
@@ -115,7 +116,8 @@ h3 {
     padding: 5px 10px 5px 10px;
 }
 
-#service_controls:hover #service_list {
+#service_controls:hover #service_list,
+#service_controls.setting_shortcuts #service_list {
     display: block;
 }
 
@@ -130,6 +132,37 @@ h3 {
 
 .service_heading {
     font-weight: bold;
+}
+
+#services_gamepad_mapping_toggle {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    display: none;
+    color: #fff6;
+    top: 13px;
+    right: 10px;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+
+#service_controls:hover #services_gamepad_mapping_toggle,
+#service_controls.setting_shortcuts #services_gamepad_mapping_toggle {
+    display: block
+}
+
+#mapping-confirmation #current-key {
+    background-color: blue;
+    display: block;
+    width: 210px;
+    height: 80px;
+    margin: 0px auto;
+    border-radius: 15px;
+    color: yellow;
+    font-size: 30px;
+    line-height: 80px;
+    text-align: center;
 }
 
 .service.nonhandled  {
@@ -157,7 +190,20 @@ h3 {
     border-radius: 5px;
     padding: 5px 20px;
     margin: 5px 5px 0px 0px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
 }
+
+.setting_shortcuts .service_button {
+    border: 1px dashed yellow;
+    margin-right: 4px;
+    margin-top: 4px;
+    /* -webkit-box-shadow:inset 0px 0px 0px 1px yellow;
+    -moz-box-shadow:inset 0px 0px 0px 1px yellow;
+    box-shadow:inset 0px 0px 0px 1px yellow; */
+}
+
 .service_button:hover {
     background: #006dff;
 }

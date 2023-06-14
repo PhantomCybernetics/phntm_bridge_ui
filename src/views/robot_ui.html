@@ -19,6 +19,7 @@
 
     <div id="service_controls">
         <h3 id="services_heading">Services</h3>
+        <a href="#" id="services_gamepad_mapping_toggle">[shortcuts]</a>
         <div id="service_list"></div>
     </div>
 </div>
@@ -34,6 +35,8 @@
         <div id="gamepad_debug"></div>
     </div>
 </div>
+
+<div id="mapping-confirmation"></div>
 
 <script type="text/javascript">
 
@@ -366,6 +369,20 @@
 
         });
 
+
+        $('#services_gamepad_mapping_toggle').click(function(event) {
+
+            if (!$('#service_controls').hasClass('setting_shortcuts')) {
+                $('#service_controls').addClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('Press a button to map...');
+            } else {
+                $('#service_controls').removeClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('[shortcuts]');
+            }
+
+            event.preventDefault();
+        });
+
         // socket.on('offer', (offer_data) => {
         //     console.log('Got webrtc offer:', offer_data)
         //     let id_robot = Object.keys(offer_data)[0];
@@ -383,5 +400,7 @@
 
 
 </script>
+
+
 
 <%- include('partial/footer.html'); %>

@@ -193,8 +193,45 @@ class GamepadWriter {
             JSON.stringify(msg, null, 2)
             //+ '<br>' + JSON.stringify(debug, null, 2)
         );
-        if (transmitting && window.gamepadWriter.dc && window.gamepadWriter.dc.readyState == 'open')
-            window.gamepadWriter.Write(msg);
+
+
+        if (capturing_gamepad_input) {
+            CaptureGamepadInput(buttons, axes);
+        } else {
+            if (transmitting && window.gamepadWriter.dc && window.gamepadWriter.dc.readyState == 'open')
+                window.gamepadWriter.Write(msg);
+        }
+
+        if (gamepad_service_mapping) {
+            for (const [service_name, service_mapping] of Object.entries(gamepad_service_mapping)) {
+                //let  = gamepad_service_mapping[service_name];
+                for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
+                    //let  = gamepad_service_mapping[service_name][btn_name];
+                    //console.log('btns_cond', btns_cond)
+                    let btns_cond = btns_config.btns_cond;
+                    let num_pressed = 0;
+                    for (let i = 0; i < btns_cond.length; i++) {
+                        let b = btns_cond[i];
+                        if (buttons[b] && buttons[b].pressed)
+                            num_pressed++;
+                    }
+                    if (btns_cond.length && num_pressed == btns_cond.length) {
+                        if (!btns_config['needs_reset']) {
+                            console.warn('service '+service_name+' triggering '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
+                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
+
+                            $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]').click();
+
+                        }
+                    } else if (btns_config['needs_reset']) {
+                        gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
+                    }
+                }
+                // if (buttons[service.btn_id].pressed) {
+                //     ServiceCall(window.gamepadWriter.id_robot, service_name, service.msg, window.gamepadWriter.socket);
+                // }
+            }
+        }
 
         requestAnimationFrame(window.gamepadWriter.UpdateLoop);
     }
