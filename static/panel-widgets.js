@@ -144,15 +144,18 @@ function RangeWidget(panel, decoded) {
 
     let width = $('#panel_widget_'+panel.n).width();
     let height = $('#panel_widget_'+panel.n).height();
-
+    let mt = parseFloat($('#panel_widget_'+panel.n).css('margin-top'));
+    let mb = parseFloat($('#panel_widget_'+panel.n).css('margin-bottom'));
+    //height = height - mt - mb;
     let c = lerpColor('#259FFB', '#ff0000', gageVal / 100.0);
 
     let options = {
         chart: {
-            height: 'auto',
-            width: width,
+            height: '100%',
+            width: '100%',
             type: "radialBar",
-            offsetY: -10,
+            offsetY: 10,
+            redrawOnParentResize: true,
         },
         series: [ 0 ],
         colors: [ c ],
@@ -210,6 +213,7 @@ function RangeWidget(panel, decoded) {
         panel.chart.render();
     }
 
+    //console.log('updating range '+panel.topic+' w w='+width+'; h='+height);
     options.series = [ gageVal ];
     panel.chart.updateOptions(options);
     // this.chart.updateSeries([

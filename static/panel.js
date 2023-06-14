@@ -19,51 +19,93 @@ class Panel {
     resize_event_handler = null;
     //const event = new Event("build");
 
-    constructor(topic, msg_types, w, h, x = null, y = null) {
+    //widget_opts = {};
+
+    constructor(topic, msg_types, w, h, x = null, y = null, src_visible = false) {
         this.topic = topic;
         console.log('Panel created for '+this.topic)
 
-        let display_source = false;
+        //let display_source = false;
 
         let html =
             '<div class="monitor_panel" data-topic="'+topic+'">' +
                 '<h3>'+topic+'</h3>' +
-                '<a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a>' +
-                '<input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/>' +
-                '<label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(display_source?' checked':'')+' title="Display source data">Source</label>' +
-                '<div class="panel_widget" id="panel_widget_'+this.n+'"></div>' +
-                '<div class="panel_content" id="panel_content_'+this.n+'">Waiting for data...</div>' +
+                '<div class="monitor_menu">' +
+                    '<div class="monitor_menu_content">' +
+                        '<div class="menu_line" id="panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
+                        '<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>' +
+                        '<div class="menu_line" id="display_panel_source_link_'+this.n+'" style="display:none"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>' +
+                        '<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="panel_widget'+(src_visible?' content_enabled':'')+'" id="panel_widget_'+this.n+'"></div>' +
+                '<div class="panel_content'+(src_visible?' enabled':'')+'" id="panel_content_'+this.n+'">Waiting for data...</div>' +
                 '<div class="cleaner"></div>' +
                 '<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
 
-        let opts = {w: w, h:h, content: html};
-        if (x != null && x != undefined) opts.x = x;
-        if (y != null && y != undefined) opts.y = y;
-        this.grid_widget = grid.addWidget(opts);
+        let widget_opts = {w: w, h:h, content: html};
+        if (x != null && x != undefined) widget_opts.x = x;
+        if (y != null && y != undefined) widget_opts.y = y;
+        this.grid_widget = grid.addWidget(widget_opts);
+
+
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
-            console.log('click '+that.n)
+            /*console.log('click '+that.n)
             let el = $('#panel_msg_type_'+that.n);
             if (el.css('display') != 'block')
                 el.css('display', 'block');
             else if (!el.hasClass('err'))
                 el.css('display', 'none');
+                */
             ev.cancelBubble = true;
             ev.preventDefault();
         });
 
+        let source_el = $('#panel_content_'+this.n);
+        let widget_el = $('#panel_widget_'+this.n);
         $('#display_panel_source_'+this.n).change(function(ev) {
-            let el = $('#panel_content_'+that.n);
-            let widget = $('#panel_widget_'+that.n);
             if ($(this).prop('checked')) {
-                el.addClass('enabled');
-                widget.addClass('content_enabled');
+                source_el.addClass('enabled');
+                widget_el.addClass('content_enabled');
+
+                let w = parseInt($(that.grid_widget).attr('gs-w'))*2;
+                console.log('grid cell opts w=', w);
+                grid.update(that.grid_widget, {w : w});
+                that.OnResize();
             } else {
-                el.removeClass('enabled');
-                widget.removeClass('content_enabled');
+                source_el.removeClass('enabled');
+                widget_el.removeClass('content_enabled');
+
+                let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
+                console.log('grid cell opts w=', w);
+                grid.update(that.grid_widget, {w : w});
+                that.OnResize();
             }
+        });
+
+
+
+        $('#close_panel_link_'+this.n).click(function(ev) {
+            /*console.log('click '+that.n)
+            let el = $('#panel_msg_type_'+that.n);
+            if (el.css('display') != 'block')
+                el.css('display', 'block');
+            else if (!el.hasClass('err'))
+                el.css('display', 'none');
+                */
+
+            $('#topic_list .topic[data-topic="'+that.topic+'"] INPUT').click()
+            //$('#cb_topic_'+that.n).click()
+
+            //that.Close();
+            //delete panels[that.topic];
+
+
+            ev.cancelBubble = true;
+            ev.preventDefault();
         });
 
         if (msg_types)
@@ -92,7 +134,7 @@ class Panel {
         let hasWidget = (panel_widgets[this.msg_types[0]] != undefined);
 
         if (hasWidget) {
-            $('#display_panel_source_label_'+this.n).addClass('enabled');
+            $('#display_panel_source_link_'+this.n).css('display', 'block');
         } else {
             $('#panel_content_'+this.n).addClass('enabled');
         }
@@ -175,8 +217,15 @@ class Panel {
     }
 
     Close() {
+        let x = parseInt($(this.grid_widget).attr('gs-x'));
+        let y = parseInt($(this.grid_widget).attr('gs-y'));
+
+        grid.removeWidget(this.grid_widget);
+
         $('.monitor_panel[data-topic="'+this.topic+'"]').remove();
         console.log('Panel closed for '+this.topic)
     }
+
+
 
 }

@@ -396,11 +396,11 @@ function ToggleReadTopicSubscription(id_robot, topic, state) {
     });
 }
 
-function TogglePanel(topic, state, w, h, x = null, y = null) {
+function TogglePanel(topic, state, w, h, x = null, y = null, src_visible = false) {
     let panel = panels[topic];
     if (state) {
         if (!panel) {
-            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null, w, h, x, y);
+            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null, w, h, x, y, src_visible);
             panels[topic] = panel;
         }
     } else if (panel) {
@@ -426,8 +426,11 @@ function UpdateUrlHash() {
         let topicBits = [
             topic,
             [x, y].join('x'),
-            [w, h].join('x')
+            [w, h].join('x'),
         ];
+        let source_visible = $(widget).find('.panel_content').hasClass('enabled');
+        if (source_visible)
+            topicBits.push('src');
         hash.push(topicBits.join(':'));
     });
 

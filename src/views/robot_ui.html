@@ -111,8 +111,15 @@
                             w = panelSize[0];
                             h = panelSize[1];
                         }
-                        console.info('Opening panel for ', topic);
-                        TogglePanel(topic, true, w, h, x, y)
+                        let src_on = false;
+                        for (let j = 2; j < topic_vars.length; j++) {
+                            if (topic_vars[j] == 'src') {
+                                src_on = true;
+                            }
+                        }
+
+                        console.info('Opening panel for '+topic+'; src_on='+src_on);
+                        TogglePanel(topic, true, w, h, x, y, src_on)
                     }
                 }
 
@@ -219,7 +226,7 @@
                             + '>'
                             + service.service
                             + '</div>'
-                            + '<div class="service_input" id="service_input_type'+i+'">' + service.msgType + '</div>'
+                            + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msgType + '</div>'
                             + '<div class="service_input" id="service_input_'+i+'"></div>'
                             + '</div>'
                         );
@@ -346,7 +353,6 @@
                 let w = 2; let h = 2;
 
                 let msg_type = topics[topic].msg_types[0]
-
 
                 if (panel_widgets[msg_type]) {
                     w = panel_widgets[msg_type].w;
