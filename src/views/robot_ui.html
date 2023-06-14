@@ -40,7 +40,7 @@
 
 <script type="text/javascript">
 
-
+    let id_robot = '<%= id_robot %>';
 
     $(document ).ready(function() {
 
@@ -127,13 +127,13 @@
                 }
 
 
-                window.gamepadWriter = new GamepadWriter(pc, '/joy', '<%= id_robot %>', socket, supported_msg_types);
+                window.gamepadController = new GamepadController(pc, '/joy', id_robot, socket, supported_msg_types);
 
                 //proceed when we have msg types ready
                 socket.connect();
             });
 
-        pc = InitPeerConnection('<%= id_robot %>');
+        pc = InitPeerConnection(id_robot);
 
         $('#msg_type_filter').change(()=>{
         let filter = $('#msg_type_filter').val();

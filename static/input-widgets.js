@@ -23,7 +23,7 @@ function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_typ
 
     $('#service_btn_'+service.n).click((ev)=>{
         if ($('#service_controls').hasClass('setting_shortcuts')) {
-            return MapServiceButton(ev.target);
+            return MapServiceButton(ev.target, id_robot);
         }
 
         $('#service_btn_'+service.n).addClass('working');
@@ -45,7 +45,7 @@ function ServiceCallInput_Bool(el, service, id_robot, socket, supported_msg_type
 
     $('#service_btn_'+service.n+'_true').click((ev)=>{
         if ($('#service_controls').hasClass('setting_shortcuts')) {
-            return MapServiceButton(ev.target);
+            return MapServiceButton(ev.target, id_robot);
         }
 
         $('#service_btn_'+service.n+'_true').addClass('working');
@@ -58,7 +58,7 @@ function ServiceCallInput_Bool(el, service, id_robot, socket, supported_msg_type
     });
     $('#service_btn_'+service.n+'_false').click((ev)=>{
         if ($('#service_controls').hasClass('setting_shortcuts')) {
-            return MapServiceButton(ev.target);
+            return MapServiceButton(ev.target, id_robot);
         }
         $('#service_btn_'+service.n+'_false').addClass('working');
         let msg = FindMessageType(service.msg_type+'_Request', supported_msg_types);

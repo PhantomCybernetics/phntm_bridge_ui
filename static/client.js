@@ -105,7 +105,7 @@ function InitPeerConnection(id_robot) {
         if (evt.currentTarget.connectionState == 'connected') {
             if (!pc_connected) {
                 pc_connected = true;
-                window.gamepadWriter.InitProducer()
+                window.gamepadController.InitProducer()
                 let panelTopics = Object.keys(panels);
                 for (let i = 0; i < panelTopics.length; i++) {
                     let topic = panelTopics[i];
@@ -116,7 +116,7 @@ function InitPeerConnection(id_robot) {
             }
         } else if (pc_connected) {
             pc_connected = false;
-            window.gamepadWriter.ClearProducer();
+            window.gamepadController.ClearProducer();
         }
     });
 
@@ -409,84 +409,6 @@ function TogglePanel(topic, state, w, h, x = null, y = null, src_visible = false
     }
 
     //UpdateUrlHash();
-}
-
-
-let capturing_gamepad_input = false;
-let captured_gamepad_input = [];
-let gamepad_service_mapping = {}
-function CaptureGamepadInput(buttons, axes) {
-    if (!capturing_gamepad_input) {
-        return;
-    }
-
-    let something_pressed = false;
-    for (let i = 0; i < buttons.length; i++) {
-        if (buttons[i] && buttons[i].pressed) {
-            something_pressed = true;
-            if (captured_gamepad_input.indexOf(i) === -1) {
-                captured_gamepad_input.push(i);
-            }
-        }
-    }
-    if (something_pressed) {
-        for (let i = 0; i < captured_gamepad_input.length; i++) {
-            let btn = captured_gamepad_input[i];
-            if (!buttons[btn] || !buttons[btn].pressed) {
-                captured_gamepad_input.splice(i, 1);
-                i--;
-            }
-        }
-    }
-
-    $('#current-key').html(captured_gamepad_input.join(' + '));
-}
-
-
-
-function MapServiceButton(button) {
-
-    let service_name = $(button).attr('data-service');
-    let btn_name = $(button).attr('data-name');
-    console.warn('Mapping '+service_name+' => ' + btn_name +' ...');
-
-    $('#mapping-confirmation').attr('title', 'Mapping '+service_name+':'+btn_name);
-    $('#mapping-confirmation').html('Press a gamepad button or combination...<br><br><span id="current-key"></span>');
-    captured_gamepad_input = [];
-    capturing_gamepad_input = true;
-    $( "#mapping-confirmation" ).dialog({
-        resizable: false,
-        height: "auto",
-        width: 400,
-        modal: true,
-        buttons: {
-          Clear: function() {
-            captured_gamepad_input = [];
-            $('#current-key').html('');
-            //$( this ).dialog( "close" );
-          },
-          Cancel: function() {
-            capturing_gamepad_input = false;
-            $( this ).dialog( "close" );
-          },
-          Save: function() {
-            capturing_gamepad_input = false;
-            if (!gamepad_service_mapping[service_name])
-                gamepad_service_mapping[service_name] = {};
-            if (!gamepad_service_mapping[service_name][btn_name])
-                gamepad_service_mapping[service_name][btn_name] = { };
-
-            gamepad_service_mapping[service_name][btn_name]['btns_cond'] = captured_gamepad_input;
-            captured_gamepad_input = [];
-            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
-
-            console.log('Mapping saved: ', gamepad_service_mapping);
-            $( this ).dialog( "close" );
-            $('#service_controls.setting_shortcuts').removeClass('setting_shortcuts');
-            $('#services_gamepad_mapping_toggle').html('[shortcuts]');
-          }
-        }
-      });
 }
 
 function UpdateUrlHash() {
