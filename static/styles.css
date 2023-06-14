@@ -2,6 +2,7 @@ body {
     background-color: #0b5065;
     color: black;
     margin: 20px;
+    padding-bottom: 100px; /* make some space for panel resizing  */
   }
 
 .msgTypes {
@@ -310,7 +311,7 @@ h3 {
     background-color: #001649;
 }
 
-#panel_msg_types_line:hover {
+.panel_msg_types_line:hover {
     background-color: transparent;
 }
 
@@ -378,7 +379,7 @@ h3 {
 
 }
 
-.panel_msg_type {
+#msg_type-dialog {
     background: #060606;
     margin-top: 10px;
     font-size: 12px;
@@ -388,9 +389,11 @@ h3 {
     color: #00fff9;
     border-radius: 5px;
     display: none;
+    overflow: scroll;
+    height: -webkit-fill-available;
 }
 
-.panel_msg_type.err {
+#msg_type-dialog.err {
     background: rgb(215 3 35);
     font-weight: bold;
     display: block !important;

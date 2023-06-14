@@ -32,7 +32,7 @@ class Panel {
                 '<h3>'+topic+'</h3>' +
                 '<div class="monitor_menu">' +
                     '<div class="monitor_menu_content">' +
-                        '<div class="menu_line" id="panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
+                        '<div class="menu_line" class="panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
                         '<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>' +
                         '<div class="menu_line" id="display_panel_source_link_'+this.n+'" style="display:none"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>' +
                         '<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>' +
@@ -41,7 +41,7 @@ class Panel {
                 '<div class="panel_widget'+(src_visible?' content_enabled':'')+'" id="panel_widget_'+this.n+'"></div>' +
                 '<div class="panel_content'+(src_visible?' enabled':'')+'" id="panel_content_'+this.n+'">Waiting for data...</div>' +
                 '<div class="cleaner"></div>' +
-                '<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
+                //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
 
         let widget_opts = {w: w, h:h, content: html};
@@ -53,13 +53,21 @@ class Panel {
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
-            /*console.log('click '+that.n)
-            let el = $('#panel_msg_type_'+that.n);
-            if (el.css('display') != 'block')
-                el.css('display', 'block');
-            else if (!el.hasClass('err'))
-                el.css('display', 'none');
-                */
+
+            $('#msg_type-dialog').attr('title', that.msg_types[0]);
+            $('#msg_type-dialog').html((that.msg_type ? JSON.stringify(that.msg_type, null, 2) : 'Message type not loaded!'));
+            $( "#msg_type-dialog" ).dialog({
+                resizable: true,
+                height: 700,
+                width: 500,
+                modal: true,
+                buttons: {
+                    Okay: function() {
+                        $(this).dialog( "close" );
+                    },
+                }
+            });
+
             ev.cancelBubble = true;
             ev.preventDefault();
         });
@@ -121,7 +129,6 @@ class Panel {
         this.msg_types = msg_types;
         this.msg_type = msg_types ? FindMessageType(msg_types[0], supported_msg_types) : null;
         $('#panel_msg_types_'+this.n).html(msg_types ? msg_types.join(', ') : '');
-        $('#panel_msg_type_'+this.n).html((this.msg_type ? JSON.stringify(this.msg_type, null, 2) : 'Message type not loaded!'));
 
         if (this.msg_type == null && msg_types != null)
             $('#panel_msg_type_'+this.n).addClass('err');
