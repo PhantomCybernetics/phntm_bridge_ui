@@ -34,7 +34,31 @@ $(document ).ready(function() {
     LoadGamepadServiceMapping(id_robot);
 });
 
+function MarkMappedServiceButtons() {
+    if (!gamepad_service_mapping)
+        return;
+
+    $('.service_button').removeClass('mapped');
+    $('.service_button').attr('title');
+    for (const [service_name, service_mapping] of Object.entries(gamepad_service_mapping)) {
+        for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
+            console.log('MARKING MAPPED: ', service_name, btn_name, $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]'))
+            let btns_print = [];
+            for (let i = 0; i < btns_config.btns_cond.length; i++) {
+                let b = btns_config.btns_cond[i];
+                btns_print.push('['+b+']');
+            }
+            $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]')
+                .addClass('mapped')
+                .attr('title', 'Mapped to gamepad button(s): '+btns_print.join(' + '));
+        }
+    }
+}
+
 function SaveGamepadServiceMapping(id_robot) {
+
+    MarkMappedServiceButtons();
+
     if (typeof(Storage) === "undefined") {
         console.warn('No Web Storage support, cannot save gamepad mapping');
         return;
@@ -72,7 +96,8 @@ function LoadGamepadServiceMapping(id_robot) {
 
     for (let i = 0; i < val.length; i++) {
         let service_data = val[i];
-        gamepad_service_mapping[service_data.service_name] = {};
+        if (!gamepad_service_mapping[service_data.service_name])
+            gamepad_service_mapping[service_data.service_name] = {};
         gamepad_service_mapping[service_data.service_name][service_data.btn_name] = {
             btns_cond: service_data.btns_cond,
             needs_reset: false
@@ -365,9 +390,16 @@ function MapServiceButton(button, id_robot) {
             if (!gamepad_service_mapping[service_name][btn_name])
                 gamepad_service_mapping[service_name][btn_name] = { };
 
-            gamepad_service_mapping[service_name][btn_name]['btns_cond'] = captured_gamepad_input;
-            captured_gamepad_input = [];
-            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
+            if (captured_gamepad_input.length > 0) {
+                gamepad_service_mapping[service_name][btn_name]['btns_cond'] = captured_gamepad_input;
+                captured_gamepad_input = [];
+                gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
+            } else {
+                delete gamepad_service_mapping[service_name][btn_name];
+                if (Object.keys(gamepad_service_mapping[service_name]).length == 0)
+                    delete gamepad_service_mapping[service_name];
+            }
+
 
             //console.log('Mapping saved: ', gamepad_service_mapping);
             $( this ).dialog( "close" );

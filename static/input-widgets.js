@@ -19,7 +19,7 @@ function ServiceCall(id_robot, service, msg, socket, cb) {
 
 function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_types) {
 
-    $(el).html('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Call">Call</button>');
+    $(el).html('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
 
     $('#service_btn_'+service.n).click((ev)=>{
         if ($('#service_controls').hasClass('setting_shortcuts')) {
@@ -39,8 +39,8 @@ function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_typ
 
 function ServiceCallInput_Bool(el, service, id_robot, socket, supported_msg_types) {
     $(el).html(
-        '<button class="service_button true" id="service_btn_'+service.n+'_true" data-service="'+service.service+'" data-name="True">True</button>' +
-        '<button class="service_button false" id="service_btn_'+service.n+'_false" data-service="'+service.service+'" data-name="False">False</button>'
+        '<button class="service_button true" id="service_btn_'+service.n+'_true" data-service="'+service.service+'" data-name="Btn_True">True</button>' +
+        '<button class="service_button false" id="service_btn_'+service.n+'_false" data-service="'+service.service+'" data-name="Btn_False">False</button>'
     );
 
     $('#service_btn_'+service.n+'_true').click((ev)=>{

@@ -226,7 +226,7 @@
                         $('#service_list').append('<div class="service '+(handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
                             + '<div '
                             + 'class="service_heading" '
-                            + 'title="'+service.msgType+'"'
+                            + 'title="'+service.service+'\n'+service.msgType+'"'
                             + '>'
                             + service.service
                             + '</div>'
@@ -243,7 +243,10 @@
 
                     });
 
+
                 });
+
+                MarkMappedServiceButtons();
 
                 $('#services_heading').html(services_data[id_robot].length+' Services');
             });
@@ -294,13 +297,15 @@
                         msg_types: topic.msgTypes
                     }
 
+                    let is_image = topic.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
+
                     $('#topic_list').append('<div class="topic" data-topic="'+topic.topic+'" data-msg_types="'+topic.msgTypes.join(',')+'">'
                         + '<input type="checkbox" id="cb_topic_'+i+'"'
                         //+ (!topic.robotTubscribed?' disabled':'')
                         + (panels[topic.topic] ? ' checked': '' )
                         + '/> '
                         + '<span '
-                        + 'class="topic" '
+                        + 'class="topic'+(is_image?' image':'')+'" '
                         + 'title="'+topic.msgTypes.join('; ')+'"'
                         + '>'
                         + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.topic+'</label>'
