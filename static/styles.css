@@ -181,6 +181,9 @@ h3 {
     padding-left: 5px;
 }
 
+.service.nonhandled .service_input {
+    display: none;
+}
 .service_input_type {
     color: white;
     font-size: 12px;
@@ -207,10 +210,12 @@ h3 {
 }
 
 .service_button.mapped {
-    border: 1px dotted #eaff00;
-    margin-right: 4px;
+    border-top: 3px solid #eaff00;
+    padding-top: 3px;
     margin-left: 0px;
-    margin-top: 11px;
+    margin-top: 9px;
+    /* filter: drop-shadow(2px 0px 0px yellow); */
+    /* border-spacing: revert; */
 }
 
 .service_button:hover {
