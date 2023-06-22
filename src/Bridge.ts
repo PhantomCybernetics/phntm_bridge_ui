@@ -736,7 +736,59 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
+    appSocket.on('answer', async function (answer:{ id_robot:string, sdp:string, type:string, id_app?:string, id_instance?:string}, returnCallback) {
+
+        $d.log('App sending webrtc answer to robot', answer);
+
+        if (!answer.id_robot || !answer.sdp || !answer.type) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid answer data'
+                })
+            }
+            return;
+        }
+
+        if (!ObjectId.isValid(answer.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+answer.id_robot
+                })
+            }
+            return;
+        }
+        let id_robot = new ObjectId(answer.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete answer['id_robot'];
+        answer['id_app'] = app.id_app.toString();
+        answer['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('answer', answer, (answerReplyData:any) => {
+
+            $d.log('Got robot\'s answer reply:', answerReplyData);
+
+            return returnCallback(answerReplyData);
+
+            //if (i == 0 && returnCallback) { //only the 1st triggers reply (only 1 expected)
+            //    returnCallback(replyData)
+           // }
+        });
+
+    });
+
+    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][], sdp_offer?:string, id_app?:string, id_instance?:string}, returnCallback) {
 
         $d.log('App requesting read subscription to robot with:', data);
 
@@ -892,10 +944,22 @@ sioApps.on('connect', async function(appSocket : AppSocket){
     appSocket.on('disconnect', (data:any) => {
 
         $d.l(('Socket disconnect for app: '+data).red);
+
         app.isAuthentificated = false;
         app.isConnected = false;
         app.socket = null;
         app.RemoveFromConnected();
+
+        for (let i = 0; i < app.robotSubscriptions.length; i++) {
+            let id_robot = app.robotSubscriptions[i];
+            let robot = Robot.FindConnected(id_robot);
+            if (robot && robot.socket) {
+                robot.socket.emit('peer:disconnected', {
+                    id_app: app.id_app.toString(),
+                    id_instance: app.id_instance.toString()
+                });
+            }
+        }
 
         /*if (user != null && user.clientType == ClientType.PHNTM) {
             $d.log((user+' at '+user.clientAddress+' disconnected').blue);

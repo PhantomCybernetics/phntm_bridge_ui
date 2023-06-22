@@ -286,10 +286,9 @@ h3 {
     display: none;
     position: absolute;
     right: 0px;
-    top: 100%;
-    background-color: #139a80;
+    top: 15px;
     border-radius: 5px 0px 5px 5px;
-    padding: 5px 0px;
+    padding: 5px 0px 0px 0px;
     font-size: 13px;
     color: #fff;
     text-align: left;
@@ -311,20 +310,38 @@ h3 {
 }
 
 .monitor_panel .menu_line {
+    background-color: #139a80;
+}
+
+.monitor_panel .menu_line A, .monitor_panel .menu_line Label {
+    text-decoration: none;
+    display: block;
     padding: 5px 5px 5px 8px;
 }
 
-.monitor_panel .menu_line A {
-    text-decoration: none;
-    display: block;
+.monitor_panel .menu_line:last-child A {
+    padding-bottom: 7px;
 }
 
 .monitor_panel .menu_line:hover {
     background-color: #001649;
 }
 
+.monitor_panel .menu_line:first-child {
+    padding-top: 5px;
+    border-radius: 5px 0px 0px 0px;
+}
+
+.monitor_panel .menu_line:last-child {
+    border-radius: 0px 0px 5px 5px;
+}
+
+.panel_msg_types_line {
+    padding-bottom: 10px;
+}
+
 .panel_msg_types_line:hover {
-    background-color: transparent;
+    background-color: #139a80 !important;
 }
 
 .monitor_panel .msg_types {
@@ -332,6 +349,7 @@ h3 {
     padding: 6px 10px;
     border-radius: 5px;
     background: #4c7fb0;
+    margin: 0px 3px;
 }
 
 .monitor_panel  .msg_types:hover {
@@ -483,6 +501,26 @@ h3 {
 .panel_widget.log .log_line .time {
     color: #8c0361;
 }
+
+.panel_widget.video {
+    background: #000;
+    position: relative;
+    height: -webkit-fill-available;
+}
+
+.panel_widget video {
+    /* margin: auto auto; */
+    /* vertical-align: middle; */
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%) translateX(-50%);
+    left: 50%;
+    width: 100%;
+    border-radius: 5px;
+}
+
 
 .panel_widget.enabled {
     display: block;

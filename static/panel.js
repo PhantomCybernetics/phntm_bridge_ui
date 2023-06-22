@@ -3,6 +3,7 @@ let panelNo = 0;
 
 class Panel {
     topic = null;
+    id_stream = null;
     msg_types = [];
     n = ++panelNo;
     msg_type = null;
@@ -32,7 +33,7 @@ class Panel {
                 '<h3>'+topic+'</h3>' +
                 '<div class="monitor_menu">' +
                     '<div class="monitor_menu_content">' +
-                        '<div class="menu_line" class="panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
+                        '<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
                         '<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>' +
                         '<div class="menu_line" id="display_panel_source_link_'+this.n+'" style="display:none"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>' +
                         '<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>' +
@@ -48,8 +49,6 @@ class Panel {
         if (x != null && x != undefined) widget_opts.x = x;
         if (y != null && y != undefined) widget_opts.y = y;
         this.grid_widget = grid.addWidget(widget_opts);
-
-
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
@@ -139,8 +138,15 @@ class Panel {
         }
 
         let hasWidget = (panel_widgets[this.msg_types[0]] != undefined);
+        let is_image = msg_types[0] == 'sensor_msgs/msg/Image'
 
-        if (hasWidget) {
+        if (is_image) {
+            console.log('making video el')
+            $('#panel_widget_'+this.n)
+                .addClass('enabled video')
+                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video>') //muted allows video autoplay in chrome before user interactions
+        }
+        else if (hasWidget) {
             $('#display_panel_source_link_'+this.n).css('display', 'block');
         } else {
             $('#panel_content_'+this.n).addClass('enabled');
@@ -199,7 +205,7 @@ class Panel {
                 datahr
             );
 
-            if (panel_widgets[this.msg_types[0]])
+            if (panel_widgets[this.msg_types[0]] && panel_widgets[this.msg_types[0]].widget)
                 panel_widgets[this.msg_types[0]].widget(this, decoded);
 
 

@@ -153,6 +153,8 @@ class GamepadController {
 
     InitProducer () {
 
+        return; //!! disabled for now
+
         if (this.dc)
             return;
 
@@ -309,10 +311,16 @@ class GamepadController {
                     }
                     if (btns_cond.length && num_pressed == btns_cond.length) {
                         if (!btns_config['needs_reset']) {
-                            console.warn('service '+service_name+' triggering '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
-                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
 
-                            $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]').click();
+                            let btn_el = $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]');
+
+                            if (btn_el.length) {
+                                console.warn('Triggering '+service_name+' btn '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
+                                btn_el.click();
+                            } else {
+                                console.log('Not triggering '+service_name+' btn '+btn_name+'; btn not found (service not discovered yet?)');
+                            }
+                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
 
                         }
                     } else if (btns_config['needs_reset']) {

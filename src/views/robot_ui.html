@@ -71,7 +71,7 @@
             if (items) {
                 let str = '';
                 items.forEach(function(item) { str += ' (x,y)=' + item.x + ',' + item.y; });
-                console.warn('Grid: '+ e.type + ' ' + items.length + ' items:' + str );
+                //console.warn('Grid: '+ e.type + ' ' + items.length + ' items:' + str );
             }
 
             UpdateUrlHash();
@@ -79,7 +79,7 @@
 
         grid.on('resize', function(e, el) {
             let topic = $(el).find('.monitor_panel').attr('data-topic');
-            console.warn('Grid resized: '+ topic);
+            //console.warn('Grid resized: '+ topic);
             panels[topic].OnResize();
         });
 
@@ -122,7 +122,7 @@
                             }
                         }
 
-                        console.info('Opening panel for '+topic+'; src_on='+src_on);
+                        //console.info('Opening panel for '+topic+'; src_on='+src_on);
                         TogglePanel(topic, true, w, h, x, y, src_on)
                     }
                 }
@@ -268,8 +268,9 @@
             console.log('Topics:', topics_data);
 
             let msg_type_filters = [];
-            let old_topics = topics;
-            topics = {};
+            //let old_topics = topics;
+            //topics = {};
+            let subscribe_topics = [];
 
             let i = 0;
             Object.keys(topics_data).forEach((id_robot) => {
@@ -293,8 +294,11 @@
 
                 topics_data[id_robot].forEach((topic)=>{
 
-                    topics[topic.topic] = {
-                        msg_types: topic.msgTypes
+                    if (!topics[topic.topic]) {
+                        topics[topic.topic] = {
+                            msg_types: topic.msgTypes,
+                            subscribed: false
+                        }
                     }
 
                     let is_image = topic.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
@@ -329,7 +333,7 @@
 
                     if (subscribe) {
                         //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                        ToggleReadTopicSubscription('<%= id_robot %>', topic.topic, true);
+                        subscribe_topics.push(topic.topic);
                     } else {
                         //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
                     }
@@ -337,12 +341,12 @@
                     //TogglePanel(topic.topic, true);
                     //}
 
-
-
-
                     i++;
                 });
             });
+
+            if (subscribe_topics.length)
+                SetTopicsReadSubscription('<%= id_robot %>', subscribe_topics, true);
 
             $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
 
@@ -368,7 +372,7 @@
                     h = panel_widgets[msg_type].h;
                 }
                 TogglePanel(topic, state, w, h);
-                ToggleReadTopicSubscription('<%= id_robot %>', topic, state);
+                SetTopicsReadSubscription('<%= id_robot %>', [ topic ], state);
             });
 
 

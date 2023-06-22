@@ -3,6 +3,7 @@ let panel_widgets = {
     'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
     'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
     'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
+    'sensor_msgs/msg/Image' : { widget: null, w:4, h:4 },
 }
 
 // BATTERY VISUALIZATION
