@@ -1,5 +1,301 @@
 [
   {
+    "name": "astra_camera_msgs/msg/DeviceInfo",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "vid"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "pid"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "serial_number"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "firmware_version"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "supported_min_sdk_version"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "hardware_version"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/msg/Extrinsics",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "rotation",
+        "isArray": true,
+        "arrayLength": 9
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "translation",
+        "isArray": true,
+        "arrayLength": 3
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/msg/Metadata",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "json_data"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetCameraInfo_Request",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "structure_needs_at_least_one_member"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetCameraInfo_Response",
+    "definitions": [
+      {
+        "type": "sensor_msgs/msg/CameraInfo",
+        "isComplex": true,
+        "name": "info"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetCameraParams_Request",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "structure_needs_at_least_one_member"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetCameraParams_Response",
+    "definitions": [
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "l_intr_p",
+        "isArray": true,
+        "arrayLength": 4
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "r_intr_p",
+        "isArray": true,
+        "arrayLength": 4
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "r2l_r",
+        "isArray": true,
+        "arrayLength": 9
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "r2l_t",
+        "isArray": true,
+        "arrayLength": 3
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "l_k",
+        "isArray": true,
+        "arrayLength": 5
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "r_k",
+        "isArray": true,
+        "arrayLength": 5
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetDeviceInfo_Request",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "structure_needs_at_least_one_member"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetDeviceInfo_Response",
+    "definitions": [
+      {
+        "type": "astra_camera_msgs/msg/DeviceInfo",
+        "isComplex": true,
+        "name": "info"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetInt32_Request",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "structure_needs_at_least_one_member"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetInt32_Response",
+    "definitions": [
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "data"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetString_Request",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "structure_needs_at_least_one_member"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/GetString_Response",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "data"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/SetInt32_Request",
+    "definitions": [
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "data"
+      }
+    ]
+  },
+  {
+    "name": "astra_camera_msgs/srv/SetInt32_Response",
+    "definitions": [
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
     "name": "builtin_interfaces/msg/Duration",
     "definitions": [
       {
