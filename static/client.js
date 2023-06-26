@@ -34,6 +34,8 @@ function InitPeerConnection(id_robot) {
     pc_.createDataChannel('_ignore_'); //wouldn't otherwise open chanels (?)
     //for ()
     transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
+    transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
+
     //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
     //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
 
@@ -465,8 +467,14 @@ function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
         topics: [],
     };
     for (let i = 0; i < topics_list.length; i++) {
+        if (!topics[topics_list[i]])
+            continue;
         topics[topics_list[i]].subscribed = subscribe;
         subscription_data.topics.push([ topics_list[i], subscribe ? 1 : 0 ]);
+    }
+
+    if (!subscription_data['topics'].length) {
+        return
     }
 
     if (!subscribe) {

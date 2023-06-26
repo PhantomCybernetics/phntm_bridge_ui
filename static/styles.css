@@ -84,7 +84,7 @@ h3 {
 }
 
 #service_controls {
-    width: 400px;
+    width: 240px;
     background: #b311a3;
     padding: 10px;
     border-radius: 5px;
@@ -112,7 +112,7 @@ h3 {
     background: #ecafed;
     left: 0px;
     top: 100%;
-    width: 400px;
+    width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
 }
@@ -292,6 +292,7 @@ h3 {
     font-size: 13px;
     color: #fff;
     text-align: left;
+    min-width: 120px;
 }
 
 .monitor_menu_content A {
@@ -352,14 +353,26 @@ h3 {
     margin: 0px 3px;
 }
 
+.monitor_panel .msg_types.err {
+    background: red;
+}
+
 .monitor_panel  .msg_types:hover {
     background: #558ec3;
+}
+
+.monitor_panel .msg_types.err:hover {
+    background: #c20000;
 }
 
 .monitor_panel h3 {
     z-index: 2;
     position: relative;
     padding-right: 10px;
+}
+
+SPAN.error {
+    color: red;
 }
 
 #topic_list .topic {
@@ -370,6 +383,9 @@ h3 {
     color: #ff00fa
 }
 
+#topic_list .topic.unsupported_message_type {
+    color: gray
+}
 
 #topic_list .topic:hover {
     color: rgb(255, 0, 212);

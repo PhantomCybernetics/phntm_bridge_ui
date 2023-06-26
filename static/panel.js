@@ -54,7 +54,7 @@ class Panel {
         $('#panel_msg_types_'+this.n).click(function(ev) {
 
             $('#msg_type-dialog').attr('title', that.msg_types[0]);
-            $('#msg_type-dialog').html((that.msg_type ? JSON.stringify(that.msg_type, null, 2) : 'Message type not loaded!'));
+            $('#msg_type-dialog').html((that.msg_type ? JSON.stringify(that.msg_type, null, 2) : '<span class="error">Message type not loaded!</span>'));
             $( "#msg_type-dialog" ).dialog({
                 resizable: true,
                 height: 700,
@@ -103,9 +103,12 @@ class Panel {
             else if (!el.hasClass('err'))
                 el.css('display', 'none');
                 */
+            if ($('.topic[data-topic="'+topic+'"] INPUT:checkbox').length > 0) {
+                $('.topic[data-topic="'+topic+'"] INPUT:checkbox').click();
+            } else { //topics not loaded
+                TogglePanel(topic, false);
+            }
 
-            $('#topic_list .topic[data-topic="'+that.topic+'"] INPUT').click()
-            //$('#cb_topic_'+that.n).click()
 
             //that.Close();
             //delete panels[that.topic];
@@ -129,8 +132,10 @@ class Panel {
         this.msg_type = msg_types ? FindMessageType(msg_types[0], supported_msg_types) : null;
         $('#panel_msg_types_'+this.n).html(msg_types ? msg_types.join(', ') : '');
 
-        if (this.msg_type == null && msg_types != null)
-            $('#panel_msg_type_'+this.n).addClass('err');
+        if (this.msg_type == null && msg_types != null) {
+            $('#panel_msg_types_'+this.n).addClass('err');
+            $('#panel_content_'+this.n).html('<span class="error">Message type '+ msg_types.join(', ')+' not loaded</span>');
+        }
 
         if (this.msg_type != null) {
             let Reader = window.Serialization.MessageReader;

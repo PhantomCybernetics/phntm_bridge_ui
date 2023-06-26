@@ -292,40 +292,41 @@
 
                 $('#topics_heading').html(topics_data[id_robot].length+' Topics');
 
-                topics_data[id_robot].forEach((topic)=>{
+                topics_data[id_robot].forEach((topic_data)=>{
 
-                    if (!topics[topic.topic]) {
-                        topics[topic.topic] = {
-                            msg_types: topic.msgTypes,
+                    if (!topics[topic_data.topic]) {
+                        topics[topic_data.topic] = {
+                            msg_types: topic_data.msgTypes,
                             subscribed: false
                         }
                     }
 
-                    let is_image = topic.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
+                    let is_image = topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
+                    let msg_type_supported = FindMessageType(topic_data.msgTypes[0], supported_msg_types)
 
-                    $('#topic_list').append('<div class="topic" data-topic="'+topic.topic+'" data-msg_types="'+topic.msgTypes.join(',')+'">'
+                    $('#topic_list').append('<div class="topic" data-topic="'+topic_data.topic+'" data-msg_types="'+topic_data.msgTypes.join(',')+'">'
                         + '<input type="checkbox" id="cb_topic_'+i+'"'
                         //+ (!topic.robotTubscribed?' disabled':'')
-                        + (panels[topic.topic] ? ' checked': '' )
+                        + (panels[topic_data.topic] ? ' checked': '' )
                         + '/> '
                         + '<span '
-                        + 'class="topic'+(is_image?' image':'')+'" '
-                        + 'title="'+topic.msgTypes.join('; ')+'"'
+                        + 'class="topic'+(is_image?' image':'')+(!msg_type_supported?' unsupported_message_type':'')+'" '
+                        + 'title="'+(!msg_type_supported?'Unsupported type: ':'')+topic_data.msgTypes.join('; ')+'"'
                         + '>'
-                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.topic+'</label>'
+                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic_data.topic+'</label>'
                         + '</span>'
                         + '</div>'
                     );
 
-                    topic.msgTypes.forEach((msgType)=>{
+                    topic_data.msgTypes.forEach((msgType)=>{
                         if (msg_type_filters.indexOf(msgType) == -1)
                             msg_type_filters.push(msgType);
                     });
 
                     let subscribe = $('#cb_topic_'+i).is(':checked');
 
-                    if (panels[topic.topic] && !panels[topic.topic].initialized) {
-                        panels[topic.topic].Init(topic.msgTypes);
+                    if (panels[topic_data.topic] && !panels[topic_data.topic].initialized) {
+                        panels[topic_data.topic].Init(topic_data.msgTypes);
                         subscribe = true;
                     }
 
@@ -333,7 +334,7 @@
 
                     if (subscribe) {
                         //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                        subscribe_topics.push(topic.topic);
+                        subscribe_topics.push(topic_data.topic);
                     } else {
                         //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
                     }
@@ -371,6 +372,7 @@
                     w = panel_widgets[msg_type].w;
                     h = panel_widgets[msg_type].h;
                 }
+
                 TogglePanel(topic, state, w, h);
                 SetTopicsReadSubscription('<%= id_robot %>', [ topic ], state);
             });
