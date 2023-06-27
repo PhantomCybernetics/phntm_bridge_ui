@@ -185,7 +185,9 @@
         }
 
         setInterval(() => {
-            pc.getStats(null).then(showLocalStats, err => console.log(err))
+            if (pc) {
+                pc.getStats(null).then(showLocalStats, err => console.log(err))
+            }
         }, 1000);
 
         $('#msg_type_filter').change(()=>{
