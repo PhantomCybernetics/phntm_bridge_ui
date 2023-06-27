@@ -149,7 +149,7 @@ class Panel {
             console.log('making video el')
             $('#panel_widget_'+this.n)
                 .addClass('enabled video')
-                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video>') //muted allows video autoplay in chrome before user interactions
+                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video><span id="video_stats_'+this.n+'" class="video_stats"></span>') //muted allows video autoplay in chrome before user interactions
         }
         else if (hasWidget) {
             $('#display_panel_source_link_'+this.n).css('display', 'block');

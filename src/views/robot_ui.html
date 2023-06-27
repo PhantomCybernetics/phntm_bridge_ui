@@ -136,6 +136,54 @@
 
         pc = InitPeerConnection(id_robot);
 
+        // Dumping a stats variable as a string.
+        // might be named toString?
+        function dumpStats(results) {
+            let statsString = '';
+            results.forEach(res => {
+                if (res.type != 'inbound-rtp' || !res.trackIdentifier)
+                    return; //continue
+
+                Object.keys(topic_video_tracks).forEach(topic => {
+                    let topic_video_track = topic_video_tracks[topic];
+                    //console.log({topic_video_track
+                    if (res.trackIdentifier == topic_video_track.id) {
+
+                        let panel = panels[topic];
+                        if (!panel)
+                            return;
+
+                        let statsString = ''
+                        statsString += `${res.timestamp}<br>`;
+                        Object.keys(res).forEach(k => {
+                        if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
+                            if (typeof res[k] === 'object') {
+                            statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
+                            } else {
+                            statsString += `${k}: ${res[k]}<br>`;
+                            }
+                        }
+                        });
+                        $('#video_stats_'+panel.n).html(statsString);
+
+                        //console.log('res '+topic+' ' + res.type, res)
+
+                    }
+                });
+            });
+            return statsString;
+        }
+
+        function showLocalStats(results) {
+            const statsString = dumpStats(results);
+            //console.log(statsString)
+            //senderStatsDiv.innerHTML = `<h2>Sender stats</h2>${statsString}`;
+        }
+
+        setInterval(() => {
+            pc.getStats(null).then(showLocalStats, err => console.log(err))
+        }, 1000);
+
         $('#msg_type_filter').change(()=>{
         let filter = $('#msg_type_filter').val();
         //console.log('msg_type_filter='+filter);
