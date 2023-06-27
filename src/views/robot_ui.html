@@ -155,17 +155,21 @@
 
                         let statsString = ''
                         statsString += `${res.timestamp}<br>`;
+                        let fps = 0;
                         Object.keys(res).forEach(k => {
-                        if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
-                            if (typeof res[k] === 'object') {
-                            statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
-                            } else {
-                            statsString += `${k}: ${res[k]}<br>`;
+                            if (k == 'framesPerSecond') {
+                                fps = res[k];
                             }
-                        }
+                            if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
+                                if (typeof res[k] === 'object') {
+                                    statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
+                                } else {
+                                    statsString += `${k}: ${res[k]}<br>`;
+                                }
+                            }
                         });
                         $('#video_stats_'+panel.n).html(statsString);
-
+                        $('#video_fps_'+panel.n).html(fps+' FPS');
                         //console.log('res '+topic+' ' + res.type, res)
 
                     }

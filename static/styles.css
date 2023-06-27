@@ -275,10 +275,23 @@ h3 {
     background-repeat: no-repeat;
 }
 
+.monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
+    display: none;
+    position: absolute;
+    left: -147px;
+    top: 0px;
+    width: 169px;
+    height: 20px;
+    background-color: transparent;
+}
 
 .monitor_menu:hover {
     border-radius: 5px 5px 0px 0px;
     background-color: #139a80;
+}
+
+.monitor_menu:hover .hover_keeper {
+    display: block;
 }
 
 
@@ -538,14 +551,29 @@ SPAN.error {
 }
 
 
-.video_stats {
-    color: white;
+.video_stats, .video_fps {
+    color: #ffffffa3;
     position: absolute;
     z-index: 2;
     left: 10px;
     top: 10px;
     font-size: 11px;
     font-weight: normal;
+    display: block;
+    background: #0000005e;
+    padding: 5px;
+    border-radius: 3px;
+    display: none;
+}
+.video_stats {
+    bottom: 20px;
+    overflow: scroll;
+}
+.video_fps {
+    left: auto;
+    right: 10px;
+}
+.video_stats.enabled, .video_fps.enabled {
     display: block;
 }
 

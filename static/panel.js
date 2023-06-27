@@ -32,7 +32,8 @@ class Panel {
             '<div class="monitor_panel" data-topic="'+topic+'">' +
                 '<h3>'+topic+'</h3>' +
                 '<div class="monitor_menu">' +
-                    '<div class="monitor_menu_content">' +
+                    '<div class="hover_keeper"></div>' +
+                    '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'">' +
                         '<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
                         '<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>' +
                         '<div class="menu_line" id="display_panel_source_link_'+this.n+'" style="display:none"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>' +
@@ -149,7 +150,37 @@ class Panel {
             console.log('making video el')
             $('#panel_widget_'+this.n)
                 .addClass('enabled video')
-                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video><span id="video_stats_'+this.n+'" class="video_stats"></span>') //muted allows video autoplay in chrome before user interactions
+                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video>'
+                    + '<span id="video_stats_'+this.n+'" class="video_stats"></span>'
+                    + '<span id="video_fps_'+this.n+'" class="video_fps"></span>'
+                    ); //muted allows video autoplay in chrome before user interactions
+
+            let that = this;
+
+            //fps menu toggle
+            $('<div class="menu_line"><label for="video_fps_cb_'+this.n+'" class="video_fps_cb_label" id="video_fps_cb_label_'+this.n+'">'
+                +'<input type="checkbox" id="video_fps_cb_'+this.n+'" checked class="video_fps_cb" title="Display video FPS"> FPS</label></div>'
+                ).insertBefore($('#close_panel_link_'+this.n).parent());
+            $('#video_fps_cb_'+this.n).change(function(ev) {
+                if ($(this).prop('checked')) {
+                    $('#video_fps_'+that.n).addClass('enabled');
+                } else {
+                    $('#video_fps_'+that.n).removeClass('enabled');
+                }
+            });
+            $('#video_fps_'+that.n).addClass('enabled'); //on by default
+
+            //stats menu toggle
+            $('<div class="menu_line"><label for="video_stats_cb_'+this.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+this.n+'">'
+                +'<input type="checkbox" id="video_stats_cb_'+this.n+'" class="video_stats_cb" title="Display video stats"> Stats for nerds</label></div>'
+                ).insertBefore($('#close_panel_link_'+this.n).parent());
+            $('#video_stats_cb_'+this.n).change(function(ev) {
+                if ($(this).prop('checked')) {
+                    $('#video_stats_'+that.n).addClass('enabled');
+                } else {
+                    $('#video_stats_'+that.n).removeClass('enabled');
+                }
+            });
         }
         else if (hasWidget) {
             $('#display_panel_source_link_'+this.n).css('display', 'block');
