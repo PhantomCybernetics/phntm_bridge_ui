@@ -28,13 +28,27 @@ let services = {}; // str service => { msg_type: str}
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
 
+const MAX_OPEN_VIDEO_STREAMS = 5;
+
 function InitPeerConnection(id_robot) {
     let pc_ = new RTCPeerConnection(config);
 
     pc_.createDataChannel('_ignore_'); //wouldn't otherwise open chanels (?)
-    //for ()
-    transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
-    transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
+
+    const capabilities = RTCRtpReceiver.getCapabilities('video');
+    let preferedVideoCodecs = [];
+    capabilities.codecs.forEach(codec => {
+        if (codec.mimeType == 'video/H264') {
+            preferedVideoCodecs.push(codec);
+        }
+    });
+    console.info('Video codecs: ', capabilities);
+    console.warn('Preferred video codecs: ', preferedVideoCodecs);
+    //transceiver.setCodecPreferences(capabilities.codecs);
+
+    for (let i = 0; i < MAX_OPEN_VIDEO_STREAMS; i++) { //we need to prepare transcievers in advance before creating offer
+        transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
+    }
 
     //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
     //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
