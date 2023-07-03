@@ -9,7 +9,13 @@ const socket = io("https://mrkbk.local:1337", {
 
 let config = {
     sdpSemantics: 'unified-plan',
-    iceServers: [{urls: ['stun:stun.l.google.com:19302']}]
+    iceServers: [{urls:[
+                         "stun:stun.l.google.com:19302",
+                         "stun:stun1.l.google.com:19302",
+                         "stun:stun2.l.google.com:19302",
+                         "stun:stun3.l.google.com:19302",
+                         "stun:stun4.l.google.com:19302",
+                ]}]
 };
 
 let supported_msg_types = null; //fetched static
@@ -28,7 +34,7 @@ let services = {}; // str service => { msg_type: str}
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
 
-const MAX_OPEN_VIDEO_STREAMS = 5;
+const MAX_OPEN_VIDEO_STREAMS = 10;
 
 function InitPeerConnection(id_robot) {
     let pc_ = new RTCPeerConnection(config);
@@ -396,7 +402,7 @@ function WebRTC_Negotiate(id_robot)
                 console.error('Offer returned error', answer);
                 return;
             }
-            console.log('Setting remote answer:', answer);
+            console.log('Setting remote answer:', answer.sdp);
             return pc.setRemoteDescription(answer);
         });
     });
