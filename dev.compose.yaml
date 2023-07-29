@@ -1,0 +1,24 @@
+services:
+  phntm_cloud_bridge:
+    image: phntm/cloud-bridge:latest
+    container_name: phntm-cloud-bridge
+    hostname: phntm-cloud-bridge.local
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    # ipc: shareable
+    # pid: host
+    # extra_hosts:
+    #   - "webrtc-bridge.local:127.0.0.1"
+    #   - "gazebo.local:127.0.0.1"
+    # environment:
+      # - DISPLAY=192.168.5.87:0
+    volumes:
+      - ~/phntm_cloud_bridge:/phntm_cloud_bridge
+      # - /tmp/.X11-unix:/tmp/.X11-unix
+      # - ~/.Xauthority:/root/.Xauthority:rw
+    devices:
+      - /dev:/dev
+    command:
+      # ros2 launch phntm_webrtc_bridge bridge_launch.py
+      /bin/sh -c "while sleep 1000; do :; done"

@@ -576,7 +576,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.topics = null;
         robot.services = null;
         robot.socket = null;
-        robot.RemoveFromConnedted();
+        robot.RemoveFromConnedted(!shuttingDown);
 
         /*if (user != null && user.clientType == ClientType.PHNTM) {
             $d.log((user+' at '+user.clientAddress+' disconnected').blue);
@@ -592,11 +592,6 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
     robotSocket.on('disconnecting', (reason:any) => {
         $d.l(('Socket disconnecting from robot: '+reason).gray);
     });
-
-
-
-
-
 
 });
 

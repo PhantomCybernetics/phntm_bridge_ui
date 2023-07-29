@@ -372,7 +372,7 @@ function RenderScan(panel) {
             let = p = pts[j];
             panel.chart.fillStyle = (i == panel.chart_trace.length-1 ? "#ff0000" : "#aa0000");
             panel.chart.beginPath();
-            panel.chart.arc(frame[0]+p[0], frame[1]+p[1], 1.5, 0, 2 * Math.PI);
+            panel.chart.arc(frame[0]-p[0], frame[1]+p[1], 1.5, 0, 2 * Math.PI);
             panel.chart.fill();
         }
     }

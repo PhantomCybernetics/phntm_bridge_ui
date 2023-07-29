@@ -34,7 +34,7 @@ let services = {}; // str service => { msg_type: str}
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
 
-const MAX_OPEN_VIDEO_STREAMS = 10;
+const MAX_OPEN_VIDEO_STREAMS = 3;
 
 function InitPeerConnection(id_robot) {
     let pc_ = new RTCPeerConnection(config);
@@ -169,7 +169,6 @@ function InitPeerConnection(id_robot) {
 
     pc_.addEventListener("connectionstatechange", (evt) => {
         console.log('connectionstatechange: ',  evt.currentTarget.connectionState);
-        SetWebRTCSatusLabel()
 
         if (evt.currentTarget.connectionState == 'connected') {
             if (!pc_connected) { //just connected
@@ -204,9 +203,14 @@ function InitPeerConnection(id_robot) {
                     }
                 }
             }
-            pc.close();
-            pc = null;
+            if (pc) {
+                pc.close();
+                pc = InitPeerConnection(id_robot); //prepare for next connection
+            }
+
         }
+
+        SetWebRTCSatusLabel();
     });
 
     return pc_;
@@ -366,6 +370,15 @@ function ProcessRobotData(robot_data) {
                             + 'Socket.io: <span id="socketio_status"></span>'
                             );
 
+    // server reports robot being offline, in case of Socker connection loss this is
+    // not teh case and webrtc keeps transmitting
+    if (!robot_online && pc && pc_connected) {
+        console.warn('Robot offline, restarting pc...');
+        pc.close();
+        const ev = new Event("connectionstatechange");
+        pc.dispatchEvent(ev);
+    }
+
     SetWebRTCSatusLabel();
     SetSocketIOSatusLabel();
 }
@@ -460,7 +473,11 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
                 return;
             }
 
-            console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
+            if (pc)
+                console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
+            else
+                console.info('Cannot subscribe to topics, pc=null; waiting... '+cum_topics_list.join(', '));
+
             setTimeout(() => {
                 SetTopicsReadSubscription(id_robot, [], subscribe) //all alteady in queues
             }, 300); //try again when stable

@@ -28,11 +28,12 @@ export class Robot {
         }
     }
 
-    public RemoveFromConnedted() {
+    public RemoveFromConnedted(notify:boolean = true) {
         let index = Robot.connectedRobots.indexOf(this);
         if (index != -1) {
             Robot.connectedRobots.splice(index, 1);
-            this.StateToSubscribers();
+            if (notify)
+                this.StateToSubscribers();
         }
     }
 
