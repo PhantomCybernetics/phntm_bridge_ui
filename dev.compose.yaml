@@ -4,8 +4,11 @@ services:
     container_name: phntm-cloud-bridge
     hostname: phntm-cloud-bridge.local
     restart: unless-stopped
-    privileged: true
-    network_mode: host
+    # privileged: true
+    # network_mode: host
+    ports:
+      - 443:443
+      - 1337:1337
     # ipc: shareable
     # pid: host
     # extra_hosts:

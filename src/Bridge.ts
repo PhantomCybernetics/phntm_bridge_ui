@@ -1,7 +1,7 @@
 const startupTime:number = Date.now();
 
 import { Debugger } from './lib/debugger';
-const $d:Debugger = Debugger.Get('[Bridge]');
+const $d:Debugger = Debugger.Get('[Cloud Bridge]');
 
 import { RegisterRobot, RegisterApp, GetCerts, UncaughtExceptionHandler } from './lib/helpers'
 const bcrypt = require('bcrypt-nodejs');
@@ -270,7 +270,7 @@ mongoClient.connect().then((client:MongoClient) => {
 
     // }
 
-    $d.log("We are connected to", DB_URL);
+    $d.log(("We are connected to "+DB_URL).green);
 
     db = client.db('phntm');
     humansCollection = db.collection('humans');
@@ -279,7 +279,7 @@ mongoClient.connect().then((client:MongoClient) => {
 
     sioHttpServer.listen(SIO_PORT);
     webHttpServer.listen(UI_PORT);
-    $d.l('SIO Server listening on port '+SIO_PORT+'; Web UI listening on port '+UI_PORT);
+    $d.l(('SIO Server listening on port '+SIO_PORT+'; Web UI listening on port '+UI_PORT).green);
 }).catch(()=>{
     $d.err("Error connecting to", DB_URL);
     process.exit();

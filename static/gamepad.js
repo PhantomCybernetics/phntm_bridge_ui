@@ -174,6 +174,8 @@ class GamepadController {
                     console.log('locall DC '+topic+'/W id='+id+', protocol='+protocol)
                     this.dc = pc.createDataChannel(topic, {
                         negotiated: true,
+                        ordered: false,
+                        maxRetransmits: 0,
                         id:id
                     });
 

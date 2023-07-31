@@ -4,6 +4,7 @@ let panel_widgets = {
     'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
     'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
     'sensor_msgs/msg/Image' : { widget: null, w:4, h:4 },
+    'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
 }
 
 // BATTERY VISUALIZATION
@@ -240,6 +241,22 @@ function LaserScanWidget(panel, decoded) {
         //panel.chart = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
 
         //panel.chart.render();
+        panel.zoom = 8.0;
+
+        //zoom menu control
+        $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'"><span class="minus">-</span><span class="val">Zoom: '+panel.zoom.toFixed(1)+'x</span><span class="plus">+</span></div>').insertAfter($('#panel_msg_types_'+panel.n).parent());
+        $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
+            panel.zoom +=1.0;
+            $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        });
+        $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
+            if (panel.zoom - 1.0 <= 0) {
+                return;
+            }
+            panel.zoom -= 1.0;
+            $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        });
+
 
         window.addEventListener('resize', () => {
             ResizeWidget(panel);
@@ -299,6 +316,81 @@ function LaserScanWidget(panel, decoded) {
     RenderScan(panel);
 }
 
+function ImuWidget(panel, decoded) {
+
+    if (!panel.chart) {
+
+        $('#panel_widget_'+panel.n).addClass('enabled imu');
+        // let q = decoded.orientation;
+        [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
+
+        panel.scene = new THREE.Scene();
+        panel.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
+
+        panel.renderer = new THREE.WebGLRenderer();
+        panel.renderer.setSize( panel.widget_width, panel.widget_height );
+        document.getElementById('panel_widget_'+panel.n).appendChild( panel.renderer.domElement );
+
+        const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+        const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
+        panel.cube = new THREE.Mesh( geometry, material );
+        panel.scene.add( panel.cube );
+        panel.cube.position.y = .5
+
+        panel.cube.add(panel.camera)
+        panel.camera.position.z = 2;
+        panel.camera.position.x = 0;
+        panel.camera.position.y = 1;
+        panel.camera.lookAt(panel.cube.position);
+
+        // const light = new THREE.AmbientLight( 0x404040 ); // soft white light
+        // panel.scene.add( light );
+
+        const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+        panel.scene.add( directionalLight );
+        directionalLight.position.set( 1, 2, 1 );
+        directionalLight.lookAt(panel.cube.position);
+
+        // const axesHelper = new THREE.AxesHelper( 5 );
+        // panel.scene.add( axesHelper );
+
+        const axesHelperCube = new THREE.AxesHelper( 5 );
+        axesHelperCube.scale.set(1, 1, 1); //show z forward like in ROS
+        panel.cube.add( axesHelperCube );
+
+        const gridHelper = new THREE.GridHelper( 10, 10 );
+        panel.scene.add( gridHelper );
+
+        panel.chart = panel.renderer;
+
+        // panel.animate();
+
+        window.addEventListener('resize', () => {
+            ResizeWidget(panel);
+            RenderImu(panel);
+        });
+        $('#display_panel_source_'+panel.n).change(() => {
+            ResizeWidget(panel);
+            RenderImu(panel);
+        });
+        panel.resize_event_handler = function () {
+            ResizeWidget(panel);
+            RenderImu(panel);
+        };
+    }
+
+    // LHS (ROS) => RHS (Three)
+    panel.cube.quaternion.set(-decoded.orientation.y, decoded.orientation.z, -decoded.orientation.x, decoded.orientation.w);
+
+    RenderImu(panel)
+}
+function RenderImu(panel) {
+
+    panel.renderer.render( panel.scene, panel.camera );
+}
+
+
+
 function ScrollSmoothlyToBottom (el) {
     return el.animate({
         scrollTop: el.prop("scrollHeight")
@@ -353,6 +445,15 @@ function ResizeWidget (panel) {
         .attr('width', panel.widget_width)
         .attr('height', panel.widget_height)
     ;
+    if (panel.renderer) {
+
+        panel.camera.aspect = parseFloat(panel.widget_width) / parseFloat(panel.widget_height);
+        panel.camera.updateProjectionMatrix();
+
+        panel.renderer.setSize( panel.widget_width, panel.widget_height );
+        console.log('resize', panel.widget_width, panel.widget_height)
+    }
+
 }
 
 function RenderScan(panel) {
@@ -362,6 +463,9 @@ function RenderScan(panel) {
         panel.widget_height/2.0
     ];
 
+
+    let range = panel.range_max;
+
     //panel.chart.fillStyle = "#fff";
     panel.chart.clearRect(0, 0, panel.widget_width, panel.widget_height);
 
@@ -369,16 +473,16 @@ function RenderScan(panel) {
         let pts = panel.chart_trace[i];
 
         for (let j = 0; j < pts.length; j++) {
-            let = p = pts[j];
+            let p = [ pts[j][0]*panel.zoom, pts[j][1]*panel.zoom ]; //zoom applied here
             panel.chart.fillStyle = (i == panel.chart_trace.length-1 ? "#ff0000" : "#aa0000");
             panel.chart.beginPath();
-            panel.chart.arc(frame[0]-p[0], frame[1]+p[1], 1.5, 0, 2 * Math.PI);
+            panel.chart.arc(frame[0]+p[0], frame[1]-p[1], 1.5, 0, 2 * Math.PI);
             panel.chart.fill();
         }
     }
 
     //lines
-    let range_int = Math.floor(panel.range_max);
+    let range_int = Math.floor(range);
     for (let x = -range_int; x < range_int+1; x++) {
         panel.chart.beginPath();
         panel.chart.setLineDash(x == 0 ? [] : [panel.scale/20, panel.scale/10]);
@@ -386,14 +490,14 @@ function RenderScan(panel) {
 
         //vertical
         //panel.widget_height
-        let dd = Math.sqrt(Math.pow(range_int*panel.scale, 2) - Math.pow(x*panel.scale, 2));
-        panel.chart.moveTo(frame[0]+(x*panel.scale), frame[1]-dd);
-        panel.chart.lineTo(frame[0]+(x*panel.scale), frame[1]+dd);
+        let dd = Math.sqrt(Math.pow(range_int*panel.scale, 2) - Math.pow(x*panel.scale, 2))*panel.zoom;
+        panel.chart.moveTo(frame[0] + (x*panel.scale)*panel.zoom, frame[1]-dd);
+        panel.chart.lineTo(frame[0] + (x*panel.scale)*panel.zoom, frame[1]+dd);
         panel.chart.stroke();
 
         //horizontal
-        panel.chart.moveTo(frame[0]-dd, frame[1]+(x*panel.scale));
-        panel.chart.lineTo(frame[0]+dd, frame[1]+(x*panel.scale));
+        panel.chart.moveTo(frame[0]-dd, frame[1]+(x*panel.scale)*panel.zoom);
+        panel.chart.lineTo(frame[0]+dd, frame[1]+(x*panel.scale)*panel.zoom);
         panel.chart.stroke();
     }
 

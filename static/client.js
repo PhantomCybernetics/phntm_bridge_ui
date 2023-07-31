@@ -44,9 +44,9 @@ function InitPeerConnection(id_robot) {
     const capabilities = RTCRtpReceiver.getCapabilities('video');
     let preferedVideoCodecs = [];
     capabilities.codecs.forEach(codec => {
-        if (codec.mimeType == 'video/H264') {
-            preferedVideoCodecs.push(codec);
-        }
+         if (codec.mimeType == 'video/H264') {
+             preferedVideoCodecs.push(codec);
+         }
     });
     console.info('Video codecs: ', capabilities);
     console.warn('Preferred video codecs: ', preferedVideoCodecs);
@@ -306,8 +306,19 @@ function linkifyURLs(text, is_xhtml) {
 function SetWebRTCSatusLabel() {
 
     let state = null;
-    if (pc)
+    let via_turn = null;
+    if (pc) {
         state = pc.connectionState
+        console.log('pc.sctp:', pc.sctp)
+        if (pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
+            // console.log('pc.sctp.transport:', pc.sctp.transport)
+            // console.log('pc.sctp.transport.iceTransport:', pc.sctp.transport.iceTransport)
+            selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
+            if (selectedPair && selectedPair.remote) {
+                via_turn = selectedPair.remote.type == 'relay' ? true : false;
+            }
+        }
+    }
 
     if (state != null)
         state = state.charAt(0).toUpperCase() + state.slice(1);
@@ -315,7 +326,9 @@ function SetWebRTCSatusLabel() {
         state = 'n/a'
 
     if (state == 'Connected')
-        $('#webrtc_status').html('<span class="online">'+state+'</span>');
+        $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
+    else if (state == 'Connecting')
+        $('#webrtc_status').html('<span class="connecting">'+state+'</span>');
     else
         $('#webrtc_status').html('<span class="offline">'+state+'</span>');
 }
@@ -352,8 +365,11 @@ function ProcessRobotData(robot_data) {
 
     console.log('SIO got robot data', robot_data);
 
-    if (robot_data['name'])
+    if (robot_data['name']) {
         $('#robot_name').html(robot_data['name']);
+        document.title = robot_data['name'] + ' @ BridgeViz';
+    }
+
 
     console.log('Robot data: ', robot_data);
 
@@ -598,6 +614,8 @@ function _HandleSubscriptionData(res) {
             console.log('Opening local read DC '+topic+' id='+id)
             let dc = pc.createDataChannel(topic, {
                 negotiated: true,
+                ondragend: false,
+                maxRetransmits: 0,
                 id:id
             });
 

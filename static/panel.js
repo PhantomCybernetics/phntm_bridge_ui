@@ -13,6 +13,7 @@ class Panel {
     chart = null;
     chart_trace = [];
     max_trace_length = 100;
+    zoom = 1;
 
     grid_widget = null;
 

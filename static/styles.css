@@ -6,15 +6,23 @@ body {
   }
 
 .msgTypes {
-    color: gray
+    color: gray;
 }
 
 .offline {
-    color: red
+    color: red;
+}
+
+.connecting {
+    color: yellow;
 }
 
 .online {
-    color: lime
+    color: lime;
+}
+
+.turn {
+    color: yellow;
 }
 
 h1 {
@@ -325,6 +333,7 @@ h3 {
 
 .monitor_panel .menu_line {
     background-color: #139a80;
+    clear: both;
 }
 
 .monitor_panel .menu_line A, .monitor_panel .menu_line Label {
@@ -354,7 +363,7 @@ h3 {
     padding-bottom: 10px;
 }
 
-.panel_msg_types_line:hover {
+.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
     background-color: #139a80 !important;
 }
 
@@ -585,7 +594,9 @@ SPAN.error {
 
 .panel_widget.range,
 .panel_widget.battery,
-.panel_widget.laser_scan {
+.panel_widget.laser_scan,
+.panel_widget.imu
+{
     height: -webkit-fill-available;
 }
 
@@ -735,4 +746,41 @@ SPAN.error {
     /* take entire space */
     position: absolute;
     inset: 0; /* TODO change top: if you have content in nested grid */
+  }
+
+  .menu_line.zoom_ctrl {
+    line-height: 30px;
+    height: 35px;
+    text-align: center;
+    position: relative;
+  }
+
+  .menu_line.zoom_ctrl .minus {
+    left: 5px;
+  }
+
+  .menu_line.zoom_ctrl .val {
+    display:block;
+  }
+
+  .menu_line.zoom_ctrl .plus {
+    right: 5px;
+  }
+
+  .menu_line.zoom_ctrl .minus,
+  .menu_line.zoom_ctrl .plus {
+    position: absolute;
+    top: 0px;
+    display:block;
+    width: 40px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 20px;
+    background-color: #0051ff;
+    border-radius: 5px;
+  }
+
+  .menu_line.zoom_ctrl .minus:hover,
+  .menu_line.zoom_ctrl .plus:hover {
+    background-color: #006dff;
   }
