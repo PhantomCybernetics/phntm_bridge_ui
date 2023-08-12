@@ -469,7 +469,7 @@ SPAN.error {
     height: -webkit-fill-available;
     /* overflow: hidden; */
     /* margin-bottom: 5px; */
-    margin-bottom: 15px;
+    /* margin-bottom: 15px; */
 }
 
 .grid_panel .panel_source.enabled {
@@ -632,6 +632,7 @@ SPAN.error {
 .panel_content_space {
     height: -webkit-fill-available;
     padding-top: 10px;
+    padding-bottom: 20px;
     position: relative;
 }
 

@@ -2,10 +2,11 @@ let panel_widgets = {
     'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,
     'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
     'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
+    'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
     'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
     'sensor_msgs/msg/Image' : { widget: VideoWidget, w:4, h:4 },
     'video' : { widget: VideoWidget, w:4, h:4 },
-    'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
+
 }
 
 // BATTERY VISUALIZATION
@@ -428,7 +429,7 @@ function ImuWidget(panel, decoded) {
         panel.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
 
         panel.renderer = new THREE.WebGLRenderer({
-            antialias : true,
+            antialias : false,
         });
         panel.renderer.setSize( panel.widget_width, panel.widget_height );
         document.getElementById('panel_widget_'+panel.n).appendChild( panel.renderer.domElement );
@@ -488,51 +489,59 @@ function ImuWidget(panel, decoded) {
     }
 }
 
+//logger
 function ImuWidget_Render(panel) {
     panel.renderer.render( panel.scene, panel.camera );
-}
-
-
-
-function ScrollSmoothlyToBottom (el) {
-    return el.animate({
-        scrollTop: el.prop("scrollHeight")
-    }, 500);
 }
 
 function LogWidget(panel, decoded) {
 
     if (!$('#panel_widget_'+panel.n).hasClass('enabled')) {
         $('#panel_widget_'+panel.n).addClass('enabled log');
+        panel.max_trace_length = 100;
+        $('#panel_widget_'+panel.n).addClass('autoscroll')
+        // console.log('AUTOSCROLL START')
+        $('#panel_widget_'+panel.n).mouseenter(function() {
+            $('#panel_widget_'+panel.n).removeClass('autoscroll');
+            // console.log('AUTOSCROLL STOP')
+            if (panel.animation != null) {
+                //console.log('cancel animation ', panel.animation)
+                $('#panel_widget_'+panel.n+'').stop();
+                panel.animation = null
+            }
+        }).mouseleave(function() {
+            $('#panel_widget_'+panel.n).addClass('autoscroll');
+            // console.log('AUTOSCROLL START')
+        });
     }
 
-    let line = '<div class="log_line">[<span class="name">'+decoded.name+'</span>] <span class="time">'+decoded.stamp.sec+'.'+decoded.stamp.nanosec+'</span>: '+decoded.msg+'</div>';
-    $('#panel_widget_'+panel.n).append(line);
+    if (decoded) {
 
-    if (panel.animation != null && panel.animation != undefined && !panel.animation.pla) {
-        //console.log('cancel animation ', panel.animation)
-        panel.animation.stop();
+        let line = '<div class="log_line">[<span class="name">'+decoded.name+'</span>] '
+             + '<span class="time">'+decoded.stamp.sec+'.'+decoded.stamp.nanosec+'</span>: '
+             + decoded.msg+'</div>';
+
+        $('#panel_widget_'+panel.n).append(line);
+
+        if ($('#panel_widget_'+panel.n+'.autoscroll .log_line').length > panel.max_trace_length) {
+            $('#panel_widget_'+panel.n+'.autoscroll .log_line').first().remove();
+        }
+
+        if (panel.animation != null) {
+            //console.log('cancel animation ', panel.animation)
+            $('#panel_widget_'+panel.n+'').stop();
+            panel.animation = null
+        }
+
+        panel.animation = $('#panel_widget_'+panel.n+'.autoscroll').animate({
+            scrollTop: $('#panel_widget_'+panel.n).prop("scrollHeight")
+        }, 300, 'linear', () => {
+            panel.animation = null
+        });
     }
-
-    panel.animation = ScrollSmoothlyToBottom($('#panel_widget_'+panel.n));
-
-    // panel.data_trace.push({
-    //     x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
-    //     y: decoded.voltage
-    // });
-
-    // if (panel.data_trace.length > panel.max_trace_length) {
-    //     panel.data_trace.shift();
-    // }
 }
 
-
-
-
-
-
-
-
+// UTILS
 function deg2rad(degrees)
 {
   var pi = Math.PI;
