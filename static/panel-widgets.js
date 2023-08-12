@@ -415,19 +415,21 @@ function LaserScanWidget_Render(panel) {
 }
 
 
-
+//IMU VISUALIZATION
 function ImuWidget(panel, decoded) {
 
     if (!panel.display_widget) {
 
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         // let q = decoded.orientation;
-        [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
+        [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
 
         panel.scene = new THREE.Scene();
         panel.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
 
-        panel.renderer = new THREE.WebGLRenderer();
+        panel.renderer = new THREE.WebGLRenderer({
+            antialias : true,
+        });
         panel.renderer.setSize( panel.widget_width, panel.widget_height );
         document.getElementById('panel_widget_'+panel.n).appendChild( panel.renderer.domElement );
 
@@ -475,17 +477,18 @@ function ImuWidget(panel, decoded) {
         // });
         panel.resize_event_handler = function () {
             // ResizeWidget(panel);
-            RenderImu(panel);
+            ImuWidget_Render(panel);
         };
     }
 
-    // LHS (ROS) => RHS (Three)
-    panel.cube.quaternion.set(-decoded.orientation.y, decoded.orientation.z, -decoded.orientation.x, decoded.orientation.w);
-
-    RenderImu(panel)
+    if (panel.display_widget && decoded) {
+        // LHS (ROS) => RHS (Three)
+        panel.cube.quaternion.set(-decoded.orientation.y, decoded.orientation.z, -decoded.orientation.x, decoded.orientation.w);
+        ImuWidget_Render(panel)
+    }
 }
-function RenderImu(panel) {
 
+function ImuWidget_Render(panel) {
     panel.renderer.render( panel.scene, panel.camera );
 }
 
