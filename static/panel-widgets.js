@@ -90,16 +90,17 @@ function BatteryStateWidget(panel, decoded) {
                     enabled: false
                 },
                 redrawOnParentResize: true,
-                markers: {
-                    size: 20
-                },
-            },
-            dataLabels: {
-                enabled: false
-            },
 
+            },
+            // dataLabels: {
+            //     enabled: true,
+            //     offsetY: 20,
+            //     formatter: function (value) {
+            //         return value.toFixed(2) + " V";
+            //     }
+            // },
             stroke: {
-                curve: 'straight'
+                curve: 'straight',
             },
             // title: {
             //     text: 'Voltage over time',
@@ -113,8 +114,6 @@ function BatteryStateWidget(panel, decoded) {
             },
             xaxis: {
                 //categories: panel.labels_trace,
-                tickAmount: 10,
-                decimalsInFloat: 5,
                 labels: {
                     show: false,
                 }
@@ -294,7 +293,7 @@ function LaserScanWidget(panel, decoded) {
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
                 panel.zoom +=1.0;
                 $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                UpdateUrlHash();
+                Panel.UpdateUrlHash();
             });
             $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
                 if (panel.zoom - 1.0 <= 0) {
@@ -302,7 +301,7 @@ function LaserScanWidget(panel, decoded) {
                 }
                 panel.zoom -= 1.0;
                 $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                UpdateUrlHash();
+                Panel.UpdateUrlHash();
             });
         }
 

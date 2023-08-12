@@ -73,13 +73,13 @@
 
         grid.on('added removed change', function(e, items) {
 
-            if (items) {
-                let str = '';
-                items.forEach(function(item) { str += ' (x,y)=' + item.x + ',' + item.y; });
-                //console.warn('Grid: '+ e.type + ' ' + items.length + ' items:' + str );
-            }
+            // if (items) {
+            //     let str = '';
+            //     items.forEach(function(item) { str += ' (x,y)=' + item.x + ',' + item.y; });
+            //     //console.warn('Grid: '+ e.type + ' ' + items.length + ' items:' + str );
+            // }
 
-            UpdateUrlHash();
+            Panel.UpdateUrlHash();
         });
 
         grid.on('resize', function(e, el) {
@@ -109,7 +109,7 @@
                 supported_msg_types=json;
                 console.log('Fetched '+json.length+' msg types from '+msg_types_src)
 
-                ParseUrlHash(window.location.hash);
+                Panel.ParseUrlHash(window.location.hash);
 
                 window.gamepadController = new GamepadController(pc, '/joy', id_robot, socket, supported_msg_types);
 
