@@ -27,11 +27,11 @@ class Panel {
 
     //widget_opts = {};
 
-    static TogglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
+    static TogglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false, zoom = 1.0) {
         let panel = panels[id_source];
         if (state) {
             if (!panel) {
-                panel = new Panel(id_source, w, h, x, y, src_visible);
+                panel = new Panel(id_source, w, h, x, y, src_visible, zoom);
                 panel.init(msg_type)
             }
         } else if (panel) {
@@ -39,9 +39,10 @@ class Panel {
         }
     }
 
-    constructor(id_source,  w, h, x = null, y = null, src_visible = false) {
+    constructor(id_source,  w, h, x = null, y = null, src_visible = false, zoom = 1.0) {
         this.id_source = id_source;
         this.src_visible = src_visible;
+        this.zoom = zoom;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
         //let display_source = false;
@@ -146,18 +147,14 @@ class Panel {
                 source_el.addClass('enabled');
                 widget_el.addClass('source_visible');
                 let w = parseInt($(that.grid_widget).attr('gs-w'))*2;
-                // console.log('grid cell opts w=', w);
                 that.src_visible = true;
-                grid.update(that.grid_widget, {w : w}); //updates url hash
-                that.onResize();
+                grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
             } else {
                 source_el.removeClass('enabled');
                 widget_el.removeClass('source_visible');
                 let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
-                // console.log('grid cell opts w=', w);
                 that.src_visible = false;
-                grid.update(that.grid_widget, {w : w});
-                that.onResize();
+                grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
             }
         });
 
@@ -188,7 +185,7 @@ class Panel {
     getAvailableWidgetSize() {
 
         let w = $('#panel_widget_'+this.n).width();
-        let h = $('#panel_widget_'+this.n).parent().innerHeight()-30;
+        let h = $('#panel_widget_'+this.n).parent().innerHeight()-10; //padding
 
         //let sourceDisplayed = $('#panel_content_'+this.n).hasClass('enabled');
 
@@ -206,15 +203,23 @@ class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
-        console.warn('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+        // console.warn('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+
+        let canvas = document.getElementById('panel_canvas_'+this.n)
+        if (canvas) {
+            canvas.width = Math.round(this.widget_width);
+            canvas.height = Math.round(this.widget_height);
+        }
 
         //  auto scale canvas
-        if ($('#panel_widget_'+this.n+' CANVAS').length > 0) {
+        // if ($('#panel_widget_'+this.n+' CANVAS').length > 0) {
 
-            $('#panel_widget_'+this.n+' CANVAS')
-            .attr('width', this.widget_width)
-            .attr('height', this.widget_height);
-        }
+        //     $('#panel_widget_'+this.n+' CANVAS')
+        //         .attr({
+        //             'width': this.widget_width,
+        //             'height' : this.widget_height
+        //         });
+        // }
 
         // auto scale THREE renderer & set camera aspect
         if (this.renderer) {

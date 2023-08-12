@@ -743,6 +743,9 @@ function UpdateUrlHash() {
         ];
         if (panels[id_source].src_visible)
             parts.push('src');
+        if (panels[id_source].zoom != 1)
+            parts.push('z='+panels[id_source].zoom);
+
         hash.push(parts.join(':'));
     });
 
@@ -750,4 +753,49 @@ function UpdateUrlHash() {
         window.location.hash = ''+hash.join(';');
     else //remove hash
         history.pushState("", document.title, window.location.pathname+window.location.search);
+}
+
+function ParseUrlHash(hash) {
+    if (hash.length) {
+        hash = hash.substr(1);
+        let hashArr = hash.split(';');
+        for (let i = 0; i < hashArr.length; i++) {
+            let src_vars = hashArr[i].trim();
+            if (!src_vars)
+                continue;
+            src_vars = src_vars.split(':');
+            let id_source = src_vars[0];
+            let x = null; let y = null;
+            let panelPos = src_vars[1];
+            if (panelPos) {
+                panelPos = panelPos.split('x');
+                x = panelPos[0];
+                y = panelPos[1];
+            }
+            let panelSize = src_vars[2];
+            let w = 2; let h = 2;
+            if (panelSize) {
+                panelSize = panelSize.split('x');
+                w = panelSize[0];
+                h = panelSize[1];
+            }
+
+            //opional vars follow
+            let src_on = false;
+            let zoom = 1;
+            for (let j = 2; j < src_vars.length; j++) {
+                if (src_vars[j] == 'src') {
+                    src_on = true;
+                }
+                else if (src_vars[j].indexOf('z=') === 0) {
+                    zoom = parseFloat(src_vars[j].substr(2));
+                    console.log('Found zoom for '+id_source+': '+src_vars[j] + ' => ', zoom);
+                }
+            }
+
+            let msg_type = null; //unknown atm
+            //console.info('Opening panel for '+topic+'; src_on='+src_on);
+            Panel.TogglePanel(id_source, msg_type, true, w, h, x, y, src_on, zoom)
+        }
+    }
 }

@@ -86,6 +86,20 @@
             let id_source = $(el).find('.grid_panel').attr('data-source');
             panels[id_source].onResize();
         });
+        grid.on('resizestop', function(e, el) {
+            let id_source = $(el).find('.grid_panel').attr('data-source');
+            panels[id_source].onResize();
+        });
+        // grid.on('change', function(e, els) {
+        //     if (!els)
+        //         return;
+        //     els.forEach(function(el) {
+        //         console.log('change', el);
+        //         let id_source = $(el.el).find('.grid_panel').attr('data-source');
+        //         if (panels[id_source])
+        //             panels[id_source].onResize();
+        //     });
+        // });
 
 
         let msg_types_src = '/static/msg_types.json'
@@ -95,42 +109,7 @@
                 supported_msg_types=json;
                 console.log('Fetched '+json.length+' msg types from '+msg_types_src)
 
-                let hash = window.location.hash;
-                if (hash.length) {
-                    hash = hash.substr(1);
-                    let hashArr = hash.split(';');
-                    for (let i = 0; i < hashArr.length; i++) {
-                        let src_vars = hashArr[i].trim();
-                        if (!src_vars)
-                            continue;
-                        src_vars = src_vars.split(':');
-                        let id_source = src_vars[0];
-                        let x = null; let y = null;
-                        let panelPos = src_vars[1];
-                        if (panelPos) {
-                            panelPos = panelPos.split('x');
-                            x = panelPos[0];
-                            y = panelPos[1];
-                        }
-                        let panelSize = src_vars[2];
-                        let w = 2; let h = 2;
-                        if (panelSize) {
-                            panelSize = panelSize.split('x');
-                            w = panelSize[0];
-                            h = panelSize[1];
-                        }
-                        let src_on = false;
-                        for (let j = 2; j < src_vars.length; j++) {
-                            if (src_vars[j] == 'src') {
-                                src_on = true;
-                            }
-                        }
-
-                        let msg_type = null; //unknown atm
-                        //console.info('Opening panel for '+topic+'; src_on='+src_on);
-                        Panel.TogglePanel(id_source, msg_type, true, w, h, x, y, src_on)
-                    }
-                }
+                ParseUrlHash(window.location.hash);
 
                 window.gamepadController = new GamepadController(pc, '/joy', id_robot, socket, supported_msg_types);
 

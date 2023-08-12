@@ -171,13 +171,7 @@ function BatteryStateWidget(panel, decoded) {
         panel.display_widget = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
         panel.display_widget.render();
 
-        panel.resize_event_handler = function () {
-            console.log('battery resized');
-            //LaserScanWidget_Render(panel);
-            // options.chart.width = panel.widget_width;
-            // options.chart.height = panel.widget_height;
-            // panel.display_widget.updateOptions(options);
-        };
+        // panel.resize_event_handler = function () { }; //no need here
     }
 
     if (decoded != null) {
@@ -195,27 +189,11 @@ function BatteryStateWidget(panel, decoded) {
             panel.display_widget.updateSeries([ { data: panel.data_trace } ], false); //don't animate
         }
     }
-
-    // panel.display_widget.updateSeries([{
-    //     name: 'Voltage',
-    //     data: panel.data_trace
-    // }]);
-
 }
 
 
 // RANGE VISUALIZATION
 function RangeWidget(panel, decoded) {
-
-    // panel.data_trace = [ decoded.range > decoded.max_range ? -1 : decoded.range ];
-
-    //let fullScale = decoded.max_range;
-
-    // let width = $('#panel_widget_'+panel.n).width();
-    // let height = $('#panel_widget_'+panel.n).height();
-    // let mt = parseFloat($('#panel_widget_'+panel.n).css('margin-top'));
-    // let mb = parseFloat($('#panel_widget_'+panel.n).css('margin-bottom'));
-    //height = height - mt - mb;
 
     if (!panel.display_widget) {
 
@@ -240,9 +218,7 @@ function RangeWidget(panel, decoded) {
                     },
                     track: {
                         show: true,
-
                     },
-
                     startAngle: -135,
                     endAngle: 135,
                     dataLabels: {
@@ -258,8 +234,8 @@ function RangeWidget(panel, decoded) {
                             fontSize: "20px",
                             show: true,
                             formatter: function(val) {
-                                // console.log(val);
-                                if (val < 0.0)
+
+                                if (val < 0.001)
                                     return "> "+panel.max_range.toFixed(1) +" m";
                                 else
                                     return panel.data_trace[0].toFixed(3) + " m";
@@ -276,8 +252,6 @@ function RangeWidget(panel, decoded) {
 
         $('#panel_widget_'+panel.n).addClass('enabled range');
 
-        //const div = d3.selectAll();
-        //console.log('d3 div', div)
         panel.display_widget = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
         panel.display_widget.render();
     }
@@ -285,22 +259,13 @@ function RangeWidget(panel, decoded) {
     if (decoded != null && panel.display_widget) {
 
         panel.max_range = decoded.max_range;
-        panel.data_trace[0] = decoded.range; //print val
+        panel.data_trace[0] = decoded.range; // val in m
 
         //display gage pos
         let gageVal = 100.0 - (Math.min(Math.max(decoded.range, 0), decoded.max_range) * 100.0 / decoded.max_range);
 
         panel.display_widget.updateSeries([ gageVal ], false);
-        // panel.display_widget.updateColors([ gageVal ]);
-
     }
-
-    //console.log('updating range '+panel.topic+' w w='+width+'; h='+height);
-    // options.series = [ gageVal ];
-    // panel.display_widget.updateOptions(options);
-    // this.chart.updateSeries([
-    //     100.0 - gageVal
-    // ]);
 }
 
 
@@ -310,8 +275,8 @@ function LaserScanWidget(panel, decoded) {
     if (!panel.display_widget) {
         panel.max_trace_length = 5;
         $('#panel_widget_'+panel.n).addClass('enabled laser_scan');
-        [ panel.widget_width, panel.widget_height ] = GetAvailableWidgetSize(panel)
-        const canvas = $('#panel_widget_'+panel.n).html('<canvas width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
+
+        const canvas = $('#panel_widget_'+panel.n).html('<canvas id="panel_canvas_'+panel.n+'" width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
         const ctx = canvas.getContext("2d");
         panel.display_widget = ctx;
 
@@ -320,21 +285,26 @@ function LaserScanWidget(panel, decoded) {
         //panel.display_widget = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
 
         //panel.display_widget.render();
-        panel.zoom = 8.0;
+        // panel.zoom = 8.0;
 
         //zoom menu control
-        $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'"><span class="minus">-</span><span class="val">Zoom: '+panel.zoom.toFixed(1)+'x</span><span class="plus">+</span></div>').insertAfter($('#panel_msg_types_'+panel.n).parent());
-        $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
-            panel.zoom +=1.0;
-            $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        });
-        $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
-            if (panel.zoom - 1.0 <= 0) {
-                return;
-            }
-            panel.zoom -= 1.0;
-            $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        });
+        panel.widget_menu_cb = () => {
+
+            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'"><span class="minus">-</span><span class="val">Zoom: '+panel.zoom.toFixed(1)+'x</span><span class="plus">+</span></div>').insertAfter($('#panel_msg_types_'+panel.n).parent());
+            $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
+                panel.zoom +=1.0;
+                $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+                UpdateUrlHash();
+            });
+            $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
+                if (panel.zoom - 1.0 <= 0) {
+                    return;
+                }
+                panel.zoom -= 1.0;
+                $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+                UpdateUrlHash();
+            });
+        }
 
         // window.addEventListener('resize', () => {
         //     ResizeWidget(panel);
@@ -345,50 +315,53 @@ function LaserScanWidget(panel, decoded) {
         //     RenderScan(panel);
         // });
         panel.resize_event_handler = function () {
-            console.log('laser resized');
+            // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
             LaserScanWidget_Render(panel);
         };
     }
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);
 
-    let numSamples = decoded.ranges.length;
-    let anglePerSample = 360.0 / numSamples;
+    if (decoded) {
+        let numSamples = decoded.ranges.length;
+        let anglePerSample = 360.0 / numSamples;
 
-    //panel.display_widget.fillStyle = "#ff0000";
+        //panel.display_widget.fillStyle = "#ff0000";
 
-    let scale = (panel.widget_height/2.0 - 20.0) / decoded.range_max;
+        let scale = (panel.widget_height/2.0 - 20.0) / decoded.range_max;
 
-    let newScanPts = [];
-    for (let i = 0; i < numSamples; i++) {
+        let newScanPts = [];
+        for (let i = 0; i < numSamples; i++) {
 
-        if (decoded.ranges[i] == null || decoded.ranges[i] > decoded.range_max || decoded.ranges[i] < decoded.range_min)
-            continue;
+            if (decoded.ranges[i] == null || decoded.ranges[i] > decoded.range_max || decoded.ranges[i] < decoded.range_min)
+                continue;
 
-        let pos = [
-            0,
-            decoded.ranges[i] * scale
-        ]
+            let pos = [
+                0,
+                decoded.ranges[i] * scale
+            ]
 
-        let arad = deg2rad(anglePerSample * i);
-        let p = [
-            Math.cos(arad)*pos[0] - Math.sin(arad)*pos[1],
-            Math.sin(arad)*pos[0] + Math.cos(arad)*pos[1]
-        ]
+            let arad = deg2rad(anglePerSample * i);
+            let p = [
+                Math.cos(arad)*pos[0] - Math.sin(arad)*pos[1],
+                Math.sin(arad)*pos[0] + Math.cos(arad)*pos[1]
+            ]
 
-        newScanPts.push(p);
+            newScanPts.push(p);
+        }
+
+        panel.data_trace.push(newScanPts);
+
+        if (panel.data_trace.length > panel.max_trace_length) {
+            panel.data_trace.shift();
+        }
+
+        panel.range_max = decoded.range_max; //save for later
+        panel.scale = scale;
+
+        LaserScanWidget_Render(panel);
     }
 
-    panel.data_trace.push(newScanPts);
-
-    if (panel.data_trace.length > panel.max_trace_length) {
-        panel.data_trace.shift();
-    }
-
-    panel.range_max = decoded.range_max; //save for later
-    panel.scale = scale;
-
-    LaserScanWidget_Render(panel);
 }
 
 function LaserScanWidget_Render(panel) {
@@ -397,7 +370,6 @@ function LaserScanWidget_Render(panel) {
         panel.widget_width/2.0,
         panel.widget_height/2.0
     ];
-
 
     let range = panel.range_max;
 

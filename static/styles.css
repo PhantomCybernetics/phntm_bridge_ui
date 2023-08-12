@@ -536,6 +536,11 @@ SPAN.error {
     background-color: #072038;
 }
 
+/* .panel_widget.laser_scan CANVAS {
+    width: 100%;
+    height: 100%;
+} */
+
 .panel_widget.log {
     background: black;
     color: #fff;
