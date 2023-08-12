@@ -441,7 +441,6 @@ function WebRTC_Negotiate(id_robot)
 
 let topics_to_subscribe = []; // str topic
 let topics_to_unsubscribe = []; // str topic
-
 function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
 
     for (let i = 0; i < topics_list.length; i++) {
@@ -533,22 +532,8 @@ function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
     }
 
     if (!subscribe) {
-        return _DoSetSubscription(subscription_data, false); //no need to negotiate
+        return _DoSetTopicsSubscription(subscription_data, false); //no need to negotiate
     }
-
-    // for (let i = 0; i < topics_list.length; i++) {
-    //     let topic = topics_list[i];
-    // }
-
-    // for (let i = 0; i < subscription_data['topics'].length; i++) {
-        // let topic = subscription_data['topics'][i];
-        // let msg_type = topics[topic[0]] ? topics[topic[0]]['msg_types'][0] : null;
-        // let is_image = msg_type == 'sensor_msgs/msg/Image';
-        // if (is_image && !topic_transceivers[topic]) {
-        //     console.log('Adding video transceiver for '+topic);
-        //     topic_transceivers[topic] = pc.addTransceiver('video', {direction: 'recvonly'});
-        // }
-    // }
 
     return pc.createOffer()
         .then(function(offer) {
@@ -556,15 +541,15 @@ function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
             //setup transievers for img topics
             subscription_data['sdp_offer'] = pc.localDescription.sdp;
         }).then(function() {
-            _DoSetSubscription(subscription_data, true);
+            _DoSetTopicsSubscription(subscription_data, true);
         });
 }
 
-function _DoSetSubscription(subscription_data, subscribing) {
+function _DoSetTopicsSubscription(subscription_data, subscribing) {
     // toggle read subscription
     return socket.emit('subcribe:read', subscription_data, (res) => {
-        if (!res['success']) {
-            console.warn('Read subscription err: ', res);
+        if (!res || !res['success']) {
+            console.error('Read subscription err: ', res);
             return;
         }
 
@@ -572,7 +557,7 @@ function _DoSetSubscription(subscription_data, subscribing) {
             let robot_answer = new RTCSessionDescription({ sdp: res['answer_sdp'], type: 'answer' });
             //robot_offer.sdp = offer.sdp.replace('H264', 'codec-not-supported');
 
-            _HandleSubscriptionData(res);
+            _HandleTopicSubscriptionRepy(res);
 
             console.log('Setting robot answer:', robot_answer);
             pc.setRemoteDescription(robot_answer)
@@ -580,7 +565,7 @@ function _DoSetSubscription(subscription_data, subscribing) {
 
             // });
         } else { //no negotiation needed
-            _HandleSubscriptionData(res);
+            _HandleTopicSubscriptionRepy(res);
         }
 
         //console.log('Setting robot offer:', robot_answer);
@@ -589,9 +574,9 @@ function _DoSetSubscription(subscription_data, subscribing) {
     });
 }
 
-function _HandleSubscriptionData(res) {
+function _HandleTopicSubscriptionRepy(res) {
 
-    console.log('Handling subscription data: ', res);
+    console.log('Handling topic subscription data: ', res);
 
     for (let i = 0; i < res['subscribed'].length; i++) {
 
@@ -721,4 +706,147 @@ function _HandleSubscriptionData(res) {
             }
         }
     }
+}
+
+
+let cameras_to_subscribe = []; // str cam
+let cameras_to_unsubscribe = []; // str cam
+function SetCameraSubscription(id_robot, camera_list, subscribe) {
+
+    for (let i = 0; i < camera_list.length; i++) {
+        let cam = camera_list[i];
+        if (subscribe) {
+            let pSubscribe = cameras_to_subscribe.indexOf(cam);
+            if (cameras[cam] && cameras[cam].subscribed) {
+                console.info('Camera '+cam+' already subscribed to (we cool)');
+                if (pSubscribe !== -1)
+                    cameras_to_subscribe.splice(pSubscribe, 1);
+                continue;
+            }
+            if (pSubscribe === -1)
+                cameras_to_subscribe.push(cam);
+            let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
+            if (pUnsubscribe !== -1)
+                cameras_to_unsubscribe.splice(pUnsubscribe, 1);
+        } else {
+            let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
+            if (cameras[cam] && !cameras[cam].subscribed) {
+                console.info('Camera '+cam+' already unsubscribed from (we cool)');
+                if (pUnsubscribe !== -1)
+                    cameras_to_unsubscribe.splice(pUnsubscribe, 1);
+                continue;
+            }
+            if (pUnsubscribe === -1)
+                cameras_to_unsubscribe.push(cam);
+            let pSubscribe = cameras_to_subscribe.indexOf(cam);
+            if (pSubscribe !== -1)
+                cameras_to_subscribe.splice(pSubscribe, 1);
+        }
+    }
+
+    let cum_cameras_list = subscribe ? cameras_to_subscribe : cameras_to_unsubscribe;
+
+    if (!cum_cameras_list.length) {
+        console.info('No cameras to '+(subscribe?'subscribe to':'unsubscribe from')+' in SetCameraSubscription (we cool)');
+        return;
+    }
+
+    if (subscribe) {
+
+        if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
+            if (pc && pc.connectionState == 'failed') {
+                console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
+                //connect will trigger this again
+                return;
+            }
+
+            if (pc)
+                console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
+            else
+                console.info('Cannot subscribe to cameras, pc=null; waiting... '+cum_cameras_list.join(', '));
+
+            setTimeout(() => {
+                SetCameraSubscription(id_robot, [], subscribe) //all alteady in queues
+            }, 1000); //try again when stable
+            return;
+        }
+
+        _DoInitCamerasSubscription(id_robot, cum_cameras_list, true)
+        cameras_to_subscribe = [];
+
+    } else {
+        // unsubscribe, no need to renegotiate
+        _DoInitCamerasSubscription(id_robot, cum_cameras_list, false)
+        cameras_to_unsubscribe = [];
+    }
+
+}
+
+// assuming pc state is stable when subscribing to new cameras here
+function _DoInitCamerasSubscription(id_robot, cameras_list, subscribe) {
+
+    console.warn((subscribe ? 'Subscribing to caneras ' : 'Unsubscribing from cameras ') + cameras_list.join(', '));
+
+    let subscription_data = {
+        id_robot: id_robot,
+        cameras: [],
+    };
+    for (let i = 0; i < cameras_list.length; i++) {
+        if (!cameras[cameras_list[i]])
+            continue;
+        cameras[cameras_list[i]].subscribed = subscribe;
+        subscription_data.cameras.push([ cameras_list[i], subscribe ? 1 : 0 ]);
+    }
+
+    if (!subscription_data['cameras'].length) {
+        return
+    }
+
+    if (!subscribe) {
+        return _DoSetCamerasSubscription(subscription_data, false); //no need to negotiate
+    }
+
+    return pc.createOffer()
+        .then(function(offer) {
+            pc.setLocalDescription(offer);
+            //setup transievers for img topics
+            subscription_data['sdp_offer'] = pc.localDescription.sdp;
+        }).then(function() {
+            _DoSetCamerasSubscription(subscription_data, true);
+        });
+}
+
+function _DoSetCamerasSubscription(subscription_data, subscribing) {
+    // toggle read subscription
+    return socket.emit('cameras:read', subscription_data, (res) => {
+        if (!res || !res['success']) {
+            console.error('Camera read subscription err: ', res);
+            return;
+        }
+
+        if (subscribing) {
+            let robot_answer = new RTCSessionDescription({ sdp: res['answer_sdp'], type: 'answer' });
+            //robot_offer.sdp = offer.sdp.replace('H264', 'codec-not-supported');
+
+            _HandleCamerasSubscriptionRepy(res);
+
+            console.log('Setting robot answer:', robot_answer);
+            pc.setRemoteDescription(robot_answer)
+            // .then(() => {
+
+            // });
+        } else { //no negotiation needed
+            _HandleCamerasSubscriptionRepy(res);
+        }
+
+        //console.log('Setting robot offer:', robot_answer);
+        //pc.setRemoteDescription(robot_answer)
+
+    });
+}
+
+function _HandleCamerasSubscriptionRepy(res) {
+
+    console.log('Handling cameras subscription data: ', res);
+
 }

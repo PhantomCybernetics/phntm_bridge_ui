@@ -74,19 +74,21 @@ class Panel {
     init(msg_type=null) {
 
         this.msg_type = msg_type;
-        if (this.msg_type && this.msg_type != 'video') {
+        if (this.msg_type) {
 
-            this.msg_type_class = msg_type ? FindMessageType(this.msg_type, supported_msg_types) : null;
-            $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
+            if (this.msg_type != 'video') {
+                this.msg_type_class = msg_type ? FindMessageType(this.msg_type, supported_msg_types) : null;
+                $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
 
-            if (this.msg_type_class == null && this.msg_type != null) {
-                $('#panel_msg_types_'+this.n).addClass('err');
-                $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
-            }
+                if (this.msg_type_class == null && this.msg_type != null) {
+                    $('#panel_msg_types_'+this.n).addClass('err');
+                    $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
+                }
 
-            if (this.msg_type != null) {
-                let Reader = window.Serialization.MessageReader;
-                this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
+                if (this.msg_type != null) {
+                    let Reader = window.Serialization.MessageReader;
+                    this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
+                }
             }
 
             if (panel_widgets[this.msg_type] != undefined) {
@@ -330,6 +332,15 @@ class Panel {
         } // else { //topics not loaded
             // Panel.TogglePanel(that.id_source, null, false);
         // }
+
+        if ($('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').length > 0) {
+            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
+            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
+            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
+            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
+
+            SetCameraSubscription(id_robot, [ this.id_source ], false);
+        }
 
         // let x = parseInt($(this.grid_widget).attr('gs-x'));
         // let y = parseInt($(this.grid_widget).attr('gs-y'));

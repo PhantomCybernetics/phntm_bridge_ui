@@ -308,7 +308,7 @@
 
             cameras = {};
 
-            let subscribe_cameras = [];
+
 
             if (Object.keys(cameras_data).length > 0) {
                 $('#camera_controls').addClass('active');
@@ -317,6 +317,7 @@
             }
 
             let i = 0;
+            let subscribe_cameras = [];
             Object.keys(cameras_data).forEach((id_robot) => {
 
                 if (!cameras_data[id_robot])
@@ -332,7 +333,7 @@
                     }
 
                     $('#cameras_list').append('<div class="camera" data-camera="'+camera_data.id+'">'
-                        + '<input type="checkbox" id="cb_camera_'+i+'"'
+                        + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
                         //+ (!topic.robotTubscribed?' disabled':'')
                         + (panels[camera_data.id] ? ' checked': '' )
                         + '/> '
@@ -365,21 +366,20 @@
 
                     i++;
                 });
-
                 $('#cameras_heading').html(cameras_data[id_robot].length+' '+(cameras_data[id_robot].length == 1 ? 'Camera' : 'Cameras'));
 
-                $('#cameras_list INPUT:checkbox').change(function(event) {
-                    let camera = $(this).parent('DIV.camera').data('camera');
+                if (subscribe_cameras.length)
+                    SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+                $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
+                    let cam = $(this).parent('DIV.camera').data('camera');
                     let state = this.checked;
-                    let w = 4; let h = 4;
 
-                    if (panel_widgets['video']) {
-                        w = panel_widgets['video'].w;
-                        h = panel_widgets['video'].h;
-                    }
+                    let w = panel_widgets['video'].w;
+                    let h = panel_widgets['video'].h;
 
-                    Panel.TogglePanel(camera, 'video', state, w, h, null, null, false, true);
-                    // SetTopicsReadSubscription('<%= id_robot %>', [ topic ], state);
+                    Panel.TogglePanel(cam, 'video', state, w, h, null, null);
+                    SetCameraSubscription(id_robot, [ cam ], state);
                 });
             });
         });
@@ -392,17 +392,17 @@
             //$('#topic_list').css('display', 'block');
             $('#monitors').css('display', 'block');
 
-            let msg_type_filter_val = $('#msg_type_filter').val();
-            $("#msg_type_filter option[value!='']").each(function() {
-                $(this).remove();
-            });
+            // let msg_type_filter_val = $('#msg_type_filter').val();
+            // $("#msg_type_filter option[value!='']").each(function() {
+            //     $(this).remove();
+            // });
 
             console.log('Topics:', topics_data);
 
-            let msg_type_filters = [];
+            // let msg_type_filters = [];
             //let old_topics = topics;
             //topics = {};
-            let subscribe_topics = [];
+
 
             if (Object.keys(topics_data).length > 0) {
                 $('#topic_controls').addClass('active');
@@ -411,6 +411,7 @@
             }
 
             let i = 0;
+            let subscribe_topics = [];
             Object.keys(topics_data).forEach((id_robot) => {
 
                 if (!topics_data[id_robot])
@@ -456,10 +457,10 @@
                         + '</div>'
                     );
 
-                    topic_data.msgTypes.forEach((msgType)=>{
-                        if (msg_type_filters.indexOf(msgType) == -1)
-                            msg_type_filters.push(msgType);
-                    });
+                    // topic_data.msgTypes.forEach((msgType)=>{
+                    //     if (msg_type_filters.indexOf(msgType) == -1)
+                    //         msg_type_filters.push(msgType);
+                    // });
 
                     let subscribe = $('#cb_topic_'+i).is(':checked');
 
@@ -483,11 +484,10 @@
                     i++;
                 });
             });
+            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
 
             if (subscribe_topics.length)
                 SetTopicsReadSubscription(id_robot, subscribe_topics, true);
-
-            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
 
             $('#topic_list INPUT.enabled:checkbox').change(function(event) {
                 let topic = $(this).parent('DIV.topic').data('topic');
