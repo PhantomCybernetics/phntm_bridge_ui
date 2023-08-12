@@ -22,6 +22,11 @@
         <a href="#" id="services_gamepad_mapping_toggle">[shortcuts]</a>
         <div id="service_list"></div>
     </div>
+
+    <div id="camera_controls">
+        <h3 id="cameras_heading">Cameras</h3>
+        <div id="cameras_list"></div>
+    </div>
 </div>
 
 <div class="grid-stack" id="grid-stack"></div>
@@ -78,9 +83,8 @@
         });
 
         grid.on('resize', function(e, el) {
-            let topic = $(el).find('.monitor_panel').attr('data-topic');
-            //console.warn('Grid resized: '+ topic);
-            panels[topic].OnResize();
+            let id_source = $(el).find('.grid_panel').attr('data-source');
+            panels[id_source].onResize();
         });
 
 
@@ -96,19 +100,19 @@
                     hash = hash.substr(1);
                     let hashArr = hash.split(';');
                     for (let i = 0; i < hashArr.length; i++) {
-                        let topic_vars = hashArr[i].trim();
-                        if (!topic_vars)
+                        let src_vars = hashArr[i].trim();
+                        if (!src_vars)
                             continue;
-                        topic_vars = topic_vars.split(':');
-                        let topic = topic_vars[0];
+                        src_vars = src_vars.split(':');
+                        let id_source = src_vars[0];
                         let x = null; let y = null;
-                        let panelPos = topic_vars[1];
+                        let panelPos = src_vars[1];
                         if (panelPos) {
                             panelPos = panelPos.split('x');
                             x = panelPos[0];
                             y = panelPos[1];
                         }
-                        let panelSize = topic_vars[2];
+                        let panelSize = src_vars[2];
                         let w = 2; let h = 2;
                         if (panelSize) {
                             panelSize = panelSize.split('x');
@@ -116,17 +120,17 @@
                             h = panelSize[1];
                         }
                         let src_on = false;
-                        for (let j = 2; j < topic_vars.length; j++) {
-                            if (topic_vars[j] == 'src') {
+                        for (let j = 2; j < src_vars.length; j++) {
+                            if (src_vars[j] == 'src') {
                                 src_on = true;
                             }
                         }
 
+                        let msg_type = null; //unknown atm
                         //console.info('Opening panel for '+topic+'; src_on='+src_on);
-                        TogglePanel(topic, true, w, h, x, y, src_on)
+                        Panel.TogglePanel(id_source, msg_type, true, w, h, x, y, src_on)
                     }
                 }
-
 
                 window.gamepadController = new GamepadController(pc, '/joy', id_robot, socket, supported_msg_types);
 
@@ -240,6 +244,12 @@
 
             services = {};
 
+            if (Object.keys(services_data).length > 0) {
+                $('#service_controls').addClass('active');
+            } else {
+                $('#service_controls').removeClass('active');
+            }
+
             let i = 0;
             Object.keys(services_data).forEach((id_robot) => {
 
@@ -306,6 +316,90 @@
             });
         });
 
+        socket.on('cameras', (cameras_data) => {
+            $('#cameras_list').empty();
+            //$('#service_list').css('display', 'block');
+
+            console.log('Cameras:', cameras_data);
+
+            cameras = {};
+
+            let subscribe_cameras = [];
+
+            if (Object.keys(cameras_data).length > 0) {
+                $('#camera_controls').addClass('active');
+            } else {
+                $('#camera_controls').removeClass('active');
+            }
+
+            let i = 0;
+            Object.keys(cameras_data).forEach((id_robot) => {
+
+                if (!cameras_data[id_robot])
+                    return;
+
+                cameras_data[id_robot].forEach((camera_data)=>{
+
+                    if (!cameras[camera_data.id]) {
+                        cameras[camera_data.id] = {
+                            info: camera_data.info,
+                            subscribed: false
+                        }
+                    }
+
+                    $('#cameras_list').append('<div class="camera" data-camera="'+camera_data.id+'">'
+                        + '<input type="checkbox" id="cb_camera_'+i+'"'
+                        //+ (!topic.robotTubscribed?' disabled':'')
+                        + (panels[camera_data.id] ? ' checked': '' )
+                        + '/> '
+                        + '<span '
+                        + 'class="camera" '
+                        + '>'
+                        + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera_data.id+'</label>'
+                        + '</span>'
+                        + '</div>'
+                    );
+
+                    let subscribe = $('#cb_camera_'+i).is(':checked');
+
+                    if (panels[camera_data.id]) {
+                        panels[camera_data.id].init('video');
+                        subscribe = true;
+                    }
+
+                    //if (!old_topics[topic.topic]) {
+
+                    if (subscribe) {
+                        //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                        subscribe_cameras.push(camera_data.id);
+                    } else {
+                        //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                    }
+
+                    //TogglePanel(topic.topic, true);
+                    //}
+
+                    i++;
+                });
+
+                $('#cameras_heading').html(cameras_data[id_robot].length+' '+(cameras_data[id_robot].length == 1 ? 'Camera' : 'Cameras'));
+
+                $('#cameras_list INPUT:checkbox').change(function(event) {
+                    let camera = $(this).parent('DIV.camera').data('camera');
+                    let state = this.checked;
+                    let w = 4; let h = 4;
+
+                    if (panel_widgets['video']) {
+                        w = panel_widgets['video'].w;
+                        h = panel_widgets['video'].h;
+                    }
+
+                    Panel.TogglePanel(camera, 'video', state, w, h, null, null, false, true);
+                    // SetTopicsReadSubscription('<%= id_robot %>', [ topic ], state);
+                });
+            });
+        });
+
 
         socket.on('topics', (topics_data) => {
             $('#topic_list').empty();
@@ -325,6 +419,12 @@
             //let old_topics = topics;
             //topics = {};
             let subscribe_topics = [];
+
+            if (Object.keys(topics_data).length > 0) {
+                $('#topic_controls').addClass('active');
+            } else {
+                $('#topic_controls').removeClass('active');
+            }
 
             let i = 0;
             Object.keys(topics_data).forEach((id_robot) => {
@@ -355,16 +455,16 @@
                         }
                     }
 
-                    let is_image = topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
+                    let is_video = topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
                     let msg_type_supported = FindMessageType(topic_data.msgTypes[0], supported_msg_types)
 
                     $('#topic_list').append('<div class="topic" data-topic="'+topic_data.topic+'" data-msg_types="'+topic_data.msgTypes.join(',')+'">'
-                        + '<input type="checkbox" id="cb_topic_'+i+'"'
+                        + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
                         //+ (!topic.robotTubscribed?' disabled':'')
                         + (panels[topic_data.topic] ? ' checked': '' )
                         + '/> '
                         + '<span '
-                        + 'class="topic'+(is_image?' image':'')+(!msg_type_supported?' unsupported_message_type':'')+'" '
+                        + 'class="topic'+(is_video?' image':'')+(!msg_type_supported?' unsupported_message_type':'')+'" '
                         + 'title="'+(!msg_type_supported?'Unsupported type: ':'')+topic_data.msgTypes.join('; ')+'"'
                         + '>'
                         + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic_data.topic+'</label>'
@@ -379,8 +479,8 @@
 
                     let subscribe = $('#cb_topic_'+i).is(':checked');
 
-                    if (panels[topic_data.topic] && !panels[topic_data.topic].initialized) {
-                        panels[topic_data.topic].Init(topic_data.msgTypes);
+                    if (panels[topic_data.topic]) {
+                        panels[topic_data.topic].init(topic_data.msgTypes[0]); //init w message type
                         subscribe = true;
                     }
 
@@ -401,36 +501,23 @@
             });
 
             if (subscribe_topics.length)
-                SetTopicsReadSubscription('<%= id_robot %>', subscribe_topics, true);
+                SetTopicsReadSubscription(id_robot, subscribe_topics, true);
 
             $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
 
-            if (msg_type_filter_val && msg_type_filters.indexOf(msg_type_filter_val) == -1) {
-                msg_type_filters.push(msg_type_filter_val);
-            }
-            msg_type_filters.sort();
-            msg_type_filters.forEach((msgType)=>{
-                $("#msg_type_filter").append('<option value="'+msgType+'">'+msgType+'</option>');
-            });
-            $('#msg_type_filter').val(msg_type_filter_val).change();
-            //console.log('topics reloaded, msg_type_filter_val='+msg_type_filter_val)
-
-            $('#topic_list INPUT:checkbox').change(function(event) {
+            $('#topic_list INPUT.enabled:checkbox').change(function(event) {
                 let topic = $(this).parent('DIV.topic').data('topic');
                 let state = this.checked;
+
                 let w = 2; let h = 2;
-
-                let msg_type = topics[topic].msg_types[0]
-
-                if (panel_widgets[msg_type]) {
-                    w = panel_widgets[msg_type].w;
-                    h = panel_widgets[msg_type].h;
+                if (panel_widgets[topics[topic].msg_types]) {
+                    w = panel_widgets[topics[topic].msg_types].w;
+                    h = panel_widgets[topics[topic].msg_types].h;
                 }
 
-                TogglePanel(topic, state, w, h);
-                SetTopicsReadSubscription('<%= id_robot %>', [ topic ], state);
+                Panel.TogglePanel(topic, topics[topic].msg_types, state, w, h);
+                SetTopicsReadSubscription(id_robot, [ topic ], state);
             });
-
 
 
         });

@@ -344,6 +344,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
 
     robot.topics = [];
     robot.services = [];
+    robot.cameras = [];
     robot.socket = robotSocket;
 
     robot.AddToConnedted(); //sends update to subscribers
@@ -446,6 +447,58 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         });
 
         robot.ServicesToSubscribers();
+    });
+
+
+    robotSocket.on('cameras', async function(allCameras:any[]) {
+
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
+
+        $d.l("Got cameras from "+robot.id_robot+":");
+        allCameras.forEach(cameraData => {
+            let idCam = cameraData[0];
+            //let robotSubscribed:boolean = topicData[1];
+            let camInfo = cameraData[1];
+
+            let report = false;
+            let currCamera = null;
+            for (let i = 0; i < robot.cameras.length; i++) {
+                if (robot.cameras[i].id == idCam) {
+                    currCamera = robot.cameras[i];
+                    break;
+                }
+            }
+            if (!currCamera) {
+                robot.cameras.push({
+                    id: idCam,
+                    info: camInfo
+                });
+                report = true;
+            } else {
+
+                if (currCamera.info['Model'] !== camInfo['Model']) {
+                    currCamera.info['Model']  = camInfo['Model'];
+                    report = true;
+                }
+                if (currCamera.info['Location'] !== camInfo['Location']) {
+                    currCamera.info['Location']  = camInfo['Location'];
+                    report = true;
+                }
+                if (currCamera.info['Rotation'] !== camInfo['Rotation']) {
+                    currCamera.info['Rotation']  = camInfo['Rotation'];
+                    report = true;
+                }
+            }
+
+            if (report) {
+                let out = "  > "+idCam;
+                $d.l(out.cyan);
+            }
+
+        });
+
+        robot.CamerasToSubscribers();
     });
 
 
@@ -676,6 +729,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         if (robot) {
             app.socket.emit('topics', robot.GetTopicsData());
             app.socket.emit('services', robot.GetServicesData());
+            app.socket.emit('cameras', robot.GetCamerasData());
         }
     });
 

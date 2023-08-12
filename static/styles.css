@@ -70,9 +70,7 @@ h3 {
     float: left;
 }
 
-#topic_controls:hover {
-    border-radius: 5px 5px 0px 0px;
-}
+
 
 #topic_list {
     overflow-x: hidden;
@@ -87,12 +85,9 @@ h3 {
     background: #deeeff;
 }
 
-#topic_controls:hover #topic_list {
-    display: block;
-}
 
 #service_controls {
-    width: 240px;
+    width: 270px;
     background: #b311a3;
     padding: 10px;
     border-radius: 5px;
@@ -101,16 +96,42 @@ h3 {
     margin-left: 10px
 }
 
+#camera_controls {
+    width: 170px;
+    background: #82b727;
+    padding: 10px;
+    border-radius: 5px;
+    position: relative;
+    float: left;
+    margin-left: 10px
+}
+
 #service_controls H3,
+#camera_controls H3,
 #topic_controls H3 {
     color: #fff;
 }
 
-#service_controls:hover,
-#service_controls.setting_shortcuts {
+#service_controls.active:hover,
+#camera_controls.active:hover,
+#topic_controls.active:hover,
+#service_controls.active.setting_shortcuts {
     border-radius: 5px 5px 0px 0px;
 }
 
+#cameras_list {
+    display: none;
+    position: absolute;
+    overflow-x: hidden;
+    overflow: scroll;
+    background: #9ec65a;
+    left: 0px;
+    top: 100%;
+    width: 510px;
+    max-height: 520px;
+    padding: 5px 10px 5px 10px;
+    border-radius: 0px 5px 5px 5px;
+}
 
 #service_list {
     display: none;
@@ -123,10 +144,13 @@ h3 {
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
+    border-radius: 0px 5px 5px 5px;
 }
 
-#service_controls:hover #service_list,
-#service_controls.setting_shortcuts #service_list {
+#service_controls.active:hover #service_list,
+#topic_controls.active:hover #topic_list,
+#camera_controls.active:hover #cameras_list,
+#service_controls.active.setting_shortcuts #service_list {
     display: block;
 }
 
@@ -156,8 +180,8 @@ h3 {
 }
 
 
-#service_controls:hover #services_gamepad_mapping_toggle,
-#service_controls.setting_shortcuts #services_gamepad_mapping_toggle {
+#service_controls.active:hover #services_gamepad_mapping_toggle,
+#service_controls.active.setting_shortcuts #services_gamepad_mapping_toggle {
     display: block
 }
 
@@ -261,7 +285,7 @@ h3 {
 
 }
 
-.monitor_panel {
+.grid_panel {
     height: -webkit-fill-available;
     padding-bottom: 0px;
     position: relative;
@@ -324,38 +348,38 @@ h3 {
     display: block;
 }
 
-.monitor_panel .menu_line INPUT {
+.grid_panel .menu_line INPUT {
     margin: 0px 1px 0px 0px;
     position: relative;
     top: 1px;
     float: right;
 }
 
-.monitor_panel .menu_line {
+.grid_panel .menu_line {
     background-color: #139a80;
     clear: both;
 }
 
-.monitor_panel .menu_line A, .monitor_panel .menu_line Label {
+.grid_panel .menu_line A, .grid_panel .menu_line Label {
     text-decoration: none;
     display: block;
     padding: 5px 5px 5px 8px;
 }
 
-.monitor_panel .menu_line:last-child A {
+.grid_panel .menu_line:last-child A {
     padding-bottom: 7px;
 }
 
-.monitor_panel .menu_line:hover {
+.grid_panel .menu_line:hover {
     background-color: #001649;
 }
 
-.monitor_panel .menu_line:first-child {
+.grid_panel .menu_line:first-child {
     padding-top: 5px;
     border-radius: 5px 0px 0px 0px;
 }
 
-.monitor_panel .menu_line:last-child {
+.grid_panel .menu_line:last-child {
     border-radius: 0px 0px 5px 5px;
 }
 
@@ -367,7 +391,7 @@ h3 {
     background-color: #139a80 !important;
 }
 
-.monitor_panel .msg_types {
+.grid_panel .msg_types {
     border: 1px dashed white;
     padding: 6px 10px;
     border-radius: 5px;
@@ -375,19 +399,19 @@ h3 {
     margin: 0px 3px;
 }
 
-.monitor_panel .msg_types.err {
+.grid_panel .msg_types.err {
     background: red;
 }
 
-.monitor_panel  .msg_types:hover {
+.grid_panel  .msg_types:hover {
     background: #558ec3;
 }
 
-.monitor_panel .msg_types.err:hover {
+.grid_panel .msg_types.err:hover {
     background: #c20000;
 }
 
-.monitor_panel h3 {
+.grid_panel h3 {
     z-index: 2;
     position: relative;
     padding-right: 10px;
@@ -409,17 +433,18 @@ SPAN.error {
     color: gray
 }
 
-#topic_list .topic:hover {
+#topic_list .topic:hover,
+#cameras_list .camera:hover {
     color: rgb(255, 0, 212);
 }
 
-#topic_list .topic label{
+#topic_list .topic label,
+#cameras_list .camera label{
     cursor: pointer;
 }
 
-.monitor_panel .panel_content {
+.grid_panel .panel_source {
     min-height: 1em;
-    margin-top: 10px;
     padding: 12px;
     word-wrap: break-word;
     white-space: pre;
@@ -436,19 +461,19 @@ SPAN.error {
     margin-bottom: 15px;
 }
 
-.monitor_panel .panel_content.enabled {
+.grid_panel .panel_source.enabled {
     display: block;
 }
 
-.monitor_panel .panel_content A {
+.grid_panel .panel_source A {
     color: #fff;
 }
 
-.monitor_panel .panel_content A:hover {
+.grid_panel .panel_source A:hover {
     color: #30f104;
 }
 
-.monitor_panel .panel_update {
+.grid_panel .panel_update {
 
 }
 
@@ -496,19 +521,15 @@ SPAN.error {
     background: white;
     min-height: 40px;
     clear: right;
-    margin-top: 9px;
     border-radius: 5px;
     display: none;
     overflow: hidden;
-    margin-bottom: 15px;
 }
 
-.panel_widget.content_enabled {
+.panel_widget.source_visible {
     width: 50%;
     float: right;
-    margin-top: 30px;
     margin-left: 5px;
-    margin-bottom: -30px;
 }
 
 .panel_widget.laser_scan {
@@ -592,13 +613,19 @@ SPAN.error {
     display: block;
 }
 
-.panel_widget.range,
+.panel_content_space {
+    height: -webkit-fill-available;
+    padding-top: 10px;
+    position: relative;
+}
+
+/* .panel_widget.range,
 .panel_widget.battery,
 .panel_widget.laser_scan,
 .panel_widget.imu
 {
     height: -webkit-fill-available;
-}
+} */
 
 .panel_widget canvas {
     border-radius: 5px;

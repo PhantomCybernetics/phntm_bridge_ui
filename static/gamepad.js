@@ -15,7 +15,7 @@ const browser2joy_mapping = {
     },
     axes: {
         0 : [ 0, -1.0], // angular_z_axiss (speed => fw back)
-        1 : [ 1, -1.0], // linear_x_axis (turn l/r)
+        1 : [ 1, 1.0], // linear_x_axis (turn l/r)
         2 : [ 4 ] // linear_y_axis (strafe)
     }
 }

@@ -30,6 +30,7 @@ let topic_dcs = {}; //str topic => RTCDataChannel
 let topic_video_tracks = {}; //str topic => MediaStreamTrack
 let topic_transceivers = {}; //str topic => RTCRtpTransceiver
 let services = {}; // str service => { msg_type: str}
+let cameras = {}; // str id => { info: {}}
 
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
@@ -448,7 +449,7 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
         if (subscribe) {
             let pSubscribe = topics_to_subscribe.indexOf(topic);
             if (topics[topic] && topics[topic].subscribed) {
-                console.warn('Topic '+topic+' already subscribed to');
+                console.info('Topic '+topic+' already subscribed to (we cool)');
                 if (pSubscribe !== -1)
                     topics_to_subscribe.splice(pSubscribe, 1);
                 continue;
@@ -461,7 +462,7 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
         } else {
             let pUnsubscribe = topics_to_unsubscribe.indexOf(topic);
             if (topics[topic] && !topics[topic].subscribed) {
-                console.warn('Topic '+topic+' already unsubscribed from');
+                console.info('Topic '+topic+' already unsubscribed from (we cool)');
                 if (pUnsubscribe !== -1)
                     topics_to_unsubscribe.splice(pUnsubscribe, 1);
                 continue;
@@ -486,6 +487,7 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
         if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
             if (pc && pc.connectionState == 'failed') {
                 console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
+                //connect will trigger this again
                 return;
             }
 
@@ -496,7 +498,7 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
 
             setTimeout(() => {
                 SetTopicsReadSubscription(id_robot, [], subscribe) //all alteady in queues
-            }, 300); //try again when stable
+            }, 1000); //try again when stable
             return;
         }
 
@@ -634,13 +636,19 @@ function _HandleSubscriptionData(res) {
             });
             dc.addEventListener('message', (ev)=> {
                 let panel = panels[topic];
-                if (!panel)
+                if (!panel) {
+                    console.error('panel not found for '+topic+' (data)')
                     return;
+                }
 
-                if (!$('#update_panel_'+panel.n).is(':checked'))
+                if (!$('#update_panel_'+panel.n).is(':checked')) {
+                    console.error('panel not updating '+topic+' (data)')
                     return;
+                }
 
-                panel.OnData(ev);
+                // console.log('panel '+topic+' has data', ev)
+
+                panel.onData(ev);
             });
 
         } else { //subscribed video
@@ -715,42 +723,27 @@ function _HandleSubscriptionData(res) {
     }
 }
 
-function TogglePanel(topic, state, w, h, x = null, y = null, src_visible = false) {
-    let panel = panels[topic];
-    if (state) {
-        if (!panel) {
-            panel = new Panel(topic, topics[topic] ? topics[topic].msg_types : null, w, h, x, y, src_visible);
-            panels[topic] = panel;
-        }
-    } else if (panel) {
-        panel.Close();
-        delete panels[topic];
-    }
-
-    //UpdateUrlHash();
-}
-
 function UpdateUrlHash() {
     let hash = [];
 
     //console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
 
     $('#grid-stack').children('.grid-stack-item').each(function () {
-        widget = this;
+        let widget = this;
         let x = $(widget).attr('gs-x');
         let y = $(widget).attr('gs-y');
         let w = $(widget).attr('gs-w');
         let h = $(widget).attr('gs-h');
-        let topic = $(widget).find('.monitor_panel').attr('data-topic');
-        let topicBits = [
-            topic,
+        let id_source = $(widget).find('.grid_panel').attr('data-source');
+
+        let parts = [
+            id_source,
             [x, y].join('x'),
             [w, h].join('x'),
         ];
-        let source_visible = $(widget).find('.panel_content').hasClass('enabled');
-        if (source_visible)
-            topicBits.push('src');
-        hash.push(topicBits.join(':'));
+        if (panels[id_source].src_visible)
+            parts.push('src');
+        hash.push(parts.join(':'));
     });
 
     if (hash.length > 0)

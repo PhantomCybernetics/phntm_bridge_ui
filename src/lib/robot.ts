@@ -18,6 +18,7 @@ export class Robot {
     socket: RobotSocket;
     topics: {topic: string, robotSubscribed:boolean, msgTypes:string[]}[];
     services: {service: string, msgType:string}[];
+    cameras: {id: string, info: any}[];
 
     static connectedRobots:Robot[] = [];
 
@@ -73,17 +74,33 @@ export class Robot {
     }
 
     public GetServicesData():any {
-        let robotServicessData:any = {}
-        robotServicessData[this.id_robot.toString()] = this.services;
-        return robotServicessData;
+        let robotServicesData:any = {}
+        robotServicesData[this.id_robot.toString()] = this.services;
+        return robotServicesData;
     }
 
     public ServicesToSubscribers():void {
-        let robotServicessData = this.GetServicesData();
+        let robotServicesData = this.GetServicesData();
         App.connectedApps.forEach(app => {
             if (app.IsSubscribedToRobot(this.id_robot)) {
-                $d.l('emitting services to app', robotServicessData);
-                app.socket.emit('services', robotServicessData)
+                // $d.l('emitting services to app', robotServicesData);
+                app.socket.emit('services', robotServicesData)
+            }
+        });
+    }
+
+    public GetCamerasData():any {
+        let robotCamerasData:any = {}
+        robotCamerasData[this.id_robot.toString()] = this.cameras;
+        return robotCamerasData;
+    }
+
+    public CamerasToSubscribers():void {
+        let robotCamerasData = this.GetCamerasData();
+        App.connectedApps.forEach(app => {
+            if (app.IsSubscribedToRobot(this.id_robot)) {
+                $d.l('emitting cameras to app', robotCamerasData);
+                app.socket.emit('cameras', robotCamerasData)
             }
         });
     }

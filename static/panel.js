@@ -2,16 +2,19 @@ let panelNo = 0;
 
 
 class Panel {
-    topic = null;
+    id_source = null;
     id_stream = null;
-    msg_types = [];
+    msg_type = null; //str
+    msg_type_class = null;
     n = ++panelNo;
-    msg_type = null;
+
     msg_reader = null;
     max_height = 0;
 
-    chart = null;
-    chart_trace = [];
+    display_widget = null;
+    data_trace = [];
+    widget_menu_cb = null;
+
     max_trace_length = 100;
     zoom = 1;
 
@@ -19,44 +22,107 @@ class Panel {
 
     initiated = false;
     resize_event_handler = null;
+    src_visible = false;
     //const event = new Event("build");
 
     //widget_opts = {};
 
-    constructor(topic, msg_types, w, h, x = null, y = null, src_visible = false) {
-        this.topic = topic;
-        console.log('Panel created for '+this.topic)
+    static TogglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
+        let panel = panels[id_source];
+        if (state) {
+            if (!panel) {
+                panel = new Panel(id_source, w, h, x, y, src_visible);
+                panel.init(msg_type)
+            }
+        } else if (panel) {
+            panel.close();
+        }
+    }
+
+    constructor(id_source,  w, h, x = null, y = null, src_visible = false) {
+        this.id_source = id_source;
+        this.src_visible = src_visible;
+        console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
         //let display_source = false;
 
         let html =
-            '<div class="monitor_panel" data-topic="'+topic+'">' +
-                '<h3>'+topic+'</h3>' +
+            '<div class="grid_panel" data-source="'+id_source+'">' +
+                '<h3>'+id_source+'</h3>' +
                 '<div class="monitor_menu">' +
                     '<div class="hover_keeper"></div>' +
-                    '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'">' +
-                        '<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition"></a></div>' +
-                        '<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>' +
-                        '<div class="menu_line" id="display_panel_source_link_'+this.n+'" style="display:none"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>' +
-                        '<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>' +
-                    '</div>' +
+                    '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
-                '<div class="panel_widget'+(src_visible?' content_enabled':'')+'" id="panel_widget_'+this.n+'"></div>' +
-                '<div class="panel_content'+(src_visible?' enabled':'')+'" id="panel_content_'+this.n+'">Waiting for data...</div>' +
-                '<div class="cleaner"></div>' +
+                '<div class="panel_content_space">' +
+                    '<div class="panel_widget'+(this.src_visible?' source_visible':'')+'" id="panel_widget_'+this.n+'"></div>' +
+                    '<div class="panel_source'+(this.src_visible?' enabled':'')+'" id="panel_source_'+this.n+'">Waiting for data...</div>' +
+                    '<div class="cleaner"></div>' +
+                '</div>' +
                 //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
 
         let widget_opts = {w: w, h:h, content: html};
         if (x != null && x != undefined) widget_opts.x = x;
         if (y != null && y != undefined) widget_opts.y = y;
+        panels[id_source] = this;
         this.grid_widget = grid.addWidget(widget_opts);
+    }
+
+    // init with message type when it's known
+    // might get called with null gefore we receive the message type
+    init(msg_type=null) {
+
+        this.msg_type = msg_type;
+        if (this.msg_type && this.msg_type != 'video') {
+
+            this.msg_type_class = msg_type ? FindMessageType(this.msg_type, supported_msg_types) : null;
+            $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
+
+            if (this.msg_type_class == null && this.msg_type != null) {
+                $('#panel_msg_types_'+this.n).addClass('err');
+                $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
+            }
+
+            if (this.msg_type != null) {
+                let Reader = window.Serialization.MessageReader;
+                this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
+            }
+
+            if (panel_widgets[this.msg_type] != undefined) {
+                if (!this.display_widget) { //only once
+                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
+                    panel_widgets[this.msg_type].widget(this, null) //no data yet
+                }
+            } else {  //no widget, show source
+                //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
+                $('#panel_source_'+this.n).addClass('enabled');
+            }
+        }
+
+        this.setMenu()
+        this.onResize();
+    }
+
+    setMenu() {
+
+        let els = []
+        if (this.msg_type != null && this.msg_type != 'video') {
+            els.push('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition">'+this.msg_type+'</a></div>');
+            els.push('<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>');
+
+            if (this.display_widget)
+                els.push('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
+        }
+
+        els.push('<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>')
+
+        $('#monitor_menu_content_'+this.n).html(els.join('\n'));
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
 
-            $('#msg_type-dialog').attr('title', that.msg_types[0]);
-            $('#msg_type-dialog').html((that.msg_type ? JSON.stringify(that.msg_type, null, 2) : '<span class="error">Message type not loaded!</span>'));
+            $('#msg_type-dialog').attr('title', that.msg_type);
+            $('#msg_type-dialog').html((that.msg_type_class ? JSON.stringify(that.msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>'));
             $( "#msg_type-dialog" ).dialog({
                 resizable: true,
                 height: 700,
@@ -73,29 +139,27 @@ class Panel {
             ev.preventDefault();
         });
 
-        let source_el = $('#panel_content_'+this.n);
+        let source_el = $('#panel_source_'+this.n);
         let widget_el = $('#panel_widget_'+this.n);
         $('#display_panel_source_'+this.n).change(function(ev) {
             if ($(this).prop('checked')) {
                 source_el.addClass('enabled');
-                widget_el.addClass('content_enabled');
-
+                widget_el.addClass('source_visible');
                 let w = parseInt($(that.grid_widget).attr('gs-w'))*2;
-                console.log('grid cell opts w=', w);
-                grid.update(that.grid_widget, {w : w});
-                that.OnResize();
+                // console.log('grid cell opts w=', w);
+                that.src_visible = true;
+                grid.update(that.grid_widget, {w : w}); //updates url hash
+                that.onResize();
             } else {
                 source_el.removeClass('enabled');
-                widget_el.removeClass('content_enabled');
-
+                widget_el.removeClass('source_visible');
                 let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
-                console.log('grid cell opts w=', w);
+                // console.log('grid cell opts w=', w);
+                that.src_visible = false;
                 grid.update(that.grid_widget, {w : w});
-                that.OnResize();
+                that.onResize();
             }
         });
-
-
 
         $('#close_panel_link_'+this.n).click(function(ev) {
             /*console.log('click '+that.n)
@@ -105,94 +169,63 @@ class Panel {
             else if (!el.hasClass('err'))
                 el.css('display', 'none');
                 */
-            if ($('.topic[data-topic="'+topic+'"] INPUT:checkbox').length > 0) {
-                $('.topic[data-topic="'+topic+'"] INPUT:checkbox').click();
-            } else { //topics not loaded
-                TogglePanel(topic, false);
-            }
 
+            that.close();
 
             //that.Close();
             //delete panels[that.topic];
-
 
             ev.cancelBubble = true;
             ev.preventDefault();
         });
 
-        if (msg_types)
-            this.Init(msg_types)
+        if (this.widget_menu_cb != null) {
+            this.widget_menu_cb(this);
+        }
+
     }
 
-    Init(msg_types) {
+    getAvailableWidgetSize() {
 
-        if (this.initiated)
-            return;
-        this.initiated = true;
+        let w = $('#panel_widget_'+this.n).width();
+        let h = $('#panel_widget_'+this.n).parent().innerHeight()-30;
 
-        this.msg_types = msg_types;
-        this.msg_type = msg_types ? FindMessageType(msg_types[0], supported_msg_types) : null;
-        $('#panel_msg_types_'+this.n).html(msg_types ? msg_types.join(', ') : '');
+        //let sourceDisplayed = $('#panel_content_'+this.n).hasClass('enabled');
 
-        if (this.msg_type == null && msg_types != null) {
-            $('#panel_msg_types_'+this.n).addClass('err');
-            $('#panel_content_'+this.n).html('<span class="error">Message type '+ msg_types.join(', ')+' not loaded</span>');
-        }
+        //console.log('w', w, $('#panel_content_'+panel.n).innerWidth())
+        //if (sourceDisplayed)
+        //    w -= $('#panel_content_'+panel.n).innerWidth();
 
-        if (this.msg_type != null) {
-            let Reader = window.Serialization.MessageReader;
-            this.msg_reader = new Reader( [ this.msg_type ].concat(supported_msg_types) );
-        }
+        //h = Math.min(h, w);
+        //h = Math.min(h, 500);
 
-        let hasWidget = (panel_widgets[this.msg_types[0]] != undefined);
-        let is_image = msg_types[0] == 'sensor_msgs/msg/Image'
-
-        if (is_image) {
-            console.log('making video el')
-            $('#panel_widget_'+this.n)
-                .addClass('enabled video')
-                .html('<video id="panel_video_'+this.n+'" autoplay="true" playsinline="true" muted></video>'
-                    + '<span id="video_stats_'+this.n+'" class="video_stats"></span>'
-                    + '<span id="video_fps_'+this.n+'" class="video_fps"></span>'
-                    ); //muted allows video autoplay in chrome before user interactions
-
-            let that = this;
-
-            //fps menu toggle
-            $('<div class="menu_line"><label for="video_fps_cb_'+this.n+'" class="video_fps_cb_label" id="video_fps_cb_label_'+this.n+'">'
-                +'<input type="checkbox" id="video_fps_cb_'+this.n+'" checked class="video_fps_cb" title="Display video FPS"> FPS</label></div>'
-                ).insertBefore($('#close_panel_link_'+this.n).parent());
-            $('#video_fps_cb_'+this.n).change(function(ev) {
-                if ($(this).prop('checked')) {
-                    $('#video_fps_'+that.n).addClass('enabled');
-                } else {
-                    $('#video_fps_'+that.n).removeClass('enabled');
-                }
-            });
-            $('#video_fps_'+that.n).addClass('enabled'); //on by default
-
-            //stats menu toggle
-            $('<div class="menu_line"><label for="video_stats_cb_'+this.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+this.n+'">'
-                +'<input type="checkbox" id="video_stats_cb_'+this.n+'" class="video_stats_cb" title="Display video stats"> Stats for nerds</label></div>'
-                ).insertBefore($('#close_panel_link_'+this.n).parent());
-            $('#video_stats_cb_'+this.n).change(function(ev) {
-                if ($(this).prop('checked')) {
-                    $('#video_stats_'+that.n).addClass('enabled');
-                } else {
-                    $('#video_stats_'+that.n).removeClass('enabled');
-                }
-            });
-        }
-        else if (hasWidget) {
-            $('#display_panel_source_link_'+this.n).css('display', 'block');
-        } else {
-            $('#panel_content_'+this.n).addClass('enabled');
-        }
-
-        this.OnResize();
+        return [w, h];
     }
 
-    OnResize() {
+    onResize() {
+
+        [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
+
+        console.warn('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+
+        //  auto scale canvas
+        if ($('#panel_widget_'+this.n+' CANVAS').length > 0) {
+
+            $('#panel_widget_'+this.n+' CANVAS')
+            .attr('width', this.widget_width)
+            .attr('height', this.widget_height);
+        }
+
+        // auto scale THREE renderer & set camera aspect
+        if (this.renderer) {
+
+            this.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
+            this.camera.updateProjectionMatrix();
+
+            this.renderer.setSize( this.widget_width, this.widget_height );
+            // console.log('resize', this.widget_width, this.widget_height)
+        }
+
         // let h = $('#panel_content_'+this.n).parent().parent('.grid-stack-item-content').innerHeight();
         // let t = $('#panel_content_'+this.n).position().top;
         // let pt = parseInt($('#panel_content_'+this.n).css('padding-top'));
@@ -206,7 +239,7 @@ class Panel {
            this.resize_event_handler();
     }
 
-    OnData(ev) {
+    onData(ev) {
 
         let rawData = ev.data; //arraybuffer
         let decoded = null;
@@ -215,11 +248,14 @@ class Panel {
         //$('#panel_content_'+this.n).height('auto');
         if (rawData instanceof ArrayBuffer) {
 
+            if (this.id_source == '/robot_description')
+                console.warn(this.id_source+' onData (buff): ' + rawData.byteLength + 'B');
+
             let datahr = '';
             if (this.msg_reader != null) {
                 let v = new DataView(rawData)
                 decoded = this.msg_reader.readMessage(v);
-                if (this.msg_types[0] == 'std_msgs/msg/String' && decoded.data) {
+                if (this.msg_type == 'std_msgs/msg/String' && decoded.data) {
                     if (decoded.data.indexOf('xml') !== -1)  {
                         datahr = linkifyURLs(escapeHtml(window.xmlFormatter(decoded.data)), true);
                     } else {
@@ -235,27 +271,31 @@ class Panel {
                 datahr = buf2hex(rawData)
             }
 
-            $('#panel_content_'+this.n).html(
+            $('#panel_source_'+this.n).html(
                 'Stamp: '+ev.timeStamp + '<br>' +
                 rawData+' '+rawData.byteLength+'B'+'<br>' +
                 '<br>' +
                 datahr
             );
 
-            if (panel_widgets[this.msg_types[0]] && panel_widgets[this.msg_types[0]].widget)
-                panel_widgets[this.msg_types[0]].widget(this, decoded);
+            if (panel_widgets[this.msg_type] && panel_widgets[this.msg_type].widget)
+                panel_widgets[this.msg_type].widget(this, decoded);
 
+        } else { //string data
 
-        } else {
             let datahr = ev.data;
-            $('#panel_content_'+this.n).html(
+            if (this.id_source == '/robot_description')
+                console.warn(this.id_source+' onData (hr): ', datahr);
+
+            $('#panel_source_'+this.n).html(
                 'Stamp: '+ev.timeStamp + '<br>' +
                 '<br>' +
                 datahr
             );
+
         }
 
-        let newh = $('#panel_content_'+this.n).height();
+        let newh = $('#panel_source_'+this.n).height();
         //console.log('max_height='+this.max_height+' newh='+newh);
 
         if (newh > this.max_height) {
@@ -266,16 +306,28 @@ class Panel {
 
     }
 
-    Close() {
-        let x = parseInt($(this.grid_widget).attr('gs-x'));
-        let y = parseInt($(this.grid_widget).attr('gs-y'));
+    close() {
+
+        if ($('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').length > 0) {
+            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
+            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
+            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
+            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
+
+            SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
+        } // else { //topics not loaded
+            // Panel.TogglePanel(that.id_source, null, false);
+        // }
+
+        // let x = parseInt($(this.grid_widget).attr('gs-x'));
+        // let y = parseInt($(this.grid_widget).attr('gs-y'));
 
         grid.removeWidget(this.grid_widget);
 
-        $('.monitor_panel[data-topic="'+this.topic+'"]').remove();
-        console.log('Panel closed for '+this.topic)
+        delete panels[this.id_source];
+
+        $('.grid_panel[data-source="'+this.id_source+'"]').remove(); //updates url hash
+        console.log('Panel closed for '+this.id_source)
     }
-
-
 
 }
