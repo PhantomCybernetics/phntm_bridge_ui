@@ -16,9 +16,11 @@ export class Robot {
     isConnected: boolean;
     isAuthentificated: boolean;
     socket: RobotSocket;
-    topics: {topic: string, robotSubscribed:boolean, msgTypes:string[]}[];
+    topics: {topic: string, msgTypes:string[]}[];
     services: {service: string, msgType:string}[];
+    docker_containers: {id: string, name:string, image:string, short_id: string, status:string }[];
     cameras: {id: string, info: any}[];
+    discovery: boolean;
 
     static connectedRobots:Robot[] = [];
 
@@ -42,10 +44,14 @@ export class Robot {
         let data:any = {
             id_robot: id.toString()
         }
-        if (robot)
+        if (robot) {
             data['name'] =  robot.name ? robot.name : 'Unnamed Robot';
-        if (robot && robot.socket)
-            data['ip'] =  robot.socket.conn.remoteAddress;
+            if (robot.socket)
+                data['ip'] =  robot.socket.conn.remoteAddress;
+            data['discovery'] =  robot.discovery;
+        }
+
+
 
         return data;
     }
@@ -99,8 +105,34 @@ export class Robot {
         let robotCamerasData = this.GetCamerasData();
         App.connectedApps.forEach(app => {
             if (app.IsSubscribedToRobot(this.id_robot)) {
-                $d.l('emitting cameras to app', robotCamerasData);
+                // $d.l('emitting cameras to app', robotCamerasData);
                 app.socket.emit('cameras', robotCamerasData)
+            }
+        });
+    }
+
+    public DiscoveryToSubscribers():void {
+        let discoveryOn = this.discovery;
+        App.connectedApps.forEach(app => {
+            if (app.IsSubscribedToRobot(this.id_robot)) {
+                // $d.l('emitting discovery state to app', discoveryOn);
+                app.socket.emit('discovery', discoveryOn)
+            }
+        });
+    }
+
+    public GetDockerContinersData():any {
+        let robotDockerContainersData:any = {}
+        robotDockerContainersData[this.id_robot.toString()] = this.docker_containers;
+        return robotDockerContainersData;
+    }
+
+    public DockerContainersToSubscribers():void {
+        let robotDockerContainersData = this.GetDockerContinersData();
+        App.connectedApps.forEach(app => {
+            if (app.IsSubscribedToRobot(this.id_robot)) {
+                // $d.l('emitting docker to app', robotDockerContainersData);
+                app.socket.emit('docker', robotDockerContainersData)
             }
         });
     }

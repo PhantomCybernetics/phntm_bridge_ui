@@ -17,7 +17,7 @@ function VideoWidget(panel, ignored) {
         console.log('making video el')
         $('#panel_widget_'+panel.n)
             .addClass('enabled video')
-            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted></video>'
+            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted></video>' //muted allows video autoplay in chrome before user interactions
                 + '<span id="video_stats_'+panel.n+'" class="video_stats"></span>'
                 + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
                 ); //muted allows video autoplay in chrome before user interactions
@@ -258,11 +258,13 @@ function RangeWidget(panel, decoded) {
 
     if (decoded != null && panel.display_widget) {
 
+        let range = decoded.range ? decoded.range : decoded.max_range;
+
         panel.max_range = decoded.max_range;
-        panel.data_trace[0] = decoded.range; // val in m
+        panel.data_trace[0] = range; // val in m
 
         //display gage pos
-        let gageVal = 100.0 - (Math.min(Math.max(decoded.range, 0), decoded.max_range) * 100.0 / decoded.max_range);
+        let gageVal = 100.0 - (Math.min(Math.max(range, 0), decoded.max_range) * 100.0 / decoded.max_range);
 
         panel.display_widget.updateSeries([ gageVal ], false);
     }

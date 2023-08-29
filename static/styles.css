@@ -70,8 +70,6 @@ h3 {
     float: left;
 }
 
-
-
 #topic_list {
     overflow-x: hidden;
     width: 400px;
@@ -107,13 +105,51 @@ h3 {
 }
 
 #docker_controls {
-    width: 170px;
+    width: 190px;
     background: #4a4a4a;
     padding: 10px;
     border-radius: 5px;
     position: relative;
     float: left;
     margin-left: 10px
+}
+
+
+
+#discovery_state {
+    width: 50px;
+    /* background: #4a4a4a; */
+    padding: 0px;
+    position: relative;
+    float: left;
+    margin-left: 0px;
+    height: 42px;
+    background-image: url(/static/discovery_stopped.svg);
+    -webkit-animation-play-state: paused;
+    -moz-animation-play-state: paused;
+    animation-play-state: paused;
+    background-size: 24px 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#discovery_state:hover,
+#discovery_state.active {
+    /* background: #82b727; */
+    filter: opacity(1) !important;
+}
+
+#discovery_state.inactive {
+    cursor: pointer;
+    filter: opacity(.2);
+}
+
+#discovery_state.active {
+    background-image: url(/static/discovery.svg);
+}
+
+#gamepad.connected #gamepad_status {
+
 }
 
 #service_controls H3,
@@ -144,6 +180,83 @@ h3 {
     border-radius: 0px 5px 5px 5px;
 }
 
+#docker_list {
+    display: none;
+    position: absolute;
+    overflow-x: hidden;
+    overflow: scroll;
+    background: #4a4a4a;
+    left: 0px;
+    top: 100%;
+    width: 360px;
+    max-height: 520px;
+    padding: 5px 10px 5px 10px;
+    border-radius: 0px 5px 5px 5px;
+}
+
+#docker_list .docker_cont {
+    color: #8f8f8f;
+    line-height: 30px;
+    position: relative;
+}
+
+#docker_list .docker_cont_name {
+    font-weight: bold;
+}
+
+#docker_list .running .docker_cont_name {
+    color: #00ff00;
+}
+
+#docker_list .exited .docker_cont_name {
+    color: #ff0000;
+}
+
+.docker_btns {
+    position: absolute;
+    right: -5px;
+    top: 0px;
+    display: block;
+    width: 80px;
+    height: 100%;
+}
+
+.docker_btns button {
+    display: block;
+    width: 20px;
+    height: 20px;
+    float: left;
+    margin-right:5px;
+    filter: grayscale(0) opacity(.2);
+    border-radius: 5px;
+    border: 0px;
+    cursor: pointer;
+}
+
+.docker_btns button.working {
+    background: #ff8c00 !important;
+    filter: grayscale(0) opacity(1) !important;
+    cursor: wait;
+}
+
+.docker_btns button:hover,
+.running .docker_btns button.docker_run,
+.exited .docker_btns button.docker_stop {
+    filter: grayscale(0) opacity(1);
+}
+
+.docker_btns button.docker_run {
+    background-color: lime;
+}
+
+.docker_btns button.docker_stop {
+    background-color: red;
+}
+
+.docker_btns button.docker_restart {
+    background-color: magenta;
+}
+
 #service_list {
     display: none;
     position: absolute;
@@ -161,6 +274,7 @@ h3 {
 #service_controls.active:hover #service_list,
 #topic_controls.active:hover #topic_list,
 #camera_controls.active:hover #cameras_list,
+#docker_controls.active:hover #docker_list,
 #service_controls.active.setting_shortcuts #service_list {
     display: block;
 }
@@ -450,8 +564,12 @@ SPAN.error {
 }
 
 #topic_list .topic label,
-#cameras_list .camera label{
+#cameras_list .camera label {
     cursor: pointer;
+}
+
+#cameras_list .camera label {
+    line-height: 30px;
 }
 
 .grid_panel .panel_source {
@@ -656,13 +774,12 @@ SPAN.error {
 }
 
 
-
-
 #gamepad {
     position: absolute;
     right: 0;
     top: 0;
     display: block;
+    z-index: 15;
 }
 
 #gamepad.connected {
@@ -717,14 +834,6 @@ SPAN.error {
 #gamepad.connected.debug_on #gamepad_settings {
    display: block;
 }
-
-
-
-
-
-
-
-
 
 
 /* Optional styles for demos */

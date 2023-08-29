@@ -16,7 +16,7 @@ const browser2joy_mapping = {
     axes: {
         0 : [ 0, -1.0], // angular_z_axiss (speed => fw back)
         1 : [ 1, 1.0], // linear_x_axis (turn l/r)
-        2 : [ 4 ] // linear_y_axis (strafe)
+        4 : [ 4, 1.0 ] // linear_y_axis (strafe)
     }
 }
 
@@ -287,7 +287,7 @@ class GamepadController {
         }
         $('#gamepad_debug').html(
             JSON.stringify(msg, null, 2)
-            //+ '<br>' + JSON.stringify(debug, null, 2)
+            + '<br>' + JSON.stringify(debug, null, 2)
         );
 
 
@@ -335,7 +335,7 @@ class GamepadController {
             }
         }
 
-        requestAnimationFrame(window.gamepadController.UpdateLoop);
+        window.setTimeout(window.gamepadController.UpdateLoop, 33.3); //30Hz updates
     }
 }
 

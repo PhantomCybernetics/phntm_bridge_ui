@@ -32,6 +32,9 @@
         <h3 id="docker_heading">Docker</h3>
         <div id="docker_list"></div>
     </div>
+
+    <div id="discovery_state" class="inactive"></div>
+
 </div>
 
 <div class="grid-stack" id="grid-stack"></div>
@@ -171,6 +174,7 @@
             //console.log(statsString)
             //senderStatsDiv.innerHTML = `<h2>Sender stats</h2>${statsString}`;
         }
+
 
         setInterval(() => {
             if (pc) {
@@ -384,6 +388,96 @@
             });
         });
 
+        socket.on('docker', (docker_containers_data) => {
+            $('#docker_list').empty();
+            // $('#docker_list').css('display', 'block');
+
+            console.log('Docker :', docker_containers_data);
+
+            docker_containers = {};
+
+            if (Object.keys(docker_containers_data).length > 0) {
+                $('#docker_controls').addClass('active');
+            } else {
+                $('#docker_controls').removeClass('active');
+            }
+
+            let i = 0;
+            Object.keys(docker_containers_data).forEach((id_robot) => {
+
+                if (!docker_containers_data[id_robot])
+                    return;
+
+                docker_containers_data[id_robot].forEach((cont_data)=>{
+
+                    // if (!docker_containers[cont_data.id]) {
+                    docker_containers[cont_data.id] = cont_data
+
+                    $('#docker_list').append('<div class="docker_cont '+cont_data.status+'" id="docker_cont_'+i+'" data-container="'+cont_data.id+'">'
+                        // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
+                        //+ (!topic.robotTubscribed?' disabled':'')
+                        // + (panels[camera_data.id] ? ' checked': '' )
+                        // + '/> '
+                        + '<span '
+                        + 'class="docker_cont_name" '
+                        + '>'
+                        + cont_data.name
+                        + '</span>' + ' ['+cont_data.status+']'
+                        + '<div class="docker_btns">'
+                        + '<button class="docker_run" title="Start"></button>'
+                        + '<button class="docker_stop" title="Stop"></button>'
+                        + '<button class="docker_restart" title="Restart"></button>'
+                        + '</div>'
+                        + '</div>'
+                    );
+
+                    $('#docker_cont_'+i+' button.docker_run').click(function(event) {
+                        if ($(this).hasClass('working'))
+                            return;
+                        $(this).addClass('working');
+                        // console.log('Running '+cont_data.name);
+                        let that = this;
+                        DockerContainerCall(id_robot, cont_data.id, 'start', socket, () => {
+                            $(that).removeClass('working');
+                        });
+                    });
+                    $('#docker_cont_'+i+' button.docker_stop').click(function(event) {
+                        if ($(this).hasClass('working'))
+                            return;
+                        $(this).addClass('working');
+                        // console.log('Stopping '+cont_data.name);
+                        let that = this;
+                        DockerContainerCall(id_robot, cont_data.id, 'stop', socket, () => {
+                            $(that).removeClass('working');
+                        });
+                    });
+                    $('#docker_cont_'+i+' button.docker_restart').click(function(event) {
+                        if ($(this).hasClass('working'))
+                            return;
+                        $(this).addClass('working');
+                        // console.log('Restarting '+cont_data.name);
+                        let that = this;
+                        DockerContainerCall(id_robot, cont_data.id, 'restart', socket, () => {
+                            $(that).removeClass('working');
+                        });
+                    });
+
+                    i++;
+                });
+                $('#docker_heading').html(docker_containers_data[id_robot].length+' Docker '+(docker_containers_data[id_robot].length == 1 ? 'Container' : 'Containers'));
+
+                // if (subscribe_cameras.length)
+                //     SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+
+            });
+        });
+
+
+        socket.on('discovery', (discovery_state) => {
+            SetDiscoveryState(discovery_state)
+        });
+
 
         socket.on('topics', (topics_data) => {
             $('#topic_list').empty();
@@ -519,6 +613,18 @@
 
             event.preventDefault();
         });
+
+        $('#discovery_state.inactive').click((ev) => {
+            $('#discovery_state.inactive').removeClass('inactive');
+            // console.log('Starting discovery...');
+            // SetDiscoveryState(true);
+            socket.emit('discovery', { id_robot: id_robot, state:true }, (res) => {
+                if (!res || !res['success']) {
+                    console.error('Discovery start err: ', res);
+                    return;
+                }
+            });
+        })
 
         // socket.on('offer', (offer_data) => {
         //     console.log('Got webrtc offer:', offer_data)

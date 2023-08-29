@@ -345,6 +345,8 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
     robot.topics = [];
     robot.services = [];
     robot.cameras = [];
+    robot.docker_containers = [];
+    robot.discovery = false;
     robot.socket = robotSocket;
 
     robot.AddToConnedted(); //sends update to subscribers
@@ -357,9 +359,9 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         $d.l("Got topics from "+robot.id_robot+":");
         allTopics.forEach(topicData => {
             let topic = topicData[0];
-            let robotSubscribed:boolean = topicData[1];
+            // let robotSubscribed:boolean = topicData[1];
             let msgTypes = [];
-            for (let i = 2; i < topicData.length; i++) {
+            for (let i = 1; i < topicData.length; i++) {
                 msgTypes.push(topicData[i]); //msg types all the way
             }
 
@@ -374,15 +376,10 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             if (!currTopic) {
                 robot.topics.push({
                     topic: topic,
-                    robotSubscribed: robotSubscribed,
                     msgTypes: msgTypes
                 });
                 report = true;
             } else {
-                if (currTopic.robotSubscribed != robotSubscribed) {
-                    currTopic.robotSubscribed = robotSubscribed;
-                    // report = true;
-                }
                 if (currTopic.msgTypes.length != msgTypes.length) {
                     currTopic.msgTypes = msgTypes;
                     report = true;
@@ -397,7 +394,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             }
 
             if (report) {
-                let out = " Topic "+topic+" ("+msgTypes.join(', ')+", robotSubscribed="+robotSubscribed+")";
+                let out = "  "+topic+" ("+msgTypes.join(', ')+")";
                 $d.l(out.gray);
             }
 
@@ -440,7 +437,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             }
 
             if (report) {
-                let out = " Service "+service+" ("+msgType+")";
+                let out = "  "+service+" ("+msgType+")";
                 $d.l(out.gray);
             }
 
@@ -492,13 +489,71 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
             }
 
             if (report) {
-                let out = "  > "+idCam;
+                let out = "  "+idCam;
                 $d.l(out.cyan);
             }
 
         });
 
         robot.CamerasToSubscribers();
+    });
+
+    robotSocket.on('docker', async function(allContainers:{id: string, name:string, image:string, short_id: string, status:string }[]) {
+
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
+
+        $d.l("Got Docker containers from "+robot.id_robot+":");
+        allContainers.forEach(contData => {
+
+            let report = false;
+            let currContainer = null;
+            for (let i = 0; i < robot.docker_containers.length; i++) {
+                if (robot.docker_containers[i].id == contData.id) {
+                    currContainer = robot.docker_containers[i];
+                    break;
+                }
+            }
+            if (!currContainer) {
+                robot.docker_containers.push(contData);
+                currContainer = contData;
+                report = true;
+            } else {
+
+                if (currContainer.image !== contData.image) {
+                    currContainer.image = contData.image
+                    report = true;
+                }
+                if (currContainer.short_id !== contData.short_id) {
+                    currContainer.short_id = contData.short_id
+                    report = true;
+                }
+                if (currContainer.status !== contData.status) {
+                    currContainer.status = contData.status
+                    report = true;
+                }
+            }
+
+            if (report) {
+                let out = "  "+currContainer.name+" ("+currContainer.status+")";
+                $d.l(out.gray);
+            }
+
+        });
+
+        robot.DockerContainersToSubscribers();
+    });
+
+    robotSocket.on('discovery', async function(state:boolean) {
+
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
+
+        $d.l("Got discovery state from "+robot.id_robot+": "+state);
+
+        robot.discovery = state;
+
+        robot.DiscoveryToSubscribers();
     });
 
 
@@ -730,7 +785,66 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             app.socket.emit('topics', robot.GetTopicsData());
             app.socket.emit('services', robot.GetServicesData());
             app.socket.emit('cameras', robot.GetCamerasData());
+            app.socket.emit('docker', robot.GetDockerContinersData());
         }
+    });
+
+    appSocket.on('discovery', async function (data:{id_robot:string, state:boolean, id_app?:string, id_instance?:string}, returnCallback) {
+        $d.log('App requesting robot discovery', data);
+
+        if (!ObjectId.isValid(data.id_robot))
+            return returnCallback({'err':1});
+
+        let idRobot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(idRobot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('discovery', data, (answerData:any) => {
+            $d.log('Got robot\'s discovery answer:', answerData);
+            return returnCallback(answerData);
+        });
+
+    });
+
+    appSocket.on('docker', async function (data:{id_robot:string, container:boolean, msg:string, id_app?:string, id_instance?:string}, returnCallback) {
+        $d.log('App calling robot docker container ', data);
+
+        if (!ObjectId.isValid(data.id_robot))
+            return returnCallback({'err':1});
+
+        let idRobot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(idRobot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('docker', data, (answerData:any) => {
+            $d.log('Got robot\'s docker call reply:', answerData);
+            return returnCallback(answerData);
+        });
+
     });
 
     appSocket.on('offer', async function (offer:{ id_robot:string, sdp:string, type:string, id_app?:string, id_instance?:string}, returnCallback) {

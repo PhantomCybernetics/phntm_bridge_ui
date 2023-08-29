@@ -31,6 +31,7 @@ let topic_video_tracks = {}; //str topic => MediaStreamTrack
 let topic_transceivers = {}; //str topic => RTCRtpTransceiver
 let services = {}; // str service => { msg_type: str}
 let cameras = {}; // str id => { info: {}}
+let docker_containers = {}; // str id => { info: {}}
 
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
@@ -80,25 +81,25 @@ function InitPeerConnection(id_robot) {
     // connect audio / video
     pc_.addEventListener('track', (evt) => {
 
-        console.warn('New track added: ', evt);
+        console.log('New track added: ', evt);
 
         //document.getElementById('panel_video_1').srcObject = evt.streams[0];
 
         for (let i = 0; i < evt.streams.length; i++) {
             let stream = evt.streams[i];
 
-            for (let topic in panels) {
-                let panel = panels[topic];
+            for (let id_panel_source in panels) {
+                let panel = panels[id_panel_source];
                 if (panel.id_stream == stream.id) {
 
-                    console.log('Found video panel for stream '+stream.id+' topic='+topic);
+                    console.log('Found video panel for stream '+stream.id+' src='+id_panel_source);
                     //$('#panel_video_'+panel.n).attr('src', evt.streams[i]);
                     document.getElementById('panel_video_'+panel.n).srcObject = stream;
                     //document.getElementById('panel_video_'+panel.n).play();
-                    console.warn('New video track added for '+topic+' id_stream='+stream.id);
-                    topic_video_tracks[topic] = evt.track;
-                    topic_transceivers[topic] = evt.transceiver;
-                    topic_media_streams[topic] = stream
+                    console.warn('New video track added for '+id_panel_source+' id_stream='+stream.id);
+                    topic_video_tracks[id_panel_source] = evt.track;
+                    topic_transceivers[id_panel_source] = evt.transceiver;
+                    topic_media_streams[id_panel_source] = stream
 
                     stream.addEventListener('addtrack', (evt) => {
                         console.warn('Track added to stream '+stream.id, evt);
@@ -187,6 +188,8 @@ function InitPeerConnection(id_robot) {
                     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
             }
         } else if (pc_connected) { //just disconnected
+
+            console.error('Peer connection disconnected');
 
             pc_connected = false;
             window.gamepadController.ClearProducer();
@@ -398,6 +401,30 @@ function ProcessRobotData(robot_data) {
 
     SetWebRTCSatusLabel();
     SetSocketIOSatusLabel();
+    SetDiscoveryState(robot_data['discovery'] ? true : false);
+}
+
+function SetDiscoveryState(discovery_state) {
+    if (discovery_state) {
+        $('#discovery_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
+    } else {
+        $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+    }
+    // console.log('Robot introspection state: ', discovery_state);
+}
+
+function DockerContainerCall(id_robot, id_cont, msg, socket, cb) {
+    let req = {
+        id_robot: id_robot,
+        container: id_cont,
+        msg: msg
+    }
+    console.warn('docker request', req);
+    socket.emit('docker', req, (reply)=> {
+        console.log('docker reply', reply);
+        if (cb)
+            cb(reply);
+    });
 }
 
 function WebRTC_Negotiate(id_robot)
@@ -848,5 +875,62 @@ function _DoSetCamerasSubscription(subscription_data, subscribing) {
 function _HandleCamerasSubscriptionRepy(res) {
 
     console.log('Handling cameras subscription data: ', res);
+
+    for (let i = 0; i < res['subscribed'].length; i++) {
+
+        let id_cam = res['subscribed'][i][0];
+        let id_stream = res['subscribed'][i][1];
+
+        if (!cameras[id_cam]) {
+            console.warn('Camera '+id_cam+' not found in detected cameras list', cameras);
+            continue;
+        }
+
+        console.log('Subscribing to video track '+id_cam+' id stream='+id_stream+'; local streams:', topic_media_streams);
+
+        let panel = panels[id_cam];
+        if (!panel) {
+            console.error('Panel not found for '+id_cam);
+            continue;
+        }
+
+        panel.id_stream = id_stream;
+
+        if (topic_media_streams[id_cam] && topic_media_streams[id_cam].id == id_stream) {
+            console.log('Found stream for '+id_cam+' id='+id_stream);
+            document.getElementById('panel_video_'+panel.n).srcObject = topic_media_streams[id_cam];
+        }
+    }
+
+    if (res['unsubscribed']) {
+        for (let i = 0; i < res['unsubscribed'].length; i++) {
+
+            let id_cam = res['unsubscribed'][i][0];
+            let id_stream = res['unsubscribed'][i][1];
+
+            if (topic_media_streams[id_cam]) {
+
+                console.warn('Pausing video track for '+id_cam);
+
+                const elements = document.querySelectorAll(`[srcObject="${topic_media_streams[id_cam].id}"]`);
+                elements.forEach(element => {
+                    element.srcObject = null;
+                });
+            }
+        }
+    }
+
+    if (res['err']) {
+        for (let i = 0; i < res['err'].length; i++) {
+
+            let id_cam = res['err'][i][0];
+            let msg = res['err'][i][1];
+            console.info('Camera '+id_cam+' subscription err: '+msg);
+
+            if (cameras[id_cam]) {
+                cameras[id_cam].subscribed = false;
+            }
+        }
+    }
 
 }
