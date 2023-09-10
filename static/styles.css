@@ -782,6 +782,13 @@ SPAN.error {
     z-index: 15;
 }
 
+#gamepad_latency {
+    color: #fff;
+    font-size: 10px;
+    position: absolute;
+    right: 0px;
+}
+
 #gamepad.connected {
 
 }
@@ -808,7 +815,8 @@ SPAN.error {
 #gamepad #gamepad_settings {
     position: absolute;
     background: #5d53b0e3;
-    width: 270px;
+    /* width: 800px; */
+    overflow-x: hidden;
     right: -10px;
     font-size: 12px;
     color: white;
@@ -820,15 +828,36 @@ SPAN.error {
     z-index: 2;
 }
 
+#gamepad #gamepad_settings SElECT {
+    color: black;
+}
+
 #gamepad #gamepad_debug {
-    white-space: pre;
-    background: #001649;
     padding: 5px;
     border-radius: 5px;
     margin-top: 10px;
     margin-left: -5px;
     margin-right: -5px;
     margin-bottom: -5px;
+    width: 525px;
+    overflow-x: hidden;
+}
+
+#gamepad_debug .col {
+    float: left;
+    width: 250px;
+    background: #001649;
+    margin-right: 5px;
+    background: #400042;
+    white-space: pre;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+#gamepad_debug .col:last-child {
+    float: left;
+    width: 250px;
+    margin-right: 0px;
 }
 
 #gamepad.connected.debug_on #gamepad_settings {

@@ -5,22 +5,365 @@ let capturing_gamepad_input = false;
 let captured_gamepad_input = [];
 let gamepad_service_mapping = {}
 
-// browser => joy remapping
-const id_dead_man_switch_btn = 8;
-const browser2joy_mapping = {
-    buttons: {
-        8: 5, // dead man switch
-        4: 3, // fast_mode
-        1: 1  // slow_mode
-    },
-    axes: {
-        0 : [ 0, -1.0], // angular_z_axiss (speed => fw back)
-        1 : [ 1, 1.0], // linear_x_axis (turn l/r)
-        4 : [ 4, 1.0 ] // linear_y_axis (strafe)
-    }
+const axes_config = {
+    0: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+    1: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+    2: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+    3: { dead_zone: [ -10.0, -0.98, -10.0 ] },
+    4: { dead_zone: [ -10.0, -0.98, -10.0 ] },
 }
 
-$(document ).ready(function() {
+function lerp(a, b, alpha ) {
+    return a + alpha * (b-a)
+}
+
+function apply_axis_deadzone(val, id_axis) {
+    if (axes_config[id_axis] && axes_config[id_axis]['dead_zone']
+        && val > axes_config[id_axis]['dead_zone'][0] && val < axes_config[id_axis]['dead_zone'][1]
+    )
+        return axes_config[id_axis]['dead_zone'][2] // return dead val
+
+    return val;
+}
+
+// browser => joy remapping
+// const id_dead_man_switch_btn = 4; //will send this as true
+// const browser2joy_mapping = {
+//     //local btn => send as
+//     buttons: {
+//         9: 7, // fast mode
+//         7: 5  // slow mode
+//     },
+//     //local axis => [ send_as, scale_factor ]
+//     axes: {
+//         // linear x (fw/back)
+//         1 : [ 1, 1.0],
+
+//         // left right steer
+//         0 : [ 0, 1.0 ],
+
+//         // strife w mecanum wheels
+//         2 : [ 2, -1.0]
+//     }
+// }
+
+class GamepadController {
+
+    constructor(pc, id_robot, socket, supported_msg_types) {
+
+        this.joy_msg_type = 'sensor_msgs/msg/Joy';
+        this.joy_topic = '/joy';
+
+        this.cmd_vel_msg_type = 'geometry_msgs/msg/Twist';
+        this.cmd_vel_topic = '/cmd_vel';
+
+        this.joy_msg_class = FindMessageType(this.joy_msg_type, supported_msg_types);
+        this.cmd_vel_msg_class = FindMessageType(this.cmd_vel_msg_type, supported_msg_types);
+
+        this.socket = socket;
+        this.id_robot = id_robot;
+
+        console.log('Gamnepad msg classes:', this.joy_msg_class, this.cmd_vel_msg_class);
+
+        let Writer = window.Serialization.MessageWriter;
+        this.msg_writers = {}
+        this.msg_writers[this.joy_msg_type] = new Writer( [ this.joy_msg_class ].concat(supported_msg_types) );
+        this.msg_writers[this.cmd_vel_msg_type] = new Writer( [ this.cmd_vel_msg_class ].concat(supported_msg_types) );
+
+        this.dcs = {};
+
+        let that = this;
+        window.addEventListener('gamepadconnected', (event) => {
+            console.warn('Gamepad connected:', event.gamepad);
+            idGamepad = event.gamepad.index;
+
+            $('#gamepad').addClass('connected');
+
+            if (pc && pc.connectionState == 'connected')
+                that.InitProducers();
+
+            that.UpdateLoop();
+        });
+
+        window.addEventListener('gamepaddisconnected', (event) => {
+            if (idGamepad == event.gamepad.index) {
+                idGamepad = null; //kills the loop
+                console.warn('Gamepad disconnected:', event.gamepad);
+                $('#gamepad').removeClass('connected');
+            }
+        });
+    }
+
+    InitProducers () {
+
+        // return; //!! disabled for now
+        let subscription_data = {
+            id_robot: this.id_robot,
+            topics: []
+        };
+
+        if (!this.dcs[this.joy_topic])
+            subscription_data.topics.push([ this.joy_topic, 1, this.joy_msg_type ])
+
+        if (!this.dcs[this.cmd_vel_topic])
+            subscription_data.topics.push([ this.cmd_vel_topic, 1, this.cmd_vel_msg_type ])
+
+        if (!subscription_data.topics.length)
+            return;
+
+        this.socket.emit('subcribe:write', subscription_data, (res) => {
+            if (res['success']) {
+                for (let i = 0; i < res['subscribed'].length; i++) {
+
+                    let topic = res['subscribed'][i][0];
+                    let id = res['subscribed'][i][1];
+                    let protocol = res['subscribed'][i][2];
+
+                    console.log('Making local DC for '+topic+', id='+id+', protocol='+protocol)
+                    this.dcs[topic] = pc.createDataChannel(topic, {
+                        negotiated: true,
+                        ordered: false,
+                        maxRetransmits: null,
+                        id:id
+                    });
+
+                    this.dcs[topic].addEventListener('open', (ev)=> {
+                        console.info('DC '+topic+'/W opened', this.dcs[topic])
+                    });
+                    this.dcs[topic].addEventListener('close', (ev)=> {
+                        console.info('DC '+topic+'/W closed')
+                        delete this.dcs[topic];
+                    });
+                    this.dcs[topic].addEventListener('error', (ev)=> {
+                        console.error('DC '+topic+'/W error', ev)
+                        delete this.dcs[topic];
+                    });
+                    this.dcs[topic].addEventListener('message', (ev)=> {
+                        console.warn('DC '+topic+'/W message!!', ev); //this should not be as we use separate r/w channels
+                    });
+                }
+            } else {
+                console.warn('Error setting up gamepad publisher: ', res);
+            }
+        });
+    }
+
+    ClearProducers() {
+        for (const topic of Object.keys(this.dcs)) {
+            if (this.dcs[topic])
+                this.dcs[topic].close();
+        }
+        this.dcs = {}
+    }
+
+    Write(topic, msg_type, msg) {
+        if (!this.dcs[topic] || this.dcs[topic].readyState != 'open') {
+            if (this.dcs[topic])
+                console.warn('Gamepad dc not ready for '+topic+': '+(this.dcs[topic] ? 'state='+this.dcs[topic].readyState : 'Not initiated'))
+            return;
+        }
+        let payload = this.msg_writers[msg_type].writeMessage(msg); //to binary
+        //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
+        this.dcs[topic].send(payload);
+    }
+
+    UpdateLoop() {
+        if (idGamepad == null)
+            return;
+
+        let transmitting = $('#gamepad_enabled').is(':checked');
+        let transmitting_type = $('#gamepad_msg_type').val()
+
+        const gp = navigator.getGamepads()[idGamepad];
+
+        let buttons = gp.buttons;
+        let axes = gp.axes;
+
+        let now_ms = Date.now(); //window.performance.now()
+        let sec = Math.floor(now_ms / 1000)
+        let nanosec = (now_ms - sec*1000) * 1000000
+        // console.log(now)
+
+        let msg = {}
+
+        switch (transmitting_type) {
+            case 'sensor_msgs/msg/Joy': //forward joy
+                msg = {
+                    header: {
+                        stamp: {
+                            sec: sec,
+                            nanosec: nanosec
+                        },
+                        frame_id: 'phntm'
+                    },
+                    axes: [],
+                    buttons: []
+                }
+                for (let id_axis = 0; id_axis < axes.length; id_axis++) {
+                    let val = apply_axis_deadzone(axes[id_axis], id_axis)
+                    msg.axes[id_axis] = val
+                }
+                for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
+                    msg.buttons[id_btn] = buttons[id_btn].pressed;;
+                }
+                break;
+            case 'geometry_msgs/msg/Twist':
+
+                let fw_speed = apply_axis_deadzone(axes[1], 1); // (-1,1)
+
+                let val_strife = 0.0;
+                let val_strife_l = apply_axis_deadzone(axes[4], 4)
+                if (val_strife_l > -1) {
+                    val_strife -= (val_strife_l + 1.0) / 4.0; // (-.5,0)
+                }
+                let val_strife_r = apply_axis_deadzone(axes[3], 3)
+                if (val_strife_r > -1) {
+                    val_strife += (val_strife_r + 1.0) / 4.0; // (0,.5)
+                }
+                let turn_amount = apply_axis_deadzone(-axes[2], 2); //0-1
+                let turn_speed_max = 3.0; //at 0.0 fw speed
+                let turn_speed_min = 0.7; //at 1.0 fw speed
+                let turn_speed = lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
+                msg = {
+                        "linear": {
+                            "x": fw_speed, //fw / back 0-10
+                            "y": val_strife, //strife
+                            "z": 0
+                        },
+                        "angular": {
+                            "x": 0,
+                            "y": 0,
+                            "z": turn_amount * turn_speed, //turn 0-2
+                        }
+                    }
+                break;
+            default:
+                console.error('Invalid transmitting_type val: '+transmitting_type)
+                return;
+        }
+
+        let debug = {
+            buttons: {},
+            axis: {}
+        }
+        for (let i = 0; i < axes.length; i++) {
+            debug.axis[i] = axes[i];
+        }
+        for (let i = 0; i < buttons.length; i++) {
+            debug.buttons[i] = buttons[i].pressed;
+        }
+        if (transmitting) {
+            $('#gamepad_debug').html(
+                '<div class="col">' +
+                    '<b>Axes raw:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
+                    '<b>Btns raw:</b><br>' + JSON.stringify(debug.buttons, null, 2) +
+                '</div>' +
+                // '<div class="col">' +
+                //     // '<b>Mapping:</b><br>' + JSON.stringify(browser2joy_mapping, null, 2) +
+                // '</div>' +
+                '<div class="col"><b>Msg ['+transmitting_type+']:</b><br>' + JSON.stringify(msg, null, 2) + '</div>'
+            );
+        }
+
+        if (capturing_gamepad_input) {
+            CaptureGamepadInput(buttons, axes);
+        } else  if (transmitting) {
+            let that = window.gamepadController;
+            switch (transmitting_type) {
+                case 'sensor_msgs/msg/Joy':
+                    that.Write(that.joy_topic, transmitting_type, msg);
+                    break;
+                case 'geometry_msgs/msg/Twist':
+                    that.Write(that.cmd_vel_topic , transmitting_type, msg);
+                    break;
+            }
+
+            // if (dead_man_switch && transmitting && window.gamepadController.dc && window.gamepadController.dc.readyState == 'open')
+            //
+        }
+
+        if (gamepad_service_mapping) {
+            for (const [service_name, service_mapping] of Object.entries(gamepad_service_mapping)) {
+                //let  = gamepad_service_mapping[service_name];
+                for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
+                    //let  = gamepad_service_mapping[service_name][btn_name];
+                    //console.log('btns_cond', btns_cond)
+                    let btns_cond = btns_config.btns_cond;
+                    let num_pressed = 0;
+                    for (let i = 0; i < btns_cond.length; i++) {
+                        let b = btns_cond[i];
+                        if (buttons[b] && buttons[b].pressed)
+                            num_pressed++;
+                    }
+                    if (btns_cond.length && num_pressed == btns_cond.length) {
+                        if (!btns_config['needs_reset']) {
+
+                            let btn_el = $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]');
+
+                            if (btn_el.length) {
+                                console.warn('Triggering '+service_name+' btn '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
+                                btn_el.click();
+                            } else {
+                                console.log('Not triggering '+service_name+' btn '+btn_name+'; btn not found (service not discovered yet?)');
+                            }
+                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
+
+                        }
+                    } else if (btns_config['needs_reset']) {
+                        gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
+                    }
+                }
+                // if (buttons[service.btn_id].pressed) {
+                //     ServiceCall(window.gamepadController.id_robot, service_name, service.msg, window.gamepadController.socket);
+                // }
+            }
+        }
+
+        window.setTimeout(window.gamepadController.UpdateLoop, 33.3); //ms, 30Hz updates
+    }
+
+    // SampleLatency(decoded) {
+    //     let sec = decoded.header.stamp.sec
+    //     let nanosec = decoded.header.stamp.nanosec
+    //     let msg_ms = (sec * 1000) + (nanosec / 1000000);
+    //     let now_ms = Date.now(); //window.performance.now()
+    //     let lat = now_ms - msg_ms;
+    //     // let sec = Math.floor(now_ms / 1000)
+    //     // let nanosec = (now_ms - sec*1000) * 1000000
+
+    //     $('#gamepad_latency').html(lat+' ms')
+    //     // console.log('Sampling joy lag: ', )
+    // }
+}
+
+function CaptureGamepadInput(buttons, axes) {
+    if (!capturing_gamepad_input) {
+        return;
+    }
+
+    let something_pressed = false;
+    for (let i = 0; i < buttons.length; i++) {
+        if (buttons[i] && buttons[i].pressed) {
+            something_pressed = true;
+            if (captured_gamepad_input.indexOf(i) === -1) {
+                captured_gamepad_input.push(i);
+            }
+        }
+    }
+    if (something_pressed) {
+        for (let i = 0; i < captured_gamepad_input.length; i++) {
+            let btn = captured_gamepad_input[i];
+            if (!buttons[btn] || !buttons[btn].pressed) {
+                captured_gamepad_input.splice(i, 1);
+                i--;
+            }
+        }
+    }
+
+    $('#current-key').html(captured_gamepad_input.join(' + '));
+}
+
+$(document).ready(function() {
 
     $('#gamepad_status').click(() => {
 
@@ -105,268 +448,6 @@ function LoadGamepadServiceMapping(id_robot) {
     }
     console.log('Loaded Gamepad Service Mapping:', val, gamepad_service_mapping);
 }
-
-class GamepadController {
-    joy_msg_type = null;
-    msg_writer = null;
-    dc = null;
-    socket = null;
-    topic = null;
-    id_robot = null;
-
-    constructor(pc, topic, id_robot, socket, supported_msg_types) {
-
-        this.joy_msg_type = FindMessageType('sensor_msgs/msg/Joy', supported_msg_types);
-        this.socket = socket;
-        this.topic = topic;
-        this.id_robot = id_robot;
-
-        console.log('Gamnepad msg type', this.joy_msg_type);
-
-        let Writer = window.Serialization.MessageWriter;
-        this.msg_writer = new Writer( [ this.joy_msg_type ].concat(supported_msg_types) );
-
-        this.dc = null;
-
-        let that = this;
-        window.addEventListener('gamepadconnected', (event) => {
-            console.warn('Gamepad connected:', event.gamepad);
-            idGamepad = event.gamepad.index;
-
-            $('#gamepad').addClass('connected');
-
-            that.UpdateLoop();
-
-            if (pc && pc.connectionState == 'connected')
-                that.InitProducer();
-        });
-
-        window.addEventListener('gamepaddisconnected', (event) => {
-            if (idGamepad == event.gamepad.index) {
-                idGamepad = null; //kills the loop
-                console.warn('Gamepad disconnected:', event.gamepad);
-                $('#gamepad').removeClass('connected');
-
-            }
-        });
-    }
-
-    InitProducer () {
-
-        // return; //!! disabled for now
-
-        if (this.dc)
-            return;
-
-        let subscription_data = {
-            id_robot: this.id_robot,
-            topics: [ [ this.topic, 1, 'sensor_msgs/msg/Joy' ] ]
-        };
-        this.socket.emit('subcribe:write', subscription_data, (res) => {
-
-            if (res['success']) {
-                for (let i = 0; i < res['subscribed'].length; i++) {
-
-                    let topic = res['subscribed'][i][0];
-                    let id = res['subscribed'][i][1];
-                    let protocol = res['subscribed'][i][2];
-
-                    console.log('locall DC '+topic+'/W id='+id+', protocol='+protocol)
-                    this.dc = pc.createDataChannel(topic, {
-                        negotiated: true,
-                        ordered: false,
-                        maxRetransmits: 0,
-                        id:id
-                    });
-
-                    this.dc.addEventListener('open', (ev)=> {
-                        console.info('DC '+topic+'/W opened', this.dc)
-                    });
-                    this.dc.addEventListener('close', (ev)=> {
-                        console.info('DC '+topic+'/W closed')
-                        this.dc = null;
-                    });
-                    this.dc.addEventListener('message', (ev)=> {
-                        console.warn('DC '+topic+'/W message!!', ev); //this should not be as we use separate r/w channels
-                    });
-                    this.dc.addEventListener('error', (ev)=> {
-                        console.error('DC '+topic+'/W error', ev)
-                        this.dc = null;
-                    });
-
-                }
-            } else {
-                console.warn('Error setting up gamepad publisher: ', res);
-            }
-        });
-    }
-
-    ClearProducer() {
-        if (!this.dc)
-            return;
-
-        this.dc.close();
-        this.dc = null;
-    }
-
-    Write (msg) {
-
-        if (!this.dc)
-            return;
-
-        if (this.dc.readyState != 'open') {
-            console.warn('/joy dc.readyState = '+this.dc.readyState)
-            return;
-        }
-
-        let payload = this.msg_writer.writeMessage(msg);
-
-        //console.log('writing', payload);
-
-        this.dc.send(payload);
-    }
-
-    UpdateLoop () {
-        if (idGamepad == null)
-            return;
-
-        const gp = navigator.getGamepads()[idGamepad];
-
-        let buttons = gp.buttons;
-        let axes = gp.axes;
-
-        let msg = {
-            header: {
-                stamp: {
-                    sec: 0,
-                    nanosec: 0
-                },
-                frame_id: 'phntm'
-            },
-            axes: [],
-            buttons: []
-        }
-        for (let id_axis = 0; id_axis < axes.length; id_axis++) { //sending all input regardless of mapping
-            let scale = 1.0;
-            let id_target_axis = id_axis;
-            if (browser2joy_mapping.axes[id_axis]){
-                id_target_axis = browser2joy_mapping.axes[id_axis][0];
-                if (browser2joy_mapping.axes[id_axis].length > 1)
-                    scale = browser2joy_mapping.axes[id_axis][1];
-            }
-            msg.axes[id_target_axis] = axes[id_axis] * scale;
-        }
-        let dead_man_switch = false;
-        for (let id_btn = 0; id_btn < buttons.length; id_btn++) { //sending all input regardless of mapping
-            let pressed = buttons[id_btn].pressed;
-            let id_target_btn = id_btn;
-            if (browser2joy_mapping.buttons[id_btn])
-                id_target_btn = browser2joy_mapping.buttons[id_btn];
-            msg.buttons[id_target_btn] = pressed;
-            if (id_btn == id_dead_man_switch_btn) {
-                dead_man_switch = pressed;
-            }
-        }
-
-        let transmitting = $('#gamepad_enabled').is(':checked');
-
-        if (dead_man_switch && transmitting)
-            $('#gamepad_status').addClass('active')
-        else
-            $('#gamepad_status').removeClass('active')
-
-        let debug = {
-            buttons: {},
-            axis: {}
-        }
-        for (let i = 0; i < buttons.length; i++) {
-            debug.buttons[i] = buttons[i].pressed;
-        }
-        for (let i = 0; i < axes.length; i++) {
-            debug.axis[i] = axes[i];
-        }
-        $('#gamepad_debug').html(
-            JSON.stringify(msg, null, 2)
-            + '<br>' + JSON.stringify(debug, null, 2)
-        );
-
-
-        if (capturing_gamepad_input) {
-            CaptureGamepadInput(buttons, axes);
-        } else {
-            if (transmitting && window.gamepadController.dc && window.gamepadController.dc.readyState == 'open')
-                window.gamepadController.Write(msg);
-        }
-
-        if (gamepad_service_mapping) {
-            for (const [service_name, service_mapping] of Object.entries(gamepad_service_mapping)) {
-                //let  = gamepad_service_mapping[service_name];
-                for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
-                    //let  = gamepad_service_mapping[service_name][btn_name];
-                    //console.log('btns_cond', btns_cond)
-                    let btns_cond = btns_config.btns_cond;
-                    let num_pressed = 0;
-                    for (let i = 0; i < btns_cond.length; i++) {
-                        let b = btns_cond[i];
-                        if (buttons[b] && buttons[b].pressed)
-                            num_pressed++;
-                    }
-                    if (btns_cond.length && num_pressed == btns_cond.length) {
-                        if (!btns_config['needs_reset']) {
-
-                            let btn_el = $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]');
-
-                            if (btn_el.length) {
-                                console.warn('Triggering '+service_name+' btn '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
-                                btn_el.click();
-                            } else {
-                                console.log('Not triggering '+service_name+' btn '+btn_name+'; btn not found (service not discovered yet?)');
-                            }
-                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
-
-                        }
-                    } else if (btns_config['needs_reset']) {
-                        gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
-                    }
-                }
-                // if (buttons[service.btn_id].pressed) {
-                //     ServiceCall(window.gamepadController.id_robot, service_name, service.msg, window.gamepadController.socket);
-                // }
-            }
-        }
-
-        window.setTimeout(window.gamepadController.UpdateLoop, 33.3); //30Hz updates
-    }
-}
-
-function CaptureGamepadInput(buttons, axes) {
-    if (!capturing_gamepad_input) {
-        return;
-    }
-
-    let something_pressed = false;
-    for (let i = 0; i < buttons.length; i++) {
-        if (buttons[i] && buttons[i].pressed) {
-            something_pressed = true;
-            if (captured_gamepad_input.indexOf(i) === -1) {
-                captured_gamepad_input.push(i);
-            }
-        }
-    }
-    if (something_pressed) {
-        for (let i = 0; i < captured_gamepad_input.length; i++) {
-            let btn = captured_gamepad_input[i];
-            if (!buttons[btn] || !buttons[btn].pressed) {
-                captured_gamepad_input.splice(i, 1);
-                i--;
-            }
-        }
-    }
-
-    $('#current-key').html(captured_gamepad_input.join(' + '));
-}
-
-
 
 function MapServiceButton(button, id_robot) {
 

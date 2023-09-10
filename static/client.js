@@ -175,7 +175,7 @@ function InitPeerConnection(id_robot) {
         if (evt.currentTarget.connectionState == 'connected') {
             if (!pc_connected) { //just connected
                 pc_connected = true;
-                window.gamepadController.InitProducer()
+                window.gamepadController.InitProducers()
                 let subscribe_topics = []
                 let panelTopics = Object.keys(panels);
                 for (let i = 0; i < panelTopics.length; i++) {
@@ -192,7 +192,8 @@ function InitPeerConnection(id_robot) {
             console.error('Peer connection disconnected');
 
             pc_connected = false;
-            window.gamepadController.ClearProducer();
+            window.gamepadController.ClearProducers();
+
             for (const topic of Object.keys(topics)) {
                 topics[topic].subscribed = false;
                 if (topic_media_streams[topic]) {

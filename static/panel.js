@@ -50,6 +50,7 @@ class Panel {
         let html =
             '<div class="grid_panel" data-source="'+id_source+'">' +
                 '<h3>'+id_source+'</h3>' +
+                '<span class="notes"></span>' +
                 '<div class="monitor_menu">' +
                     '<div class="hover_keeper"></div>' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
@@ -269,6 +270,9 @@ class Panel {
             if (this.msg_reader != null) {
                 let v = new DataView(rawData)
                 decoded = this.msg_reader.readMessage(v);
+                // if (this.id_source == '/joy')
+                //     window.gamepadController.SampleLatency(decoded);
+
                 if (this.msg_type == 'std_msgs/msg/String' && decoded.data) {
                     if (decoded.data.indexOf('xml') !== -1)  {
                         datahr = linkifyURLs(escapeHtml(window.xmlFormatter(decoded.data)), true);

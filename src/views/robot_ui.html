@@ -43,8 +43,13 @@
 
 <div id="gamepad">
     <div id="gamepad_status" title="Gamepad Settings"></div>
+    <div id="gamepad_latency" title="Latency"></div>
     <div id="gamepad_settings">
         <input type="checkbox" id="gamepad_enabled" checked="checked"/> <label for="gamepad_enabled">Transmitting</label>
+        <select id="gamepad_msg_type">
+            <option value="sensor_msgs/msg/Joy">Forward sensor_msgs/msg/Joy into /joy</option>
+            <option value="geometry_msgs/msg/Twist" selected="selected">Generate geometry_msgs/msg/Twist into /cmd_vel </option>
+        </select>
         <div id="gamepad_debug"></div>
     </div>
 </div>
@@ -109,7 +114,6 @@
         //     });
         // });
 
-
         let msg_types_src = '/static/msg_types.json'
         fetch(msg_types_src)
             .then((response) => response.json())
@@ -119,7 +123,7 @@
 
                 Panel.ParseUrlHash(window.location.hash);
 
-                window.gamepadController = new GamepadController(pc, '/joy', id_robot, socket, supported_msg_types);
+                window.gamepadController = new GamepadController(pc, id_robot, socket, supported_msg_types);
 
                 //proceed when we have msg types ready
                 socket.connect();
@@ -310,22 +314,17 @@
 
             console.log('Cameras:', cameras_data);
 
+            $('#camera_controls').removeClass('active');
             cameras = {};
-
-
-
-            if (Object.keys(cameras_data).length > 0) {
-                $('#camera_controls').addClass('active');
-            } else {
-                $('#camera_controls').removeClass('active');
-            }
 
             let i = 0;
             let subscribe_cameras = [];
             Object.keys(cameras_data).forEach((id_robot) => {
 
-                if (!cameras_data[id_robot])
+                if (!cameras_data[id_robot] || !cameras_data[id_robot].length)
                     return;
+
+                $('#camera_controls').addClass('active');
 
                 cameras_data[id_robot].forEach((camera_data)=>{
 
@@ -396,17 +395,15 @@
 
             docker_containers = {};
 
-            if (Object.keys(docker_containers_data).length > 0) {
-                $('#docker_controls').addClass('active');
-            } else {
-                $('#docker_controls').removeClass('active');
-            }
+            $('#docker_controls').removeClass('active');
 
             let i = 0;
             Object.keys(docker_containers_data).forEach((id_robot) => {
 
-                if (!docker_containers_data[id_robot])
+                if (!docker_containers_data[id_robot] || !docker_containers_data[id_robot].length)
                     return;
+
+                $('#docker_controls').addClass('active');
 
                 docker_containers_data[id_robot].forEach((cont_data)=>{
 
