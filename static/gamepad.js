@@ -220,20 +220,20 @@ class GamepadController {
                 if (val_strife_r > -1) {
                     val_strife += (val_strife_r + 1.0) / 4.0; // (0,.5)
                 }
-                let turn_amount = apply_axis_deadzone(-axes[2], 2); //0-1
+                let turn_amount = apply_axis_deadzone(-axes[2], 2); // (-1,1)
                 let turn_speed_max = 3.0; //at 0.0 fw speed
                 let turn_speed_min = 0.7; //at 1.0 fw speed
                 let turn_speed = lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
                 msg = {
                         "linear": {
-                            "x": fw_speed, //fw / back 0-10
-                            "y": val_strife, //strife
+                            "x": fw_speed, //fw / back (-1,1)
+                            "y": val_strife, //strife (-.5,0.5)
                             "z": 0
                         },
                         "angular": {
                             "x": 0,
                             "y": 0,
-                            "z": turn_amount * turn_speed, //turn 0-2
+                            "z": turn_amount * turn_speed, //turn (-3,3)
                         }
                     }
                 break;

@@ -830,6 +830,7 @@ SPAN.error {
 
 #gamepad #gamepad_settings SElECT {
     color: black;
+    margin-left: 5px;
 }
 
 #gamepad #gamepad_debug {
