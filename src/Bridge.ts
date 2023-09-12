@@ -818,6 +818,35 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
+    appSocket.on('iw:scan', async function (data:{id_robot:string, id_app?:string, id_instance?:string}, returnCallback) {
+        $d.log('App requesting robot wiri scan', data);
+
+        if (!ObjectId.isValid(data.id_robot))
+            return returnCallback({'err':1});
+
+        let idRobot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(idRobot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('iw:scan', data, (answerData:any) => {
+            $d.log('Got robot\'s iw:scan answer:', answerData);
+            return returnCallback(answerData);
+        });
+
+    });
+
     appSocket.on('docker', async function (data:{id_robot:string, container:boolean, msg:string, id_app?:string, id_instance?:string}, returnCallback) {
         $d.log('App calling robot docker container ', data);
 

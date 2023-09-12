@@ -1463,6 +1463,87 @@
     ]
   },
   {
+    "name": "phntm_interfaces/msg/IWStatus_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MODE_MANAGED",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MODE_AD_HOC",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/IWStatus",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "frequency"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "access_point"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "bit_rate"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "essid"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "mode"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "quality"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "quality_max"
+      },
+      {
+        "type": "int16",
+        "isComplex": false,
+        "name": "level"
+      },
+      {
+        "type": "int16",
+        "isComplex": false,
+        "name": "noise"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "supports_scanning"
+      }
+    ]
+  },
+  {
     "name": "rcl_interfaces/msg/FloatingPointRange",
     "definitions": [
       {

@@ -330,12 +330,18 @@ function SetWebRTCSatusLabel() {
     else
         state = 'n/a'
 
-    if (state == 'Connected')
+    if (state == 'Connected') {
         $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
-    else if (state == 'Connecting')
+        $('#trigger_wifi_scan').removeClass('working')
+    } else if (state == 'Connecting') {
         $('#webrtc_status').html('<span class="connecting">'+state+'</span>');
-    else
+        $('#robot_wifi_info').addClass('offline')
+        $('#trigger_wifi_scan').removeClass('working')
+    } else {
         $('#webrtc_status').html('<span class="offline">'+state+'</span>');
+        $('#robot_wifi_info').addClass('offline')
+        $('#trigger_wifi_scan').removeClass('working')
+    }
 }
 
 function SetSocketIOSatusLabel() {
@@ -403,6 +409,97 @@ function ProcessRobotData(robot_data) {
     SetWebRTCSatusLabel();
     SetSocketIOSatusLabel();
     SetDiscoveryState(robot_data['discovery'] ? true : false);
+}
+
+function TriggerWidiScan() {
+    console.warn('Triggering wifi scan on robot '+id_robot)
+    $('#trigger_wifi_scan').addClass('working');
+    socket.emit('iw:scan', { id_robot: id_robot }, (res) => {
+        $('#trigger_wifi_scan').removeClass('working');
+        if (!res || !res['success']) {
+            console.error('Wifi scan err: ', res);
+            return;
+        }
+    });
+}
+
+let lastAP = null;
+
+function UpdateIWStatus(msg) {
+    // console.warn('UpdateIWStatus', msg)
+    let qc = '#00ff00';
+    let qPercent = (msg.quality / msg.quality_max) * 100.0;
+    if (qPercent < 40)
+        qc = 'red';
+    else if (qPercent < 50)
+        qc = 'orange';
+    else if (qPercent < 70)
+        qc = 'yellow';
+
+    let nc = ''
+    if (msg.noise > 0)
+        nc = 'yellow'
+
+    let brc = ''
+    if (msg.bit_rate < 100)
+        brc = 'yellow'
+
+    let apclass = '';
+    if (lastAP != msg.access_point) {
+        lastAP = msg.access_point;
+        apclass = 'new'
+    }
+
+    let html = '// <span class="eeid">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+msg.frequency.toFixed(3)+' GHz, </span> ' +
+                '<span style="color:'+brc+'">BitRate: '+msg.bit_rate.toFixed(1) + ' Mb/s</span> ' +
+                '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
+                'Level: '+ msg.level + ' ' +
+                '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> '
+                ;
+
+    $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
+    $('#robot_wifi_info').removeClass('offline');
+
+    pc.getStats(null).then((stats) => {
+
+        // console.log('stats', stats)
+
+        // let statsOutput = "";
+
+        stats.forEach((report) => {
+        //   statsOutput +=
+        //     `<h2>Report: ${report.type}</h2>\n<strong>ID:</strong> ${report.id}<br>\n` +
+        //     `<strong>Timestamp:</strong> ${report.timestamp}<br>\n`;
+
+        //   // Now the statistics for this report; we intentionally drop the ones we
+        //   // sorted to the top above
+
+            Object.keys(report).forEach((statName) => {
+                if (statName == 'currentRoundTripTime') {
+                    let rtt_ms = report[statName] * 1000;
+                    let rttc = ''
+                    if (rtt_ms > 50)
+                        rttc = 'red'
+                    else if (rtt_ms > 30)
+                        rttc = 'orange'
+                    else if (rtt_ms > 15)
+                        rttc = 'yellow'
+                    else
+                        rttc = 'lime'
+                    html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'ms</span>';
+                    $('#robot_wifi_stats').html(html)
+                }
+                // console.log(`${statName}: ${report[statName]}`);
+            //     if (
+            //       statName !== "id" &&
+            //       statName !== "timestamp" &&
+            //       statName !== "type"
+            //     ) {
+            //       statsOutput += `<strong>${statName}:</strong> ${report[statName]}<br>\n`;
+            //     }
+            });
+        });
+    });
 }
 
 function SetDiscoveryState(discovery_state) {
@@ -634,6 +731,10 @@ function _HandleTopicSubscriptionRepy(res) {
                 id:id
             });
 
+            let Reader = window.Serialization.MessageReader;
+            let msg_type_class = FindMessageType(topics[topic]['msg_types'][0], supported_msg_types)
+            let msg_reader = new Reader( [ msg_type_class ].concat(supported_msg_types) );
+
             topic_dcs[topic] = dc;
 
             dc.addEventListener('open', (ev)=> {
@@ -648,6 +749,35 @@ function _HandleTopicSubscriptionRepy(res) {
                 delete topic_dcs[topic]
             });
             dc.addEventListener('message', (ev)=> {
+
+                let rawData = ev.data; //arraybuffer
+                let decoded = null;
+                let raw_len = 0;
+                let raw_type = ""
+
+                if (rawData instanceof ArrayBuffer) {
+                    if (msg_reader != null) {
+                        let v = new DataView(rawData)
+                        decoded = msg_reader.readMessage(v);
+                    } else {
+                        decoded = buf2hex(rawData)
+                    }
+                    raw_len = rawData.byteLength;
+                    raw_type = 'ArrayBuffer';
+                } else { //string
+                    decoded = rawData;
+                    raw_len = decoded.length;
+                    raw_type = 'String';
+                }
+
+                if (topic == '/iw_status') {
+                    UpdateIWStatus(decoded)
+                }
+
+                if (topic == '/robot_description') {
+                    console.warn('Got robot descripotion: ', decoded);
+                }
+
                 let panel = panels[topic];
                 if (!panel) {
                     console.error('panel not found for '+topic+' (data)')
@@ -655,13 +785,13 @@ function _HandleTopicSubscriptionRepy(res) {
                 }
 
                 if (!$('#update_panel_'+panel.n).is(':checked')) {
-                    console.error('panel not updating '+topic+' (data)')
+                    // console.error('panel not updating '+topic+' (data)')
                     return;
                 }
 
                 // console.log('panel '+topic+' has data', ev)
 
-                panel.onData(ev);
+                panel.onData(ev, decoded, raw_type, raw_len);
             });
 
         } else { //subscribed video

@@ -396,6 +396,31 @@ h3 {
 
 #robot_info {
     color: #ffffff78;
+    float: left
+}
+
+#robot_wifi_info {
+    color: #00d5d2;
+    margin-left: 5px;
+    float: left;
+    font-size: 12px;
+}
+
+#robot_wifi_info.offline {
+    opacity: 0.3;
+}
+
+BUTTON#trigger_wifi_scan {
+    margin-left: 5px;
+    border: 0px;
+    border-radius: 5px;
+    color: #fff;
+    background-color: #0051ff;
+    display: none;
+}
+
+BUTTON#trigger_wifi_scan.working {
+    background: #ff8c00;
 }
 
 #robot_stats {
@@ -408,6 +433,18 @@ h3 {
 
 #topic_list A.topic {
 
+}
+
+#robot_wifi_info .ap_id {
+
+}
+
+#robot_wifi_info .ap_id.new {
+    background-color: lime;
+    color: #000000;
+    border-radius: 2px;
+    padding: 2px 5px;
+    margin: -2px -5px;
 }
 
 .grid_panel {

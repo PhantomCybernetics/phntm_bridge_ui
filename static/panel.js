@@ -254,64 +254,73 @@ class Panel {
            this.resize_event_handler();
     }
 
-    onData(ev) {
+    onData(ev, decoded, raw_type, raw_len) {
 
-        let rawData = ev.data; //arraybuffer
-        let decoded = null;
+        let datahr = 'N/A';
+        if ((this.msg_type == 'std_msgs/msg/String' && decoded.data) || raw_type === 'String' ) {
 
-        //let oldh = $('#panel_content_'+this.n).height();
-        //$('#panel_content_'+this.n).height('auto');
-        if (rawData instanceof ArrayBuffer) {
+            let str_val = null;
+            if (this.msg_type == 'std_msgs/msg/String')
+                str_val = decoded.data;
+            else
+                str_val = decoded;
 
-            if (this.id_source == '/robot_description')
-                console.warn(this.id_source+' onData (buff): ' + rawData.byteLength + 'B');
-
-            let datahr = '';
-            if (this.msg_reader != null) {
-                let v = new DataView(rawData)
-                decoded = this.msg_reader.readMessage(v);
-                // if (this.id_source == '/joy')
-                //     window.gamepadController.SampleLatency(decoded);
-
-                if (this.msg_type == 'std_msgs/msg/String' && decoded.data) {
-                    if (decoded.data.indexOf('xml') !== -1)  {
-                        datahr = linkifyURLs(escapeHtml(window.xmlFormatter(decoded.data)), true);
-                    } else {
-                        datahr = linkifyURLs(escapeHtml(decoded.data));
-                    }
-                    //console.log(window.xmlFormatter)
-
-                } else {
-                    datahr = JSON.stringify(decoded, null, 2);
-                }
-                //datahr = rawData.
+            if (str_val.indexOf('xml') !== -1)  {
+                datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
             } else {
-                datahr = buf2hex(rawData)
+                datahr = linkifyURLs(escapeHtml(str_val));
             }
+            //console.log(window.xmlFormatter)
 
-            $('#panel_source_'+this.n).html(
-                'Stamp: '+ev.timeStamp + '<br>' +
-                rawData+' '+rawData.byteLength+'B'+'<br>' +
-                '<br>' +
-                datahr
-            );
+        } else if (decoded) {
+            datahr = JSON.stringify(decoded, null, 2);
 
             if (panel_widgets[this.msg_type] && panel_widgets[this.msg_type].widget)
                 panel_widgets[this.msg_type].widget(this, decoded);
-
-        } else { //string data
-
-            let datahr = ev.data;
-            if (this.id_source == '/robot_description')
-                console.warn(this.id_source+' onData (hr): ', datahr);
-
-            $('#panel_source_'+this.n).html(
-                'Stamp: '+ev.timeStamp + '<br>' +
-                '<br>' +
-                datahr
-            );
-
         }
+
+        $('#panel_source_'+this.n).html(
+            'Received: '+ev.timeStamp + '<br>' + // this is local stamp
+            '&lt;'+raw_type+'&gt; '+raw_len+' '+(raw_type!='String'?'B':'chars')+'<br>' +
+            '<br>' +
+            datahr
+        );
+
+
+        //let oldh = $('#panel_content_'+this.n).height();
+        // //$('#panel_content_'+this.n).height('auto');
+        // if (rawData instanceof ArrayBuffer) {
+
+        //     // if (this.id_source == '/robot_description')
+        //     //     console.warn(this.id_source+' onData (buff): ' + rawData.byteLength + 'B');
+
+
+
+        //         // if (this.id_source == '/joy')
+        //         //     window.gamepadController.SampleLatency(decoded);
+
+
+        //         //datahr = rawData.
+        //     } else {
+        //         datahr = buf2hex(rawData)
+        //     }
+
+
+
+        //     if (panel_widgets[this.msg_type] && panel_widgets[this.msg_type].widget)
+        //         panel_widgets[this.msg_type].widget(this, decoded);
+
+        // } else { //string data
+
+        //     let datahr = ev.data;
+
+        //     $('#panel_source_'+this.n).html(
+        //         'Rcvd stamp: '+ev.timeStamp + '<br>' + // this is local stamp
+        //         '<br>' +
+        //         datahr
+        //     );
+
+        // }
 
         let newh = $('#panel_source_'+this.n).height();
         //console.log('max_height='+this.max_height+' newh='+newh);

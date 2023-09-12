@@ -54,21 +54,25 @@ class GamepadController {
         this.joy_msg_type = 'sensor_msgs/msg/Joy';
         this.joy_topic = '/joy';
 
-        this.cmd_vel_msg_type = 'geometry_msgs/msg/Twist';
-        this.cmd_vel_topic = '/cmd_vel';
+        this.twist_msg_type = 'geometry_msgs/msg/Twist';
+        // this.twist_stamped_msg_type = 'geometry_msgs/msg/TwistStamped';
+        this.twist_topic = '/cmd_vel';
+        // this.twist_stamped_topic = '/cmd_vel';
 
         this.joy_msg_class = FindMessageType(this.joy_msg_type, supported_msg_types);
-        this.cmd_vel_msg_class = FindMessageType(this.cmd_vel_msg_type, supported_msg_types);
+        this.twist_msg_class = FindMessageType(this.twist_msg_type, supported_msg_types);
+        // this.twist_stamped_msg_class = FindMessageType(this.twist_stamped_msg_type, supported_msg_types);
 
         this.socket = socket;
         this.id_robot = id_robot;
 
-        console.log('Gamnepad msg classes:', this.joy_msg_class, this.cmd_vel_msg_class);
+        console.log('Gamnepad msg classes:', this.joy_msg_class, this.twist_msg_type, this.twist_stamped_msg_type);
 
         let Writer = window.Serialization.MessageWriter;
         this.msg_writers = {}
         this.msg_writers[this.joy_msg_type] = new Writer( [ this.joy_msg_class ].concat(supported_msg_types) );
-        this.msg_writers[this.cmd_vel_msg_type] = new Writer( [ this.cmd_vel_msg_class ].concat(supported_msg_types) );
+        this.msg_writers[this.twist_msg_type] = new Writer( [ this.twist_msg_class ].concat(supported_msg_types) );
+        // this.msg_writers[this.twist_stamped_msg_type] = new Writer( [ this.twist_stamped_msg_class ].concat(supported_msg_types) );
 
         this.dcs = {};
 
@@ -105,8 +109,11 @@ class GamepadController {
         if (!this.dcs[this.joy_topic])
             subscription_data.topics.push([ this.joy_topic, 1, this.joy_msg_type ])
 
-        if (!this.dcs[this.cmd_vel_topic])
-            subscription_data.topics.push([ this.cmd_vel_topic, 1, this.cmd_vel_msg_type ])
+        if (!this.dcs[this.twist_topic])
+            subscription_data.topics.push([ this.twist_topic, 1, this.twist_msg_type ])
+
+        // if (!this.dcs[this.twist_stamped_topic])
+        //     subscription_data.topics.push([ this.twist_stamped_topic, 1, this.twist_stamped_msg_type ])
 
         if (!subscription_data.topics.length)
             return;
@@ -187,7 +194,7 @@ class GamepadController {
         let msg = {}
 
         switch (transmitting_type) {
-            case 'sensor_msgs/msg/Joy': //forward joy
+            case 'Joy': //forward joy
                 msg = {
                     header: {
                         stamp: {
@@ -207,7 +214,8 @@ class GamepadController {
                     msg.buttons[id_btn] = buttons[id_btn].pressed;;
                 }
                 break;
-            case 'geometry_msgs/msg/Twist':
+            case 'Twist':
+            // case 'TwistStamped':
 
                 let fw_speed = apply_axis_deadzone(axes[1], 1); // (-1,1)
 
@@ -221,7 +229,7 @@ class GamepadController {
                     val_strife += (val_strife_r + 1.0) / 4.0; // (0,.5)
                 }
                 let turn_amount = apply_axis_deadzone(-axes[2], 2); // (-1,1)
-                let turn_speed_max = 3.0; //at 0.0 fw speed
+                let turn_speed_max = 2.0; //at 0.0 fw speed
                 let turn_speed_min = 0.7; //at 1.0 fw speed
                 let turn_speed = lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
                 msg = {
@@ -235,7 +243,21 @@ class GamepadController {
                             "y": 0,
                             "z": turn_amount * turn_speed, //turn (-3,3)
                         }
-                    }
+                }
+
+                // if (transmitting_type == 'TwistStamped') {
+                //     msg = {
+                //         header: {
+                //             stamp: {
+                //                 sec: sec,
+                //                 nanosec: nanosec
+                //             },
+                //             frame_id: 'phntm'
+                //         },
+                //         twist: msg
+                //     }
+                // }
+
                 break;
             default:
                 console.error('Invalid transmitting_type val: '+transmitting_type)
@@ -252,34 +274,30 @@ class GamepadController {
         for (let i = 0; i < buttons.length; i++) {
             debug.buttons[i] = buttons[i].pressed;
         }
-        if (transmitting) {
-            $('#gamepad_debug').html(
-                '<div class="col">' +
-                    '<b>Axes raw:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
-                    '<b>Btns raw:</b><br>' + JSON.stringify(debug.buttons, null, 2) +
-                '</div>' +
-                // '<div class="col">' +
-                //     // '<b>Mapping:</b><br>' + JSON.stringify(browser2joy_mapping, null, 2) +
-                // '</div>' +
-                '<div class="col"><b>Msg ['+transmitting_type+']:</b><br>' + JSON.stringify(msg, null, 2) + '</div>'
-            );
-        }
+
+        $('#gamepad_debug_input').html('<b>Axes raw:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
+                                       '<b>Btns raw:</b><br>' + JSON.stringify(debug.buttons, null, 2));
 
         if (capturing_gamepad_input) {
             CaptureGamepadInput(buttons, axes);
         } else  if (transmitting) {
             let that = window.gamepadController;
+            let topic = null;
+            let msg_type = null;
             switch (transmitting_type) {
-                case 'sensor_msgs/msg/Joy':
-                    that.Write(that.joy_topic, transmitting_type, msg);
+                case 'Joy':
+                    msg_type = that.joy_msg_type;
+                    topic = that.joy_topic;
                     break;
-                case 'geometry_msgs/msg/Twist':
-                    that.Write(that.cmd_vel_topic , transmitting_type, msg);
+                case 'Twist':
+                    that.Write(that.twist_topic , that.twist_msg_type, msg);
                     break;
+                // case 'TwistStamped':
+                //     that.Write(that.twist_topic_stamped , that.twist_stamped_msg_type, msg);
+                //     break;
             }
-
-            // if (dead_man_switch && transmitting && window.gamepadController.dc && window.gamepadController.dc.readyState == 'open')
-            //
+            $('#gamepad_debug_output').html('<b>'+msg_type+' -> '+topic+'</b><br>' + JSON.stringify(msg, null, 2));
+            that.Write(topic, msg_type, msg);
         }
 
         if (gamepad_service_mapping) {

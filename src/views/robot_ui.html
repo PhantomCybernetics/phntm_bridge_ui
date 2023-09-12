@@ -1,7 +1,13 @@
 <%- include('partial/header.html', { extraLinks: [ '<a href="#" id="helpLink">?</a>' ] }); %>
 
 <h1 id="robot_name">Waiting for Connection...</h1>
+<div class="cleaner"></div>
 <div id="robot_info">Contacting <%= id_robot %>...</div>
+<div id="robot_wifi_info">
+    <span id="robot_wifi_stats"></span>
+    <button id="trigger_wifi_scan" onclick="TriggerWidiScan();">scan</button>
+</div>
+<div class="cleaner"></div>
 <br>
 <div id="robot_stats" style="display:none">
 
@@ -47,10 +53,14 @@
     <div id="gamepad_settings">
         <input type="checkbox" id="gamepad_enabled" checked="checked"/> <label for="gamepad_enabled">Transmitting</label>
         <select id="gamepad_msg_type">
-            <option value="sensor_msgs/msg/Joy">Forward sensor_msgs/msg/Joy into /joy</option>
-            <option value="geometry_msgs/msg/Twist" selected="selected">Generate geometry_msgs/msg/Twist into /cmd_vel </option>
+            <option value="Joy">Joy -> /joy</option>
+            <option value="Twist" selected="selected">Twist -> /cmd_vel </option>
+            <!-- <option value="TwistStamped">TwistStamped -> /cmd_vel </option> -->
         </select>
-        <div id="gamepad_debug"></div>
+        <div id="gamepad_debug">
+            <div class="col" id="gamepad_debug_input">Initializing...</div>
+            <div class="col" id="gamepad_debug_output">Initializing...</div>
+        </div>
     </div>
 </div>
 
