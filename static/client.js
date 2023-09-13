@@ -411,19 +411,28 @@ function ProcessRobotData(robot_data) {
     SetDiscoveryState(robot_data['discovery'] ? true : false);
 }
 
-function TriggerWidiScan() {
+function TriggerWifiScan(roam=true) {
     console.warn('Triggering wifi scan on robot '+id_robot)
     $('#trigger_wifi_scan').addClass('working');
-    socket.emit('iw:scan', { id_robot: id_robot }, (res) => {
+    socket.emit('iw:scan', { id_robot: id_robot, roam: roam }, (res) => {
         $('#trigger_wifi_scan').removeClass('working');
         if (!res || !res['success']) {
             console.error('Wifi scan err: ', res);
             return;
         }
+        console.log('IW Scan results:', res)
+        let candidates = [];
+        res.res.forEach((one_res) => {
+            if (one_res.essid == lastESSID) {
+                candidates.push(one_res)
+            }
+        });
+        console.log('Same ESSID candidates:', candidates)
     });
 }
 
 let lastAP = null;
+let lastESSID = null;
 
 function UpdateIWStatus(msg) {
     // console.warn('UpdateIWStatus', msg)
@@ -450,7 +459,13 @@ function UpdateIWStatus(msg) {
         apclass = 'new'
     }
 
-    let html = '// <span class="eeid">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+msg.frequency.toFixed(3)+' GHz, </span> ' +
+    let essidclass= ''
+    if (lastESSID != msg.essid) {
+        lastESSID = msg.essid;
+        essidclass = 'new'
+    }
+
+    let html = '// <span class="eeid '+essidclass+'">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+msg.frequency.toFixed(3)+' GHz, </span> ' +
                 '<span style="color:'+brc+'">BitRate: '+msg.bit_rate.toFixed(1) + ' Mb/s</span> ' +
                 '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
                 'Level: '+ msg.level + ' ' +

@@ -211,7 +211,7 @@ class GamepadController {
                     msg.axes[id_axis] = val
                 }
                 for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
-                    msg.buttons[id_btn] = buttons[id_btn].pressed;;
+                    msg.buttons[id_btn] = buttons[id_btn].pressed;
                 }
                 break;
             case 'Twist':
@@ -243,6 +243,13 @@ class GamepadController {
                             "y": 0,
                             "z": turn_amount * turn_speed, //turn (-3,3)
                         }
+                }
+
+                //select triggers iw scan and roam
+                if (buttons[10].pressed) {
+                    if (!$('#trigger_wifi_scan').hasClass('working')) {
+                        TriggerWifiScan()
+                    }
                 }
 
                 // if (transmitting_type == 'TwistStamped') {

@@ -818,7 +818,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    appSocket.on('iw:scan', async function (data:{id_robot:string, id_app?:string, id_instance?:string}, returnCallback) {
+    appSocket.on('iw:scan', async function (data:{id_robot:string, roam?:boolean, id_app?:string, id_instance?:string}, returnCallback) {
         $d.log('App requesting robot wiri scan', data);
 
         if (!ObjectId.isValid(data.id_robot))
