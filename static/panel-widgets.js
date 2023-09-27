@@ -4,8 +4,8 @@ let panel_widgets = {
     'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
     'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
     'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
-    'sensor_msgs/msg/Image' : { widget: VideoWidget, w:3, h:4 },
-    'video' : { widget: VideoWidget, w:3, h:4 },
+    'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
+    'video' : { widget: VideoWidget, w:5, h:4 },
 
 }
 

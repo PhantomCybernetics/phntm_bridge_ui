@@ -27,7 +27,7 @@ class Panel {
 
     //widget_opts = {};
 
-    static TogglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false, zoom = 1.0) {
+    static TogglePanel(id_source, msg_type, state, w, h, x = 0, y = 0, src_visible = false, zoom = 1.0) {
         let panel = panels[id_source];
         if (state) {
             if (!panel) {

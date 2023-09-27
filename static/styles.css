@@ -56,19 +56,50 @@ h3 {
 
 #menubar {
     width: 100%;
-    position: absolute;
-    z-index: 15;
+    position: relative;
+    z-index: 35;
 }
 
-#topic_controls {
-    width: 400px;
+#topic_controls,
+#service_controls,
+#camera_controls,
+#docker_controls {
     margin-top: 0px;
     background: #6f98c4;
     padding: 10px;
     border-radius: 5px;
     position: relative;
     float: left;
+    margin: 0px 10px 10px 0px;
+    z-index: 1;
 }
+
+#topic_controls:hover,
+#service_controls:hover,
+#camera_controls:hover,
+#docker_controls:hover {
+    z-index: 2;
+}
+
+#topic_controls {
+    width: 400px;
+}
+
+#service_controls {
+    width: 270px;
+    background: #b311a3;
+}
+
+#camera_controls {
+    width: 170px;
+    background: #82b727;
+}
+
+#docker_controls {
+    width: 190px;
+    background: #2b2b2b;
+}
+
 
 #topic_list {
     overflow-x: hidden;
@@ -83,47 +114,15 @@ h3 {
     background: #deeeff;
 }
 
-
-#service_controls {
-    width: 270px;
-    background: #b311a3;
-    padding: 10px;
-    border-radius: 5px;
-    position: relative;
-    float: left;
-    margin-left: 10px
-}
-
-#camera_controls {
-    width: 170px;
-    background: #82b727;
-    padding: 10px;
-    border-radius: 5px;
-    position: relative;
-    float: left;
-    margin-left: 10px
-}
-
-#docker_controls {
-    width: 190px;
-    background: #4a4a4a;
-    padding: 10px;
-    border-radius: 5px;
-    position: relative;
-    float: left;
-    margin-left: 10px
-}
-
-
-
 #discovery_state {
-    width: 50px;
+    width: 34px;
     /* background: #4a4a4a; */
     padding: 0px;
     position: relative;
+    left: -7px;
     float: left;
-    margin-left: 0px;
-    height: 42px;
+    margin: 5px 0px 0px 0px;
+    height: 33px;
     background-image: url(/static/discovery_stopped.svg);
     -webkit-animation-play-state: paused;
     -moz-animation-play-state: paused;
@@ -917,7 +916,7 @@ SPAN.error {
 }
 
 .grid-stack {
-    margin-top: 50px;
+    margin-top: 0px;
     margin-left: -10px;
     margin-right: -10px;
 }

@@ -9,9 +9,7 @@
 </div>
 <div class="cleaner"></div>
 <br>
-<div id="robot_stats" style="display:none">
-
-</div>
+<div id="robot_stats" style="display:none"></div>
 
 <div id="menubar">
 
@@ -40,6 +38,8 @@
     </div>
 
     <div id="discovery_state" class="inactive"></div>
+
+    <div class="cleaner"></div>
 
 </div>
 
@@ -391,7 +391,7 @@
                     let w = panel_widgets['video'].w;
                     let h = panel_widgets['video'].h;
 
-                    Panel.TogglePanel(cam, 'video', state, w, h, null, null);
+                    Panel.TogglePanel(cam, 'video', state, w, h);
                     SetCameraSubscription(id_robot, [ cam ], state);
                 });
             });

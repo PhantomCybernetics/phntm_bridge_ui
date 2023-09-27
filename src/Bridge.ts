@@ -980,7 +980,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][], sdp_offer?:string, id_app?:string, id_instance?:string}, returnCallback) {
+    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
 
         $d.log('App requesting read subscription to robot with:', data);
 
@@ -1028,7 +1028,54 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    appSocket.on('cameras:read', async function (data:{ id_robot:string, cameras:[string, number][], sdp_offer?:string, id_app?:string, id_instance?:string}, returnCallback) {
+    appSocket.on('sdp:answer', async function (data:{ id_robot:string, sdp:string, id_app?:string, id_instance?:string}, returnCallback) {
+        $d.log('App sending sdp answer with:', data);
+
+        if (!data.id_robot || !data.sdp) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid subscription data'
+                })
+            }
+            return;
+        }
+
+        if (!ObjectId.isValid(data.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+data.id_robot
+                })
+            }
+            return;
+        }
+        let id_robot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot || !robot.socket) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Robot not connected'
+                })
+            }
+            return;
+        }
+
+        delete data['id_robot'];
+        data['id_app'] = app.id_app.toString();
+        data['id_instance'] = app.id_instance.toString();
+
+        robot.socket.emit('sdp:answer', data, (resData:any) => {
+
+            $d.log('Got robot\'s sdp:answer answer:', resData);
+
+            return returnCallback(resData);
+        });
+
+    });
+
+    appSocket.on('cameras:read', async function (data:{ id_robot:string, cameras:[string, number][], id_app?:string, id_instance?:string}, returnCallback) {
 
         $d.log('App requesting robot camera access with:', data);
 
@@ -1173,10 +1220,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    // appSocket.on('answer', async function (app_answer_data:{ [id_robot:string]: {sdp:string, type:string}}, returnCallback) {
-    //     $d.log('App sending webrtc answer to robot', app_answer_data);
 
-    // });
 
        /*
      * client disconnected

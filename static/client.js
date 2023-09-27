@@ -35,6 +35,7 @@ let docker_containers = {}; // str id => { info: {}}
 
 let transievers = []; // RTCRtpTransceiver[]
 let topic_media_streams = {}; // str topic => MediaStream
+let preferedVideoCodecs = [];
 
 const MAX_OPEN_VIDEO_STREAMS = 3;
 
@@ -44,7 +45,7 @@ function InitPeerConnection(id_robot) {
     pc_.createDataChannel('_ignore_'); //wouldn't otherwise open chanels (?)
 
     const capabilities = RTCRtpReceiver.getCapabilities('video');
-    let preferedVideoCodecs = [];
+
     capabilities.codecs.forEach(codec => {
          if (codec.mimeType == 'video/H264') {
              preferedVideoCodecs.push(codec);
@@ -54,11 +55,14 @@ function InitPeerConnection(id_robot) {
     console.warn('Preferred video codecs: ', preferedVideoCodecs);
     //transceiver.setCodecPreferences(capabilities.codecs);
 
-    for (let i = 0; i < MAX_OPEN_VIDEO_STREAMS; i++) { //we need to prepare transcievers in advance before creating offer
-        transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
-    }
+    // for (let i = 0; i < MAX_OPEN_VIDEO_STREAMS; i++) { //we need to prepare transcievers in advance before creating offer
+    //     transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
+    // }
 
-    //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
+    // let t = pc_.addTransceiver('video', {direction: 'recvonly'});
+    // t.setCodecPreferences(preferedVideoCodecs);
+    // transievers.push(t);
+
     //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
 
     //pc_.addTransceiver('video', {direction: 'recvonly'}); //wouldn't otherwise open media streams (?)
@@ -102,12 +106,25 @@ function InitPeerConnection(id_robot) {
                     topic_media_streams[id_panel_source] = stream
 
                     stream.addEventListener('addtrack', (evt) => {
-                        console.warn('Track added to stream '+stream.id, evt);
+                        console.warn('Stream added track '+stream.id, evt);
                     });
 
                     stream.addEventListener('removetrack', (evt) => {
-                        console.info('Track removed from stream '+stream.id, evt);
+                        console.info('Stream removed track '+stream.id, evt);
                     });
+
+                    stream.addEventListener('onactive', (evt) => {
+                        console.info('Stream active '+stream.id, evt);
+                    });
+                    stream.addEventListener('oninactive', (evt) => {
+                        console.info('Stream inactive '+stream.id, evt);
+                    });
+
+                    evt.track.addEventListener('oncapturehandlechange', (evt) => {
+                        console.info('Track oncapturehandlechange '+stream.id, evt);
+                    });
+
+
 
                    // break;
                 }
@@ -189,7 +206,7 @@ function InitPeerConnection(id_robot) {
             }
         } else if (pc_connected) { //just disconnected
 
-            console.error('Peer connection disconnected');
+            console.error('Peer connection disconnected', evt);
 
             pc_connected = false;
             window.gamepadController.ClearProducers();
@@ -641,22 +658,40 @@ function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
             return;
         }
 
-        _DoInitTopicsReadSubscription(id_robot, cum_topics_list, true)
+        _DoSetTopicsSubscription(id_robot, cum_topics_list, true)
         topics_to_subscribe = [];
 
     } else {
         // unsubscribe, no need to renegotiate
-        _DoInitTopicsReadSubscription(id_robot, cum_topics_list, false)
+        _DoSetTopicsSubscription(id_robot, cum_topics_list, false)
         topics_to_unsubscribe = [];
     }
 }
 
-//assuming pc state is stable when subscribing to new topics here
-function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
+// //assuming pc state is stable when subscribing to new topics here
+// function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
+
+
+
+//     // if (!subscribe) {
+//     return _DoSetTopicsSubscription(subscription_data, subscribe); //no need to negotiate
+//     // }
+
+//     // return pc.createOffer()
+//     //     .then(function(offer) {
+//     //         pc.setLocalDescription(offer);
+//     //         //setup transievers for img topics
+//     //         subscription_data['sdp_offer'] = pc.localDescription.sdp;
+//     //     }).then(function() {
+//     //         _DoSetTopicsSubscription(subscription_data, true);
+//     //     });
+// }
+
+function _DoSetTopicsSubscription(id_robot, topics_list, subscribe) {
 
     console.warn((subscribe ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topics_list.join(', '));
 
-    let subscription_data = {
+    let data = {
         id_robot: id_robot,
         topics: [],
     };
@@ -664,43 +699,60 @@ function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
         if (!topics[topics_list[i]])
             continue;
         topics[topics_list[i]].subscribed = subscribe;
-        subscription_data.topics.push([ topics_list[i], subscribe ? 1 : 0 ]);
+        data.topics.push([ topics_list[i], subscribe ? 1 : 0 ]);
     }
 
-    if (!subscription_data['topics'].length) {
+    // transievers.push(pc.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
+
+    if (!data['topics'].length) {
         return
     }
 
-    if (!subscribe) {
-        return _DoSetTopicsSubscription(subscription_data, false); //no need to negotiate
-    }
-
-    return pc.createOffer()
-        .then(function(offer) {
-            pc.setLocalDescription(offer);
-            //setup transievers for img topics
-            subscription_data['sdp_offer'] = pc.localDescription.sdp;
-        }).then(function() {
-            _DoSetTopicsSubscription(subscription_data, true);
-        });
-}
-
-function _DoSetTopicsSubscription(subscription_data, subscribing) {
     // toggle read subscription
-    return socket.emit('subcribe:read', subscription_data, (res) => {
+    return socket.emit('subcribe:read', data, (res) => {
         if (!res || !res['success']) {
             console.error('Read subscription err: ', res);
             return;
         }
 
-        if (subscribing) {
-            let robot_answer = new RTCSessionDescription({ sdp: res['answer_sdp'], type: 'answer' });
+        if (subscribe) {
+
+            if (!res['offer_sdp']) {
+                console.error('Read subscription err: no sdp offer received');
+                return;
+            }
+
+            let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
             //robot_offer.sdp = offer.sdp.replace('H264', 'codec-not-supported');
+            console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
 
             _HandleTopicSubscriptionRepy(res);
 
-            console.log('Setting robot answer:', robot_answer);
-            pc.setRemoteDescription(robot_answer)
+            pc.setRemoteDescription(robot_offer)
+            .then(() => {
+
+                pc.createAnswer()
+                .then((answer) => {
+                    pc.setLocalDescription(answer)
+                    .then(()=>{
+                        let answer_data = {
+                            id_robot: id_robot,
+                            sdp: answer.sdp,
+                        };
+                        socket.emit('sdp:answer', answer_data, (res_answer) => {
+                            if (!res_answer || !res_answer['success']) {
+                                console.error('Error answering read subscription offer: ', res_answer);
+                                return;
+                            }
+
+
+                        });
+
+                    })
+                })
+
+            });
+
             // .then(() => {
 
             // });
@@ -741,7 +793,7 @@ function _HandleTopicSubscriptionRepy(res) {
             console.log('Opening local read DC '+topic+' id='+id)
             let dc = pc.createDataChannel(topic, {
                 negotiated: true,
-                ondragend: false,
+                ordered: false,
                 maxRetransmits: 0,
                 id:id
             });
@@ -819,18 +871,13 @@ function _HandleTopicSubscriptionRepy(res) {
                 continue;
             }
 
-            panel.id_stream = id;
+            panel.id_stream = id; //panel will be found by 'track' event listener
 
+            // reuse existing
             if (topic_media_streams[topic] && topic_media_streams[topic].id == id) {
                 console.log('Found stream for '+topic+' id='+id);
                 document.getElementById('panel_video_'+panel.n).srcObject = topic_media_streams[topic];
             }
-
-            //$('#panel_widget_'+panel.n).find('video').attr('id', 'panel_video_'+id);
-
-            // if (topic_video_tracks[topic]) {
-
-            // }
 
         }
 

@@ -234,7 +234,7 @@ class GamepadController {
                 let turn_speed = lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
                 msg = {
                         "linear": {
-                            "x": fw_speed, //fw / back (-1,1)
+                            "x": fw_speed * 3, //fw / back (-1,1)
                             "y": val_strife, //strife (-.5,0.5)
                             "z": 0
                         },
