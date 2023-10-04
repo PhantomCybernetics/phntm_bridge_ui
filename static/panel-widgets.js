@@ -6,7 +6,6 @@ let panel_widgets = {
     'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
     'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
     'video' : { widget: VideoWidget, w:5, h:4 },
-
 }
 
 // BATTERY VISUALIZATION

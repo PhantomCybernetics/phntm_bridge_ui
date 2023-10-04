@@ -447,11 +447,11 @@ BUTTON#trigger_wifi_scan.working {
 }
 
 .grid_panel {
-    height: -webkit-fill-available;
+    height: 100%;
     padding-bottom: 0px;
     position: relative;
     display: block;
-    overflow: hidden;
+    /* overflow: hidden; */
     border-radius: 5px;
 }
 
@@ -471,9 +471,9 @@ BUTTON#trigger_wifi_scan.working {
 .monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
     display: none;
     position: absolute;
-    left: -147px;
+    left: -50px;
     top: 0px;
-    width: 169px;
+    width: 170px;
     height: 20px;
     background-color: transparent;
 }
@@ -499,6 +499,11 @@ BUTTON#trigger_wifi_scan.working {
     color: #fff;
     text-align: left;
     min-width: 120px;
+}
+
+.monitor_menu_content.right { /* used when panel is thin and on the very left of the screen */
+    right: auto;
+    left: 0px;
 }
 
 .monitor_menu_content A {
@@ -576,6 +581,16 @@ BUTTON#trigger_wifi_scan.working {
     z-index: 2;
     position: relative;
     padding-right: 10px;
+    display: block;
+    width: -webkit-fill-available;
+    margin-right: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grid-stack>.grid-stack-item>.grid-stack-item-content {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
 }
 
 SPAN.error {
@@ -734,7 +749,7 @@ SPAN.error {
 .panel_widget.video {
     background: #000;
     position: relative;
-    height: -webkit-fill-available;
+    height: 100%;
 }
 
 .panel_widget video {
@@ -786,7 +801,7 @@ SPAN.error {
 .panel_content_space {
     height: -webkit-fill-available;
     padding-top: 10px;
-    padding-bottom: 20px;
+    padding-bottom: 22px;
     position: relative;
 }
 

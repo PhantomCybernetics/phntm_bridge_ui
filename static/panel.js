@@ -27,7 +27,7 @@ class Panel {
 
     //widget_opts = {};
 
-    static TogglePanel(id_source, msg_type, state, w, h, x = 0, y = 0, src_visible = false, zoom = 1.0) {
+    static TogglePanel(id_source, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
         let panel = panels[id_source];
         if (state) {
             if (!panel) {
@@ -39,7 +39,7 @@ class Panel {
         }
     }
 
-    constructor(id_source,  w, h, x = null, y = null, src_visible = false, zoom = 1.0) {
+    constructor(id_source,  w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
         this.id_source = id_source;
         this.src_visible = src_visible;
         this.zoom = zoom;
@@ -66,8 +66,29 @@ class Panel {
         let widget_opts = {w: w, h:h, content: html};
         if (x != null && x != undefined) widget_opts.x = x;
         if (y != null && y != undefined) widget_opts.y = y;
+
+        if (x == null && y == null) {
+            x = 0;
+            y = 0;
+            // let cols = $('#grid-stack').attr('gs-column');
+            // console.error('Cols='+cols)
+            for (let _x = 0; _x < 12-w; _x++) {
+                if (grid.isAreaEmpty(_x, y, w, h)) {
+                    x = _x;
+                    console.log('Grid area empty at ['+x+'; '+y+'] for '+w+'x'+h+']');
+                    break;
+                }
+            }
+            widget_opts.x = x;
+            widget_opts.y = y;
+        }
         panels[id_source] = this;
+
         this.grid_widget = grid.addWidget(widget_opts);
+
+        window.setTimeout(()=>{
+            panels[id_source].onResize()
+        }, 300); // resize at the end of the animation
     }
 
     // init with message type when it's known
@@ -194,17 +215,13 @@ class Panel {
 
     getAvailableWidgetSize() {
 
-        let w = $('#panel_widget_'+this.n).width();
-        let h = $('#panel_widget_'+this.n).parent().innerHeight()-10; //padding
+        let ref = this.grid_widget;
 
-        //let sourceDisplayed = $('#panel_content_'+this.n).hasClass('enabled');
+        let w = $(ref).innerWidth();
+        let h = $(ref).innerHeight(); //padding
 
-        //console.log('w', w, $('#panel_content_'+panel.n).innerWidth())
-        //if (sourceDisplayed)
-        //    w -= $('#panel_content_'+panel.n).innerWidth();
-
-        //h = Math.min(h, w);
-        //h = Math.min(h, 500);
+        w -= 30;
+        h -= 66;
 
         return [w, h];
     }
@@ -213,7 +230,10 @@ class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
-        // console.warn('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+        console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+
+        $('#panel_widget_'+this.n).parent()
+            .css('height', this.widget_height)
 
         let canvas = document.getElementById('panel_canvas_'+this.n)
         if (canvas) {
