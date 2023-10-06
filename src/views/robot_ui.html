@@ -2,7 +2,7 @@
 
 <h1 id="robot_name">Waiting for Connection...</h1>
 <div class="cleaner"></div>
-<div id="robot_info">Contacting <%= id_robot %>...</div>
+<div id="robot_info">Contacting <%= id_robot %>...</div><div id="socketio_status"></div>
 <div id="robot_wifi_info">
     <span id="robot_wifi_stats"></span>
     <button id="trigger_wifi_scan" onclick="TriggerWifiScan();">scan</button>
@@ -69,15 +69,410 @@
 
 <script type="text/javascript">
 
-    let id_robot = '<%= id_robot %>';
-
-    $(document ).ready(function() {
+    $(document).ready(function() {
 
         let GridStack = window.exports.GridStack;
+        let grid = GridStack.init({ cellHeight: 119 });
 
-        grid = GridStack.init({
-            cellHeight: 119,
+        let panels = {};
+
+        let robot = new PhntmBridgeClient({
+
+            socket_url: "https://mrkbk.local:1337",
+            socket_auto_connect: false,
+
+            app_id: '6476b0cb2a6d250ce840ad5e',
+            app_key: '6476b0cb2a6d250ce840ad5d',
+
+            id_robot: '<%= id_robot %>',
+
         });
+        let gamepad = null;
+        robot.load_message_types().then(() => { // ROS message types fetched from JSON
+
+            // TODO: load from config file or cookie?
+            const axes_config = {
+                0: { dead_zone: [ -0.02, 0.02, 0.0 ] }, //dead zone min, max, dead value (optional)
+                1: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+                2: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+                3: { dead_zone: [ -10.0, -0.98, -10.0 ] },
+                4: { dead_zone: [ -10.0, -0.98, -10.0 ] },
+            }
+            gamepad = new GamepadController(robot, axes_config); //creates write channels if/when gamepad is connected
+        });
+
+        //init panel setup from url
+        //also subscribes to topics and cameras required by panel widgets
+        PanelUI.PanelsFromUrlHash(panels, grid, robot, window.location.hash);
+
+        // browsers Socker.io connection to the Cloud Bridge's server
+        robot.socket.on('connect',  () => {
+            $('#socketio_status').html('Socket.io: <span class="online">Connected</span>');
+        });
+        robot.socket.on('disconnect',  () => {
+            $('#socketio_status').html('Socket.io: <span class="offline">Disconnected</span>');
+        })
+
+        robot.on('error', (err, msg)=>{
+            // $('#robot_info').html('<span class="error">'+msg+'</spam>');
+        })
+
+        //robot connected via Socket.io
+        robot.on('online', (state)=>{
+            if (state)
+                console.info('(Socket.io) Robot is online');
+            else
+                console.info('(Socket.io) Robot is offline');
+        });
+
+        // introspection running in the robot
+        robot.on('introspection',  (state) => {
+            if (state) {
+                $('#discovery_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
+            } else {
+                $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+            }
+        });
+
+        // robot's state changed
+        robot.on('update', ()=>{
+
+            if (robot.name) {
+                $('#robot_name').html(robot.name);
+                document.title = robot.name + ' @ PHNTM bridge';
+            }
+
+            $('#robot_info').html('ID: '+ robot.id_robot
+                                + ' @ '
+                                + (robot.online ? '<span class="online">'+robot.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+' '
+                                + 'WebRTC: <span id="webrtc_status"></span> '
+                                );
+
+            PanelUI.SetWebRTCSatusLabel(robot.pc)
+        });
+
+        robot.on('topics', (topics)=>{
+
+            let topic_list = Object.values(topics);
+
+            topic_list.sort((a, b) => {
+                let _a = a.id.indexOf('/_') === 0;
+                let _b = b.id.indexOf('/_') === 0;
+                if (!_a && _b) return -1;
+                if (!_b && _a) return 1;
+                if (a.id < b.id) return -1;
+                if (a.id > b.id) return 1;
+                return 0;
+            });
+
+            $('#topic_list').empty();
+
+            $('#robot_stats').css('display', 'block');
+            //$('#topic_list').css('display', 'block');
+            $('#monitors').css('display', 'block');
+
+            let num_topics = Object.keys(topics).length;
+            $('#topics_heading').html(num_topics+' '+(num_topics == 1 ? 'Topic' : 'Topics'));
+            if (num_topics > 0) {
+                $('#topic_controls').addClass('active');
+            } else {
+                $('#topic_controls').removeClass('active');
+            }
+
+            let i = 0;
+            topic_list.forEach((topic)=>{
+
+                $('#topic_list').append('<div class="topic" data-topic="'+topic.id+'" data-msg_types="'+topic.msg_types.join(',')+'">'
+                    + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    + (panels[topic.id] ? ' checked': '' )
+                    + '/> '
+                    + '<span '
+                    + 'class="topic'+(topic.is_video?' image':'')+(!topic.msg_type_supported?' unsupported_message_type':'')+'" '
+                    + 'title="'+(!topic.msg_type_supported?'Unsupported type: ':'')+topic.msg_types.join('; ')+'"'
+                    + '>'
+                    + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.id+'</label>'
+                    + '</span>'
+                    + '</div>'
+                );
+
+                // topic_data.msgTypes.forEach((msgType)=>{
+                //     if (msg_type_filters.indexOf(msgType) == -1)
+                //         msg_type_filters.push(msgType);
+                // });
+
+                // let subscribe = $('#cb_topic_'+i).is(':checked');
+
+                if (panels[topic.id]) {
+                    panels[topic.id].init(topic.msg_types[0]); //init w message type
+                    // subscribe = true;
+                }
+
+                //if (!old_topics[topic.topic]) {
+
+                // if (subscribe) {
+                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                //     subscribe_topics.push(topic_data.topic);
+                // } else {
+                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                // }
+
+                //TogglePanel(topic.topic, true);
+                //}
+
+                i++;
+            });
+
+            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
+
+            $('#topic_list INPUT.enabled:checkbox').change(function(event) {
+                let id_topic = $(this).parent('DIV.topic').data('topic');
+                let state = this.checked;
+
+                let w = 3; let h = 3;
+                if (PanelUI.widgets[topics[widgets].msg_types]) {
+                    w = panel_widgets[topics[widgets].msg_types].w;
+                    h = panel_widgets[topics[widgets].msg_types].h;
+                }
+
+                PanelUI.TogglePanel(topic, topics[topic].msg_types, state, w, h);
+                SetTopicsReadSubscription(id_robot, [ topic ], state);
+            });
+
+
+        });
+
+        robot.on('services', (services)=>{
+            $('#service_list').empty();
+            //$('#service_list').css('display', 'block');
+            let num_services = Object.keys(services).length;
+            if (num_services > 0) {
+                $('#service_controls').addClass('active');
+            } else {
+                $('#service_controls').removeClass('active');
+            }
+            $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
+
+            let handled_services = [];
+            let other_services = [];
+
+            Object.values(services).forEach((service) => {
+                if (service.handled)
+                    handled_services.push(service);
+                else
+                    other_services.push(service);
+            });
+
+            let i = 0;
+            [ handled_services, other_services ].forEach((services_list)=>{
+
+                let handled = services_list == handled_services;
+
+                services_list.sort((a, b) => {
+                    if (a.service < b.service) {
+                        return -1;
+                    }
+                    if (a.service > b.service) {
+                        return 1;
+                    }
+                    return 0;
+                });
+
+                services_list.forEach((service)=>{
+
+                    $('#service_list').append('<div class="service '+(handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
+                        + '<div '
+                        + 'class="service_heading" '
+                        + 'title="'+service.service+'\n'+service.msg_type+'"'
+                        + '>'
+                        + service.service
+                        + '</div>'
+                        + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_type + '</div>'
+                        + '<div class="service_input" id="service_input_'+i+'"></div>'
+                        + '</div>'
+                    );
+
+                    if (PanelUI.input_widgets[service.msg_type] != undefined) {
+                        PanelUI.input_widgets[service.msg_type]($('#service_input_'+i), service, '<%= id_robot %>', robot.socket, robot.supported_msg_types);
+                    }
+
+                    i++;
+
+                });
+            });
+
+            if (gamepad)
+                gamepad.MarkMappedServiceButtons();
+        });
+
+        robot.on('cameras', (cameras)=>{
+            $('#cameras_list').empty();
+
+            let num_cameras = Object.keys(cameras).length;
+
+            if (num_cameras > 0) {
+                $('#camera_controls').addClass('active');
+            } else {
+                $('#camera_controls').removeClass('active');
+            }
+            $('#cameras_heading').html(num_cameras+' '+(num_cameras == 1 ? 'Camera' : 'Cameras'));
+
+            let i = 0;
+            // let subscribe_cameras = [];
+            Object.values(cameras).forEach((camera) => {
+
+                $('#cameras_list').append('<div class="camera" data-camera="'+camera.id+'">'
+                    + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    + (panels[camera.id] ? ' checked': '' )
+                    + '/> '
+                    + '<span '
+                    + 'class="camera" '
+                    + '>'
+                    + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera.id+'</label>'
+                    + '</span>'
+                    + '</div>'
+                );
+
+                // let subscribe = $('#cb_camera_'+i).is(':checked');
+
+                if (panels[camera.id]) {
+                    panels[camera.id].init('video');
+                    // subscribe = true;
+                }
+
+                //if (!old_topics[topic.topic]) {
+
+                // if (subscribe) {
+                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                //     subscribe_cameras.push(camera_data.id);
+                // } else {
+                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                // }
+
+                //TogglePanel(topic.topic, true);
+                //}
+
+                i++;
+            });
+
+
+            // if (subscribe_cameras.length)
+            //     SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+            $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
+                let id_cam = $(this).parent('DIV.camera').data('camera');
+                let state = this.checked;
+
+                let w = panel_widgets['video'].w;
+                let h = panel_widgets['video'].h;
+
+                PanelUI.TogglePanel(id_cam, 'video', state, w, h);
+                // SetCameraSubscription(id_robot, [ cam ], state);
+            });
+
+        });
+
+        robot.on('docker', (containers)=>{
+
+            $('#docker_list').empty();
+
+            let num_containers = Object.keys(containers).length;
+
+            if (num_containers > 0) {
+                $('#docker_controls').addClass('active');
+            } else {
+                $('#docker_controls').removeClass('active');
+            }
+            $('#docker_heading').html(num_containers+' Docker '+(num_containers == 1 ? 'conainer' : 'conaines'));
+
+            let i = 0;
+            Object.values(containers).forEach((container) => {
+
+                $('#docker_list').append('<div class="docker_cont '+container.status+'" id="docker_cont_'+i+'" data-container="'+container.id+'">'
+                    // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    // + (panels[camera_data.id] ? ' checked': '' )
+                    // + '/> '
+                    + '<span '
+                    + 'class="docker_cont_name" '
+                    + '>'
+                    + container.name
+                    + '</span>' + ' ['+container.status+']'
+                    + '<div class="docker_btns">'
+                    + '<button class="docker_run" title="Start"></button>'
+                    + '<button class="docker_stop" title="Stop"></button>'
+                    + '<button class="docker_restart" title="Restart"></button>'
+                    + '</div>'
+                    + '</div>'
+                );
+
+                $('#docker_cont_'+i+' button.docker_run').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Running '+cont_data.name);
+                    let item = this;
+                    DockerContainerCall(robot.id_robot, container.id, 'start', robot.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+                $('#docker_cont_'+i+' button.docker_stop').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Stopping '+cont_data.name);
+                    let item = this;
+                    DockerContainerCall(robot.id_robot, container.id, 'stop', robot.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+                $('#docker_cont_'+i+' button.docker_restart').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Restarting '+cont_data.name);
+                    let item = this;
+                    DockerContainerCall(robot.id_robot, container.id, 'restart', robot.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+
+                i++;
+            });
+
+
+        });
+
+        // subscribes to /robot_description
+        robot.on('/robot_description', (xml_str)=>{
+
+        });
+
+        // subscribes to /iw_status
+        robot.on('/iw_status', (msg)=>{
+            console.log('Got /iw_status msg', msg);
+        });
+
+        // subscribes to /battery
+        robot.on('/battery', (msg)=>{
+
+        });
+
+        robot.on('/htop', (msg)=>{
+            //TODO
+        });
+        robot.on('/docker_htop', (msg)=>{
+            //TODO
+        });
+
+        robot.Connect(); // call after initial subscriptions are set to save on requests
+
+        setInterval(() => {
+            if (robot.pc) {
+                robot.pc.getStats(null).then((results)=>{PanelUI.UpdateVideoStats(panels, results)}, err => console.log(err))
+            }
+        }, 1000);
 
         grid.on('added removed change', function(e, items) {
             if (items) {
@@ -89,7 +484,7 @@
                     }
                 });
             }
-            Panel.UpdateUrlHash();
+            PanelUI.UpdateUrlHash(panels);
         });
 
         grid.on('resize resizestop', function(e, el) {
@@ -97,478 +492,36 @@
             panels[id_source].onResize();
         });
 
-        let msg_types_src = '/static/msg_types.json'
-        fetch(msg_types_src)
-            .then((response) => response.json())
-            .then((json) => {
-                supported_msg_types=json;
-                console.log('Fetched '+json.length+' msg types from '+msg_types_src)
-
-                Panel.ParseUrlHash(window.location.hash);
-
-                window.gamepadController = new GamepadController(pc, id_robot, socket, supported_msg_types);
-
-                //proceed when we have msg types ready
-                socket.connect();
-            });
-
-        pc = InitPeerConnection(id_robot);
-
-        // Dumping a stats variable as a string.
-        // might be named toString?
-        function dumpStats(results) {
-            let statsString = '';
-
-            let panel_ids = Object.keys(panels);
-
-            results.forEach(res => {
-                if (res.type != 'inbound-rtp' || !res.trackIdentifier)
-                    return; //continue
-
-                panel_ids.forEach((id_panel)=>{
-                    let panel = panels[id_panel];
-                    if (panel.id_stream == res.trackIdentifier) {
-                        let statsString = ''
-                        statsString += `${res.timestamp}<br>`;
-                        let fps = 0;
-                        Object.keys(res).forEach(k => {
-                            if (k == 'framesPerSecond') {
-                                fps = res[k];
-                            }
-                            if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
-                                if (typeof res[k] === 'object') {
-                                    statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
-                                } else {
-                                    statsString += `${k}: ${res[k]}<br>`;
-                                }
-                            }
-                        });
-                        $('#video_stats_'+panel.n).html(statsString);
-                        $('#video_fps_'+panel.n).html(fps+' FPS');
-                    }
-                });
-            });
-            return statsString;
-        }
-
-        function showLocalStats(results) {
-            const statsString = dumpStats(results);
-        }
-
-        setInterval(() => {
-            if (pc) {
-                pc.getStats(null).then(showLocalStats, err => console.log(err))
-            }
-        }, 1000);
-
-
-        // client-side
-        socket.on("connect", () => {
-            console.log('SIO connected w id'+socket.id); // x8WIv7-mJelg7on_ALbx
-            SetSocketIOSatusLabel();
-            socket.emit('robot', { id: '<%= id_robot %>' },
-                ProcessRobotData
-            );
-        });
-
-        socket.on('robot', ProcessRobotData);
-
-        socket.on('services', (services_data) => {
-            $('#service_list').empty();
-            //$('#service_list').css('display', 'block');
-
-            console.log('Services:', services_data);
-
-            services = {};
-
-            if (Object.keys(services_data).length > 0) {
-                $('#service_controls').addClass('active');
-            } else {
-                $('#service_controls').removeClass('active');
-            }
-
-            let i = 0;
-            Object.keys(services_data).forEach((id_robot) => {
-
-                if (!services_data[id_robot])
-                    return;
-
-                let handled_services = [];
-                let other_services = [];
-                for (let i = 0; i < services_data[id_robot].length; i++) {
-                    if (input_widgets[services_data[id_robot][i].msgType] != undefined)
-                        handled_services.push(services_data[id_robot][i]);
-                    else
-                        other_services.push(services_data[id_robot][i]);
-                }
-
-                [ handled_services, other_services ].forEach((services_list)=>{
-
-                    let handled = services_list == handled_services;
-
-                    services_list.sort((a, b) => {
-                        if (a.service < b.service) {
-                            return -1;
-                        }
-                        if (a.service > b.service) {
-                            return 1;
-                        }
-                        return 0;
-                    });
-
-                    services_list.forEach((service)=>{
-
-                        services[service.service] = {
-                            service: service.service,
-                            msg_type: service.msgType,
-                            n: i
-                        }
-
-                        $('#service_list').append('<div class="service '+(handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msgType+'">'
-                            + '<div '
-                            + 'class="service_heading" '
-                            + 'title="'+service.service+'\n'+service.msgType+'"'
-                            + '>'
-                            + service.service
-                            + '</div>'
-                            + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msgType + '</div>'
-                            + '<div class="service_input" id="service_input_'+i+'"></div>'
-                            + '</div>'
-                        );
-
-                        if (input_widgets[service.msgType] != undefined) {
-                            input_widgets[service.msgType]($('#service_input_'+i), services[service.service], '<%= id_robot %>', socket, supported_msg_types);
-                        }
-
-                        i++;
-
-                    });
-
-
-                });
-
-                MarkMappedServiceButtons();
-
-                $('#services_heading').html(services_data[id_robot].length+' Services');
-            });
-        });
-
-        socket.on('cameras', (cameras_data) => {
-            $('#cameras_list').empty();
-            //$('#service_list').css('display', 'block');
-
-            console.log('Cameras:', cameras_data);
-
-            $('#camera_controls').removeClass('active');
-            cameras = {};
-
-            let i = 0;
-            let subscribe_cameras = [];
-            Object.keys(cameras_data).forEach((id_robot) => {
-
-                if (!cameras_data[id_robot] || !cameras_data[id_robot].length)
-                    return;
-
-                $('#camera_controls').addClass('active');
-
-                cameras_data[id_robot].forEach((camera_data)=>{
-
-                    if (!cameras[camera_data.id]) {
-                        cameras[camera_data.id] = {
-                            info: camera_data.info,
-                            subscribed: false,
-                            id: camera_data.id
-                        }
-                    }
-
-                    $('#cameras_list').append('<div class="camera" data-camera="'+camera_data.id+'">'
-                        + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
-                        //+ (!topic.robotTubscribed?' disabled':'')
-                        + (panels[camera_data.id] ? ' checked': '' )
-                        + '/> '
-                        + '<span '
-                        + 'class="camera" '
-                        + '>'
-                        + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera_data.id+'</label>'
-                        + '</span>'
-                        + '</div>'
-                    );
-
-                    let subscribe = $('#cb_camera_'+i).is(':checked');
-
-                    if (panels[camera_data.id]) {
-                        panels[camera_data.id].init('video');
-                        subscribe = true;
-                    }
-
-                    //if (!old_topics[topic.topic]) {
-
-                    if (subscribe) {
-                        //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                        subscribe_cameras.push(camera_data.id);
-                    } else {
-                        //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-                    }
-
-                    //TogglePanel(topic.topic, true);
-                    //}
-
-                    i++;
-                });
-                $('#cameras_heading').html(cameras_data[id_robot].length+' '+(cameras_data[id_robot].length == 1 ? 'Camera' : 'Cameras'));
-
-                if (subscribe_cameras.length)
-                    SetCameraSubscription(id_robot, subscribe_cameras, true);
-
-                $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
-                    let cam = $(this).parent('DIV.camera').data('camera');
-                    let state = this.checked;
-
-                    let w = panel_widgets['video'].w;
-                    let h = panel_widgets['video'].h;
-
-                    Panel.TogglePanel(cam, 'video', state, w, h);
-                    SetCameraSubscription(id_robot, [ cam ], state);
-                });
-            });
-        });
-
-        socket.on('docker', (docker_containers_data) => {
-            $('#docker_list').empty();
-            // $('#docker_list').css('display', 'block');
-
-            console.log('Docker :', docker_containers_data);
-
-            docker_containers = {};
-
-            $('#docker_controls').removeClass('active');
-
-            let i = 0;
-            Object.keys(docker_containers_data).forEach((id_robot) => {
-
-                if (!docker_containers_data[id_robot] || !docker_containers_data[id_robot].length)
-                    return;
-
-                $('#docker_controls').addClass('active');
-
-                docker_containers_data[id_robot].forEach((cont_data)=>{
-
-                    // if (!docker_containers[cont_data.id]) {
-                    docker_containers[cont_data.id] = cont_data
-
-                    $('#docker_list').append('<div class="docker_cont '+cont_data.status+'" id="docker_cont_'+i+'" data-container="'+cont_data.id+'">'
-                        // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
-                        //+ (!topic.robotTubscribed?' disabled':'')
-                        // + (panels[camera_data.id] ? ' checked': '' )
-                        // + '/> '
-                        + '<span '
-                        + 'class="docker_cont_name" '
-                        + '>'
-                        + cont_data.name
-                        + '</span>' + ' ['+cont_data.status+']'
-                        + '<div class="docker_btns">'
-                        + '<button class="docker_run" title="Start"></button>'
-                        + '<button class="docker_stop" title="Stop"></button>'
-                        + '<button class="docker_restart" title="Restart"></button>'
-                        + '</div>'
-                        + '</div>'
-                    );
-
-                    $('#docker_cont_'+i+' button.docker_run').click(function(event) {
-                        if ($(this).hasClass('working'))
-                            return;
-                        $(this).addClass('working');
-                        // console.log('Running '+cont_data.name);
-                        let that = this;
-                        DockerContainerCall(id_robot, cont_data.id, 'start', socket, () => {
-                            $(that).removeClass('working');
-                        });
-                    });
-                    $('#docker_cont_'+i+' button.docker_stop').click(function(event) {
-                        if ($(this).hasClass('working'))
-                            return;
-                        $(this).addClass('working');
-                        // console.log('Stopping '+cont_data.name);
-                        let that = this;
-                        DockerContainerCall(id_robot, cont_data.id, 'stop', socket, () => {
-                            $(that).removeClass('working');
-                        });
-                    });
-                    $('#docker_cont_'+i+' button.docker_restart').click(function(event) {
-                        if ($(this).hasClass('working'))
-                            return;
-                        $(this).addClass('working');
-                        // console.log('Restarting '+cont_data.name);
-                        let that = this;
-                        DockerContainerCall(id_robot, cont_data.id, 'restart', socket, () => {
-                            $(that).removeClass('working');
-                        });
-                    });
-
-                    i++;
-                });
-                $('#docker_heading').html(docker_containers_data[id_robot].length+' Docker '+(docker_containers_data[id_robot].length == 1 ? 'Container' : 'Containers'));
-
-                // if (subscribe_cameras.length)
-                //     SetCameraSubscription(id_robot, subscribe_cameras, true);
-
-
-            });
-        });
-
-
-        socket.on('discovery', (discovery_state) => {
-            SetDiscoveryState(discovery_state)
-        });
-
-
-        socket.on('topics', (topics_data) => {
-            $('#topic_list').empty();
-
-            $('#robot_stats').css('display', 'block');
-            //$('#topic_list').css('display', 'block');
-            $('#monitors').css('display', 'block');
-
-            // let msg_type_filter_val = $('#msg_type_filter').val();
-            // $("#msg_type_filter option[value!='']").each(function() {
-            //     $(this).remove();
-            // });
-
-            console.log('Topics:', topics_data);
-
-            // let msg_type_filters = [];
-            //let old_topics = topics;
-            //topics = {};
-
-
-            if (Object.keys(topics_data).length > 0) {
-                $('#topic_controls').addClass('active');
-            } else {
-                $('#topic_controls').removeClass('active');
-            }
-
-            let i = 0;
-            let subscribe_topics = [];
-            Object.keys(topics_data).forEach((id_robot) => {
-
-                if (!topics_data[id_robot])
-                    return;
-
-                //sort by topic
-                topics_data[id_robot].sort((a, b) => {
-                    if (a.topic < b.topic) {
-                        return -1;
-                    }
-                    if (a.topic > b.topic) {
-                        return 1;
-                    }
-                    // a must be equal to b
-                    return 0;
-                });
-
-                $('#topics_heading').html(topics_data[id_robot].length+' Topics');
-
-                topics_data[id_robot].forEach((topic_data)=>{
-
-                    if (!topics[topic_data.topic]) {
-                        topics[topic_data.topic] = {
-                            msg_types: topic_data.msgTypes,
-                            subscribed: false,
-                            id: topic_data.topic
-                        }
-                    }
-
-                    let is_video = topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false;
-                    let msg_type_supported = FindMessageType(topic_data.msgTypes[0], supported_msg_types)
-
-                    $('#topic_list').append('<div class="topic" data-topic="'+topic_data.topic+'" data-msg_types="'+topic_data.msgTypes.join(',')+'">'
-                        + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
-                        //+ (!topic.robotTubscribed?' disabled':'')
-                        + (panels[topic_data.topic] ? ' checked': '' )
-                        + '/> '
-                        + '<span '
-                        + 'class="topic'+(is_video?' image':'')+(!msg_type_supported?' unsupported_message_type':'')+'" '
-                        + 'title="'+(!msg_type_supported?'Unsupported type: ':'')+topic_data.msgTypes.join('; ')+'"'
-                        + '>'
-                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic_data.topic+'</label>'
-                        + '</span>'
-                        + '</div>'
-                    );
-
-                    // topic_data.msgTypes.forEach((msgType)=>{
-                    //     if (msg_type_filters.indexOf(msgType) == -1)
-                    //         msg_type_filters.push(msgType);
-                    // });
-
-                    let subscribe = $('#cb_topic_'+i).is(':checked');
-
-                    if (panels[topic_data.topic]) {
-                        panels[topic_data.topic].init(topic_data.msgTypes[0]); //init w message type
-                        subscribe = true;
-                    }
-
-                    //if (!old_topics[topic.topic]) {
-
-                    if (subscribe) {
-                        //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                        subscribe_topics.push(topic_data.topic);
-                    } else {
-                        //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-                    }
-
-                    //TogglePanel(topic.topic, true);
-                    //}
-
-                    i++;
-                });
-            });
-            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
-
-            if (subscribe_topics.length)
-                SetTopicsReadSubscription(id_robot, subscribe_topics, true);
-
-            $('#topic_list INPUT.enabled:checkbox').change(function(event) {
-                let topic = $(this).parent('DIV.topic').data('topic');
-                let state = this.checked;
-
-                let w = 3; let h = 3;
-                if (panel_widgets[topics[topic].msg_types]) {
-                    w = panel_widgets[topics[topic].msg_types].w;
-                    h = panel_widgets[topics[topic].msg_types].h;
-                }
-
-                Panel.TogglePanel(topic, topics[topic].msg_types, state, w, h);
-                SetTopicsReadSubscription(id_robot, [ topic ], state);
-            });
-
-
-        });
-
-
-        $('#services_gamepad_mapping_toggle').click(function(event) {
-
-            if (!$('#service_controls').hasClass('setting_shortcuts')) {
-                $('#service_controls').addClass('setting_shortcuts');
-                $('#services_gamepad_mapping_toggle').html('Press a button to map...');
-            } else {
-                $('#service_controls').removeClass('setting_shortcuts');
-                $('#services_gamepad_mapping_toggle').html('[shortcuts]');
-            }
-
-            event.preventDefault();
-        });
-
         $('#discovery_state.inactive').click((ev) => {
             $('#discovery_state.inactive').removeClass('inactive');
             // console.log('Starting discovery...');
             // SetDiscoveryState(true);
-            socket.emit('discovery', { id_robot: id_robot, state:true }, (res) => {
+            robot.socket.emit('introspection', { id_robot: robot.id_robot, state:true }, (res) => {
                 if (!res || !res['success']) {
-                    console.error('Discovery start err: ', res);
+                    console.error('Introspection start err: ', res);
                     return;
                 }
             });
-        })
+        });
+
+        $('#gamepad_status').click(() => {
+            if ($('#gamepad').hasClass('debug_on')) {
+                $('#gamepad').removeClass('debug_on');
+            } else {
+                $('#gamepad').addClass('debug_on');
+            }
+        });
+
+        $('#services_gamepad_mapping_toggle').click(function(event) {
+            event.preventDefault();
+            if (!$('#service_controls').hasClass('setting_shortcuts')) {
+                $('#service_controls').addClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('[cancel]');
+            } else {
+                $('#service_controls').removeClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('[shortcuts]');
+            }
+        });
 
         // socket.on('offer', (offer_data) => {
         //     console.log('Got webrtc offer:', offer_data)
@@ -576,10 +529,7 @@
         //     OnWebRTCOffer(id_robot, offer_data[id_robot]);
         // });
 
-        socket.on("disconnect", () => {
-            console.log('SIO disconnected'); // undefined
-            SetSocketIOSatusLabel();
-        });
+
 
 
     });

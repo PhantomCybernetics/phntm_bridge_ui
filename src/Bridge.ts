@@ -346,10 +346,10 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
     robot.services = [];
     robot.cameras = [];
     robot.docker_containers = [];
-    robot.discovery = false;
+    robot.introspection = false;
     robot.socket = robotSocket;
 
-    robot.AddToConnedted(); //sends update to subscribers
+    robot.addToConnected(); //sends update to subscribers
 
     robotSocket.on('topics', async function(allTopics:any[]) {
 
@@ -544,16 +544,16 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.DockerContainersToSubscribers();
     });
 
-    robotSocket.on('discovery', async function(state:boolean) {
+    robotSocket.on('introspection', async function(state:boolean) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
             return;
 
-        $d.l("Got discovery state from "+robot.id_robot+": "+state);
+        $d.l("Got introspection state from "+robot.id_robot+": "+state);
 
-        robot.discovery = state;
+        robot.introspection = state;
 
-        robot.DiscoveryToSubscribers();
+        robot.IntrospectionToSubscribers();
     });
 
 
@@ -684,7 +684,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.topics = null;
         robot.services = null;
         robot.socket = null;
-        robot.RemoveFromConnedted(!shuttingDown);
+        robot.removeFromConnected(!shuttingDown);
 
         /*if (user != null && user.clientType == ClientType.PHNTM) {
             $d.log((user+' at '+user.clientAddress+' disconnected').blue);
@@ -757,36 +757,40 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     $d.log(('Ohi, app '+app.name+' aka '+app.id_app.toString()+' (inst '+app.id_instance.toString()+') connected to Socket.io').cyan);
 
-    app.AddToConnedted();
+    app.addToConnected();
 
-    appSocket.on('robot', async function (data:{id:string}, returnCallback) {
-        $d.log('App requesting robot', data);
+    appSocket.on('robot', async function (data:{id_robot:string, read?:string[], write?:string[][]}, returnCallback) {
+        $d.log('Peer app requesting robot: ', data);
 
-        if (!ObjectId.isValid(data.id))
-            return returnCallback({'err':1});
-
-        let idRobot = new ObjectId(data.id);
-
-        let robot = Robot.FindConnected(idRobot);
-
-        if (!robot) {
-            //check it exists
-            const dbRobot = (await robotsCollection.findOne({_id: idRobot }));
-            if (!dbRobot) {
-                return returnCallback({'err':1}); //invalid id
+        if (!data.id_robot || !ObjectId.isValid(data.id_robot)) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid robot id '+data.id_robot
+                })
             }
+            return false;
+        }
+        let id_robot = new ObjectId(data.id_robot);
+        let robot = Robot.FindConnected(id_robot);
+        if (!robot) {
+            // robot not connected, check it exists and return basic info
+            // TODO perhaps make this behavior optional?
+            const dbRobot = (await robotsCollection.findOne({_id: id_robot }));
+            if (!dbRobot) {
+                return returnCallback({'err':1, 'msg': 'Robot not found here (did you register it first?)'}); //invalid id
+            }
+
+            app.subscribeRobot(id_robot, data.read, data.write);
+
+            return returnCallback({
+                id_robot: id_robot.toString(),
+                name: dbRobot['name'] ? dbRobot['name'] : 'Unnamed Robot'
+            });
         }
 
-        app.SubScribeRobot(idRobot);
-
-        returnCallback(Robot.GetStateData(idRobot, robot));
-
-        if (robot) {
-            app.socket.emit('topics', robot.GetTopicsData());
-            app.socket.emit('services', robot.GetServicesData());
-            app.socket.emit('cameras', robot.GetCamerasData());
-            app.socket.emit('docker', robot.GetDockerContinersData());
-        }
+        app.subscribeRobot(robot.id_robot, data.read, data.write);
+        robot.init_peer(app, data.read, data.write, returnCallback);
     });
 
     function ProcessForwardRequest(app:App, data:{ id_robot:string, id_app?:string, id_instance?:string}, returnCallback:any):Robot|boolean {
@@ -819,15 +823,15 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         return robot;
     }
 
-    appSocket.on('discovery', async function (data:{id_robot:string, state:boolean}, returnCallback) {
-        $d.log('App requesting robot discovery', data);
+    appSocket.on('introspection', async function (data:{id_robot:string, state:boolean}, returnCallback) {
+        $d.log('App requesting robot introspection', data);
 
         let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
         if (!robot)
             return;
 
-        robot.socket.emit('discovery', data, (answerData:any) => {
-            $d.log('Got robot\'s discovery answer:', answerData);
+        robot.socket.emit('introspection', data, (answerData:any) => {
+            $d.log('Got robot\'s introspection answer:', answerData);
             return returnCallback(answerData);
         });
     });
@@ -858,30 +862,30 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         });
     });
 
-    appSocket.on('offer', async function (data:{ id_robot:string, sdp:string}, returnCallback) {
-        $d.log('App sending initial webrtc offer to robot', data);
+    // appSocket.on('offer', async function (data:{ id_robot:string, sdp:string}, returnCallback) {
+    //     $d.log('App sending initial webrtc offer to robot', data);
 
-        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
-        if (!robot)
-            return;
+    //     let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
+    //     if (!robot)
+    //         return;
 
-        if (!data.sdp) {
-            if (returnCallback) {
-                returnCallback({
-                    'err': 1,
-                    'msg': 'Invalid offer sdp'
-                })
-            }
-            return;
-        }
+    //     if (!data.sdp) {
+    //         if (returnCallback) {
+    //             returnCallback({
+    //                 'err': 1,
+    //                 'msg': 'Invalid offer sdp'
+    //             })
+    //         }
+    //         return;
+    //     }
 
-        robot.socket.emit('offer', data, (answerData:{ sdp:string}) => {
+    //     robot.socket.emit('offer', data, (answerData:{ sdp:string}) => {
 
-            $d.log('Got robot\'s answer:', answerData);
+    //         $d.log('Got robot\'s answer:', answerData);
 
-            return returnCallback(answerData);
-        });
-    });
+    //         return returnCallback(answerData);
+    //     });
+    // });
 
     appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][]}, returnCallback) {
 
@@ -1079,10 +1083,10 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         app.isAuthentificated = false;
         app.isConnected = false;
         app.socket = null;
-        app.RemoveFromConnected();
+        app.removeFromConnected();
 
         for (let i = 0; i < app.robotSubscriptions.length; i++) {
-            let id_robot = app.robotSubscriptions[i];
+            let id_robot = app.robotSubscriptions[i].id_robot;
             let robot = Robot.FindConnected(id_robot);
             if (robot && robot.socket) {
                 robot.socket.emit('peer:disconnected', {

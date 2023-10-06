@@ -1,7 +1,4 @@
-let input_widgets = {
-    'std_srvs/srv/Empty' : ServiceCallInput_Empty,
-    'std_srvs/srv/SetBool' : ServiceCallInput_Bool
-}
+window.InputWidgets = {}
 
 function ServiceCall(id_robot, service, msg, socket, cb) {
     let req = {
@@ -17,7 +14,7 @@ function ServiceCall(id_robot, service, msg, socket, cb) {
     });
 }
 
-function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_types) {
+window.InputWidgets.ServiceCallInput_Empty = (el, service, id_robot, socket, supported_msg_types) => {
 
     $(el).html('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
 
@@ -37,7 +34,7 @@ function ServiceCallInput_Empty(el, service, id_robot, socket, supported_msg_typ
     });
 }
 
-function ServiceCallInput_Bool(el, service, id_robot, socket, supported_msg_types) {
+window.InputWidgets.ServiceCallInput_Bool = (el, service, id_robot, socket, supported_msg_types) => {
     $(el).html(
         '<button class="service_button true" id="service_btn_'+service.n+'_true" data-service="'+service.service+'" data-name="Btn_True">True</button>' +
         '<button class="service_button false" id="service_btn_'+service.n+'_false" data-service="'+service.service+'" data-name="Btn_False">False</button>'

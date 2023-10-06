@@ -1,15 +1,10 @@
-let panel_widgets = {
-    'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,
-    'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
-    'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:4, h:4 },
-    'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
-    'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
-    'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
-    'video' : { widget: VideoWidget, w:5, h:4 },
+
+window.PanelWidgets = {
+
 }
 
 // BATTERY VISUALIZATION
-function VideoWidget(panel, ignored) {
+window.PanelWidgets.VideoWidget = (panel, ignored) => {
 
     if (!panel.display_widget) {
 
@@ -59,7 +54,7 @@ function VideoWidget(panel, ignored) {
 }
 
 // BATTERY VISUALIZATION
-function BatteryStateWidget(panel, decoded) {
+window.PanelWidgets.BatteryStateWidget = (panel, decoded) => {
 
     let minVoltage = 3.2*3; //todo load from robot
     let maxVoltage = 4.2*3;
@@ -192,7 +187,7 @@ function BatteryStateWidget(panel, decoded) {
 
 
 // RANGE VISUALIZATION
-function RangeWidget(panel, decoded) {
+window.PanelWidgets.RangeWidget = (panel, decoded) => {
 
     if (!panel.display_widget) {
 
@@ -271,7 +266,7 @@ function RangeWidget(panel, decoded) {
 
 
 //laser scan visualization
-function LaserScanWidget(panel, decoded) {
+window.PanelWidgets.LaserScanWidget = (panel, decoded) => {
 
     if (!panel.display_widget) {
         panel.max_trace_length = 5;
@@ -418,7 +413,7 @@ function LaserScanWidget_Render(panel) {
 
 
 //IMU VISUALIZATION
-function ImuWidget(panel, decoded) {
+window.PanelWidgets.ImuWidget = (panel, decoded) => {
 
     if (!panel.display_widget) {
 
@@ -495,7 +490,7 @@ function ImuWidget_Render(panel) {
     panel.renderer.render( panel.scene, panel.camera );
 }
 
-function LogWidget(panel, decoded) {
+window.PanelWidgets.LogWidget = (panel, decoded) => {
 
     if (!$('#panel_widget_'+panel.n).hasClass('enabled')) {
         $('#panel_widget_'+panel.n).addClass('enabled log');

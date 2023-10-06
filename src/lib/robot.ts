@@ -20,48 +20,76 @@ export class Robot {
     services: {service: string, msgType:string}[];
     docker_containers: {id: string, name:string, image:string, short_id: string, status:string }[];
     cameras: {id: string, info: any}[];
-    discovery: boolean;
+    introspection: boolean;
 
     static connectedRobots:Robot[] = [];
 
-    public AddToConnedted() {
+    public addToConnected() {
         if (Robot.connectedRobots.indexOf(this) == -1) {
             Robot.connectedRobots.push(this);
-            this.StateToSubscribers();
+            let robot = this;
+            App.connectedApps.forEach(app => {
+                let sub:any = {};
+                if (app.isSubscribedToRobot(this.id_robot, sub)) {
+                    robot.init_peer(app, sub.read, sub.write)
+                }
+            });
         }
     }
 
-    public RemoveFromConnedted(notify:boolean = true) {
+    public init_peer(app:App, read?:string[], write?:string[][], returnCallback?:any) {
+        let data = {
+            id_app: app.id_app.toString(),
+            id_instance: app.id_instance.toString(),
+            read: read,
+            write: write,
+        }
+
+        $d.log('Calling robot:peer with data', data);
+        this.socket.emit('peer', data, (answerData:{state?: any, offer:string }) => {
+
+            this.getStateData(answerData);
+
+            $d.log('Got robot\'s answer:', answerData);
+            if (returnCallback) {
+                returnCallback(answerData);
+            } else {
+                app.socket.emit('robot', answerData);
+            }
+
+            app.socket.emit('topics', this.GetTopicsData());
+            app.socket.emit('services', this.GetServicesData());
+            app.socket.emit('cameras', this.GetCamerasData());
+            app.socket.emit('docker', this.GetDockerContinersData());
+        });
+    }
+
+    public removeFromConnected(notify:boolean = true) {
         let index = Robot.connectedRobots.indexOf(this);
         if (index != -1) {
             Robot.connectedRobots.splice(index, 1);
-            if (notify)
-                this.StateToSubscribers();
+            if (notify) {
+                let that = this;
+                App.connectedApps.forEach(app => {
+                    if (app.isSubscribedToRobot(this.id_robot)) {
+                        app.socket.emit('robot', that.getStateData()) //offline
+                    }
+                });
+            }
         }
     }
 
-    static GetStateData(id: ObjectId, robot?:Robot):any {
-        let data:any = {
-            id_robot: id.toString()
-        }
-        if (robot) {
-            data['name'] =  robot.name ? robot.name : 'Unnamed Robot';
-            if (robot.socket)
-                data['ip'] =  robot.socket.conn.remoteAddress;
-            data['discovery'] =  robot.discovery;
-        }
+    public getStateData(data:any=null):any {
+        if (data == null)
+            data = {};
 
-
+        data['id_robot'] = this.id_robot.toString()
+        data['name'] =  this.name ? this.name : 'Unnamed Robot';
+        if (this.socket)
+            data['ip'] =  this.socket.conn.remoteAddress; //no ip = robot offline
+        data['introspection'] = this.introspection;
 
         return data;
-    }
-
-    public StateToSubscribers():void {
-        App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
-                app.socket.emit('robot', Robot.GetStateData(this.id_robot, this))
-            }
-        });
     }
 
     public GetTopicsData():any {
@@ -73,7 +101,7 @@ export class Robot {
     public TopicsToSubscribers():void {
         let robotTopicsData = this.GetTopicsData();
         App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
+            if (app.isSubscribedToRobot(this.id_robot)) {
                 app.socket.emit('topics', robotTopicsData)
             }
         });
@@ -88,7 +116,7 @@ export class Robot {
     public ServicesToSubscribers():void {
         let robotServicesData = this.GetServicesData();
         App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
+            if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting services to app', robotServicesData);
                 app.socket.emit('services', robotServicesData)
             }
@@ -104,19 +132,18 @@ export class Robot {
     public CamerasToSubscribers():void {
         let robotCamerasData = this.GetCamerasData();
         App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
+            if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting cameras to app', robotCamerasData);
                 app.socket.emit('cameras', robotCamerasData)
             }
         });
     }
 
-    public DiscoveryToSubscribers():void {
-        let discoveryOn = this.discovery;
+    public IntrospectionToSubscribers():void {
         App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
+            if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting discovery state to app', discoveryOn);
-                app.socket.emit('discovery', discoveryOn)
+                app.socket.emit('introspection', this.introspection)
             }
         });
     }
@@ -130,7 +157,7 @@ export class Robot {
     public DockerContainersToSubscribers():void {
         let robotDockerContainersData = this.GetDockerContinersData();
         App.connectedApps.forEach(app => {
-            if (app.IsSubscribedToRobot(this.id_robot)) {
+            if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting docker to app', robotDockerContainersData);
                 app.socket.emit('docker', robotDockerContainersData)
             }
@@ -140,7 +167,7 @@ export class Robot {
     // public ___WebRTCOfferToSubscribers():void {
 
     //     App.connectedApps.forEach(app => {
-    //         if (app.IsSubscribedToRobot(this.id_robot)) {
+    //         if (app.isSubscribedToRobot(this.id_robot)) {
     //             this.ConnectWebRTC(app)
     //         }
     //     });

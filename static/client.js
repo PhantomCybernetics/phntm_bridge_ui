@@ -1,253 +1,710 @@
-const socket = io("https://mrkbk.local:1337", {
-    path:'/app/socket.io/',
-    auth: {
-        id_app: '6476b0cb2a6d250ce840ad5e',
-        key: '6476b0cb2a6d250ce840ad5d'
-    },
-    autoConnect: false
-});
 
-let config = {
-    sdpSemantics: 'unified-plan',
-    iceServers: [{urls:[
-                         "stun:stun.l.google.com:19302",
-                ]}],
-    // bundlePolicy: 'max-compat'
-};
+class TopicWriter {
+    constructor(client, topic, msg_type, on_ready_cb) {
+        this.client = client;
+        this.topic = topic;
+        this.msg_type = msg_type;
 
-let supported_msg_types = null; //fetched static
-
-let pc = null;
-let pc_connected = false;
-
-let grid = null;
-let panels = {};
-let topics = {} // str topic => { msg_types: str[], subscribed: bool }
-let topic_dcs = {}; //str topic => RTCDataChannel
-// let topic_video_tracks = {}; //str topic => MediaStreamTrack
-// let topic_transceivers = {}; //str topic => RTCRtpTransceiver
-let services = {}; // str service => { msg_type: str}
-let cameras = {}; // str id => { info: {}}
-let docker_containers = {}; // str id => { info: {}}
-
-let transievers = []; // RTCRtpTransceiver[]
-// let topic_media_streams = {}; // str topic => MediaStream
-let media_streams = {}; // str id_stream => MediaStream
-let preferedVideoCodecs = [];
-
-const MAX_OPEN_VIDEO_STREAMS = 3;
-
-function InitPeerConnection(id_robot) {
-    let pc_ = new RTCPeerConnection(config);
-
-    pc_.createDataChannel('_ignore_'); //wouldn't otherwise connect when initiated from the client
-
-    const capabilities = RTCRtpReceiver.getCapabilities('video');
-
-    capabilities.codecs.forEach(codec => {
-         if (codec.mimeType == 'video/H264') {
-             preferedVideoCodecs.push(codec);
-         }
-    });
-    console.info('Video codecs: ', capabilities);
-    console.warn('Preferred video codecs: ', preferedVideoCodecs);
-    //transceiver.setCodecPreferences(capabilities.codecs);
-
-    // for (let i = 0; i < MAX_OPEN_VIDEO_STREAMS; i++) { //we need to prepare transcievers in advance before creating offer
-    //     transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
-    // }
-
-    // let t = pc_.addTransceiver('video', {direction: 'recvonly'});
-    // t.setCodecPreferences(preferedVideoCodecs);
-    // transievers.push(t);
-
-    //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
-
-    //pc_.addTransceiver('video', {direction: 'recvonly'}); //wouldn't otherwise open media streams (?)
-    //pc_.addTransceiver('video', {direction: 'recvonly'}); //wouldn't otherwise open media streams (?)
-
-
-    // pc.addTransceiver('audio', {direction: 'recvonly'});
-    // data_receiver = pc.createDataChannel('test')
-    // data_receiver.addEventListener("open", (evt) => {
-    //     console.log('data_receiver.open', evt)
-    // });
-    // data_receiver.addEventListener("error", (evt) => {
-    //     console.log('data_receiver.error', evt)
-    // });
-    // data_receiver.addEventListener("message", (evt) => {
-    //     console.log('data_receiver.MSG:', evt)
-    // });
-    //ordered=true, protocol='test.protocol/lala.hm'
-
-    // connect audio / video
-    pc_.addEventListener('track', (evt) => {
-
-        console.log('New track added: ', evt);
-
-        //document.getElementById('panel_video_1').srcObject = evt.streams[0];
-
-        for (let i = 0; i < evt.streams.length; i++) {
-            let stream = evt.streams[i];
-
-            media_streams[stream.id] = stream;
-
-            for (let id_panel in panels) {
-                let panel = panels[id_panel];
-                if (panel.id_stream == stream.id) {
-                    console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
-                    document.getElementById('panel_video_'+panel.n).srcObject = stream;
-                }
+        if (!client.msg_writers[msg_type]) {
+            let Writer = window.Serialization.MessageWriter;
+            let msg_class = client.FindMessageType(msg_type);
+            if (!msg_class) {
+                console.error('Failed creating writer for '+msg_type+'; message class not found');
+                return null;
             }
-
-            stream.addEventListener('addtrack', (evt) => {
-                console.warn('Stream added track '+stream.id, evt);
-            });
-            stream.addEventListener('removetrack', (evt) => {
-                console.info('Stream removed track '+stream.id, evt);
-            });
-            stream.addEventListener('onactive', (evt) => {
-                console.info('Stream active '+stream.id, evt);
-            });
-            stream.addEventListener('oninactive', (evt) => {
-                console.info('Stream inactive '+stream.id, evt);
-            });
+            client.msg_writers[msg_type] = new Writer( [ msg_class ].concat(client.supported_msg_types) );
         }
 
-        //document.getElementById('panel_video_'+track.id).srcObject = evt.streams[0];
-        //$('video').attr('src', evt.streams[0]);
+        this.msg_writer = client.msg_writers[msg_type];
+        this.dc = null;
+        this.on_ready_cb = on_ready_cb;
+    }
 
-        evt.track.addEventListener('ended', (evt) => {
-            console.warn('Track ended!', evt);
-        })
-    });
+    send(msg) {
+        if (!this.client.pc || this.client.pc.connectionState != 'connected')
+            return false; //not ready
 
-    //let receiveChannel =
-
-
-    // connect data
-    pc_.addEventListener('datachannel', (evt) => {
-
-        let receiveChannel = evt.channel;
-        receiveChannel.addEventListener("open", (open_evt) => {
-            console.log('receiveChannel.open', open_evt)
-        });
-        receiveChannel.addEventListener("error", (err_evt) => {
-            console.log('receiveChannel.error', err_evt)
-        });
-        receiveChannel.addEventListener("bufferedamountlow", (event) => {
-            console.log('receiveChannel.bufferedamountlow', event)
-        });
-
-        receiveChannel.addEventListener("close", (close_evt) => { console.log('receiveChannel.close', close_evt) });
-        receiveChannel.addEventListener("message", (msg_evt) => {
-            console.log(receiveChannel.label, msg_evt.data)
-        });
-
-        console.log('New data channel added!', receiveChannel);
-
-        // if (evt.track.kind == 'video') {
-        //     document.getElementById('video').srcObject = evt.streams[0];
-        // } else {
-        //     document.getElementById('audio').srcObject = evt.streams[0];
-        // }
-
-    });
-
-    pc_.addEventListener('negotiationneeded', (evt) => {
-        console.log('negotiationneeded!', evt);
-    });
-
-    pc_.addEventListener('signalingstatechange', (evt) => {
-        console.warn('signalingstatechange', pc_.signalingState);
-
-        switch (pc_.signalingState) {
-            case "closed":
-              console.warn('Peer connection closed');
-              pc = null;
-              break;
-          }
-    });
-
-    pc_.addEventListener("connectionstatechange", (evt) => {
-        console.warn('Peer connection state: ',  evt.currentTarget.connectionState);
-
-        if (evt.currentTarget.connectionState == 'connected') {
-            if (!pc_connected) { //just connected
-                pc_connected = true;
-                window.gamepadController.InitProducers()
-                let subscribe_topics = []
-                let panelTopics = Object.keys(panels);
-                for (let i = 0; i < panelTopics.length; i++) {
-                    let topic = panelTopics[i];
-                    if (topics[topic] && !topic_dcs[topic]) { //if we don't have topics[topic], it'll get subscribed on 'topics' event
-                        subscribe_topics.push(topic);
-                    }
-                }
-                if (subscribe_topics.length)
-                    SetTopicsReadSubscription(id_robot, subscribe_topics, true);
-            }
-        } else if (pc_connected) { //just disconnected
-
-            console.error('Peer disconnected', evt);
-
-            pc_connected = false;
-
-            return;
-
-            window.gamepadController.ClearProducers();
-
-            for (const topic of Object.values(topics)) {
-
-                topic.subscribed = false;
-
-                if (topic.id_stream && media_streams[topic.id_stream]) {
-                    media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
-                    delete media_streams[topic.id_stream];
-
-                    if (panels[topic.id]) {
-                        console.log('Closing video panel for '+topic.id, document.getElementById('panel_video_'+panels[topic.id].n));
-                        document.getElementById('panel_video_'+panels[topic.id].n).srcObject = undefined;
-                    }
-                }
-            }
-
-            for (const cam of Object.values(cameras)) {
-                cam.subscribed = false;
-
-                if (cam.id_stream && media_streams[cam.id_stream]) {
-                    media_streams[cam.id_stream].getTracks().forEach(track => track.stop());
-                    delete media_streams[cam.id_stream];
-
-                    if (panels[cam.id]) {
-                        console.log('Closing video panel for '+cam.id, document.getElementById('panel_video_'+panels[cam.id].n));
-                        document.getElementById('panel_video_'+panels[cam.id].n).srcObject = undefined;
-                    }
-                }
-            }
-
-            if (pc) {
-                pc.close();
-                pc = null;
-                // pc = InitPeerConnection(id_robot); //prepare for next connection
-            }
-
+        if (!this.dc || this.dc.readyState != 'open') {
+            // if (this.dc)
+            //     console.warn('Writer dc not ready for '+topic+': '+(this.dcs[topic] ? 'state='+this.dcs[topic].readyState : 'Not initiated'))
+            return false; //not yer ready
         }
 
-        SetWebRTCSatusLabel();
-    });
+        if (!this.msg_writer) {
+            return false; //err
+        }
 
-    return pc_;
+        let payload = this.msg_writer.writeMessage(msg); //to binary
+        //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
+        this.dc.send(payload);
+    }
 }
 
-function FindMessageType(search, msg_types) {
-    for (let i = 0; i < msg_types.length; i++) {
-        if (msg_types[i].name == search) {
-            return msg_types[i];
+class Subscriber {
+    constructor(client, id_source) {
+        this.client = client;
+        this.id_source = id_source;
+        this.msg_type = null;
+    }
+}
+
+class PhntmBridgeClient extends EventTarget {
+
+    id_robot = null;
+
+    supported_msg_types = null; //fetched static
+
+    pc = null;
+    pc_connected = false;
+
+    topics = {} // str topic => { msg_types: str[], subscribed: bool }
+    topic_dcs = {}; //str topic => RTCDataChannel
+    // let topic_video_tracks = {}; //str topic => MediaStreamTrack
+    // let topic_transceivers = {}; //str topic => RTCRtpTransceiver
+    services = {}; // str service => { msg_type: str}
+    cameras = {}; // str id => { info: {}}
+    docker_containers = {}; // str id => { info: {}}
+
+    transievers = []; // RTCRtpTransceiver[]
+    // let topic_media_streams = {}; // str topic => MediaStream
+    media_streams = {}; // str id_stream => MediaStream
+    preferedVideoCodecs = [];
+
+    socket = null;
+    event_calbacks = {}
+
+    constructor(opts) {
+        super();
+
+        this.id_robot = opts.id_robot;
+        if (!this.id_robot) {
+            console.error("Missing opts.id_robot")
+            return false;
+        }
+        this.app_id = opts.app_id;
+        if (!this.app_id) {
+            console.error("Missing opts.app_id")
+            return false;
+        }
+        this.app_key = opts.app_key;
+        if (!this.app_key) {
+            console.error("Missing opts.app_key")
+            return false;
+        }
+
+        this.socket_url = opts.socket_url ? opts.socket_url : 'https://bridge.phntm.io:1337';
+        this.socket_path = opts.socket_path ? opts.socket_path : '/app/socket.io/';
+        this.socket_auto_connect = opts.socket_auto_connect ? true : false;
+        this.ice_server_urls = opts.ice_server_urls ? opts.ice_server_urls : [
+            'stun:stun.l.google.com:19302'
+        ];
+
+        this.init_complete = false;
+        this.msg_writers = {}; //msg_type => writer
+        this.msg_readers = {}; //msg_type => reader
+        this.topic_writers = {}; //id => writer
+        this.subscribers = {}; //id => topic ot cam reader
+
+        this.supported_msg_types = {}
+        this.msg_types_src = opts.msg_types_src ? opts.msg_types_src : '/static/msg_types.json' // json defs generated from .idl files
+
+        let that = this;
+
+        this.socket = io(this.socket_url, {
+            path: this.socket_path,
+            auth: {
+                id_app: this.app_id,
+                key: this.app_key
+            },
+            autoConnect: this.socket_auto_connect
+        });
+
+        this.socket.on("connect", () => {
+            console.log('Socker.io connected with id '+this.socket.id); // x8WIv7-mJelg7on_ALbx
+        });
+
+        this.socket.on("disconnect", () => {
+            console.log('Socker.io disconnected'); // undefined
+        });
+
+        this.socket.on('robot', (robot_data) => {
+            that._process_robot_data(robot_data);
+        });
+
+        this.socket.on("introspection", (state) => {
+            console.log('Got introspetion state '+state); // undefined
+            that.introspection = state;
+            that.emit('introspection', that.introspection);
+        });
+
+        this.socket.on('topics', (topics_data) => {
+
+            if (!topics_data[this.id_robot])
+                return;
+
+            console.log('Got topics ', topics_data[this.id_robot]);
+
+            this.topics = {};
+            topics_data[this.id_robot].forEach((topic_data)=>{
+                if (!this.topics[topic_data.topic]) {
+                    this.topics[topic_data.topic] = {
+                        msg_types: topic_data.msgTypes,
+                        subscribed: false,
+                        id: topic_data.topic,
+                        is_video: topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                        msg_type_supported: this.FindMessageType(topic_data.msgTypes[0]) != null,
+                    }
+                }
+            });
+
+            this.emit('topics', this.topics);
+
+            // let i = 0;
+            // let subscribe_topics = [];
+            // Object.keys(topics_data).forEach((id_robot) => {
+
+            //     if (!topics_data[id_robot])
+            //         return;
+
+            //     //sort by topic
+            //     topics_data[id_robot].sort((a, b) => {
+            //         if (a.topic < b.topic) {
+            //             return -1;
+            //         }
+            //         if (a.topic > b.topic) {
+            //             return 1;
+            //         }
+            //         // a must be equal to b
+            //         return 0;
+            //     });
+
+            //     $('#topics_heading').html(topics_data[id_robot].length+' Topics');
+
+
+            // });
+
+
+            // if (subscribe_topics.length)
+            //     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
+
+
+        });
+
+        this.socket.on('services', (services_data) => {
+
+            if (!services_data[this.id_robot])
+                return;
+
+            console.log('Got services:', services_data[this.id_robot]);
+
+            this.services = {};
+
+            // let i = 0;
+            services_data[this.id_robot].forEach((service) => {
+                this.services[service.service] = {
+                    service: service.service,
+                    msg_type: service.msgType,
+                    handled: PanelUI.input_widgets[service.msgType] != undefined
+                };
+            });
+
+            this.emit('services', this.services);
+        });
+
+        this.socket.on('cameras', (cameras_data) => {
+
+            if (!cameras_data[this.id_robot])
+                return;
+
+            console.log('Got Cameras:', cameras_data[this.id_robot]);
+
+            this.cameras = {};
+
+            cameras_data[this.id_robot].forEach((camera) => {
+                this.cameras[camera.id] = {
+                    id: camera.id,
+                    info: camera.info,
+                    subscribed: false,
+                };
+            });
+
+            this.emit('cameras', this.cameras);
+        });
+
+        this.socket.on('docker', (docker_containers_data) => {
+
+            if (!docker_containers_data[this.id_robot])
+                return;
+
+            console.log('Got Docker containers:', docker_containers_data[this.id_robot]);
+
+            this.docker_containers = {};
+
+            docker_containers_data[this.id_robot].forEach((cont_data) => {
+                this.docker_containers[cont_data.id] = cont_data
+            });
+
+            this.emit('docker', this.docker_containers);
+        });
+
+        // pc = InitPeerConnection(id_robot);
+    }
+
+    non_source_events = [
+        'update', 'error', 'online', 'initialized',
+        'introspection', 'topics', 'services', 'cameras', 'docker'
+    ]
+
+    on(event, cb) {
+
+        if (this.non_source_events.indexOf(event) === -1) {
+            //subscribe to source
+            console.log('Subscribing to '+event);
+            this.create_subscriber(event);
+        }
+
+        if (!this.event_calbacks[event])
+            this.event_calbacks[event] = [];
+        this.event_calbacks[event].push(cb);
+    }
+
+    once(event, cb) {
+        if (!this.event_calbacks[event])
+            this.event_calbacks[event] = [];
+
+        let wrapper_cb = (...args) => {
+            this.off(event, wrapper_cb);
+            cb(...args);
+        }
+        this.on(event, wrapper_cb)
+    }
+
+    off(event, cb) {
+        if (!this.event_calbacks[event])
+            return;
+        let p = this.event_calbacks[event].indexOf(cb)
+        if (p !== -1) {
+            this.event_calbacks[event].splice(p, 1);
+            if (this.event_calbacks[event].length == 0) {
+                delete this.event_calbacks[event];
+                if (this.non_source_events.indexOf(event) === -1) {
+                    console.log('Unsubscribing from '+event);
+                    this.remove_subscriber(event);
+                }
+            }
         }
     }
-    return null;
+
+    emit(event, ...args) {
+        if (!this.event_calbacks[event])
+            return;
+        this.event_calbacks[event].forEach((cb) => {
+            cb(...args)
+        })
+    }
+
+    create_subscriber(id_source) {
+
+        if (this.subscribers[id_source])
+            return this.subscribers[id_source];
+
+        this.subscribers[id_source] = new Subscriber(this, id_source);
+
+        if (this.init_complete) { //not waiting for initial subs
+            this.socket.this.emit('subscribe:read', [ id_source ], (res_sub) => {
+                console.wanm('Res sub', res_sub);
+            });
+        }
+
+        //init dc async
+
+        return this.topic_writers[id_source];
+    }
+
+    remove_subscriber(id_source) {
+
+        if (!this.subscribers[id_source])
+            return;
+
+        delete this.subscribers[topic];
+
+        //TODO
+    }
+
+    create_writer(topic, msg_type, on_ready_cb) {
+
+        if (this.topic_writers[topic])
+            return this.topic_writers[topic];
+
+        this.topic_writers[topic] = new TopicWriter(this, topic, msg_type, on_ready_cb);
+
+        if (this.init_complete) { //not waiting for initial subs
+            this.socket.this.emit('topic:write', [ [ topic, msg_type ] ] ,  (res_sub) => {
+                console.wanm('Res pub: ', res_sub);
+            });
+        }
+
+        //init dc async
+
+        return this.topic_writers[topic];
+    }
+
+    clear_writer(topic) {
+        //TODO
+    }
+
+    load_message_types(msg_types_src) {
+        if (msg_types_src !== undefined)
+            this.msg_types_src = msg_types_src;
+
+        let that = this;
+        let promise = new Promise((resolve, reject) => {
+
+            fetch(this.msg_types_src)
+            .then((response) => response.json())
+            .then((json) => {
+                that.supported_msg_types=json;
+                console.log('Fetched '+json.length+' msg types from '+this.msg_types_src)
+                resolve();
+            });
+
+        });
+        return promise;
+    }
+
+    Connect() {
+
+        let that = this;
+        this.socket.on('connect', () => {
+
+            console.log('Socket.io connected, requesting robot...')
+
+            let subscribe = Object.keys(this.subscribers);
+            let writers = [];
+            Object.keys(this.topic_writers).forEach((topic)=>{
+                writers.push([ topic, this.topic_writers[topic].msg_type ]);
+            })
+            this.init_complete = true;
+
+            that.pc = that._init_peer_connection(that.id_robot);
+
+            that.socket.emit('robot', {
+                id_robot: that.id_robot,
+                read: subscribe,
+                write: writers,
+            },
+                (robot_data) => {
+                    that._process_robot_data(robot_data);
+                }
+            );
+
+        });
+
+        this.socket.connect();
+    }
+
+    _process_robot_data(robot_data) {
+
+        console.info('Recieved robot state data: ', this.id_robot, robot_data);
+
+        let error = robot_data['err'] ? robot_data['err'] : null;
+        if (error) {
+            let msg = robot_data['msg']
+            console.error('Robot reply: '+msg);
+            this.emit('error', error, msg);
+        }
+
+        if (robot_data['id_robot'] && this.id_robot != robot_data['id_robot']) {
+            console.error('Robot id missmatch: '+robot_data['id_robot']);
+            this.emit('error', 1, 'Robot id mismatch: '+robot_data['id_robot']);
+            return;
+        }
+
+        this.name = robot_data['name'];
+        this.online = robot_data['ip'] ? true : false;
+        this.ip = robot_data['ip'];
+        this.introspection = robot_data['introspection']
+
+        this.emit('online', this.online);
+        this.emit('update');
+        this.emit('introspection', this.introspection);
+
+        // if (robot_online && (!pc || pc.connectionState != 'connected')) {
+        //     WebRTC_Negotiate(robot_data['id_robot']);
+        // }
+
+        // server reports robot disconnect
+        // in case of socket connection loss this webrtc stays up transmitting p2p
+        if (!this.online && this.pc && this.pc_connected) {
+            console.warn('Robot offline, restarting pc...');
+            this.pc.close();
+            // const ev = new Event("connectionstatechange");
+
+            // for (const topic of Object.values(topics)) {
+
+            //     topic.subscribed = false;
+
+            //     if (topic.id_stream && media_streams[topic.id_stream]) {
+            //         media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
+            //         delete media_streams[topic.id_stream];
+
+            //         if (panels[topic.id]) {
+            //             console.log('Closing video panel for '+topic.id, document.getElementById('panel_video_'+panels[topic.id].n));
+            //             document.getElementById('panel_video_'+panels[topic.id].n).srcObject = undefined;
+            //         }
+            //     }
+            // }
+
+            // for (const cam of Object.values(cameras)) {
+            //     cam.subscribed = false;
+
+            //     if (cam.id_stream && media_streams[cam.id_stream]) {
+            //         media_streams[cam.id_stream].getTracks().forEach(track => track.stop());
+            //         delete media_streams[cam.id_stream];
+
+            //         if (panels[cam.id]) {
+            //             console.log('Closing video panel for '+cam.id, document.getElementById('panel_video_'+panels[cam.id].n));
+            //             document.getElementById('panel_video_'+panels[cam.id].n).srcObject = undefined;
+            //         }
+            //     }
+            // }
+
+            // pc.dispatchEvent(ev);
+        }
+
+
+
+
+    }
+
+    _init_peer_connection(id_robot) {
+
+        let config = {
+            sdpSemantics: 'unified-plan',
+            iceServers: [{urls:[
+                                 "stun:stun.l.google.com:19302",
+                        ]}],
+            // bundlePolicy: 'max-compat'
+        };
+
+        let pc = new RTCPeerConnection(config);
+
+        // pc_.createDataChannel('_ignore_'); //wouldn't otherwise connect when initiated from the client
+
+        // const capabilities = RTCRtpReceiver.getCapabilities('video');
+
+        // capabilities.codecs.forEach(codec => {
+        //      if (codec.mimeType == 'video/H264') {
+        //          preferedVideoCodecs.push(codec);
+        //      }
+        // });
+        // console.info('Video codecs: ', capabilities);
+        // console.warn('Preferred video codecs: ', preferedVideoCodecs);
+        //transceiver.setCodecPreferences(capabilities.codecs);
+
+        // for (let i = 0; i < MAX_OPEN_VIDEO_STREAMS; i++) { //we need to prepare transcievers in advance before creating offer
+        //     transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}).setCodecPreferences(preferedVideoCodecs));
+        // }
+
+        // let t = pc_.addTransceiver('video', {direction: 'recvonly'});
+        // t.setCodecPreferences(preferedVideoCodecs);
+        // transievers.push(t);
+
+        //transievers.push(pc_.addTransceiver('video', {direction: 'recvonly'}));
+
+        //pc_.addTransceiver('video', {direction: 'recvonly'}); //wouldn't otherwise open media streams (?)
+        //pc_.addTransceiver('video', {direction: 'recvonly'}); //wouldn't otherwise open media streams (?)
+
+
+        // pc.addTransceiver('audio', {direction: 'recvonly'});
+        // data_receiver = pc.createDataChannel('test')
+        // data_receiver.addEventListener("open", (evt) => {
+        //     console.log('data_receiver.open', evt)
+        // });
+        // data_receiver.addEventListener("error", (evt) => {
+        //     console.log('data_receiver.error', evt)
+        // });
+        // data_receiver.addEventListener("message", (evt) => {
+        //     console.log('data_receiver.MSG:', evt)
+        // });
+        //ordered=true, protocol='test.protocol/lala.hm'
+
+        // connect audio / video
+        pc.addEventListener('track', (evt) => {
+
+            console.log('New track added: ', evt);
+
+            //document.getElementById('panel_video_1').srcObject = evt.streams[0];
+
+            for (let i = 0; i < evt.streams.length; i++) {
+                let stream = evt.streams[i];
+
+                media_streams[stream.id] = stream;
+
+                for (let id_panel in panels) {
+                    let panel = panels[id_panel];
+                    if (panel.id_stream == stream.id) {
+                        console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
+                        document.getElementById('panel_video_'+panel.n).srcObject = stream;
+                    }
+                }
+
+                stream.addEventListener('addtrack', (evt) => {
+                    console.warn('Stream added track '+stream.id, evt);
+                });
+                stream.addEventListener('removetrack', (evt) => {
+                    console.info('Stream removed track '+stream.id, evt);
+                });
+                stream.addEventListener('onactive', (evt) => {
+                    console.info('Stream active '+stream.id, evt);
+                });
+                stream.addEventListener('oninactive', (evt) => {
+                    console.info('Stream inactive '+stream.id, evt);
+                });
+            }
+
+            //document.getElementById('panel_video_'+track.id).srcObject = evt.streams[0];
+            //$('video').attr('src', evt.streams[0]);
+
+            evt.track.addEventListener('ended', (evt) => {
+                console.warn('Track ended!', evt);
+            })
+        });
+
+        //let receiveChannel =
+        // on_ready_cb
+
+        // connect data
+        pc.addEventListener('datachannel', (evt) => {
+
+            let receiveChannel = evt.channel;
+            receiveChannel.addEventListener("open", (open_evt) => {
+                console.log('receiveChannel.open', open_evt)
+            });
+            receiveChannel.addEventListener("error", (err_evt) => {
+                console.log('receiveChannel.error', err_evt)
+            });
+            receiveChannel.addEventListener("bufferedamountlow", (event) => {
+                console.log('receiveChannel.bufferedamountlow', event)
+            });
+
+            receiveChannel.addEventListener("close", (close_evt) => { console.log('receiveChannel.close', close_evt) });
+            receiveChannel.addEventListener("message", (msg_evt) => {
+                console.log(receiveChannel.label, msg_evt.data)
+            });
+
+            console.log('New data channel added!', receiveChannel);
+
+            // if (evt.track.kind == 'video') {
+            //     document.getElementById('video').srcObject = evt.streams[0];
+            // } else {
+            //     document.getElementById('audio').srcObject = evt.streams[0];
+            // }
+
+        });
+
+        pc.addEventListener('negotiationneeded', (evt) => {
+            console.log('negotiationneeded!', evt);
+        });
+
+        pc.addEventListener('signalingstatechange', (evt) => {
+            console.warn('signalingstatechange', pc.signalingState);
+
+            switch (pc.signalingState) {
+                case "closed":
+                  console.warn('Peer connection closed');
+                  pc = null;
+                  break;
+              }
+        });
+
+        pc.addEventListener("connectionstatechange", (evt) => {
+            console.warn('Peer connection state: ',  evt.currentTarget.connectionState);
+
+            if (evt.currentTarget.connectionState == 'connected') {
+                if (!pc.connected) { //just connected
+                    pcconnected = true;
+                    window.gamepadController.InitProducers()
+                    let subscribe_topics = []
+                    let panelTopics = Object.keys(panels);
+                    for (let i = 0; i < panelTopics.length; i++) {
+                        let topic = panelTopics[i];
+                        if (topics[topic] && !topic_dcs[topic]) { //if we don't have topics[topic], it'll get subscribed on 'topics' event
+                            subscribe_topics.push(topic);
+                        }
+                    }
+                    if (subscribe_topics.length)
+                        SetTopicsReadSubscription(id_robot, subscribe_topics, true);
+                }
+            } else if (pc.connected) { //just disconnected
+
+                console.error('Peer disconnected', evt);
+
+                pcconnected = false;
+
+                return;
+
+                window.gamepadController.ClearProducers();
+
+                for (const topic of Object.values(topics)) {
+
+                    topic.subscribed = false;
+
+                    if (topic.id_stream && media_streams[topic.id_stream]) {
+                        media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
+                        delete media_streams[topic.id_stream];
+
+                        if (panels[topic.id]) {
+                            console.log('Closing video panel for '+topic.id, document.getElementById('panel_video_'+panels[topic.id].n));
+                            document.getElementById('panel_video_'+panels[topic.id].n).srcObject = undefined;
+                        }
+                    }
+                }
+
+                for (const cam of Object.values(cameras)) {
+                    cam.subscribed = false;
+
+                    if (cam.id_stream && media_streams[cam.id_stream]) {
+                        media_streams[cam.id_stream].getTracks().forEach(track => track.stop());
+                        delete media_streams[cam.id_stream];
+
+                        if (panels[cam.id]) {
+                            console.log('Closing video panel for '+cam.id, document.getElementById('panel_video_'+panels[cam.id].n));
+                            document.getElementById('panel_video_'+panels[cam.id].n).srcObject = undefined;
+                        }
+                    }
+                }
+
+                if (pc) {
+                    pc.close();
+                    pc = null;
+                    // pc = InitPeerConnection(id_robot); //prepare for next connection
+                }
+
+            }
+
+            SetWebRTCSatusLabel();
+        });
+
+        return pc;
+    }
+
+
+    FindMessageType(search, msg_types) {
+        if (msg_types === undefined)
+            msg_types = this.supported_msg_types;
+
+        for (let i = 0; i < msg_types.length; i++) {
+            if (msg_types[i].name == search) {
+                return msg_types[i];
+            }
+        }
+        return null;
+    }
 }
+
+
+
 
 function buf2hex(buffer) { // buffer is an ArrayBuffer
     return [...new Uint8Array(buffer)]
@@ -327,52 +784,6 @@ function linkifyURLs(text, is_xhtml) {
         return linkifyStr(text, options)
 }
 
-function SetWebRTCSatusLabel() {
-
-    let state = null;
-    let via_turn = null;
-    if (pc) {
-        state = pc.connectionState
-        console.log('pc.sctp:', pc.sctp)
-        if (pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
-            // console.log('pc.sctp.transport:', pc.sctp.transport)
-            // console.log('pc.sctp.transport.iceTransport:', pc.sctp.transport.iceTransport)
-            selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
-            if (selectedPair && selectedPair.remote) {
-                via_turn = selectedPair.remote.type == 'relay' ? true : false;
-            }
-        }
-    }
-
-    if (state != null)
-        state = state.charAt(0).toUpperCase() + state.slice(1);
-    else
-        state = 'n/a'
-
-    if (state == 'Connected') {
-        $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
-        $('#trigger_wifi_scan').removeClass('working')
-    } else if (state == 'Connecting') {
-        $('#webrtc_status').html('<span class="connecting">'+state+'</span>');
-        $('#robot_wifi_info').addClass('offline')
-        $('#trigger_wifi_scan').removeClass('working')
-    } else {
-        $('#webrtc_status').html('<span class="offline">'+state+'</span>');
-        $('#robot_wifi_info').addClass('offline')
-        $('#trigger_wifi_scan').removeClass('working')
-    }
-}
-
-function SetSocketIOSatusLabel() {
-    let state = 'n/a';
-    if (socket)
-        state = socket.connected ? 'Connected' : 'Disconnected';
-
-    if (state == 'Connected')
-        $('#socketio_status').html('<span class="online">'+state+'</span>');
-    else
-        $('#socketio_status').html('<span class="offline">'+state+'</span>');
-}
 
 function lerpColor(a, b, amount) {
 
@@ -387,75 +798,7 @@ function lerpColor(a, b, amount) {
     return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
 }
 
-function ProcessRobotData(robot_data) {
-    if (robot_data['err']) {
-        $('#robot_info').html('Error connecting to robot...');
-        return;
-    }
 
-    if (robot_data['name']) {
-        $('#robot_name').html(robot_data['name']);
-        document.title = robot_data['name'] + ' @ BridgeViz';
-    }
-
-    console.log('received robot data: ', robot_data);
-
-    let robot_online = robot_data['ip'] ? true : false;
-
-    if (robot_online && (!pc || pc.connectionState != 'connected')) {
-        WebRTC_Negotiate(robot_data['id_robot']);
-    }
-
-    $('#robot_info').html('ID: '+ robot_data['id_robot']
-                            + ' @ '
-                            + (robot_online ? '<span class="online">'+robot_data['ip'].replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+' '
-                            + 'WebRTC: <span id="webrtc_status"></span> '
-                            + 'Socket.io: <span id="socketio_status"></span>'
-                            );
-
-    // server reports robot disconnect
-    // in case of socket connection loss this webrtc stays up transmitting p2p
-    if (!robot_online && pc && pc_connected) {
-        console.warn('Robot offline, restarting pc...');
-        pc.close();
-        const ev = new Event("connectionstatechange");
-
-        for (const topic of Object.values(topics)) {
-
-            topic.subscribed = false;
-
-            if (topic.id_stream && media_streams[topic.id_stream]) {
-                media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
-                delete media_streams[topic.id_stream];
-
-                if (panels[topic.id]) {
-                    console.log('Closing video panel for '+topic.id, document.getElementById('panel_video_'+panels[topic.id].n));
-                    document.getElementById('panel_video_'+panels[topic.id].n).srcObject = undefined;
-                }
-            }
-        }
-
-        for (const cam of Object.values(cameras)) {
-            cam.subscribed = false;
-
-            if (cam.id_stream && media_streams[cam.id_stream]) {
-                media_streams[cam.id_stream].getTracks().forEach(track => track.stop());
-                delete media_streams[cam.id_stream];
-
-                if (panels[cam.id]) {
-                    console.log('Closing video panel for '+cam.id, document.getElementById('panel_video_'+panels[cam.id].n));
-                    document.getElementById('panel_video_'+panels[cam.id].n).srcObject = undefined;
-                }
-            }
-        }
-
-        pc.dispatchEvent(ev);
-    }
-
-    SetWebRTCSatusLabel();
-    SetSocketIOSatusLabel();
-    SetDiscoveryState(robot_data['discovery'] ? true : false);
-}
 
 function TriggerWifiScan(roam=true) {
     console.warn('Triggering wifi scan on robot '+id_robot)
@@ -563,14 +906,6 @@ function UpdateIWStatus(msg) {
     });
 }
 
-function SetDiscoveryState(discovery_state) {
-    if (discovery_state) {
-        $('#discovery_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
-    } else {
-        $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
-    }
-    // console.log('Robot introspection state: ', discovery_state);
-}
 
 function DockerContainerCall(id_robot, id_cont, msg, socket, cb) {
     let req = {
@@ -586,44 +921,44 @@ function DockerContainerCall(id_robot, id_cont, msg, socket, cb) {
     });
 }
 
-function WebRTC_Negotiate(id_robot)
-{
-    console.log('WebRTC negotiating... ');
+// function WebRTC_Negotiate(id_robot)
+// {
+//     console.log('WebRTC negotiating... ');
 
-    if (!pc)
-        pc = InitPeerConnection(id_robot);
+//     if (!pc)
+//         pc = InitPeerConnection(id_robot);
 
-    return pc.createOffer().then(function(offer) {
-        return pc.setLocalDescription(offer);
-    }).then(function() {
-        // wait for ICE gathering to complete
-        return new Promise(function(resolve) {
-            if (pc.iceGatheringState === 'complete') {
-                resolve();
-            } else {
-                function checkState() {
-                    if (pc.iceGatheringState === 'complete') {
-                        pc.removeEventListener('icegatheringstatechange', checkState);
-                        resolve();
-                    }
-                }
-                pc.addEventListener('icegatheringstatechange', checkState);
-            }
-        });
-    }).then(function() {
-        let offer = pc.localDescription;
-        console.log('ICE gathering done, sending local offer: ', offer)
-        socket.emit('offer', { 'id_robot': id_robot, 'sdp': offer.sdp}, (answer) => {
-            if (answer.err) {
-                console.error('Offer returned error', answer);
-                return;
-            }
-            console.log('Setting remote answer:', answer.sdp);
-            return pc.setRemoteDescription({ sdp:answer.sdp, type:'answer'});
-        });
-    });
+//     return pc.createOffer().then(function(offer) {
+//         return pc.setLocalDescription(offer);
+//     }).then(function() {
+//         // wait for ICE gathering to complete
+//         return new Promise(function(resolve) {
+//             if (pc.iceGatheringState === 'complete') {
+//                 resolve();
+//             } else {
+//                 function checkState() {
+//                     if (pc.iceGatheringState === 'complete') {
+//                         pc.removeEventListener('icegatheringstatechange', checkState);
+//                         resolve();
+//                     }
+//                 }
+//                 pc.addEventListener('icegatheringstatechange', checkState);
+//             }
+//         });
+//     }).then(function() {
+//         let offer = pc.localDescription;
+//         console.log('ICE gathering done, sending local offer: ', offer)
+//         socket.emit('offer', { 'id_robot': id_robot, 'sdp': offer.sdp}, (answer) => {
+//             if (answer.err) {
+//                 console.error('Offer returned error', answer);
+//                 return;
+//             }
+//             console.log('Setting remote answer:', answer.sdp);
+//             return pc.setRemoteDescription({ sdp:answer.sdp, type:'answer'});
+//         });
+//     });
 
-}
+// }
 
 let topics_to_subscribe = []; // str topic
 let topics_to_unsubscribe = []; // str topic

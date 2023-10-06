@@ -82,11 +82,11 @@ h3 {
 }
 
 #topic_controls {
-    width: 400px;
+    width: 150px;
 }
 
 #service_controls {
-    width: 270px;
+    width: 180px;
     background: #b311a3;
 }
 
@@ -97,7 +97,7 @@ h3 {
 
 #docker_controls {
     width: 190px;
-    background: #2b2b2b;
+    background: #de5a30;
 }
 
 
@@ -160,6 +160,7 @@ h3 {
 
 #service_controls.active:hover,
 #camera_controls.active:hover,
+#docker_controls.active:hover,
 #topic_controls.active:hover,
 #service_controls.active.setting_shortcuts {
     border-radius: 5px 5px 0px 0px;
@@ -184,17 +185,17 @@ h3 {
     position: absolute;
     overflow-x: hidden;
     overflow: scroll;
-    background: #4a4a4a;
+    background: #ffc490;
     left: 0px;
     top: 100%;
     width: 360px;
     max-height: 520px;
-    padding: 5px 10px 5px 10px;
+    padding: 10px 5px 0px 10px;
     border-radius: 0px 5px 5px 5px;
 }
 
 #docker_list .docker_cont {
-    color: #8f8f8f;
+    color: #fff;
     line-height: 30px;
     position: relative;
 }
@@ -393,9 +394,10 @@ h3 {
     background: #ff8c00;
 }
 
-#robot_info {
+#robot_info, #socketio_status {
     color: #ffffff78;
-    float: left
+    float: left;
+    margin-right: 5px;
 }
 
 #robot_wifi_info {

@@ -15,7 +15,11 @@ export class App {
     isConnected: boolean;
     isAuthentificated: boolean;
     socket: AppSocket;
-    robotSubscriptions: ObjectId[];
+    robotSubscriptions: {
+        id_robot: ObjectId,
+        read?:string[],
+        write?:string[][],
+    }[]
 
     static connectedApps:App[] = [];
 
@@ -23,32 +27,45 @@ export class App {
         this.id_instance = new ObjectId(); //generated here
     }
 
-    public AddToConnedted() {
+    public addToConnected() {
         if (App.connectedApps.indexOf(this) == -1) {
             App.connectedApps.push(this);
         }
     }
 
-    public RemoveFromConnected() {
+    public removeFromConnected() {
         let index = App.connectedApps.indexOf(this);
         if (index != -1) {
             App.connectedApps.splice(index, 1);
         }
     }
 
-    public SubScribeRobot(idRobot: ObjectId) {
+    public subscribeRobot(idRobot: ObjectId, read?:string[], write?:string[][]) {
         for (let i = 0; i < this.robotSubscriptions.length; i++) {
-            if (this.robotSubscriptions[i].equals(idRobot))
+            if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
+                this.robotSubscriptions[i].read = read;
+                this.robotSubscriptions[i].write = write;
                 return;
+            }
+
         }
-        this.robotSubscriptions.push(idRobot);
+        this.robotSubscriptions.push({
+            id_robot: idRobot,
+            read: read,
+            write: write
+        });
     }
 
-    public IsSubscribedToRobot(idRobot: ObjectId):boolean {
+    public isSubscribedToRobot(idRobot: ObjectId, out_subscription?:any):boolean {
         for (let i = 0; i < this.robotSubscriptions.length; i++) {
-            if (this.robotSubscriptions[i].equals(idRobot))
+            if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
+                if (out_subscription !== undefined)
+                    out_subscription = this.robotSubscriptions[i];
                 return true;
+            }
+
         }
         return false;
     }
+
 }

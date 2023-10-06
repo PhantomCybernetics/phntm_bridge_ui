@@ -2,44 +2,8 @@ let panelNo = 0;
 
 
 class Panel {
-    id_source = null;
-    id_stream = null;
-    msg_type = null; //str
-    msg_type_class = null;
-    n = ++panelNo;
 
-    msg_reader = null;
-    max_height = 0;
-
-    display_widget = null;
-    data_trace = [];
-    widget_menu_cb = null;
-
-    max_trace_length = 100;
-    zoom = 1;
-
-    grid_widget = null;
-
-    initiated = false;
-    resize_event_handler = null;
-    src_visible = false;
-    //const event = new Event("build");
-
-    //widget_opts = {};
-
-    static TogglePanel(id_source, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
-        let panel = panels[id_source];
-        if (state) {
-            if (!panel) {
-                panel = new Panel(id_source, w, h, x, y, src_visible, zoom);
-                panel.init(msg_type)
-            }
-        } else if (panel) {
-            panel.close();
-        }
-    }
-
-    constructor(id_source,  w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
+    constructor(id_source, panels, grid, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
         this.id_source = id_source;
         this.src_visible = src_visible;
         this.zoom = zoom;
@@ -386,7 +350,108 @@ class Panel {
         console.log('Panel closed for '+this.id_source)
     }
 
-    static UpdateUrlHash() {
+}
+
+class PanelUI {
+    id_source = null;
+    id_stream = null;
+    msg_type = null; //str
+    msg_type_class = null;
+    n = ++panelNo;
+
+    msg_reader = null;
+    max_height = 0;
+
+    display_widget = null;
+    data_trace = [];
+    widget_menu_cb = null;
+
+    max_trace_length = 100;
+    zoom = 1;
+
+    grid_widget = null;
+
+    initiated = false;
+    resize_event_handler = null;
+    src_visible = false;
+    //const event = new Event("build");
+
+    // override or edit to customize topic panel defaults
+    static widgets = {
+        'sensor_msgs/msg/BatteryState' : { widget: window.PanelWidgets.BatteryStateWidget, w:4, h:2 } ,
+        'sensor_msgs/msg/Range' : { widget: window.PanelWidgets.RangeWidget, w:2, h:2 },
+        'sensor_msgs/msg/LaserScan' : { widget: window.PanelWidgets.LaserScanWidget, w:4, h:4 },
+        'sensor_msgs/msg/Imu' : { widget: window.PanelWidgets.ImuWidget, w:2, h:2 },
+        'rcl_interfaces/msg/Log' : { widget: window.PanelWidgets.LogWidget, w:8, h:2 },
+        'sensor_msgs/msg/Image' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
+        'video' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
+    };
+
+    static input_widgets = {
+        'std_srvs/srv/Empty' : window.InputWidgets.ServiceCallInput_Empty,
+        'std_srvs/srv/SetBool' : window.InputWidgets.ServiceCallInput_Bool
+    }
+
+    //widget_opts = {};
+
+    static TogglePanel(id_source, grid, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+        let panel = panels[id_source];
+        if (state) {
+            if (!panel) {
+                panel = new Panel(id_source, panels, grid, w, h, x, y, src_visible, zoom);
+                panel.init(msg_type)
+            }
+        } else if (panel) {
+            panel.close();
+        }
+    }
+
+    static MakePanel(robot, id_source, panels, grid, msg_type, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+        if (panels[id_source])
+            return;
+
+        let panel = new Panel(id_source, panels, grid, w, h, x, y, src_visible, zoom);
+        // panel.init(msg_type)
+        robot.on(panel.id_source, (msg)=>{ // subscribes id topic or camera
+            panel
+        });
+        panels[id_source] = panel;
+    }
+
+    static UpdateVideoStats(panels, results) {
+        let panel_ids = Object.keys(panels);
+
+        results.forEach(res => {
+            if (res.type != 'inbound-rtp' || !res.trackIdentifier)
+                return; //continue
+
+            panel_ids.forEach((id_panel)=>{
+                let panel = panels[id_panel];
+                if (panel.id_stream == res.trackIdentifier) {
+                    let statsString = ''
+                    statsString += `${res.timestamp}<br>`;
+                    let fps = 0;
+                    Object.keys(res).forEach(k => {
+                        if (k == 'framesPerSecond') {
+                            fps = res[k];
+                        }
+                        if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
+                            if (typeof res[k] === 'object') {
+                                statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
+                            } else {
+                                statsString += `${k}: ${res[k]}<br>`;
+                            }
+                        }
+                    });
+                    $('#video_stats_'+panel.n).html(statsString);
+                    $('#video_fps_'+panel.n).html(fps+' FPS');
+                }
+            });
+        });
+    }
+
+
+    static UpdateUrlHash(panels) {
         let hash = [];
 
         //console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
@@ -418,7 +483,7 @@ class Panel {
             history.pushState("", document.title, window.location.pathname+window.location.search);
     }
 
-    static ParseUrlHash(hash) {
+    static PanelsFromUrlHash(panels, grid, robot, hash) {
         if (!hash.length) {
             return
         }
@@ -459,9 +524,46 @@ class Panel {
                 }
             }
 
-            let msg_type = null; //unknown atm
+            //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
-            Panel.TogglePanel(id_source, msg_type, true, w, h, x, y, src_on, zoom)
+            PanelUI.MakePanel(robot, id_source, panels, grid, null, w, h, x, y, src_on, zoom)
+        }
+
+        return panels;
+    }
+
+    static SetWebRTCSatusLabel(pc) {
+        let state = null;
+        let via_turn = null;
+        if (pc) {
+            state = pc.connectionState
+            console.log('pc.sctp:', pc.sctp)
+            if (pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
+                // console.log('pc.sctp.transport:', pc.sctp.transport)
+                // console.log('pc.sctp.transport.iceTransport:', pc.sctp.transport.iceTransport)
+                selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
+                if (selectedPair && selectedPair.remote) {
+                    via_turn = selectedPair.remote.type == 'relay' ? true : false;
+                }
+            }
+        }
+
+        if (state != null)
+            state = state.charAt(0).toUpperCase() + state.slice(1);
+        else
+            state = 'n/a'
+
+        if (state == 'Connected') {
+            $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
+            $('#trigger_wifi_scan').removeClass('working')
+        } else if (state == 'Connecting') {
+            $('#webrtc_status').html('<span class="connecting">'+state+'</span>');
+            $('#robot_wifi_info').addClass('offline')
+            $('#trigger_wifi_scan').removeClass('working')
+        } else {
+            $('#webrtc_status').html('<span class="offline">'+state+'</span>');
+            $('#robot_wifi_info').addClass('offline')
+            $('#trigger_wifi_scan').removeClass('working')
         }
 
     }
