@@ -1,6 +1,5 @@
 let panelNo = 0;
 
-
 class Panel {
 
     constructor(id_source, panels, grid, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
@@ -376,8 +375,10 @@ class PanelUI {
     src_visible = false;
     //const event = new Event("build");
 
+    panels = {};
+
     // override or edit to customize topic panel defaults
-    static widgets = {
+    widgets = {
         'sensor_msgs/msg/BatteryState' : { widget: window.PanelWidgets.BatteryStateWidget, w:4, h:2 } ,
         'sensor_msgs/msg/Range' : { widget: window.PanelWidgets.RangeWidget, w:2, h:2 },
         'sensor_msgs/msg/LaserScan' : { widget: window.PanelWidgets.LaserScanWidget, w:4, h:4 },
@@ -387,15 +388,407 @@ class PanelUI {
         'video' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
     };
 
-    static input_widgets = {
+    input_widgets = {
         'std_srvs/srv/Empty' : window.InputWidgets.ServiceCallInput_Empty,
         'std_srvs/srv/SetBool' : window.InputWidgets.ServiceCallInput_Bool
     }
 
+    constructor(client, grid_cell_height, gamepad) {
+        this.client = client;
+
+        let GridStack = window.exports.GridStack;
+        this.grid = GridStack.init({ cellHeight: grid_cell_height });
+
+        this.panels = {}
+        this.gamepad = gamepad;
+
+        let that = this;
+
+        client.on('introspection',  (state) => {
+            if (state) {
+                $('#discovery_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
+            } else {
+                $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+            }
+        });
+
+        client.on('update', ()=>{
+
+            if (client.name) {
+                $('#robot_name').html(client.name);
+                document.title = client.name + ' @ PHNTM bridge';
+            }
+
+            $('#robot_info').html('ID: '+ client.id_robot
+                                + ' @ '
+                                + (client.online ? '<span class="online">'+client.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+' '
+                                + 'WebRTC: <span id="webrtc_status"></span> '
+                                );
+
+            that.set_webrtc_status_label()
+        });
+
+        client.on('topics', (topics)=>{
+
+            let topic_list = Object.values(topics);
+
+            topic_list.sort((a, b) => {
+                let _a = a.id.indexOf('/_') === 0;
+                let _b = b.id.indexOf('/_') === 0;
+                if (!_a && _b) return -1;
+                if (!_b && _a) return 1;
+                if (a.id < b.id) return -1;
+                if (a.id > b.id) return 1;
+                return 0;
+            });
+
+            $('#topic_list').empty();
+
+            $('#robot_stats').css('display', 'block');
+            //$('#topic_list').css('display', 'block');
+            $('#monitors').css('display', 'block');
+
+            let num_topics = Object.keys(topics).length;
+            $('#topics_heading').html(num_topics+' '+(num_topics == 1 ? 'Topic' : 'Topics'));
+            if (num_topics > 0) {
+                $('#topic_controls').addClass('active');
+            } else {
+                $('#topic_controls').removeClass('active');
+            }
+
+            let i = 0;
+            topic_list.forEach((topic)=>{
+
+                $('#topic_list').append('<div class="topic" data-topic="'+topic.id+'" data-msg_types="'+topic.msg_types.join(',')+'">'
+                    + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    + (that.panels[topic.id] ? ' checked': '' )
+                    + '/> '
+                    + '<span '
+                    + 'class="topic'+(topic.is_video?' image':'')+(!topic.msg_type_supported?' unsupported_message_type':'')+'" '
+                    + 'title="'+(!topic.msg_type_supported?'Unsupported type: ':'')+topic.msg_types.join('; ')+'"'
+                    + '>'
+                    + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.id+'</label>'
+                    + '</span>'
+                    + '</div>'
+                );
+
+                // topic_data.msgTypes.forEach((msgType)=>{
+                //     if (msg_type_filters.indexOf(msgType) == -1)
+                //         msg_type_filters.push(msgType);
+                // });
+
+                // let subscribe = $('#cb_topic_'+i).is(':checked');
+
+                if (that.panels[topic.id]) {
+                    that.panels[topic.id].init(topic.msg_types[0]); //init w message type
+                    // subscribe = true;
+                }
+
+                //if (!old_topics[topic.topic]) {
+
+                // if (subscribe) {
+                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                //     subscribe_topics.push(topic_data.topic);
+                // } else {
+                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                // }
+
+                //TogglePanel(topic.topic, true);
+                //}
+
+                i++;
+            });
+
+            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
+
+            $('#topic_list INPUT.enabled:checkbox').change(function(event) {
+                let id_topic = $(this).parent('DIV.topic').data('topic');
+                let state = this.checked;
+
+                let w = 3; let h = 3;
+                if (that.widgets[topics[widgets].msg_types]) {
+                    w = panel_widgets[topics[widgets].msg_types].w;
+                    h = panel_widgets[topics[widgets].msg_types].h;
+                }
+
+                that.toggle_panel(topic, topics[topic].msg_types, state, w, h);
+                // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
+            });
+
+
+        });
+
+        client.on('services', (services)=>{
+            $('#service_list').empty();
+            //$('#service_list').css('display', 'block');
+            let num_services = Object.keys(services).length;
+            if (num_services > 0) {
+                $('#service_controls').addClass('active');
+            } else {
+                $('#service_controls').removeClass('active');
+            }
+            $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
+
+            let ui_handled_services = [];
+            let other_services = [];
+
+            Object.values(services).forEach((service) => {
+                let ui_handled = that.input_widgets[service.msg_type] != undefined
+                if (ui_handled)
+                    ui_handled_services.push(service);
+                else
+                    other_services.push(service);
+            });
+
+            let i = 0;
+            [ ui_handled_services, other_services ].forEach((services_list)=>{
+
+                let ui_handled = services_list == ui_handled_services;
+
+                services_list.sort((a, b) => {
+                    if (a.service < b.service) {
+                        return -1;
+                    }
+                    if (a.service > b.service) {
+                        return 1;
+                    }
+                    return 0;
+                });
+
+                services_list.forEach((service)=>{
+
+                    $('#service_list').append('<div class="service '+(ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_type+'">'
+                        + '<div '
+                        + 'class="service_heading" '
+                        + 'title="'+service.service+'\n'+service.msg_type+'"'
+                        + '>'
+                        + service.service
+                        + '</div>'
+                        + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_type + '</div>'
+                        + '<div class="service_input" id="service_input_'+i+'"></div>'
+                        + '</div>'
+                    );
+
+                    if (ui_handled) {
+                        that.input_widgets[service.msg_type]($('#service_input_'+i), service, '<%= id_robot %>', client.socket, client.supported_msg_types);
+                    }
+
+                    i++;
+
+                });
+            });
+
+            if (that.gamepad)
+                that.gamepad.MarkMappedServiceButtons();
+        });
+
+        client.on('cameras', (cameras)=>{
+            $('#cameras_list').empty();
+
+            let num_cameras = Object.keys(cameras).length;
+
+            if (num_cameras > 0) {
+                $('#camera_controls').addClass('active');
+            } else {
+                $('#camera_controls').removeClass('active');
+            }
+            $('#cameras_heading').html(num_cameras+' '+(num_cameras == 1 ? 'Camera' : 'Cameras'));
+
+            let i = 0;
+            // let subscribe_cameras = [];
+            Object.values(cameras).forEach((camera) => {
+
+                $('#cameras_list').append('<div class="camera" data-camera="'+camera.id+'">'
+                    + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    + (that.panels[camera.id] ? ' checked': '' )
+                    + '/> '
+                    + '<span '
+                    + 'class="camera" '
+                    + '>'
+                    + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera.id+'</label>'
+                    + '</span>'
+                    + '</div>'
+                );
+
+                // let subscribe = $('#cb_camera_'+i).is(':checked');
+
+                if (that.panels[camera.id]) {
+                    that.panels[camera.id].init('video');
+                    // subscribe = true;
+                }
+
+                //if (!old_topics[topic.topic]) {
+
+                // if (subscribe) {
+                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                //     subscribe_cameras.push(camera_data.id);
+                // } else {
+                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                // }
+
+                //TogglePanel(topic.topic, true);
+                //}
+
+                i++;
+            });
+
+
+            // if (subscribe_cameras.length)
+            //     SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+            $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
+                let id_cam = $(this).parent('DIV.camera').data('camera');
+                let state = this.checked;
+
+                let w = panel_widgets['video'].w;
+                let h = panel_widgets['video'].h;
+
+                that.toggle_panel(id_cam, 'video', state, w, h);
+                client.SetCameraSubscription(id_robot, [ cam ], state);
+            });
+
+        });
+
+        client.on('docker', (containers)=>{
+
+            $('#docker_list').empty();
+
+            let num_containers = Object.keys(containers).length;
+
+            if (num_containers > 0) {
+                $('#docker_controls').addClass('active');
+            } else {
+                $('#docker_controls').removeClass('active');
+            }
+            $('#docker_heading').html(num_containers+' Docker '+(num_containers == 1 ? 'conainer' : 'conaines'));
+
+            let i = 0;
+            Object.values(containers).forEach((container) => {
+
+                $('#docker_list').append('<div class="docker_cont '+container.status+'" id="docker_cont_'+i+'" data-container="'+container.id+'">'
+                    // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
+                    //+ (!topic.robotTubscribed?' disabled':'')
+                    // + (panels[camera_data.id] ? ' checked': '' )
+                    // + '/> '
+                    + '<span '
+                    + 'class="docker_cont_name" '
+                    + '>'
+                    + container.name
+                    + '</span>' + ' ['+container.status+']'
+                    + '<div class="docker_btns">'
+                    + '<button class="docker_run" title="Start"></button>'
+                    + '<button class="docker_stop" title="Stop"></button>'
+                    + '<button class="docker_restart" title="Restart"></button>'
+                    + '</div>'
+                    + '</div>'
+                );
+
+                $('#docker_cont_'+i+' button.docker_run').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Running '+cont_data.name);
+                    let item = this;
+                    client.DockerContainerCall(client.id_robot, container.id, 'start', client.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+                $('#docker_cont_'+i+' button.docker_stop').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Stopping '+cont_data.name);
+                    let item = this;
+                    client.DockerContainerCall(client.id_robot, container.id, 'stop', client.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+                $('#docker_cont_'+i+' button.docker_restart').click(function(event) {
+                    if ($(this).hasClass('working'))
+                        return;
+                    $(this).addClass('working');
+                    // console.log('Restarting '+cont_data.name);
+                    let item = this;
+                    client.DockerContainerCall(client.id_robot, container.id, 'restart', client.socket, () => {
+                        $(item).removeClass('working');
+                    });
+                });
+
+                i++;
+            });
+
+        });
+
+        // browsers Socker.io connection to the Cloud Bridge's server
+        client.socket.on('connect',  () => {
+            $('#socketio_status').html('Socket.io: <span class="online">Connected</span>');
+        });
+        client.socket.on('disconnect',  () => {
+            $('#socketio_status').html('Socket.io: <span class="offline">Disconnected</span>');
+        })
+
+        setInterval(() => {
+            if (client.pc) {
+                client.pc.getStats(null).then((results)=>{that.update_video_stats(results)}, err => console.log(err))
+            }
+        }, 1000);
+
+        this.grid.on('added removed change', function(e, items) {
+            if (items) {
+                items.forEach(function(item) {
+                    if (item.w < 3 && item.x == 0) {
+                        $(item.el).find('.monitor_menu_content').addClass('right')
+                    } else {
+                        $(item.el).find('.monitor_menu_content').removeClass('right')
+                    }
+                });
+            }
+            that.update_url_hash();
+        });
+
+        this.grid.on('resize resizestop', function(e, el) {
+            let id_source = $(el).find('.grid_panel').attr('data-source');
+            that.panels[id_source].onResize();
+        });
+
+        $('#discovery_state.inactive').click((ev) => {
+            $('#discovery_state.inactive').removeClass('inactive');
+            // console.log('Starting discovery...');
+            // SetDiscoveryState(true);
+            client.socket.emit('introspection', { id_robot: client.id_robot, state:true }, (res) => {
+                if (!res || !res['success']) {
+                    console.error('Introspection start err: ', res);
+                    return;
+                }
+            });
+        });
+
+        $('#services_gamepad_mapping_toggle').click(function(event) {
+            event.preventDefault();
+            if (!$('#service_controls').hasClass('setting_shortcuts')) {
+                $('#service_controls').addClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('[cancel]');
+            } else {
+                $('#service_controls').removeClass('setting_shortcuts');
+                $('#services_gamepad_mapping_toggle').html('[shortcuts]');
+            }
+        });
+
+        $('#gamepad_status').click(() => {
+            if ($('#gamepad').hasClass('debug_on')) {
+                $('#gamepad').removeClass('debug_on');
+            } else {
+                $('#gamepad').addClass('debug_on');
+            }
+        });
+    }
+
     //widget_opts = {};
 
-    static TogglePanel(id_source, grid, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
-        let panel = panels[id_source];
+    toggle_panel(id_source, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+        let panel = this.panels[id_source];
         if (state) {
             if (!panel) {
                 panel = new Panel(id_source, panels, grid, w, h, x, y, src_visible, zoom);
@@ -406,27 +799,29 @@ class PanelUI {
         }
     }
 
-    static MakePanel(robot, id_source, panels, grid, msg_type, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
-        if (panels[id_source])
-            return;
+    make_panel(id_source, msg_type, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+        if (this.panels[id_source])
+            return this.panels[id_source];
 
-        let panel = new Panel(id_source, panels, grid, w, h, x, y, src_visible, zoom);
+        let panel = new Panel(id_source, this.panels, this.grid, w, h, x, y, src_visible, zoom);
         // panel.init(msg_type)
-        robot.on(panel.id_source, (msg)=>{ // subscribes id topic or camera
+        this.client.on(panel.id_source, (msg)=>{ // subscribes id topic or camera
             panel
         });
-        panels[id_source] = panel;
+        this.panels[id_source] = panel;
+        return panel;
     }
 
-    static UpdateVideoStats(panels, results) {
-        let panel_ids = Object.keys(panels);
+    update_video_stats(results) {
+        let panel_ids = Object.keys(this.panels);
+        let that = this;
 
         results.forEach(res => {
             if (res.type != 'inbound-rtp' || !res.trackIdentifier)
                 return; //continue
 
             panel_ids.forEach((id_panel)=>{
-                let panel = panels[id_panel];
+                let panel = that.panels[id_panel];
                 if (panel.id_stream == res.trackIdentifier) {
                     let statsString = ''
                     statsString += `${res.timestamp}<br>`;
@@ -451,10 +846,11 @@ class PanelUI {
     }
 
 
-    static UpdateUrlHash(panels) {
+    update_url_hash() {
         let hash = [];
 
         //console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
+        let that = this;
 
         $('#grid-stack').children('.grid-stack-item').each(function () {
             let widget = this;
@@ -469,10 +865,10 @@ class PanelUI {
                 [x, y].join('x'),
                 [w, h].join('x'),
             ];
-            if (panels[id_source].src_visible)
+            if (that.panels[id_source].src_visible)
                 parts.push('src');
-            if (panels[id_source].zoom != 1)
-                parts.push('z='+panels[id_source].zoom);
+            if (that.panels[id_source].zoom != 1)
+                parts.push('z='+that.panels[id_source].zoom);
 
             hash.push(parts.join(':'));
         });
@@ -483,7 +879,7 @@ class PanelUI {
             history.pushState("", document.title, window.location.pathname+window.location.search);
     }
 
-    static PanelsFromUrlHash(panels, grid, robot, hash) {
+    panels_from_url_hash(hash) {
         if (!hash.length) {
             return
         }
@@ -526,15 +922,16 @@ class PanelUI {
 
             //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
-            PanelUI.MakePanel(robot, id_source, panels, grid, null, w, h, x, y, src_on, zoom)
+            this.make_panel(id_source, null, w, h, x, y, src_on, zoom)
         }
 
-        return panels;
+        return this.panels;
     }
 
-    static SetWebRTCSatusLabel(pc) {
+    set_webrtc_status_label() {
         let state = null;
         let via_turn = null;
+        let pc = this.client.pc;
         if (pc) {
             state = pc.connectionState
             console.log('pc.sctp:', pc.sctp)

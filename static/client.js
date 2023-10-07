@@ -92,9 +92,11 @@ class PhntmBridgeClient extends EventTarget {
             return false;
         }
 
-        this.socket_url = opts.socket_url ? opts.socket_url : 'https://bridge.phntm.io:1337';
-        this.socket_path = opts.socket_path ? opts.socket_path : '/app/socket.io/';
-        this.socket_auto_connect = opts.socket_auto_connect ? true : false;
+        //defaults to phntm bridge service
+        this.socket_url = opts.socket_url !== undefined ? opts.socket_url : 'https://bridge.phntm.io:1337';
+        this.socket_path = opts.socket_path !== undefined ? opts.socket_path : '/app/socket.io/';
+        this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
+
         this.ice_server_urls = opts.ice_server_urls ? opts.ice_server_urls : [
             'stun:stun.l.google.com:19302'
         ];
@@ -105,8 +107,9 @@ class PhntmBridgeClient extends EventTarget {
         this.topic_writers = {}; //id => writer
         this.subscribers = {}; //id => topic ot cam reader
 
-        this.supported_msg_types = {}
-        this.msg_types_src = opts.msg_types_src ? opts.msg_types_src : '/static/msg_types.json' // json defs generated from .idl files
+        this.supported_msg_types = null;
+        this.msg_types_src = opts.msg_types_src !== undefined ? opts.msg_types_src : '/static/msg_types.json' // json defs generated from .idl files
+        this.load_message_types(); //async
 
         let that = this;
 
@@ -120,7 +123,27 @@ class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on("connect", () => {
-            console.log('Socker.io connected with id '+this.socket.id); // x8WIv7-mJelg7on_ALbx
+
+            console.log('Socket.io connected with id '+that.socket.id+', requesting robot...')
+
+            let subscribe = Object.keys(that.subscribers);
+            let writers = [];
+            Object.keys(that.topic_writers).forEach((topic)=>{
+                writers.push([ topic, that.topic_writers[topic].msg_type ]);
+            })
+            that.init_complete = true;
+
+            that.pc = that._init_peer_connection(that.id_robot);
+
+            that.socket.emit('robot', {
+                id_robot: that.id_robot,
+                read: subscribe,
+                write: writers,
+            },
+                (robot_data) => {
+                    that._process_robot_data(robot_data);
+                }
+            );
         });
 
         this.socket.on("disconnect", () => {
@@ -203,8 +226,7 @@ class PhntmBridgeClient extends EventTarget {
             services_data[this.id_robot].forEach((service) => {
                 this.services[service.service] = {
                     service: service.service,
-                    msg_type: service.msgType,
-                    handled: PanelUI.input_widgets[service.msgType] != undefined
+                    msg_type: service.msgType
                 };
             });
 
@@ -251,7 +273,7 @@ class PhntmBridgeClient extends EventTarget {
     }
 
     non_source_events = [
-        'update', 'error', 'online', 'initialized',
+        'update', 'error', 'online', 'message_types_loaded',
         'introspection', 'topics', 'services', 'cameras', 'docker'
     ]
 
@@ -288,7 +310,7 @@ class PhntmBridgeClient extends EventTarget {
             if (this.event_calbacks[event].length == 0) {
                 delete this.event_calbacks[event];
                 if (this.non_source_events.indexOf(event) === -1) {
-                    console.log('Unsubscribing from '+event);
+                    // console.log('Unsubscribing from '+event);
                     this.remove_subscriber(event);
                 }
             }
@@ -326,7 +348,7 @@ class PhntmBridgeClient extends EventTarget {
         if (!this.subscribers[id_source])
             return;
 
-        delete this.subscribers[topic];
+        delete this.subscribers[id_source];
 
         //TODO
     }
@@ -353,53 +375,24 @@ class PhntmBridgeClient extends EventTarget {
         //TODO
     }
 
-    load_message_types(msg_types_src) {
-        if (msg_types_src !== undefined)
-            this.msg_types_src = msg_types_src;
+    load_message_types() {
 
-        let that = this;
-        let promise = new Promise((resolve, reject) => {
-
-            fetch(this.msg_types_src)
-            .then((response) => response.json())
-            .then((json) => {
-                that.supported_msg_types=json;
-                console.log('Fetched '+json.length+' msg types from '+this.msg_types_src)
-                resolve();
-            });
-
+        fetch(this.msg_types_src)
+        .then((response) => response.json())
+        .then((json) => {
+            this.supported_msg_types = json;
+            console.log('Fetched '+json.length+' msg types from '+this.msg_types_src)
+            this.emit('message_types_loaded');
         });
-        return promise;
     }
 
-    Connect() {
+    connect() {
+        if (this.supported_msg_types === null) {
+            this.once('message_types_loaded', () => { this.connect() } )
+            return;
+        }
 
-        let that = this;
-        this.socket.on('connect', () => {
-
-            console.log('Socket.io connected, requesting robot...')
-
-            let subscribe = Object.keys(this.subscribers);
-            let writers = [];
-            Object.keys(this.topic_writers).forEach((topic)=>{
-                writers.push([ topic, this.topic_writers[topic].msg_type ]);
-            })
-            this.init_complete = true;
-
-            that.pc = that._init_peer_connection(that.id_robot);
-
-            that.socket.emit('robot', {
-                id_robot: that.id_robot,
-                read: subscribe,
-                write: writers,
-            },
-                (robot_data) => {
-                    that._process_robot_data(robot_data);
-                }
-            );
-
-        });
-
+        console.log('Connecting Socket.io...')
         this.socket.connect();
     }
 
