@@ -1,5 +1,5 @@
 body {
-    background-color: #0b5065;
+    background-color: #0b141f;
     color: black;
     margin: 20px;
     padding-bottom: 100px; /* make some space for panel resizing  */
@@ -28,10 +28,10 @@ body {
 h1 {
     margin: 0px;
     color: #9bc200;
-    background: #063666;
+    background: #013669;
     display: inline-block;
     border-radius: 5px;
-    padding: 2px 10px;
+    padding: 3px 10px;
     margin-bottom: 10px;
 }
 
@@ -74,6 +74,9 @@ h3 {
     z-index: 1;
 }
 
+
+
+
 #topic_controls:hover,
 #service_controls:hover,
 #camera_controls:hover,
@@ -109,8 +112,8 @@ h3 {
     max-height: 520px;
     overflow: scroll;
     position: absolute;
-    left: 0px;
-    top: 100%;
+    left: 1px;
+    top: 46px;
     background: #deeeff;
 }
 
@@ -156,6 +159,36 @@ h3 {
 #docker_controls H3,
 #topic_controls H3 {
     color: #fff;
+    cursor: default;
+}
+
+#service_controls,
+#camera_controls,
+#docker_controls,
+#topic_controls,
+#service_controls {
+    margin-top: 2px;
+    margin-bottom: 5px;
+}
+
+#topic_controls.active:hover {
+    border-top: 2px solid #6f98c4;
+    border-bottom: 5px solid #6f98c4;
+}
+
+#camera_controls.active:hover {
+    border-top: 2px solid #82b727;
+    border-bottom: 5px solid #82b727;
+}
+
+#docker_controls.active:hover {
+    border-top: 2px solid #de5a30;
+    border-bottom: 5px solid #de5a30;
+}
+
+#service_controls.active:hover {
+    border-top: 2px solid #b311a3;
+    border-bottom: 5px solid #b311a3;
 }
 
 #service_controls.active:hover,
@@ -164,6 +197,8 @@ h3 {
 #topic_controls.active:hover,
 #service_controls.active.setting_shortcuts {
     border-radius: 5px 5px 0px 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
 }
 
 #cameras_list {
@@ -173,7 +208,7 @@ h3 {
     overflow: scroll;
     background: #9ec65a;
     left: 0px;
-    top: 100%;
+    top: 46px;
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
@@ -185,13 +220,13 @@ h3 {
     position: absolute;
     overflow-x: hidden;
     overflow: scroll;
-    background: #ffc490;
-    left: 0px;
-    top: 100%;
+    background: #0000005e;
+    right: 0px;
+    top: 46px;
     width: 360px;
     max-height: 520px;
     padding: 10px 5px 0px 10px;
-    border-radius: 0px 5px 5px 5px;
+    border-radius: 5px 0px 5px 5px;
 }
 
 #docker_list .docker_cont {
@@ -264,7 +299,7 @@ h3 {
     overflow: scroll;
     background: #ecafed;
     left: 0px;
-    top: 100%;
+    top: 46px;
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
@@ -405,6 +440,12 @@ h3 {
     margin-left: 5px;
     float: left;
     font-size: 12px;
+    line-height: 12px;
+    height: 12px;
+}
+
+#robot_wifi_info.narrow_screen {
+    clear:left; /* force nl*/
 }
 
 #robot_wifi_info.offline {

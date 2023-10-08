@@ -27,6 +27,19 @@ export class App {
         this.id_instance = new ObjectId(); //generated here
     }
 
+    static FindConnected(id_app:ObjectId, id_instance:ObjectId):App {
+
+        for (let i = 0; i < App.connectedApps.length; i++) {
+            if (App.connectedApps[i].id_app.equals(id_app) &&
+                App.connectedApps[i].id_instance.equals(id_instance))
+            {
+                return App.connectedApps[i];
+            }
+        }
+
+        return null;
+    }
+
     public addToConnected() {
         if (App.connectedApps.indexOf(this) == -1) {
             App.connectedApps.push(this);
@@ -59,8 +72,10 @@ export class App {
     public isSubscribedToRobot(idRobot: ObjectId, out_subscription?:any):boolean {
         for (let i = 0; i < this.robotSubscriptions.length; i++) {
             if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
-                if (out_subscription !== undefined)
-                    out_subscription = this.robotSubscriptions[i];
+                if (out_subscription !== undefined) {
+                    out_subscription.read = this.robotSubscriptions[i].read;
+                    out_subscription.write = this.robotSubscriptions[i].write;
+                }
                 return true;
             }
 

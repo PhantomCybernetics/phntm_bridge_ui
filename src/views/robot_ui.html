@@ -3,8 +3,8 @@
 <h1 id="robot_name">Waiting for Connection...</h1>
 <div class="cleaner"></div>
 <div id="robot_info">Contacting <%= id_robot %>...</div><div id="socketio_status"></div>
-<div id="robot_wifi_info">
-    <span id="robot_wifi_stats"></span>
+<div id="robot_wifi_info" class="offline">
+    <span id="robot_wifi_stats">// Waiting for network...</span>
     <button id="trigger_wifi_scan" onclick="TriggerWifiScan();">scan</button>
 </div>
 <div class="cleaner"></div>
@@ -92,7 +92,7 @@
             3: { dead_zone: [ -10.0, -0.98, -10.0 ] },
             4: { dead_zone: [ -10.0, -0.98, -10.0 ] },
         }
-        let gamepad = new GamepadController(robot, gamepad_axes_config); // creates write channels if/when gamepad is connected
+        let gamepad = new GamepadController(robot, gamepad_axes_config); // creates write channels when gamepad is connected
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
         //init panel setup from url
@@ -130,13 +130,21 @@
         });
 
         // subscribes to /iw_status
-        robot.on('/iw_status', (msg)=>{
-            console.log('Got /iw_status msg', msg);
-        });
+        // robot.on('/iw_status', (msg)=>{
+        //     console.log('Got /iw_status msg', msg);
+        // });
 
         // subscribes to /battery
         robot.on('/battery', (msg)=>{
 
+        });
+
+        robot.on('media_stream', (stream)=>{
+            console.log('Got a stream', stream);
+        });
+
+        robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
+            console.log('Got picamera stream', stream);
         });
 
         robot.on('/htop', (msg)=>{
@@ -154,9 +162,6 @@
         //     let id_robot = Object.keys(offer_data)[0];
         //     OnWebRTCOffer(id_robot, offer_data[id_robot]);
         // });
-
-
-
 
     });
 

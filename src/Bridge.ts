@@ -351,6 +351,28 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
 
     robot.addToConnected(); //sends update to subscribers
 
+    robotSocket.on('peer:update', async function(update_data:any, return_callback:any) {
+
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
+
+        let id_app:ObjectId = update_data['id_app'] && ObjectId.isValid(update_data['id_app']) ? new ObjectId(update_data['id_app']) : null;
+        let id_instance:ObjectId = update_data['id_instance'] && ObjectId.isValid(update_data['id_instance']) ? new ObjectId(update_data['id_instance']) : null;
+        delete update_data['id_app']
+        delete update_data['id_instance']
+        robot.getStateData(update_data)
+
+        $d.l("Got peer:update from "+robot.id_robot+" for peer "+id_app+"/"+id_instance+": ", update_data);
+        let app = App.FindConnected(id_app, id_instance);
+        if (app && app.isSubscribedToRobot(robot.id_robot)) {
+            app.socket.emit('robot:update', update_data, (app_answer:any) => {
+                return_callback(app_answer);
+            });
+        } else {
+            return_callback({err:1, msg:'Peer not found'});
+        }
+    });
+
     robotSocket.on('topics', async function(allTopics:any[]) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
@@ -773,7 +795,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         }
         let id_robot = new ObjectId(data.id_robot);
         let robot = Robot.FindConnected(id_robot);
-        if (!robot) {
+        if (!robot || !robot.socket) {
             // robot not connected, check it exists and return basic info
             // TODO perhaps make this behavior optional?
             const dbRobot = (await robotsCollection.findOne({_id: id_robot }));

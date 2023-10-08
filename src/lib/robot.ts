@@ -31,6 +31,7 @@ export class Robot {
             App.connectedApps.forEach(app => {
                 let sub:any = {};
                 if (app.isSubscribedToRobot(this.id_robot, sub)) {
+                    $d.log('Stored sub: ', sub);
                     robot.init_peer(app, sub.read, sub.write)
                 }
             });
@@ -44,7 +45,7 @@ export class Robot {
             read: read,
             write: write,
         }
-
+        let that = this;
         $d.log('Calling robot:peer with data', data);
         this.socket.emit('peer', data, (answerData:{state?: any, offer:string }) => {
 
@@ -54,7 +55,13 @@ export class Robot {
             if (returnCallback) {
                 returnCallback(answerData);
             } else {
-                app.socket.emit('robot', answerData);
+                app.socket.emit('robot', answerData, (app_answer_data:any) => {
+                    $d.log('Got app\'s answer:', app_answer_data);
+                    delete app_answer_data['id_robot'];
+                    app_answer_data['id_app'] = app.id_app.toString();
+                    app_answer_data['id_instance'] = app.id_instance.toString();
+                    that.socket.emit('sdp:answer', app_answer_data);
+                });
             }
 
             app.socket.emit('topics', this.GetTopicsData());

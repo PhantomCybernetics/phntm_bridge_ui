@@ -377,6 +377,9 @@ class PanelUI {
 
     panels = {};
 
+    lastAP = null;
+    lastESSID = null;
+
     // override or edit to customize topic panel defaults
     widgets = {
         'sensor_msgs/msg/BatteryState' : { widget: window.PanelWidgets.BatteryStateWidget, w:4, h:2 } ,
@@ -402,7 +405,12 @@ class PanelUI {
         this.panels = {}
         this.gamepad = gamepad;
 
+        this.last_pc_stats = null;
+
         let that = this;
+
+        this.lastAP = null;
+        this.lastESSID = null;
 
         client.on('introspection',  (state) => {
             if (state) {
@@ -411,6 +419,11 @@ class PanelUI {
                 $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
             }
         });
+
+        window.addEventListener("resize", (event) => {
+            that.update_layout_width()
+        });
+        this.update_layout_width();
 
         client.on('update', ()=>{
 
@@ -427,6 +440,12 @@ class PanelUI {
 
             that.set_webrtc_status_label()
         });
+
+        client.on('media_stream', (stream)=>{
+            console.warn('Client got a stream', stream);
+        });
+
+        client.on('/iw_status', (msg) => that.update_wifi_status(msg));
 
         client.on('topics', (topics)=>{
 
@@ -662,7 +681,7 @@ class PanelUI {
             } else {
                 $('#docker_controls').removeClass('active');
             }
-            $('#docker_heading').html(num_containers+' Docker '+(num_containers == 1 ? 'conainer' : 'conaines'));
+            $('#docker_heading').html(num_containers+' Docker '+(num_containers == 1 ? 'container' : 'containers'));
 
             let i = 0;
             Object.values(containers).forEach((container) => {
@@ -721,6 +740,24 @@ class PanelUI {
 
         });
 
+        client.on('media_stream', (stream) => {
+            for (let id_panel in Object.keys(that.panels)) {
+                let panel = that.panels[id_panel];
+                if (panel.id_stream == stream.id) {
+                    console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
+                    document.getElementById('panel_video_'+panel.n).srcObject = stream;
+                }
+            }
+        });
+
+        client.on('peer_connected', () => {
+            that.set_webrtc_status_label();
+        })
+
+        client.on('peer_disconnected', () => {
+            that.set_webrtc_status_label();
+        })
+
         // browsers Socker.io connection to the Cloud Bridge's server
         client.socket.on('connect',  () => {
             $('#socketio_status').html('Socket.io: <span class="online">Connected</span>');
@@ -731,7 +768,10 @@ class PanelUI {
 
         setInterval(() => {
             if (client.pc) {
-                client.pc.getStats(null).then((results)=>{that.update_video_stats(results)}, err => console.log(err))
+                client.pc.getStats(null).then((results)=>{
+                    that.last_pc_stats = results;
+                    that.update_video_stats(results)
+                }, err => console.log(err))
             }
         }, 1000);
 
@@ -934,11 +974,11 @@ class PanelUI {
         let pc = this.client.pc;
         if (pc) {
             state = pc.connectionState
-            console.log('pc.sctp:', pc.sctp)
+            // console.log('pc.sctp:', pc.sctp)
             if (pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
                 // console.log('pc.sctp.transport:', pc.sctp.transport)
                 // console.log('pc.sctp.transport.iceTransport:', pc.sctp.transport.iceTransport)
-                selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
+                let selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
                 if (selectedPair && selectedPair.remote) {
                     via_turn = selectedPair.remote.type == 'relay' ? true : false;
                 }
@@ -964,5 +1004,81 @@ class PanelUI {
         }
 
     }
+
+    //on resize
+    update_layout_width() {
+        let w = $('body').innerWidth();
+        console.info('body.width='+w+'px');
+        if (w < 1500)
+            $('#robot_wifi_info').addClass('narrow_screen')
+        else
+            $('#robot_wifi_info').removeClass('narrow_screen')
+    }
+
+    update_wifi_status(msg) { // /iw_status in
+        // console.warn('UpdateIWStatus', msg)
+        let qc = '#00ff00';
+        let qPercent = (msg.quality / msg.quality_max) * 100.0;
+        if (qPercent < 40)
+            qc = 'red';
+        else if (qPercent < 50)
+            qc = 'orange';
+        else if (qPercent < 70)
+            qc = 'yellow';
+
+        let nc = ''
+        if (msg.noise > 0)
+            nc = 'yellow'
+
+        let brc = ''
+        if (msg.bit_rate < 100)
+            brc = 'yellow'
+
+        let apclass = '';
+        if (this.lastAP != msg.access_point) {
+            this.lastAP = msg.access_point;
+            apclass = 'new'
+        }
+
+        let essidclass= ''
+        if (this.lastESSID != msg.essid) {
+            this.lastESSID = msg.essid;
+            essidclass = 'new'
+        }
+
+        let html = '// <span class="eeid '+essidclass+'">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+msg.frequency.toFixed(3)+' GHz, </span> ' +
+                    '<span style="color:'+brc+'">BitRate: '+msg.bit_rate.toFixed(1) + ' Mb/s</span> ' +
+                    '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
+                    'Level: '+ msg.level + ' ' +
+                    '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> '
+                    ;
+
+        $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
+        $('#robot_wifi_info').removeClass('offline');
+
+        if (this.last_pc_stats) { // from timer
+            this.last_pc_stats.forEach((report) => {
+                Object.keys(report).forEach((statName) => {
+                    if (statName == 'currentRoundTripTime') {
+                        let rtt_ms = report[statName] * 1000;
+                        let rttc = ''
+                        if (rtt_ms > 50)
+                            rttc = 'red'
+                        else if (rtt_ms > 30)
+                            rttc = 'orange'
+                        else if (rtt_ms > 15)
+                            rttc = 'yellow'
+                        else
+                            rttc = 'lime'
+                        html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'ms</span>';
+                    }
+                });
+            });
+        }
+
+        $('#robot_wifi_stats').html(html)
+    }
+
+
 
 }
