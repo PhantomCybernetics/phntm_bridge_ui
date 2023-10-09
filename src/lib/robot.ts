@@ -16,10 +16,13 @@ export class Robot {
     isConnected: boolean;
     isAuthentificated: boolean;
     socket: RobotSocket;
-    topics: {topic: string, msgTypes:string[]}[];
-    services: {service: string, msgType:string}[];
-    docker_containers: {id: string, name:string, image:string, short_id: string, status:string }[];
-    cameras: {id: string, info: any}[];
+
+    nodes: any[];
+    topics: any[];
+    services: any[];
+    docker_containers: any[];
+    cameras: any[];
+
     introspection: boolean;
 
     static connectedRobots:Robot[] = [];
@@ -64,10 +67,11 @@ export class Robot {
                 });
             }
 
-            app.socket.emit('topics', this.GetTopicsData());
-            app.socket.emit('services', this.GetServicesData());
-            app.socket.emit('cameras', this.GetCamerasData());
-            app.socket.emit('docker', this.GetDockerContinersData());
+            app.socket.emit('nodes', this.AddId(this.nodes));
+            app.socket.emit('topics', this.AddId(this.topics));
+            app.socket.emit('services', this.AddId(this.services));
+            app.socket.emit('cameras', this.AddId(this.cameras));
+            app.socket.emit('docker', this.AddId(this.docker_containers));
         });
     }
 
@@ -99,14 +103,23 @@ export class Robot {
         return data;
     }
 
-    public GetTopicsData():any {
-        let robotTopicsData:any = {}
-        robotTopicsData[this.id_robot.toString()] = this.topics;
-        return robotTopicsData;
+    public AddId(in_data:any):any {
+        let data:any = {};
+        data[this.id_robot.toString()] = in_data;
+        return data;
+    }
+
+    public NodesToSubscribers():void {
+        let robotNodesData = this.AddId(this.nodes);
+        App.connectedApps.forEach(app => {
+            if (app.isSubscribedToRobot(this.id_robot)) {
+                app.socket.emit('nodes', robotNodesData)
+            }
+        });
     }
 
     public TopicsToSubscribers():void {
-        let robotTopicsData = this.GetTopicsData();
+        let robotTopicsData = this.AddId(this.topics);
         App.connectedApps.forEach(app => {
             if (app.isSubscribedToRobot(this.id_robot)) {
                 app.socket.emit('topics', robotTopicsData)
@@ -114,14 +127,8 @@ export class Robot {
         });
     }
 
-    public GetServicesData():any {
-        let robotServicesData:any = {}
-        robotServicesData[this.id_robot.toString()] = this.services;
-        return robotServicesData;
-    }
-
     public ServicesToSubscribers():void {
-        let robotServicesData = this.GetServicesData();
+        let robotServicesData = this.AddId(this.services);
         App.connectedApps.forEach(app => {
             if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting services to app', robotServicesData);
@@ -130,14 +137,8 @@ export class Robot {
         });
     }
 
-    public GetCamerasData():any {
-        let robotCamerasData:any = {}
-        robotCamerasData[this.id_robot.toString()] = this.cameras;
-        return robotCamerasData;
-    }
-
     public CamerasToSubscribers():void {
-        let robotCamerasData = this.GetCamerasData();
+        let robotCamerasData = this.AddId(this.cameras);
         App.connectedApps.forEach(app => {
             if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting cameras to app', robotCamerasData);
@@ -155,14 +156,8 @@ export class Robot {
         });
     }
 
-    public GetDockerContinersData():any {
-        let robotDockerContainersData:any = {}
-        robotDockerContainersData[this.id_robot.toString()] = this.docker_containers;
-        return robotDockerContainersData;
-    }
-
     public DockerContainersToSubscribers():void {
-        let robotDockerContainersData = this.GetDockerContinersData();
+        let robotDockerContainersData = this.AddId(this.docker_containers);
         App.connectedApps.forEach(app => {
             if (app.isSubscribedToRobot(this.id_robot)) {
                 // $d.l('emitting docker to app', robotDockerContainersData);

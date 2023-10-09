@@ -117,7 +117,7 @@ h3 {
     background: #deeeff;
 }
 
-#discovery_state {
+#introspection_state {
     width: 34px;
     /* background: #4a4a4a; */
     padding: 0px;
@@ -133,20 +133,20 @@ h3 {
     background-size: 24px 24px;
     background-repeat: no-repeat;
     background-position: center;
+    cursor: pointer;
 }
 
-#discovery_state:hover,
-#discovery_state.active {
+#introspection_state:hover,
+#introspection_state.active {
     /* background: #82b727; */
     filter: opacity(1) !important;
 }
 
-#discovery_state.inactive {
-    cursor: pointer;
+#introspection_state.inactive {
     filter: opacity(.2);
 }
 
-#discovery_state.active {
+#introspection_state.active {
     background-image: url(/static/discovery.svg);
 }
 
@@ -304,6 +304,16 @@ h3 {
     max-height: 520px;
     padding: 5px 10px 5px 10px;
     border-radius: 0px 5px 5px 5px;
+}
+
+#topic_list .node,
+#service_list .node {
+    font-size: 10px;
+    font-weight: bold;
+    border-bottom: 1px dashed black;
+    display: inline-block;
+    margin-bottom: 3px;
+    margin-top: 3px;
 }
 
 #service_controls.active:hover #service_list,
@@ -465,13 +475,13 @@ BUTTON#trigger_wifi_scan.working {
     background: #ff8c00;
 }
 
-#robot_stats {
+/* #robot_stats {
     width: 440px;
-}
+} */
 
-#monitors {
+/* #monitors {
     margin-top: 50px;
-}
+} */
 
 #topic_list A.topic {
 

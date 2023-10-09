@@ -414,9 +414,9 @@ class PanelUI {
 
         client.on('introspection',  (state) => {
             if (state) {
-                $('#discovery_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
+                $('#introspection_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
             } else {
-                $('#discovery_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+                $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
             }
         });
 
@@ -447,160 +447,76 @@ class PanelUI {
 
         client.on('/iw_status', (msg) => that.update_wifi_status(msg));
 
-        client.on('topics', (topics)=>{
-
-            let topic_list = Object.values(topics);
-
-            topic_list.sort((a, b) => {
-                let _a = a.id.indexOf('/_') === 0;
-                let _b = b.id.indexOf('/_') === 0;
-                if (!_a && _b) return -1;
-                if (!_b && _a) return 1;
-                if (a.id < b.id) return -1;
-                if (a.id > b.id) return 1;
-                return 0;
-            });
-
-            $('#topic_list').empty();
-
-            $('#robot_stats').css('display', 'block');
-            //$('#topic_list').css('display', 'block');
-            $('#monitors').css('display', 'block');
-
-            let num_topics = Object.keys(topics).length;
-            $('#topics_heading').html(num_topics+' '+(num_topics == 1 ? 'Topic' : 'Topics'));
-            if (num_topics > 0) {
-                $('#topic_controls').addClass('active');
-            } else {
-                $('#topic_controls').removeClass('active');
-            }
-
-            let i = 0;
-            topic_list.forEach((topic)=>{
-
-                $('#topic_list').append('<div class="topic" data-topic="'+topic.id+'" data-msg_types="'+topic.msg_types.join(',')+'">'
-                    + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
-                    //+ (!topic.robotTubscribed?' disabled':'')
-                    + (that.panels[topic.id] ? ' checked': '' )
-                    + '/> '
-                    + '<span '
-                    + 'class="topic'+(topic.is_video?' image':'')+(!topic.msg_type_supported?' unsupported_message_type':'')+'" '
-                    + 'title="'+(!topic.msg_type_supported?'Unsupported type: ':'')+topic.msg_types.join('; ')+'"'
-                    + '>'
-                    + '<label for="cb_topic_'+i+'" class="prevent-select">'+topic.id+'</label>'
-                    + '</span>'
-                    + '</div>'
-                );
-
-                // topic_data.msgTypes.forEach((msgType)=>{
-                //     if (msg_type_filters.indexOf(msgType) == -1)
-                //         msg_type_filters.push(msgType);
-                // });
-
-                // let subscribe = $('#cb_topic_'+i).is(':checked');
-
-                if (that.panels[topic.id]) {
-                    that.panels[topic.id].init(topic.msg_types[0]); //init w message type
-                    // subscribe = true;
-                }
-
-                //if (!old_topics[topic.topic]) {
-
-                // if (subscribe) {
-                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                //     subscribe_topics.push(topic_data.topic);
-                // } else {
-                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-                // }
-
-                //TogglePanel(topic.topic, true);
-                //}
-
-                i++;
-            });
-
-            $('#topic_list').append('<div id="topic_list_waiting" style="display:none"></div>');
-
-            $('#topic_list INPUT.enabled:checkbox').change(function(event) {
-                let id_topic = $(this).parent('DIV.topic').data('topic');
-                let state = this.checked;
-
-                let w = 3; let h = 3;
-                if (that.widgets[topics[widgets].msg_types]) {
-                    w = panel_widgets[topics[widgets].msg_types].w;
-                    h = panel_widgets[topics[widgets].msg_types].h;
-                }
-
-                that.toggle_panel(topic, topics[topic].msg_types, state, w, h);
-                // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
-            });
 
 
+        client.on('nodes', (nodes)=>{
+            that.topics_menu_from_nodes(nodes);
+            that.services_menu_from_nodes(nodes);
         });
 
-        client.on('services', (services)=>{
-            $('#service_list').empty();
-            //$('#service_list').css('display', 'block');
-            let num_services = Object.keys(services).length;
-            if (num_services > 0) {
-                $('#service_controls').addClass('active');
-            } else {
-                $('#service_controls').removeClass('active');
-            }
-            $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
+        // client.on('services', (services)=>{
+        //     $('#service_list').empty();
+        //     //$('#service_list').css('display', 'block');
+        //     let num_services = Object.keys(services).length;
+        //     if (num_services > 0) {
+        //         $('#service_controls').addClass('active');
+        //     } else {
+        //         $('#service_controls').removeClass('active');
+        //     }
+        //     $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
 
-            let ui_handled_services = [];
-            let other_services = [];
+        //     let ui_handled_services = [];
+        //     let other_services = [];
 
-            Object.values(services).forEach((service) => {
-                let ui_handled = that.input_widgets[service.msg_type] != undefined
-                if (ui_handled)
-                    ui_handled_services.push(service);
-                else
-                    other_services.push(service);
-            });
+        //     Object.values(services).forEach((service) => {
+        //         let ui_handled = that.input_widgets[service.msg_type] != undefined
+        //         if (ui_handled)
+        //             ui_handled_services.push(service);
+        //         else
+        //             other_services.push(service);
+        //     });
 
-            let i = 0;
-            [ ui_handled_services, other_services ].forEach((services_list)=>{
+        //     let i = 0;
+        //     [ ui_handled_services, other_services ].forEach((services_list)=>{
 
-                let ui_handled = services_list == ui_handled_services;
+        //         let ui_handled = services_list == ui_handled_services;
 
-                services_list.sort((a, b) => {
-                    if (a.service < b.service) {
-                        return -1;
-                    }
-                    if (a.service > b.service) {
-                        return 1;
-                    }
-                    return 0;
-                });
+        //         services_list.sort((a, b) => {
+        //             if (a.service < b.service) {
+        //                 return -1;
+        //             }
+        //             if (a.service > b.service) {
+        //                 return 1;
+        //             }
+        //             return 0;
+        //         });
 
-                services_list.forEach((service)=>{
+        //         services_list.forEach((service)=>{
 
-                    $('#service_list').append('<div class="service '+(ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_type+'">'
-                        + '<div '
-                        + 'class="service_heading" '
-                        + 'title="'+service.service+'\n'+service.msg_type+'"'
-                        + '>'
-                        + service.service
-                        + '</div>'
-                        + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_type + '</div>'
-                        + '<div class="service_input" id="service_input_'+i+'"></div>'
-                        + '</div>'
-                    );
+        //             $('#service_list').append('<div class="service '+(ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_type+'">'
+        //                 + '<div '
+        //                 + 'class="service_heading" '
+        //                 + 'title="'+service.service+'\n'+service.msg_type+'"'
+        //                 + '>'
+        //                 + service.service
+        //                 + '</div>'
+        //                 + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_type + '</div>'
+        //                 + '<div class="service_input" id="service_input_'+i+'"></div>'
+        //                 + '</div>'
+        //             );
 
-                    if (ui_handled) {
-                        that.input_widgets[service.msg_type]($('#service_input_'+i), service, '<%= id_robot %>', client.socket, client.supported_msg_types);
-                    }
+        //             if (ui_handled) {
+        //                 that.input_widgets[service.msg_type]($('#service_input_'+i), service, '<%= id_robot %>', client.socket, client.supported_msg_types);
+        //             }
 
-                    i++;
+        //             i++;
 
-                });
-            });
+        //         });
+        //     });
 
-            if (that.gamepad)
-                that.gamepad.MarkMappedServiceButtons();
-        });
+        //     if (that.gamepad)
+        //         that.gamepad.MarkMappedServiceButtons();
+        // });
 
         client.on('cameras', (cameras)=>{
             $('#cameras_list').empty();
@@ -793,11 +709,21 @@ class PanelUI {
             that.panels[id_source].onResize();
         });
 
-        $('#discovery_state.inactive').click((ev) => {
-            $('#discovery_state.inactive').removeClass('inactive');
+        $('#introspection_state').click((ev) => {
+
+            let is_active = $('#introspection_state').hasClass('active')
+
+            if (is_active) {
+                $('#introspection_state').removeClass('active');
+                $('#introspection_state').addClass('inactive');
+            } else {
+                $('#introspection_state').removeClass('inactive');
+                $('#introspection_state').addClass('active');
+            }
+
             // console.log('Starting discovery...');
             // SetDiscoveryState(true);
-            client.socket.emit('introspection', { id_robot: client.id_robot, state:true }, (res) => {
+            client.socket.emit('introspection', { id_robot: client.id_robot, state:!is_active }, (res) => {
                 if (!res || !res['success']) {
                     console.error('Introspection start err: ', res);
                     return;
@@ -823,6 +749,197 @@ class PanelUI {
                 $('#gamepad').addClass('debug_on');
             }
         });
+    }
+
+    topics_menu_from_nodes(nodes) {
+
+        $('#topic_list').empty();
+
+        let node_ids = Object.keys(nodes);
+        node_ids.sort();
+
+        let unique_topics = [];
+
+        node_ids.forEach((node) => {
+
+            if (nodes[node].publishers) {
+                $('#topic_list').append('<div class="node" data-node="'+node+'">'+ node+ '</div>');
+
+                let topic_ids = Object.keys(nodes[node].publishers);
+                topic_ids.sort((a, b) => {
+                    let _a = a.indexOf('/_') === 0;
+                    let _b = b.indexOf('/_') === 0;
+                    if (!_a && _b) return -1;
+                    if (!_b && _a) return 1;
+                    if (a < b) return -1;
+                    if (a > b) return 1;
+                    return 0;
+                });
+
+                let i = 0;
+                topic_ids.forEach((id_topic)=>{
+
+                    if (unique_topics.indexOf(id_topic) === -1)
+                        unique_topics.push(id_topic)
+
+                    $('#topic_list').append('<div class="topic" data-topic="'+id_topic+'" data-msg_types="'+nodes[node].publishers[id_topic].msg_types.join(',')+'">'
+                        + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
+                        //+ (!topic.robotTubscribed?' disabled':'')
+                        + (this.panels[id_topic] ? ' checked': '' )
+                        + '/> '
+                        + '<span '
+                        + 'class="topic'+(nodes[node].publishers[id_topic].is_video?' image':'')+(!nodes[node].publishers[id_topic].msg_type_supported?' unsupported_message_type':'')+'" '
+                        + 'title="'+(!nodes[node].publishers[id_topic].msg_type_supported?'Unsupported type: ':'')+nodes[node].publishers[id_topic].msg_types.join('; ')+'"'
+                        + '>'
+                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+id_topic+'</label>'
+                        + '</span>'
+                        + '</div>'
+                    );
+
+                    // topic_data.msgTypes.forEach((msgType)=>{
+                    //     if (msg_type_filters.indexOf(msgType) == -1)
+                    //         msg_type_filters.push(msgType);
+                    // });
+
+                    // let subscribe = $('#cb_topic_'+i).is(':checked');
+
+                    if (this.panels[id_topic]) {
+                        this.panels[id_topic].init(nodes[node].publishers[id_topic].msg_types[0]); //init w message type
+                        // subscribe = true;
+                    }
+
+                    //if (!old_topics[topic.topic]) {
+
+                    // if (subscribe) {
+                    //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+                    //     subscribe_topics.push(topic_data.topic);
+                    // } else {
+                    //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+                    // }
+
+                    //TogglePanel(topic.topic, true);
+                    //}
+
+                    i++;
+                });
+            }
+
+
+
+            // $('#topic_list INPUT.enabled:checkbox').change(function(event) {
+            //     let id_topic = $(this).parent('DIV.topic').data('topic');
+            //     let state = this.checked;
+
+            //     let w = 3; let h = 3;
+            //     if (that.widgets[topics[widgets].msg_types]) {
+            //         w = panel_widgets[topics[widgets].msg_types].w;
+            //         h = panel_widgets[topics[widgets].msg_types].h;
+            //     }
+
+            //     that.toggle_panel(topic, topics[topic].msg_types, state, w, h);
+            //     // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
+            // });
+
+        });
+
+        let num_topics = unique_topics.length;
+        $('#topics_heading').html(num_topics+' '+(num_topics == 1 ? 'Topic' : 'Topics'));
+        if (num_topics > 0) {
+            $('#topic_controls').addClass('active');
+        } else {
+            $('#topic_controls').removeClass('active');
+        }
+
+    }
+
+    services_menu_from_nodes(nodes) {
+
+        $('#service_list').empty();
+        let num_services = 0;
+
+        let nodes_with_handled_ui = [];
+        let unhandled_nodes = [];
+
+        Object.values(nodes).forEach((node) => {
+            if (!node.services || !Object.keys(node.services).length)
+                return;
+
+            let service_ids = Object.keys(node.services);
+            let some_ui_handled = false;
+            for (let i = 0; i < service_ids.length; i++) {
+                let msg_type = node.services[service_ids[i]].msg_types[0];
+                let ui_handled = this.input_widgets[msg_type] != undefined
+                node.services[service_ids[i]].ui_handled = ui_handled;
+                if (ui_handled)
+                    some_ui_handled = true;
+            }
+            if (some_ui_handled) {
+                nodes_with_handled_ui.push(node)
+            } else {
+                unhandled_nodes.push(node)
+            }
+        });
+
+        let i = 0;
+
+        [ nodes_with_handled_ui, unhandled_nodes].forEach((node_list) => {
+
+            node_list.sort((a, b) => {
+                if (a.node < b.node) return -1;
+                if (a.node > b.node) return 1;
+                return 0;
+            });
+
+            node_list.forEach((node) => {
+
+                let services_sorted = Object.values(node.services);
+                services_sorted.sort((a, b) => {
+                    if (!a.ui_handled && b.ui_handled) return 1;
+                    if (!b.ui_handled && a.ui_handled) return -1;
+                    if (a.service < b.service) return -1;
+                    if (a.service > b.service) return 1;
+                    return 0;
+                });
+
+                $('#service_list').append('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
+
+                services_sorted.forEach((service)=>{
+
+                    num_services++;
+
+                    $('#service_list').append('<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
+                        + '<div '
+                        + 'class="service_heading" '
+                        + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
+                        + '>'
+                        + service.service
+                        + '</div>'
+                        + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
+                        + '<div class="service_input" id="service_input_'+i+'"></div>'
+                        + '</div>'
+                    );
+
+                    if (service.ui_handled) {
+                        this.input_widgets[service.msg_types[0]]($('#service_input_'+i), service, '<%= id_robot %>', this.client.socket, this.client.supported_msg_types);
+                    }
+
+                    i++;
+
+                });
+
+            });
+
+        });
+
+        if (num_services > 0) {
+            $('#service_controls').addClass('active');
+        } else {
+            $('#service_controls').removeClass('active');
+        }
+        $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
+
+        if (this.gamepad)
+            this.gamepad.MarkMappedServiceButtons();
     }
 
     //widget_opts = {};
@@ -1008,7 +1125,7 @@ class PanelUI {
     //on resize
     update_layout_width() {
         let w = $('body').innerWidth();
-        console.info('body.width='+w+'px');
+        // console.info('body.width='+w+'px');
         if (w < 1500)
             $('#robot_wifi_info').addClass('narrow_screen')
         else

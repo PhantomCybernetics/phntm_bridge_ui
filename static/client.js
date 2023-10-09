@@ -57,13 +57,14 @@ class PhntmBridgeClient extends EventTarget {
     pc = null;
     pc_connected = false;
 
-    topics = {} // str topic => { msg_types: str[], subscribed: bool }
+    discovered_topics = {} // str topic => { msg_types: str[], subscribed: bool }
     topic_dcs = {}; //str topic => RTCDataChannel
     // let topic_video_tracks = {}; //str topic => MediaStreamTrack
     // let topic_transceivers = {}; //str topic => RTCRtpTransceiver
-    services = {}; // str service => { msg_type: str}
-    cameras = {}; // str id => { info: {}}
-    docker_containers = {}; // str id => { info: {}}
+    discovered_nodes = {}; // str service => { msg_type: str}
+    discovered_services = {}; // str service => { msg_type: str}
+    discovered_cameras = {}; // str id => { info: {}}
+    discovered_docker_containers = {}; // str id => { info: {}}
 
     transievers = []; // RTCRtpTransceiver[]
     // let topic_media_streams = {}; // str topic => MediaStream
@@ -174,27 +175,110 @@ class PhntmBridgeClient extends EventTarget {
             that.emit('introspection', that.introspection);
         });
 
+        this.socket.on('nodes', (nodes_data) => {
+
+            if (!nodes_data[this.id_robot])
+                return;
+
+            console.warn('Raw nodes: ', nodes_data);
+
+            this.discovered_nodes = {};
+            Object.keys(nodes_data[this.id_robot]).forEach((node)=>{
+                this.discovered_nodes[node] = {
+                    node: node,
+                    namespace: nodes_data[this.id_robot][node]['namespace'],
+                    publishers: {},
+                    subscribers: {},
+                    services: {},
+                }
+                if (nodes_data[this.id_robot][node]['publishers']) {
+                    let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
+                    topics.forEach((topic) => {
+                        let msg_types = nodes_data[this.id_robot][node]['publishers'][topic];
+                        this.discovered_nodes[node].publishers[topic] = {
+                            msg_types: msg_types,
+                            is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                            msg_type_supported: this.FindMessageType(msg_types[0]) != null,
+                        }
+                    })
+                }
+                if (nodes_data[this.id_robot][node]['subscribers']) {
+                    let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
+                    topics.forEach((topic) => {
+                        let msg_types = nodes_data[this.id_robot][node]['subscribers'][topic];
+                        this.discovered_nodes[node].subscribers[topic] = {
+                            msg_types: msg_types,
+                            is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                            msg_type_supported: this.FindMessageType(msg_types[0]) != null,
+                        }
+                    })
+                }
+                if (nodes_data[this.id_robot][node]['services']) {
+                    let services = Object.keys(nodes_data[this.id_robot][node]['services']);
+                    services.forEach((service) => {
+                        let msg_types = nodes_data[this.id_robot][node]['services'][service];
+                        this.discovered_nodes[node].services[service] = {
+                            service: service,
+                            msg_types: msg_types,
+                        }
+                    })
+                }
+            });
+
+            console.log('Got nodes ', this.discovered_nodes);
+            this.emit('nodes', this.discovered_nodes);
+
+            // let i = 0;
+            // let subscribe_topics = [];
+            // Object.keys(topics_data).forEach((id_robot) => {
+
+            //     if (!topics_data[id_robot])
+            //         return;
+
+            //     //sort by topic
+            //     topics_data[id_robot].sort((a, b) => {
+            //         if (a.topic < b.topic) {
+            //             return -1;
+            //         }
+            //         if (a.topic > b.topic) {
+            //             return 1;
+            //         }
+            //         // a must be equal to b
+            //         return 0;
+            //     });
+
+            //     $('#topics_heading').html(topics_data[id_robot].length+' Topics');
+
+
+            // });
+
+
+            // if (subscribe_topics.length)
+            //     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
+
+
+        });
+
+
         this.socket.on('topics', (topics_data) => {
 
             if (!topics_data[this.id_robot])
                 return;
 
-            console.log('Got topics ', topics_data[this.id_robot]);
-
-            this.topics = {};
+            this.discovered_topics = {};
             topics_data[this.id_robot].forEach((topic_data)=>{
-                if (!this.topics[topic_data.topic]) {
-                    this.topics[topic_data.topic] = {
-                        msg_types: topic_data.msgTypes,
-                        subscribed: false,
-                        id: topic_data.topic,
-                        is_video: topic_data.msgTypes.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
-                        msg_type_supported: this.FindMessageType(topic_data.msgTypes[0]) != null,
-                    }
+                let topic = topic_data.shift();
+                let msg_types = topic_data
+                this.discovered_topics[topic] = {
+                    msg_types: msg_types,
+                    id: topic,
+                    is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                    msg_type_supported: this.FindMessageType(msg_types[0]) != null,
                 }
             });
 
-            this.emit('topics', this.topics);
+            console.log('Got topics ', this.discovered_topics);
+            this.emit('topics', this.discovered_topics);
 
             // let i = 0;
             // let subscribe_topics = [];
@@ -232,19 +316,20 @@ class PhntmBridgeClient extends EventTarget {
             if (!services_data[this.id_robot])
                 return;
 
-            console.log('Got services:', services_data[this.id_robot]);
-
-            this.services = {};
+            this.discovered_services = {};
 
             // let i = 0;
-            services_data[this.id_robot].forEach((service) => {
-                this.services[service.service] = {
-                    service: service.service,
-                    msg_type: service.msgType
+            services_data[this.id_robot].forEach((service_data) => {
+                let service = service_data[0];
+                let msg_type = service_data[1];
+                this.discovered_services[service] = {
+                    service: service,
+                    msg_type: msg_type
                 };
             });
 
-            this.emit('services', this.services);
+            console.log('Got services:', this.discovered_services);
+            this.emit('services', this.discovered_services);
         });
 
         this.socket.on('cameras', (cameras_data) => {
@@ -252,19 +337,20 @@ class PhntmBridgeClient extends EventTarget {
             if (!cameras_data[this.id_robot])
                 return;
 
-            console.log('Got Cameras:', cameras_data[this.id_robot]);
 
-            this.cameras = {};
 
-            cameras_data[this.id_robot].forEach((camera) => {
-                this.cameras[camera.id] = {
-                    id: camera.id,
-                    info: camera.info,
-                    subscribed: false,
+            this.discovered_cameras = {};
+
+            Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
+
+                this.discovered_cameras[id_camera] = {
+                    id: id_camera,
+                    info: cameras_data[this.id_robot][id_camera],
                 };
             });
 
-            this.emit('cameras', this.cameras);
+            console.log('Got Cameras:', this.discovered_cameras);
+            this.emit('cameras', this.discovered_cameras);
         });
 
         this.socket.on('docker', (docker_containers_data) => {
@@ -272,15 +358,14 @@ class PhntmBridgeClient extends EventTarget {
             if (!docker_containers_data[this.id_robot])
                 return;
 
-            console.log('Got Docker containers:', docker_containers_data[this.id_robot]);
-
-            this.docker_containers = {};
+            this.discovered_docker_containers = {};
 
             docker_containers_data[this.id_robot].forEach((cont_data) => {
-                this.docker_containers[cont_data.id] = cont_data
+                this.discovered_docker_containers[cont_data.id] = cont_data
             });
 
-            this.emit('docker', this.docker_containers);
+            console.log('Got Docker containers:', this.discovered_docker_containers);
+            this.emit('docker', this.discovered_docker_containers);
         });
 
         // pc = InitPeerConnection(id_robot);

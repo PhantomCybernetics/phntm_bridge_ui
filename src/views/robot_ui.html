@@ -9,7 +9,7 @@
 </div>
 <div class="cleaner"></div>
 <br>
-<div id="robot_stats" style="display:none"></div>
+<!-- <div id="robot_stats" style="display:none"></div> -->
 
 <div id="menubar">
 
@@ -37,7 +37,7 @@
         <div id="docker_list"></div>
     </div>
 
-    <div id="discovery_state" class="inactive"></div>
+    <div id="introspection_state" class="inactive"></div>
 
     <div class="cleaner"></div>
 
@@ -45,7 +45,7 @@
 
 <div class="grid-stack" id="grid-stack"></div>
 
-<div id="monitors" style="display:none"></div>
+<!-- <div id="monitors" style="display:none"></div> -->
 
 <div id="gamepad">
     <div id="gamepad_status" title="Gamepad Settings"></div>
@@ -124,6 +124,10 @@
             console.info('(Socket.io) robot updated');
         });
 
+        robot.on('nodes', (nodes)=>{
+            console.warn('(Socket.io) got nodes:', nodes);
+        });
+
         // subscribes to /robot_description
         robot.on('/robot_description', (xml_str)=>{
 
@@ -139,20 +143,20 @@
 
         });
 
-        robot.on('media_stream', (stream)=>{
-            console.log('Got a stream', stream);
-        });
+        // robot.on('media_stream', (stream)=>{
+        //     console.log('Got a stream', stream);
+        // });
 
-        robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
-            console.log('Got picamera stream', stream);
-        });
+        // robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
+        //     console.log('Got picamera stream', stream);
+        // });
 
-        robot.on('/htop', (msg)=>{
-            //TODO
-        });
-        robot.on('/docker_htop', (msg)=>{
-            //TODO
-        });
+        // robot.on('/htop', (msg)=>{
+        //     //TODO
+        // });
+        // robot.on('/docker_htop', (msg)=>{
+        //     //TODO
+        // });
 
         //connects socket.io, then runs handshake with the robot
         robot.connect();

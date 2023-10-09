@@ -373,196 +373,53 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         }
     });
 
-    robotSocket.on('topics', async function(allTopics:any[]) {
+    robotSocket.on('nodes', async function(nodes:any) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
             return;
 
-        $d.l("Got topics from "+robot.id_robot+":");
-        allTopics.forEach(topicData => {
-            let topic = topicData[0];
-            // let robotSubscribed:boolean = topicData[1];
-            let msgTypes = [];
-            for (let i = 1; i < topicData.length; i++) {
-                msgTypes.push(topicData[i]); //msg types all the way
-            }
+        $d.l('Got '+Object.keys(nodes).length+' nodes from '+robot.id_robot, nodes);
+        robot.nodes = nodes;
+        robot.NodesToSubscribers();
+    });
 
-            let report = false;
-            let currTopic = null;
-            for (let i = 0; i < robot.topics.length; i++) {
-                if (robot.topics[i].topic == topic) {
-                    currTopic = robot.topics[i];
-                    break;
-                }
-            }
-            if (!currTopic) {
-                robot.topics.push({
-                    topic: topic,
-                    msgTypes: msgTypes
-                });
-                report = true;
-            } else {
-                if (currTopic.msgTypes.length != msgTypes.length) {
-                    currTopic.msgTypes = msgTypes;
-                    report = true;
-                } else {
-                    for (let i = 0; i < msgTypes.length; i++) {
-                        if (currTopic.msgTypes[i] != msgTypes[i]) {
-                            currTopic.msgTypes[i] = msgTypes[i];
-                            report = true;
-                        }
-                    }
-                }
-            }
+    robotSocket.on('topics', async function(topics:any[]) {
 
-            if (report) {
-                let out = "  "+topic+" ("+msgTypes.join(', ')+")";
-                $d.l(out.gray);
-            }
+        if (!robot.isAuthentificated || !robot.isConnected)
+            return;
 
-        });
-
+        $d.l('Got '+topics.length+' topics from '+robot.id_robot, topics);
+        robot.topics = topics;
         robot.TopicsToSubscribers();
     });
 
-    robotSocket.on('services', async function(allServices:any[]) {
+    robotSocket.on('services', async function(services:any[]) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
             return;
 
-        $d.l("Got services from "+robot.id_robot+":");
-        allServices.forEach(serviceData => {
-            let service = serviceData[0];
-            //let robotSubscribed:boolean = topicData[1];
-            let msgType = serviceData[1];
-
-            let report = false;
-            let currService = null;
-            for (let i = 0; i < robot.services.length; i++) {
-                if (robot.services[i].service == service) {
-                    currService = robot.services[i];
-                    break;
-                }
-            }
-            if (!currService) {
-                robot.services.push({
-                    service: service,
-                    msgType: msgType
-                });
-                report = true;
-            } else {
-
-                if (currService.msgType !== msgType) {
-                    currService.msgType = msgType;
-                    report = true;
-                }
-            }
-
-            if (report) {
-                let out = "  "+service+" ("+msgType+")";
-                $d.l(out.gray);
-            }
-
-        });
-
+        $d.l('Got '+services.length+' services from '+robot.id_robot, services);
+        robot.services = services;
         robot.ServicesToSubscribers();
     });
 
-
-    robotSocket.on('cameras', async function(allCameras:any[]) {
+    robotSocket.on('cameras', async function(cameras:any[]) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
             return;
 
-        $d.l("Got cameras from "+robot.id_robot+":");
-        allCameras.forEach(cameraData => {
-            let idCam = cameraData[0];
-            //let robotSubscribed:boolean = topicData[1];
-            let camInfo = cameraData[1];
-
-            let report = false;
-            let currCamera = null;
-            for (let i = 0; i < robot.cameras.length; i++) {
-                if (robot.cameras[i].id == idCam) {
-                    currCamera = robot.cameras[i];
-                    break;
-                }
-            }
-            if (!currCamera) {
-                robot.cameras.push({
-                    id: idCam,
-                    info: camInfo
-                });
-                report = true;
-            } else {
-
-                if (currCamera.info['Model'] !== camInfo['Model']) {
-                    currCamera.info['Model']  = camInfo['Model'];
-                    report = true;
-                }
-                if (currCamera.info['Location'] !== camInfo['Location']) {
-                    currCamera.info['Location']  = camInfo['Location'];
-                    report = true;
-                }
-                if (currCamera.info['Rotation'] !== camInfo['Rotation']) {
-                    currCamera.info['Rotation']  = camInfo['Rotation'];
-                    report = true;
-                }
-            }
-
-            if (report) {
-                let out = "  "+idCam;
-                $d.l(out.cyan);
-            }
-
-        });
-
+        $d.l('Got '+Object.keys(cameras).length+' cameras from '+robot.id_robot, cameras);
+        robot.cameras = cameras;
         robot.CamerasToSubscribers();
     });
 
-    robotSocket.on('docker', async function(allContainers:{id: string, name:string, image:string, short_id: string, status:string }[]) {
+    robotSocket.on('docker', async function(containers:any[]) {
 
         if (!robot.isAuthentificated || !robot.isConnected)
             return;
 
-        $d.l("Got Docker containers from "+robot.id_robot+":");
-        allContainers.forEach(contData => {
-
-            let report = false;
-            let currContainer = null;
-            for (let i = 0; i < robot.docker_containers.length; i++) {
-                if (robot.docker_containers[i].id == contData.id) {
-                    currContainer = robot.docker_containers[i];
-                    break;
-                }
-            }
-            if (!currContainer) {
-                robot.docker_containers.push(contData);
-                currContainer = contData;
-                report = true;
-            } else {
-
-                if (currContainer.image !== contData.image) {
-                    currContainer.image = contData.image
-                    report = true;
-                }
-                if (currContainer.short_id !== contData.short_id) {
-                    currContainer.short_id = contData.short_id
-                    report = true;
-                }
-                if (currContainer.status !== contData.status) {
-                    currContainer.status = contData.status
-                    report = true;
-                }
-            }
-
-            if (report) {
-                let out = "  "+currContainer.name+" ("+currContainer.status+")";
-                $d.l(out.gray);
-            }
-
-        });
-
+        $d.l('Got '+containers.length+' Docker containers from '+robot.id_robot, containers);
+        robot.docker_containers = containers;
         robot.DockerContainersToSubscribers();
     });
 

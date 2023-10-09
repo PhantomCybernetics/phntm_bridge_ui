@@ -1,7 +1,5 @@
 
-window.PanelWidgets = {
-
-}
+window.PanelWidgets = {}
 
 // BATTERY VISUALIZATION
 window.PanelWidgets.VideoWidget = (panel, ignored) => {
