@@ -226,7 +226,8 @@ h3 {
     width: 360px;
     max-height: 520px;
     padding: 10px 5px 0px 10px;
-    border-radius: 5px 0px 5px 5px;
+    border-radius: 0px 0px 5px 5px;
+    border-top: 3px solid #de5a30;
 }
 
 #docker_list .docker_cont {
@@ -322,6 +323,24 @@ h3 {
 #docker_controls.active:hover #docker_list,
 #service_controls.active.setting_shortcuts #service_list {
     display: block;
+}
+
+.expandable.collapsed .service {
+    display: none;
+}
+
+.expandable button {
+    display: block;
+    text-align: center;
+    border: 0px;
+    background: transparent;
+    width: 100%;
+    font-size: 11px;
+    color: #fff;
+    border-radius: 5px;
+}
+.expandable button:hover {
+    background: #bc61d06e;
 }
 
 .service {
@@ -435,8 +454,9 @@ h3 {
     background: #c20000;
 }
 
-.service_button.working {
-    background: #ff8c00;
+.service_button.working,
+.service_button.working:hover {
+    background: #ff8c00 !important;
 }
 
 #robot_info, #socketio_status {

@@ -152,9 +152,7 @@ class GamepadController {
 
                 //select triggers iw scan and roam
                 if (buttons[10].pressed) {
-                    if (!$('#trigger_wifi_scan').hasClass('working')) {
-                        this.client.TriggerWifiScan()
-                    }
+                    this.ui.trigger_wifi_scan();
                 }
 
                 // if (transmitting_type == 'TwistStamped') {

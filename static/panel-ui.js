@@ -62,7 +62,7 @@ class Panel {
         if (this.msg_type) {
 
             if (this.msg_type != 'video') {
-                this.msg_type_class = msg_type ? FindMessageType(this.msg_type, supported_msg_types) : null;
+                this.msg_type_class = msg_type ? this.client.find_message_type(this.msg_type) : null;
                 $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
 
                 if (this.msg_type_class == null && this.msg_type != null) {
@@ -626,7 +626,7 @@ class PanelUI {
                     $(this).addClass('working');
                     // console.log('Running '+cont_data.name);
                     let item = this;
-                    client.DockerContainerCall(client.id_robot, container.id, 'start', client.socket, () => {
+                    client.docker_container_start(container.id, () => {
                         $(item).removeClass('working');
                     });
                 });
@@ -636,7 +636,7 @@ class PanelUI {
                     $(this).addClass('working');
                     // console.log('Stopping '+cont_data.name);
                     let item = this;
-                    client.DockerContainerCall(client.id_robot, container.id, 'stop', client.socket, () => {
+                    client.docker_container_stop(container.id, () => {
                         $(item).removeClass('working');
                     });
                 });
@@ -646,7 +646,7 @@ class PanelUI {
                     $(this).addClass('working');
                     // console.log('Restarting '+cont_data.name);
                     let item = this;
-                    client.DockerContainerCall(client.id_robot, container.id, 'restart', client.socket, () => {
+                    client.docker_container_restart(container.id, () => {
                         $(item).removeClass('working');
                     });
                 });
@@ -748,6 +748,10 @@ class PanelUI {
             } else {
                 $('#gamepad').addClass('debug_on');
             }
+        });
+
+        $('#trigger_wifi_scan').click(() => {
+            that.trigger_wifi_scan();
         });
     }
 
@@ -884,6 +888,8 @@ class PanelUI {
 
         [ nodes_with_handled_ui, unhandled_nodes].forEach((node_list) => {
 
+            let some_services_handled = node_list == nodes_with_handled_ui;
+
             node_list.sort((a, b) => {
                 if (a.node < b.node) return -1;
                 if (a.node > b.node) return 1;
@@ -902,33 +908,56 @@ class PanelUI {
                 });
 
                 $('#service_list').append('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
-
+                let unhandled_block_html = [];
                 services_sorted.forEach((service)=>{
 
                     num_services++;
 
-                    $('#service_list').append('<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
-                        + '<div '
-                        + 'class="service_heading" '
-                        + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
-                        + '>'
-                        + service.service
-                        + '</div>'
-                        + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
-                        + '<div class="service_input" id="service_input_'+i+'"></div>'
-                        + '</div>'
-                    );
+                    let html = '<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
+                             + '<div '
+                             + 'class="service_heading" '
+                             + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
+                             + '>'
+                             + service.service
+                             + '</div>'
+                             + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
+                             + '<div class="service_input" id="service_input_'+i+'"></div>'
+                             + '</div>';
 
-                    if (service.ui_handled) {
-                        this.input_widgets[service.msg_types[0]]($('#service_input_'+i), service, '<%= id_robot %>', this.client.socket, this.client.supported_msg_types);
-                    }
+                    if (service.ui_handled || !some_services_handled)
+                        $('#service_list').append(html);
+                    else
+                        unhandled_block_html.push(html);
 
+                    service.n = i;
                     i++;
 
                 });
+                if (unhandled_block_html.length) {
+                    $('#service_list').append('<div class="expandable collapsed">'+unhandled_block_html.join('')+'<button>show more</button></div>');
+                }
+
+                services_sorted.forEach((service)=>{
+                    if (service.ui_handled) {
+                        this.input_widgets[service.msg_types[0]]($('#service_input_'+service.n), service, this.client);
+                    }
+                })
 
             });
 
+
+        });
+
+        $('#service_list .expandable').click((ev)=>{
+            console.warn('CLICK', ev.target);
+            let collapsed = $(ev.target).parent().hasClass('collapsed')
+            if (collapsed) {
+                $(ev.target).parent().removeClass('collapsed');
+                $(ev.target).html('show less')
+            } else {
+                $(ev.target).parent().addClass('collapsed');
+                $(ev.target).html('show more')
+            }
         });
 
         if (num_services > 0) {
@@ -940,6 +969,15 @@ class PanelUI {
 
         if (this.gamepad)
             this.gamepad.MarkMappedServiceButtons();
+    }
+
+    trigger_wifi_scan() {
+        if ($('#trigger_wifi_scan').hasClass('working'))
+            return;
+        $('#trigger_wifi_scan').addClass('working');
+        this.client.wifi_scan(true, (res) => {
+            $('#trigger_wifi_scan').removeClass('working');
+        })
     }
 
     //widget_opts = {};

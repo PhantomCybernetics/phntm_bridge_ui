@@ -7,7 +7,7 @@ class TopicWriter {
 
         if (!client.msg_writers[msg_type]) {
             let Writer = window.Serialization.MessageWriter;
-            let msg_class = client.FindMessageType(msg_type);
+            let msg_class = client.find_message_type(msg_type);
             if (!msg_class) {
                 console.error('Failed creating writer for '+msg_type+'; message class not found');
                 return null;
@@ -198,7 +198,7 @@ class PhntmBridgeClient extends EventTarget {
                         this.discovered_nodes[node].publishers[topic] = {
                             msg_types: msg_types,
                             is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
-                            msg_type_supported: this.FindMessageType(msg_types[0]) != null,
+                            msg_type_supported: this.find_message_type(msg_types[0]) != null,
                         }
                     })
                 }
@@ -209,7 +209,7 @@ class PhntmBridgeClient extends EventTarget {
                         this.discovered_nodes[node].subscribers[topic] = {
                             msg_types: msg_types,
                             is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
-                            msg_type_supported: this.FindMessageType(msg_types[0]) != null,
+                            msg_type_supported: this.find_message_type(msg_types[0]) != null,
                         }
                     })
                 }
@@ -273,7 +273,7 @@ class PhntmBridgeClient extends EventTarget {
                     msg_types: msg_types,
                     id: topic,
                     is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
-                    msg_type_supported: this.FindMessageType(msg_types[0]) != null,
+                    msg_type_supported: this.find_message_type(msg_types[0]) != null,
                 }
             });
 
@@ -623,7 +623,7 @@ class PhntmBridgeClient extends EventTarget {
         });
 
         let Reader = window.Serialization.MessageReader;
-        let msg_type_class = this.FindMessageType(msg_type, this.supported_msg_types)
+        let msg_type_class = this.find_message_type(msg_type, this.supported_msg_types)
         let msg_reader = new Reader( [ msg_type_class ].concat(this.supported_msg_types) );
 
         this.topic_dcs[topic] = dc;
@@ -895,8 +895,62 @@ class PhntmBridgeClient extends EventTarget {
         return pc;
     }
 
+    service_call(service, data, cb) {
+        let req = {
+            id_robot: this.id_robot,
+            service: service,
+            msg: data
+        }
+        console.warn('Service call request', req);
+        this.socket.emit('service', req, (reply)=> {
+            console.log('Service call reply', reply);
+            if (cb)
+                cb(reply);
+        });
+    }
 
-    FindMessageType(search, msg_types) {
+    docker_container_start(id_cont, cb) { //
+       this._docker_call(id_cont, 'start', cb)
+    }
+
+    docker_container_stop(id_cont, cb) { //
+        this._docker_call(id_cont, 'stop', cb)
+    }
+
+    docker_container_restart(id_cont, cb) { //
+        this._docker_call(id_cont, 'restart', cb)
+    }
+
+    _docker_call(id_cont, msg, cb) { //
+        let req = {
+            id_robot: this.id_robot,
+            container: id_cont,
+            msg: msg
+        }
+        console.warn('Docker request', req);
+        this.socket.emit('docker', req, (reply)=> {
+            console.log('Docker reply', reply);
+            if (cb)
+                cb(reply);
+        });
+    }
+
+    wifi_scan(roam=true, cb) {
+        console.warn('Triggering wifi scan on robot '+this.id_robot+'; roam='+roam)
+        this.socket.emit('iw:scan', { id_robot: this.id_robot, roam: roam }, (res) => {
+            if (!res || !res['success']) {
+                console.error('Wifi scan err: ', res);
+                if (cb)
+                    cb(res);
+                return;
+            }
+            console.log('IW Scan results:', res.res);
+            if (cb)
+                cb(res.res);
+        });
+    }
+
+    find_message_type(search, msg_types) {
         if (msg_types === undefined)
             msg_types = this.supported_msg_types;
 
@@ -1006,44 +1060,14 @@ function lerpColor(a, b, amount) {
 
 
 
-function TriggerWifiScan(roam=true) {
-    console.warn('Triggering wifi scan on robot '+id_robot)
-    $('#trigger_wifi_scan').addClass('working');
-    socket.emit('iw:scan', { id_robot: id_robot, roam: roam }, (res) => {
-        $('#trigger_wifi_scan').removeClass('working');
-        if (!res || !res['success']) {
-            console.error('Wifi scan err: ', res);
-            return;
-        }
-        console.log('IW Scan results:', res)
-        let candidates = [];
-        res.res.forEach((one_res) => {
-            if (one_res.essid == lastESSID) {
-                candidates.push(one_res)
-            }
-        });
-        console.log('Same ESSID candidates:', candidates)
-    });
-}
 
 
 
 
 
 
-function DockerContainerCall(id_robot, id_cont, msg, socket, cb) {
-    let req = {
-        id_robot: id_robot,
-        container: id_cont,
-        msg: msg
-    }
-    console.warn('docker request', req);
-    socket.emit('docker', req, (reply)=> {
-        console.log('docker reply', reply);
-        if (cb)
-            cb(reply);
-    });
-}
+
+
 
 // function WebRTC_Negotiate(id_robot)
 // {
@@ -1272,7 +1296,7 @@ function _HandleTopicSubscriptionReply(res) {
             });
 
             let Reader = window.Serialization.MessageReader;
-            let msg_type_class = FindMessageType(topics[topic]['msg_types'][0], supported_msg_types)
+            let msg_type_class = find_message_type(topics[topic]['msg_types'][0], supported_msg_types)
             let msg_reader = new Reader( [ msg_type_class ].concat(supported_msg_types) );
 
             topic_dcs[topic] = dc;
