@@ -2,7 +2,11 @@ let panelNo = 0;
 
 class Panel {
 
-    constructor(id_source, panels, grid, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
+    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
+        this.ui = ui;
+        let panels = ui.panels;
+        let grid = ui.grid;
+
         this.id_source = id_source;
         this.src_visible = src_visible;
         this.zoom = zoom;
@@ -62,7 +66,7 @@ class Panel {
         if (this.msg_type) {
 
             if (this.msg_type != 'video') {
-                this.msg_type_class = msg_type ? this.client.find_message_type(this.msg_type) : null;
+                this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
                 $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
 
                 if (this.msg_type_class == null && this.msg_type != null) {
@@ -70,16 +74,16 @@ class Panel {
                     $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
                 }
 
-                if (this.msg_type != null) {
-                    let Reader = window.Serialization.MessageReader;
-                    this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
-                }
+                // if (this.msg_type != null) {
+                //     let Reader = window.Serialization.MessageReader;
+                //     this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
+                // }
             }
 
-            if (panel_widgets[this.msg_type] != undefined) {
+            if (this.ui.widgets[this.msg_type] != undefined) {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    panel_widgets[this.msg_type].widget(this, null) //no data yet
+                    this.ui.widgets[this.msg_type].widget(this, null) //no data yet
                 }
             } else {  //no widget, show source
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
@@ -358,7 +362,7 @@ class PanelUI {
     msg_type_class = null;
     n = ++panelNo;
 
-    msg_reader = null;
+    // msg_reader = null;
     max_height = 0;
 
     display_widget = null;
@@ -986,7 +990,7 @@ class PanelUI {
         let panel = this.panels[id_source];
         if (state) {
             if (!panel) {
-                panel = new Panel(id_source, panels, grid, w, h, x, y, src_visible, zoom);
+                panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
                 panel.init(msg_type)
             }
         } else if (panel) {
@@ -998,7 +1002,7 @@ class PanelUI {
         if (this.panels[id_source])
             return this.panels[id_source];
 
-        let panel = new Panel(id_source, this.panels, this.grid, w, h, x, y, src_visible, zoom);
+        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
         // panel.init(msg_type)
         this.client.on(panel.id_source, (msg)=>{ // subscribes id topic or camera
             panel
