@@ -381,6 +381,7 @@ class PhntmBridgeClient extends EventTarget {
         if (!this.event_calbacks[event])
             this.event_calbacks[event] = [];
         this.event_calbacks[event].push(cb);
+
     }
 
     once(event, cb) {
@@ -395,18 +396,26 @@ class PhntmBridgeClient extends EventTarget {
     }
 
     off(event, cb) {
-        if (!this.event_calbacks[event])
+        // console.warn('unsubscribe', cb)
+        if (!this.event_calbacks[event]) {
+            console.warn('event not registered', event, this.event_calbacks)
             return;
+        }
+
         let p = this.event_calbacks[event].indexOf(cb)
         if (p !== -1) {
             this.event_calbacks[event].splice(p, 1);
-            if (this.event_calbacks[event].length == 0) {
+            // console.log('Handler removed for '+event+);
+            if (Object.keys(this.event_calbacks[event]).length == 0) {
                 delete this.event_calbacks[event];
                 if (event.indexOf('/') === 0) { // topic or camera id
                     console.log('Unsubscribing from '+event);
                     this.remove_subscriber(event);
                 }
             }
+        }
+        else {
+            console.err('cb not found in unsubscribe')
         }
     }
 
@@ -426,14 +435,16 @@ class PhntmBridgeClient extends EventTarget {
         this.subscribers[id_source] = new Subscriber(this, id_source);
 
         if (this.init_complete) { //not waiting for initial subs
-            this.socket.this.emit('subscribe:read', [ id_source ], (res_sub) => {
-                console.wanm('Res sub', res_sub);
+            this.socket.emit('subscribe', {
+                id_robot: this.id_robot,
+                sources: [ id_source ]
+            }, (res) => {
+                // console.warn('Res sub', res);
             });
         }
 
         //init dc async
-
-        return this.topic_writers[id_source];
+        return this.subscribers[id_source];
     }
 
     remove_subscriber(id_source) {
@@ -442,6 +453,15 @@ class PhntmBridgeClient extends EventTarget {
             return;
 
         delete this.subscribers[id_source];
+
+        if (this.init_complete) { //not waiting for initial subs
+            this.socket.emit('unsubscribe', {
+                id_robot: this.id_robot,
+                sources: [ id_source ]
+            }, (res) => {
+                // console.warn('Res unsub', res);
+            });
+        }
 
         //TODO
     }
@@ -659,11 +679,9 @@ class PhntmBridgeClient extends EventTarget {
                 raw_type = 'ArrayBuffer';
             } else { //string
                 decoded = rawData;
-                raw_len = decoded.length;
-                raw_type = 'String';
             }
 
-            that.emit(topic, decoded)
+            that.emit(topic, decoded, ev)
 
             // if (topic == '/robot_description') {
             //     console.warn('Got robot descripotion: ', decoded);
@@ -1274,7 +1292,7 @@ function _HandleTopicSubscriptionReply(res) {
 
         if (!topics[topic]) {
             console.warn('Topic '+topic+' not found in topics list', topics);
-            continue;
+            continue;off()
         }
 
         let is_image = topics[topic]['msg_types'][0] == 'sensor_msgs/msg/Image'

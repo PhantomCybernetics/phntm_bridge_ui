@@ -766,31 +766,54 @@ sioApps.on('connect', async function(appSocket : AppSocket){
     //     });
     // });
 
-    appSocket.on('subcribe:read', async function (data:{ id_robot:string, topics:[string, number][]}, returnCallback) {
-
-        $d.log('App requesting read subscription to robot with:', data);
+    appSocket.on('subscribe', async function (data:{ id_robot:string, sources:string[]}, returnCallback) {
+        $d.log('App subscribing to:', data);
 
         let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
         if (!robot)
             return;
 
-        if (!data.topics) {
+        if (!data.sources) {
             if (returnCallback) {
                 returnCallback({
                     'err': 1,
-                    'msg': 'Invalid subscription data'
+                    'msg': 'Invalid subscription sources'
                 })
             }
             return;
         }
 
-        robot.socket.emit('subscription:read', data, (resData:any) => {
+        robot.socket.emit('subscribe', data, (resData:any) => {
 
-            $d.log('Got robot\'s read subscription answer:', resData);
+            $d.log('Got robot\'s subscription answer:', resData);
 
             return returnCallback(resData);
         });
+    });
 
+    appSocket.on('unsubscribe', async function (data:{ id_robot:string, sources:string[]}, returnCallback) {
+        $d.log('App unsubscribing from:', data);
+
+        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
+        if (!robot)
+            return;
+
+        if (!data.sources) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid subscription sources'
+                })
+            }
+            return;
+        }
+
+        robot.socket.emit('unsubscribe', data, (resData:any) => {
+
+            $d.log('Got robot\'s unsubscription answer:', resData);
+
+            return returnCallback(resData);
+        });
     });
 
     appSocket.on('cameras:read', async function (data:{ id_robot:string, cameras:[string, number][]}, returnCallback) {

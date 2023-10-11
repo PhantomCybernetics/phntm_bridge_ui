@@ -288,7 +288,7 @@ window.PanelWidgets.LaserScanWidget = (panel, decoded) => {
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
                 panel.zoom +=1.0;
                 $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                Panel.UpdateUrlHash();
+                panel.ui.update_url_hash();
             });
             $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
                 if (panel.zoom - 1.0 <= 0) {
@@ -296,7 +296,7 @@ window.PanelWidgets.LaserScanWidget = (panel, decoded) => {
                 }
                 panel.zoom -= 1.0;
                 $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                Panel.UpdateUrlHash();
+                panel.ui.update_url_hash();
             });
         }
 

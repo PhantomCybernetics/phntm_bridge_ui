@@ -1,6 +1,30 @@
-let panelNo = 0;
-
 class Panel {
+
+    ui = null;
+
+    id_source = null;
+    id_stream = null;
+    msg_type = null; //str
+    msg_type_class = null;
+
+    static PANEL_NO = 0;
+
+    // msg_reader = null;
+    max_height = 0;
+
+    display_widget = null;
+    data_trace = [];
+    widget_menu_cb = null;
+
+    max_trace_length = 100;
+    zoom = 1;
+
+    grid_widget = null;
+
+    initiated = false;
+    resize_event_handler = null;
+    src_visible = false;
+    //const event = new Event("build");
 
     constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
         this.ui = ui;
@@ -12,6 +36,7 @@ class Panel {
         this.zoom = zoom;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
+        this.n = Panel.PANEL_NO++;
         //let display_source = false;
 
         let html =
@@ -89,6 +114,18 @@ class Panel {
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
                 $('#panel_source_'+this.n).addClass('enabled');
             }
+
+            if (['video', 'sensor_msgs/msg/Image'].indexOf(msg_type) > -1) {
+                this.on_stream_context_wrapper = (stream) => {
+                    this.on_stream(stream)
+                }
+                this.ui.client.on(this.id_source, this.on_stream_context_wrapper);
+            } else {
+                this.on_data_context_wrapper = (msg, ev) => {
+                    this.on_data(msg, ev)
+                }
+                this.ui.client.on(this.id_source, this.on_data_context_wrapper);
+            }
         }
 
         this.setMenu()
@@ -142,17 +179,17 @@ class Panel {
                 let w = parseInt($(that.grid_widget).attr('gs-w'));
                 if (w < 5) {
                     w *= 2;
-                    grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
+                    that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
                 } else {
                     that.onResize();
-                    Panel.UpdateUrlHash();
+                    that.ui.update_url_hash();
                 }
             } else {
                 source_el.removeClass('enabled');
                 widget_el.removeClass('source_visible');
                 let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
                 that.src_visible = false;
-                grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
+                that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
             }
         });
 
@@ -241,16 +278,27 @@ class Panel {
            this.resize_event_handler();
     }
 
-    onData(ev, decoded, raw_type, raw_len) {
+    on_data(msg, ev) {
+        // console.log('Got data for '+this.id_source+': ', msg)
+
+        let raw_len = 0;
+        let raw_type = "";
+        if (ev.data instanceof ArrayBuffer) {
+            raw_len = ev.data.byteLength;
+            raw_type = 'ArrayBuffer';
+        } else {
+            raw_len = msg.length;
+            raw_type = 'String';
+        }
 
         let datahr = 'N/A';
-        if ((this.msg_type == 'std_msgs/msg/String' && decoded.data) || raw_type === 'String' ) {
+        if ((this.msg_type == 'std_msgs/msg/String' && msg.data) || raw_type === 'String' ) {
 
             let str_val = null;
             if (this.msg_type == 'std_msgs/msg/String')
-                str_val = decoded.data;
+                str_val = msg.data;
             else
-                str_val = decoded;
+                str_val = msg;
 
             if (str_val.indexOf('xml') !== -1)  {
                 datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
@@ -259,11 +307,11 @@ class Panel {
             }
             //console.log(window.xmlFormatter)
 
-        } else if (decoded) {
-            datahr = JSON.stringify(decoded, null, 2);
+        } else if (msg) {
+            datahr = JSON.stringify(msg, null, 2);
 
-            if (panel_widgets[this.msg_type] && panel_widgets[this.msg_type].widget)
-                panel_widgets[this.msg_type].widget(this, decoded);
+            if (this.ui.widgets[this.msg_type] && this.ui.widgets[this.msg_type].widget)
+            this.ui.widgets[this.msg_type].widget(this, msg);
         }
 
         $('#panel_source_'+this.n).html(
@@ -272,6 +320,22 @@ class Panel {
             '<br>' +
             datahr
         );
+
+        let newh = $('#panel_source_'+this.n).height();
+        //console.log('max_height='+this.max_height+' newh='+newh);
+
+        if (newh > this.max_height) {
+            this.max_height = newh;
+        }
+    }
+
+    on_stream(stream) {
+        console.log('Got stream for '+this.id_source+': ', stream)
+    }
+
+    onData(ev, decoded, raw_type, raw_len) {
+
+
 
 
         //let oldh = $('#panel_content_'+this.n).height();
@@ -309,12 +373,6 @@ class Panel {
 
         // }
 
-        let newh = $('#panel_source_'+this.n).height();
-        //console.log('max_height='+this.max_height+' newh='+newh);
-
-        if (newh > this.max_height) {
-            this.max_height = newh;
-        }
         //$('#panel_content_'+this.n).height(this.max_height);
 
 
@@ -328,7 +386,13 @@ class Panel {
             $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
 
-            SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
+            if (this.msg_type == 'sensor_msgs/msg/Image') {
+                this.ui.client.off(this.id_source, this.on_stream_context_wrapper);
+            } else {
+                this.ui.client.off(this.id_source, this.on_data_context_wrapper);
+            }
+
+            // SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
         } // else { //topics not loaded
             // Panel.TogglePanel(that.id_source, null, false);
         // }
@@ -339,15 +403,15 @@ class Panel {
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
 
-            SetCameraSubscription(id_robot, [ this.id_source ], false);
+            this.ui.client.off(this.id_source, this.on_stream_context_wrapper);
         }
 
         // let x = parseInt($(this.grid_widget).attr('gs-x'));
         // let y = parseInt($(this.grid_widget).attr('gs-y'));
 
-        grid.removeWidget(this.grid_widget);
+        this.ui.grid.removeWidget(this.grid_widget);
 
-        delete panels[this.id_source];
+        delete this.ui.panels[this.id_source];
 
         $('.grid_panel[data-source="'+this.id_source+'"]').remove(); //updates url hash
         console.log('Panel closed for '+this.id_source)
@@ -356,28 +420,6 @@ class Panel {
 }
 
 class PanelUI {
-    id_source = null;
-    id_stream = null;
-    msg_type = null; //str
-    msg_type_class = null;
-    n = ++panelNo;
-
-    // msg_reader = null;
-    max_height = 0;
-
-    display_widget = null;
-    data_trace = [];
-    widget_menu_cb = null;
-
-    max_trace_length = 100;
-    zoom = 1;
-
-    grid_widget = null;
-
-    initiated = false;
-    resize_event_handler = null;
-    src_visible = false;
-    //const event = new Event("build");
 
     panels = {};
 
@@ -585,7 +627,7 @@ class PanelUI {
                 let h = panel_widgets['video'].h;
 
                 that.toggle_panel(id_cam, 'video', state, w, h);
-                client.SetCameraSubscription(id_robot, [ cam ], state);
+                // client.SetCameraSubscription(id_robot, [ cam ], state);
             });
 
         });
@@ -660,15 +702,16 @@ class PanelUI {
 
         });
 
-        client.on('media_stream', (stream) => {
-            for (let id_panel in Object.keys(that.panels)) {
-                let panel = that.panels[id_panel];
-                if (panel.id_stream == stream.id) {
-                    console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
-                    document.getElementById('panel_video_'+panel.n).srcObject = stream;
-                }
-            }
-        });
+        // client.on('media_stream', (stream) => {
+        //     for (let id_panel in Object.keys(that.panels)) {
+        //         let panel = that.panels[id_panel];
+        //         console.log('id_panel: '+id_panel+'; panel=', panel, that.panels)
+        //         if (panel.id_stream == stream.id) {
+        //             console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
+        //             document.getElementById('panel_video_'+panel.n).srcObject = stream;
+        //         }
+        //     }
+        // });
 
         client.on('peer_connected', () => {
             that.set_webrtc_status_label();
@@ -768,6 +811,9 @@ class PanelUI {
 
         let unique_topics = [];
 
+        let that = this;
+
+        let i = 0;
         node_ids.forEach((node) => {
 
             if (nodes[node].publishers) {
@@ -784,7 +830,6 @@ class PanelUI {
                     return 0;
                 });
 
-                let i = 0;
                 topic_ids.forEach((id_topic)=>{
 
                     if (unique_topics.indexOf(id_topic) === -1)
@@ -831,23 +876,31 @@ class PanelUI {
                     i++;
                 });
             }
+        });
 
+        $('#topic_list INPUT.enabled:checkbox').change(function(event) {
+            let id_topic = $(this).parent('DIV.topic').data('topic');
+            let state = this.checked;
 
+            let w = 3; let h = 3; //defaults overridden by widgets
+            let msg_type = that.client.discovered_topics[id_topic]['msg_types'][0];
 
-            // $('#topic_list INPUT.enabled:checkbox').change(function(event) {
-            //     let id_topic = $(this).parent('DIV.topic').data('topic');
-            //     let state = this.checked;
+            if (that.widgets[msg_type]) {
+                w = that.widgets[msg_type].w;
+                h = that.widgets[msg_type].h;
+            }
+            let trigger_el = this;
 
-            //     let w = 3; let h = 3;
-            //     if (that.widgets[topics[widgets].msg_types]) {
-            //         w = panel_widgets[topics[widgets].msg_types].w;
-            //         h = panel_widgets[topics[widgets].msg_types].h;
-            //     }
+            console.log('Clicker topic '+id_topic);
 
-            //     that.toggle_panel(topic, topics[topic].msg_types, state, w, h);
-            //     // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
-            // });
+            $('#topic_list .topic[data-topic="'+id_topic+'"] INPUT:checkbox').each(function(index){
+                if (this != trigger_el)
+                    $(this).prop('checked', state)
+                // console.log('Also '+id_topic, this);
+            });
 
+            that.toggle_panel(id_topic, msg_type, state, w, h);
+            // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
         });
 
         let num_topics = unique_topics.length;
