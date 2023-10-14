@@ -88,7 +88,7 @@ class Panel {
     init(msg_type=null) {
 
         this.msg_type = msg_type;
-        if (this.msg_type) {
+        if (this.msg_type && !this.initiated) {
 
             if (this.msg_type != 'video') {
                 this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
@@ -116,20 +116,28 @@ class Panel {
             }
 
             if (['video', 'sensor_msgs/msg/Image'].indexOf(msg_type) > -1) {
-                this.on_stream_context_wrapper = (stream) => {
-                    this.on_stream(stream)
+                if (!this.on_stream_context_wrapper) {
+                    this.on_stream_context_wrapper = (stream) => {
+                        this.on_stream(stream)
+                    }
+                    this.ui.client.on(this.id_source, this.on_stream_context_wrapper);
                 }
-                this.ui.client.on(this.id_source, this.on_stream_context_wrapper);
             } else {
-                this.on_data_context_wrapper = (msg, ev) => {
-                    this.on_data(msg, ev)
+                if (!this.on_data_context_wrapper) {
+                    this.on_data_context_wrapper = (msg, ev) => {
+                        this.on_data(msg, ev)
+                    }
+                    this.ui.client.on(this.id_source, this.on_data_context_wrapper);
                 }
-                this.ui.client.on(this.id_source, this.on_data_context_wrapper);
             }
+
+            this.initiated = true;
         }
 
         this.setMenu()
         this.onResize();
+
+
     }
 
     setMenu() {
@@ -311,7 +319,7 @@ class Panel {
             datahr = JSON.stringify(msg, null, 2);
 
             if (this.ui.widgets[this.msg_type] && this.ui.widgets[this.msg_type].widget)
-            this.ui.widgets[this.msg_type].widget(this, msg);
+                this.ui.widgets[this.msg_type].widget(this, msg);
         }
 
         $('#panel_source_'+this.n).html(
@@ -446,7 +454,7 @@ class PanelUI {
         this.client = client;
 
         let GridStack = window.exports.GridStack;
-        this.grid = GridStack.init({ cellHeight: grid_cell_height });
+        this.grid = GridStack.init({ float: false, cellHeight: grid_cell_height });
 
         this.panels = {}
         this.gamepad = gamepad;

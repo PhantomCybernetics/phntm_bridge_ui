@@ -1024,6 +1024,9 @@ webExpressApp.set('views', path.join(__dirname, '../src/views'));
 webExpressApp.set('view engine', 'html');
 webExpressApp.use('/static/', express.static('static/'));
 webExpressApp.use('/static/socket.io/', express.static('node_modules/socket.io-client/dist/'));
+webExpressApp.use('/static/gridstack/', express.static('node_modules/gridstack/dist/'));
+// temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
+webExpressApp.use('/static/gridstack-forked/', express.static('/root/gridstack.js/dist/'));
 
 webExpressApp.get('/robot/:ID', async function(req:express.Request, res:express.Response) {
 
