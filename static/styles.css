@@ -186,7 +186,8 @@ h3 {
     border-bottom: 5px solid #de5a30;
 }
 
-#service_controls.active:hover {
+#service_controls.active:hover,
+#service_controls.active.setting_shortcuts {
     border-top: 2px solid #b311a3;
     border-bottom: 5px solid #b311a3;
 }
@@ -544,11 +545,12 @@ BUTTON#trigger_wifi_scan.working {
 .monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
     display: none;
     position: absolute;
-    left: -50px;
-    top: 0px;
-    width: 170px;
-    height: 20px;
+    left: -5%;
+    top: -13%;
+    width: 110%;
+    height: 120%;
     background-color: transparent;
+    z-index: -1;
 }
 
 .monitor_menu:hover {

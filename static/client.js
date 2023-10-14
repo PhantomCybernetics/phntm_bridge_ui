@@ -373,15 +373,19 @@ class PhntmBridgeClient extends EventTarget {
 
     on(event, cb) {
 
+        if (!this.event_calbacks[event])
+            this.event_calbacks[event] = [];
+
+        let p = this.event_calbacks[event].indexOf(cb);
+        if (p > -1)
+            return;
+
+        this.event_calbacks[event].push(cb);
+
         if (event.indexOf('/') === 0) {  // topic or camera id
             console.log('Subscribing to '+event);
             this.create_subscriber(event);
         }
-
-        if (!this.event_calbacks[event])
-            this.event_calbacks[event] = [];
-        this.event_calbacks[event].push(cb);
-
     }
 
     once(event, cb) {
@@ -398,14 +402,14 @@ class PhntmBridgeClient extends EventTarget {
     off(event, cb) {
         // console.warn('unsubscribe', cb)
         if (!this.event_calbacks[event]) {
-            console.warn('event not registered', event, this.event_calbacks)
+            // console.warn('Event not registered', event, this.event_calbacks)
             return;
         }
 
         let p = this.event_calbacks[event].indexOf(cb)
         if (p !== -1) {
             this.event_calbacks[event].splice(p, 1);
-            // console.log('Handler removed for '+event+);
+            console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
             if (Object.keys(this.event_calbacks[event]).length == 0) {
                 delete this.event_calbacks[event];
                 if (event.indexOf('/') === 0) { // topic or camera id
@@ -415,7 +419,7 @@ class PhntmBridgeClient extends EventTarget {
             }
         }
         else {
-            console.err('cb not found in unsubscribe')
+            // console.error('cb not found in unsubscribe for '+event, cb)
         }
     }
 
@@ -429,8 +433,12 @@ class PhntmBridgeClient extends EventTarget {
 
     create_subscriber(id_source) {
 
-        if (this.subscribers[id_source])
+        if (this.subscribers[id_source]) {
+            console.log('Reusing subscriber for '+id_source)
             return this.subscribers[id_source];
+        }
+
+        console.log('Creating subscriber for '+id_source)
 
         this.subscribers[id_source] = new Subscriber(this, id_source);
 
@@ -439,7 +447,7 @@ class PhntmBridgeClient extends EventTarget {
                 id_robot: this.id_robot,
                 sources: [ id_source ]
             }, (res) => {
-                // console.warn('Res sub', res);
+                 console.warn('Res sub', res);
             });
         }
 
@@ -449,8 +457,13 @@ class PhntmBridgeClient extends EventTarget {
 
     remove_subscriber(id_source) {
 
-        if (!this.subscribers[id_source])
+        if (!this.subscribers[id_source]) {
+            console.log('Subscriber not found for '+id_source+'; not removing')
             return;
+        }
+
+        console.log('Removing subscriber for '+id_source);
+        // this.topic_dcs
 
         delete this.subscribers[id_source];
 
@@ -475,7 +488,7 @@ class PhntmBridgeClient extends EventTarget {
 
         if (this.init_complete) { //not waiting for initial subs
             this.socket.this.emit('topic:write', [ [ topic, msg_type ] ] ,  (res_sub) => {
-                console.wanm('Res pub: ', res_sub);
+                // console.wanm('Res pub: ', res_sub);
             });
         }
 
@@ -527,13 +540,17 @@ class PhntmBridgeClient extends EventTarget {
         }
 
         this.name = robot_data['name'];
+        let prev_online = this.online;
         this.online = robot_data['ip'] ? true : false;
         this.ip = robot_data['ip'];
+        let prev_introspection = this.introspection;
         this.introspection = robot_data['introspection']
 
-        this.emit('online', this.online);
+        if (prev_online != this.online)
+            this.emit('online', this.online);
         this.emit('update');
-        this.emit('introspection', this.introspection);
+        if (prev_introspection != this.introspection)
+            this.emit('introspection', this.introspection);
 
         // if (robot_online && (!pc || pc.connectionState != 'connected')) {
         //     WebRTC_Negotiate(robot_data['id_robot']);
@@ -546,8 +563,10 @@ class PhntmBridgeClient extends EventTarget {
                 let msg_type = topic_data[2];
                 if (dc_id && msg_type) {
                     this._make_read_data_channel(topic, dc_id, msg_type)
-                } else {
+                } else if (topic && this.topic_dcs[topic]) {
                     console.log('Topic '+topic+' closed by the client')
+                    this.topic_dcs[topic].close();
+                    delete this.topic_dcs[topic];
                 }
             });
         }
@@ -565,7 +584,7 @@ class PhntmBridgeClient extends EventTarget {
         }
 
         if (robot_data['offer'] && answer_callback) {
-            console.log('Got sdp offer')
+            console.log('Got sdp offer', robot_data['offer'])
             let robot_offer = new RTCSessionDescription({ sdp: robot_data['offer'], type: 'offer' });
             let that = this;
             this.pc.setRemoteDescription(robot_offer)
@@ -632,8 +651,17 @@ class PhntmBridgeClient extends EventTarget {
 
     _make_read_data_channel(topic, dc_id, msg_type) {
 
-        if (this.topic_dcs[topic])
+        if (this.topic_dcs[topic]) {
+            console.log('DC already created for '+topic);
             return;
+        }
+
+        console.log('creating dc w ', topic, {
+            negotiated: true,
+            ordered: false,
+            maxRetransmits: 0,
+            id:dc_id
+        }, this.pc);
 
         let dc = this.pc.createDataChannel(topic, {
             negotiated: true,
@@ -1126,77 +1154,77 @@ function lerpColor(a, b, amount) {
 
 // }
 
-let topics_to_subscribe = []; // str topic
-let topics_to_unsubscribe = []; // str topic
-function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
+// let topics_to_subscribe = []; // str topic
+// let topics_to_unsubscribe = []; // str topic
+// function SetTopicsReadSubscription(id_robot, topics_list, subscribe) {
 
-    for (let i = 0; i < topics_list.length; i++) {
-        let topic = topics_list[i];
-        if (subscribe) {
-            let pSubscribe = topics_to_subscribe.indexOf(topic);
-            if (topics[topic] && topics[topic].subscribed) {
-                console.info('Topic '+topic+' already subscribed to (we cool)');
-                if (pSubscribe !== -1)
-                    topics_to_subscribe.splice(pSubscribe, 1);
-                continue;
-            }
-            if (pSubscribe === -1)
-                topics_to_subscribe.push(topic);
-            let pUnsubscribe = topics_to_unsubscribe.indexOf(topic);
-            if (pUnsubscribe !== -1)
-                topics_to_unsubscribe.splice(pUnsubscribe, 1);
-        } else {
-            let pUnsubscribe = topics_to_unsubscribe.indexOf(topic);
-            if (topics[topic] && !topics[topic].subscribed) {
-                console.info('Topic '+topic+' already unsubscribed from (we cool)');
-                if (pUnsubscribe !== -1)
-                    topics_to_unsubscribe.splice(pUnsubscribe, 1);
-                continue;
-            }
-            if (pUnsubscribe === -1)
-                topics_to_unsubscribe.push(topic);
-            let pSubscribe = topics_to_subscribe.indexOf(topic);
-            if (pSubscribe !== -1)
-                topics_to_subscribe.splice(pSubscribe, 1);
-        }
-    }
+//     for (let i = 0; i < topics_list.length; i++) {
+//         let topic = topics_list[i];
+//         if (subscribe) {
+//             let pSubscribe = topics_to_subscribe.indexOf(topic);
+//             if (topics[topic] && topics[topic].subscribed) {
+//                 console.info('Topic '+topic+' already subscribed to (we cool)');
+//                 if (pSubscribe !== -1)
+//                     topics_to_subscribe.splice(pSubscribe, 1);
+//                 continue;
+//             }
+//             if (pSubscribe === -1)
+//                 topics_to_subscribe.push(topic);
+//             let pUnsubscribe = topics_to_unsubscribe.indexOf(topic);
+//             if (pUnsubscribe !== -1)
+//                 topics_to_unsubscribe.splice(pUnsubscribe, 1);
+//         } else {
+//             let pUnsubscribe = topics_to_unsubscribe.indexOf(topic);
+//             if (topics[topic] && !topics[topic].subscribed) {
+//                 console.info('Topic '+topic+' already unsubscribed from (we cool)');
+//                 if (pUnsubscribe !== -1)
+//                     topics_to_unsubscribe.splice(pUnsubscribe, 1);
+//                 continue;
+//             }
+//             if (pUnsubscribe === -1)
+//                 topics_to_unsubscribe.push(topic);
+//             let pSubscribe = topics_to_subscribe.indexOf(topic);
+//             if (pSubscribe !== -1)
+//                 topics_to_subscribe.splice(pSubscribe, 1);
+//         }
+//     }
 
-    let cum_topics_list = subscribe ? topics_to_subscribe : topics_to_unsubscribe;
+//     let cum_topics_list = subscribe ? topics_to_subscribe : topics_to_unsubscribe;
 
-    if (!cum_topics_list.length) {
-        console.info('No topics to '+(subscribe?'subscribe to':'unsubscribe from')+' in SetTopicsReadSubscription (we cool)');
-        return;
-    }
+//     if (!cum_topics_list.length) {
+//         console.info('No topics to '+(subscribe?'subscribe to':'unsubscribe from')+' in SetTopicsReadSubscription (we cool)');
+//         return;
+//     }
 
-    if (subscribe) {
+//     if (subscribe) {
 
-        if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
-            if (pc && pc.connectionState == 'failed') {
-                console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
-                //connect will trigger this again
-                return;
-            }
+//         if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
+//             if (pc && pc.connectionState == 'failed') {
+//                 console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
+//                 //connect will trigger this again
+//                 return;
+//             }
 
-            if (pc)
-                console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
-            else
-                console.info('Cannot subscribe to topics, pc=null; waiting... '+cum_topics_list.join(', '));
+//             if (pc)
+//                 console.info('Cannot subscribe to topics, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_topics_list.join(', '));
+//             else
+//                 console.info('Cannot subscribe to topics, pc=null; waiting... '+cum_topics_list.join(', '));
 
-            setTimeout(() => {
-                SetTopicsReadSubscription(id_robot, [], subscribe) //all alteady in queues
-            }, 1000); //try again when stable
-            return;
-        }
+//             setTimeout(() => {
+//                 SetTopicsReadSubscription(id_robot, [], subscribe) //all alteady in queues
+//             }, 1000); //try again when stable
+//             return;
+//         }
 
-        _DoSetTopicsSubscription(id_robot, cum_topics_list, true)
-        topics_to_subscribe = [];
+//         _DoSetTopicsSubscription(id_robot, cum_topics_list, true)
+//         topics_to_subscribe = [];
 
-    } else {
-        // unsubscribe, no need to renegotiate
-        _DoSetTopicsSubscription(id_robot, cum_topics_list, false)
-        topics_to_unsubscribe = [];
-    }
-}
+//     } else {
+//         // unsubscribe, no need to renegotiate
+//         _DoSetTopicsSubscription(id_robot, cum_topics_list, false)
+//         topics_to_unsubscribe = [];
+//     }
+// }
 
 // //assuming pc state is stable when subscribing to new topics here
 // function _DoInitTopicsReadSubscription(id_robot, topics_list, subscribe) {
@@ -1252,7 +1280,7 @@ function _DoSetTopicsSubscription(id_robot, topics_list, subscribe) {
             let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
             console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
 
-            _HandleTopicSubscriptionReply(res); // preps video panel to be found when new media stream is added
+            // _HandleTopicSubscriptionReply(res); // preps video panel to be found when new media stream is added
 
             pc.setRemoteDescription(robot_offer)
             .then(() => {
@@ -1276,7 +1304,7 @@ function _DoSetTopicsSubscription(id_robot, topics_list, subscribe) {
             });
 
         } else { // unsubscribe => no negotiation needed
-            _HandleTopicSubscriptionReply(res);
+            // _HandleTopicSubscriptionReply(res);
         }
     });
 }
@@ -1292,7 +1320,7 @@ function _HandleTopicSubscriptionReply(res) {
 
         if (!topics[topic]) {
             console.warn('Topic '+topic+' not found in topics list', topics);
-            continue;off()
+            continue;
         }
 
         let is_image = topics[topic]['msg_types'][0] == 'sensor_msgs/msg/Image'
@@ -1300,9 +1328,7 @@ function _HandleTopicSubscriptionReply(res) {
         if (!is_image) { //subscribed data
 
             if (topic_dcs[topic]) {
-                console.warn('Restarting local read DC '+topic);
-                topic_dcs[topic].close();
-                delete topic_dcs[topic];
+                continue;
             }
 
             console.log('Opening local read DC '+topic+' id='+id)
@@ -1406,9 +1432,9 @@ function _HandleTopicSubscriptionReply(res) {
             let topic = topics[id_topic];
 
             if (topic_dcs[id_topic]) {
-                console.warn('Closing local read DC '+id_topic);
-                topic_dcs[id_topic].close();
-                delete topic_dcs[id_topic];
+                console.warn('Now closing local read DC '+id_topic);
+                // topic_dcs[id_topic].close();
+                // delete topic_dcs[id_topic];
             }
 
             // if (topic.id_stream && media_streams[topic.id_stream]) {

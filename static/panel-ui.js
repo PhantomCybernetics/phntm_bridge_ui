@@ -44,7 +44,6 @@ class Panel {
                 '<h3>'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
                 '<div class="monitor_menu">' +
-                    '<div class="hover_keeper"></div>' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
                 '<div class="panel_content_space">' +
@@ -67,7 +66,7 @@ class Panel {
             for (let _x = 0; _x < 12-w; _x++) {
                 if (grid.isAreaEmpty(_x, y, w, h)) {
                     x = _x;
-                    console.log('Grid area empty at ['+x+'; '+y+'] for '+w+'x'+h+']');
+                    // console.log('Grid area empty at ['+x+'; '+y+'] for '+w+'x'+h+']');
                     break;
                 }
             }
@@ -116,19 +115,10 @@ class Panel {
             }
 
             if (['video', 'sensor_msgs/msg/Image'].indexOf(msg_type) > -1) {
-                if (!this.on_stream_context_wrapper) {
-                    this.on_stream_context_wrapper = (stream) => {
-                        this.on_stream(stream)
-                    }
-                    this.ui.client.on(this.id_source, this.on_stream_context_wrapper);
-                }
+                this.ui.client.on(this.id_source, this._on_stream_context_wrapper);
             } else {
-                if (!this.on_data_context_wrapper) {
-                    this.on_data_context_wrapper = (msg, ev) => {
-                        this.on_data(msg, ev)
-                    }
-                    this.ui.client.on(this.id_source, this.on_data_context_wrapper);
-                }
+
+                this.ui.client.on(this.id_source, this._on_data_context_wrapper);
             }
 
             this.initiated = true;
@@ -138,6 +128,14 @@ class Panel {
         this.onResize();
 
 
+    }
+
+    _on_stream_context_wrapper = (stream) => {
+        this.on_stream(stream);
+    }
+
+    _on_data_context_wrapper = (msg, ev) => {
+        this.on_data(msg, ev);
     }
 
     setMenu() {
@@ -153,7 +151,7 @@ class Panel {
 
         els.push('<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>')
 
-        $('#monitor_menu_content_'+this.n).html(els.join('\n'));
+        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>'+els.join('\n'));
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
@@ -242,7 +240,7 @@ class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
-        console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+        // console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
 
         $('#panel_widget_'+this.n).parent()
             .css('height', this.widget_height)
@@ -394,24 +392,21 @@ class Panel {
             $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
 
-            if (this.msg_type == 'sensor_msgs/msg/Image') {
-                this.ui.client.off(this.id_source, this.on_stream_context_wrapper);
-            } else {
-                this.ui.client.off(this.id_source, this.on_data_context_wrapper);
-            }
+
 
             // SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
         } // else { //topics not loaded
             // Panel.TogglePanel(that.id_source, null, false);
         // }
 
+        this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
+        this.ui.client.off(this.id_source, this._on_data_context_wrapper);
+
         if ($('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').length > 0) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
-
-            this.ui.client.off(this.id_source, this.on_stream_context_wrapper);
         }
 
         // let x = parseInt($(this.grid_widget).attr('gs-x'));
@@ -438,7 +433,7 @@ class PanelUI {
     widgets = {
         'sensor_msgs/msg/BatteryState' : { widget: window.PanelWidgets.BatteryStateWidget, w:4, h:2 } ,
         'sensor_msgs/msg/Range' : { widget: window.PanelWidgets.RangeWidget, w:2, h:2 },
-        'sensor_msgs/msg/LaserScan' : { widget: window.PanelWidgets.LaserScanWidget, w:4, h:4 },
+        'sensor_msgs/msg/LaserScan' : { widget: window.PanelWidgets.LaserScanWidget, w:7, h:4 },
         'sensor_msgs/msg/Imu' : { widget: window.PanelWidgets.ImuWidget, w:2, h:2 },
         'rcl_interfaces/msg/Log' : { widget: window.PanelWidgets.LogWidget, w:8, h:2 },
         'sensor_msgs/msg/Image' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
@@ -899,7 +894,7 @@ class PanelUI {
             }
             let trigger_el = this;
 
-            console.log('Clicker topic '+id_topic);
+            // console.log('Clicker topic '+id_topic);
 
             $('#topic_list .topic[data-topic="'+id_topic+'"] INPUT:checkbox').each(function(index){
                 if (this != trigger_el)
@@ -1065,9 +1060,9 @@ class PanelUI {
 
         let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
         // panel.init(msg_type)
-        this.client.on(panel.id_source, (msg)=>{ // subscribes id topic or camera
-            panel
-        });
+
+        // this.client.on(panel.id_source, panel._on_data_context_wrapper);
+
         this.panels[id_source] = panel;
         return panel;
     }

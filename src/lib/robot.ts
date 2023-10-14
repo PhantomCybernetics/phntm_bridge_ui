@@ -52,6 +52,9 @@ export class Robot {
         $d.log('Calling robot:peer with data', data);
         this.socket.emit('peer', data, (answerData:{state?: any, offer:string }) => {
 
+            if (!app.socket)
+                return;
+
             this.getStateData(answerData);
 
             $d.log('Got robot\'s answer:', answerData);
