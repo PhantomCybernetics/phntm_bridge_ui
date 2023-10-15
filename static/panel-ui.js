@@ -724,13 +724,14 @@ class PanelUI {
             that.set_webrtc_status_label();
         })
 
-        // browsers Socker.io connection to the Cloud Bridge's server
+        // browsers Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect',  () => {
             $('#socketio_status').html('Socket.io: <span class="online">Connected</span>');
         });
+
         client.socket.on('disconnect',  () => {
             $('#socketio_status').html('Socket.io: <span class="offline">Disconnected</span>');
-        })
+        });
 
         setInterval(() => {
             if (client.pc) {

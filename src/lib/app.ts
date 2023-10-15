@@ -23,8 +23,9 @@ export class App {
 
     static connectedApps:App[] = [];
 
-    constructor() {
-        this.id_instance = new ObjectId(); //generated here
+    constructor(id_instance?:string) {
+        //generates new instance id if undefined
+        this.id_instance = new ObjectId(id_instance);
     }
 
     static FindConnected(id_app:ObjectId, id_instance:ObjectId):App {
@@ -67,6 +68,50 @@ export class App {
             read: read,
             write: write
         });
+    }
+
+    public addToRobotSubscriptions(idRobot: ObjectId, read?:string[], write?:string[][]) {
+        for (let i = 0; i < this.robotSubscriptions.length; i++) {
+            if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
+
+                if (read) {
+                    read.forEach((id_src)=>{
+                        if (this.robotSubscriptions[i].read.indexOf(id_src) === -1)
+                            this.robotSubscriptions[i].read.push(id_src);
+                    });
+                }
+                if (write) {
+                    write.forEach((id_src)=>{
+                        if (this.robotSubscriptions[i].write.indexOf(id_src) === -1)
+                            this.robotSubscriptions[i].write.push(id_src);
+                    });
+                }
+                return;
+            }
+        }
+    }
+
+    public removeFromRobotSubscriptions(idRobot: ObjectId, read?:string[], write?:string[][]) {
+        for (let i = 0; i < this.robotSubscriptions.length; i++) {
+            if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
+
+                if (read) {
+                    read.forEach((id_src)=>{
+                        let p = this.robotSubscriptions[i].read.indexOf(id_src);
+                        if (p !== -1)
+                            this.robotSubscriptions[i].read.splice(p, 1);
+                    });
+                }
+                if (write) {
+                    write.forEach((id_src)=>{
+                        let p = this.robotSubscriptions[i].write.indexOf(id_src);
+                        if (p !== -1)
+                            this.robotSubscriptions[i].write.splice(p, 1);
+                    });
+                }
+                return;
+            }
+        }
     }
 
     public isSubscribedToRobot(idRobot: ObjectId, out_subscription?:any):boolean {

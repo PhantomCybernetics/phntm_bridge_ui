@@ -627,7 +627,9 @@ sioApps.use(async (appSocket:AppSocket, next) => {
 
 sioApps.on('connect', async function(appSocket : AppSocket){
 
-    let app:App = new App(); //id instance generated in constructor
+    $d.log('Connected w id_instance: ', appSocket.handshake.auth.id_instance);
+
+    let app:App = new App(appSocket.handshake.auth.id_instance); //id instance generated in constructor, if not provided
     app.id_app = new ObjectId(appSocket.handshake.auth.id_app)
     app.name = appSocket.dbData.name;
     app.socket = appSocket;
@@ -637,6 +639,8 @@ sioApps.on('connect', async function(appSocket : AppSocket){
     $d.log(('Ohi, app '+app.name+' aka '+app.id_app.toString()+' (inst '+app.id_instance.toString()+') connected to Socket.io').cyan);
 
     app.addToConnected();
+
+    appSocket.emit('instance', app.id_instance.toString());
 
     appSocket.on('robot', async function (data:{id_robot:string, read?:string[], write?:string[][]}, returnCallback) {
         $d.log('Peer app requesting robot: ', data);
@@ -783,6 +787,8 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             return;
         }
 
+        app.addToRobotSubscriptions(robot.id_robot, data.sources)
+
         robot.socket.emit('subscribe', data, (resData:any) => {
 
             $d.log('Got robot\'s subscription answer:', resData);
@@ -807,6 +813,8 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             }
             return;
         }
+
+        app.removeFromRobotSubscriptions(robot.id_robot, data.sources);
 
         robot.socket.emit('unsubscribe', data, (resData:any) => {
 

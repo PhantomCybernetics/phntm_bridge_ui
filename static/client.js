@@ -115,18 +115,22 @@ class PhntmBridgeClient extends EventTarget {
 
         let that = this;
 
+        let socket_auth = {
+            id_app: this.app_id,
+            key: this.app_key,
+            id_instance: null, // stored for reconnects when known
+        }
+
         this.socket = io(this.socket_url, {
             path: this.socket_path,
-            auth: {
-                id_app: this.app_id,
-                key: this.app_key
-            },
+            auth: socket_auth,
             autoConnect: this.socket_auto_connect
         });
 
-        this.socket.on("connect", () => {
+        this.socket.on("connect", (data) => {
 
             console.log('Socket.io connected with id '+that.socket.id+', requesting robot...')
+            console.log('Conn data:', data);
 
             let subscribe = Object.keys(that.subscribers);
             let writers = [];
@@ -134,8 +138,6 @@ class PhntmBridgeClient extends EventTarget {
                 writers.push([ topic, that.topic_writers[topic].msg_type ]);
             })
             that.init_complete = true;
-
-            that.pc = that._init_peer_connection(that.id_robot);
 
             that.socket.emit('robot', {
                 id_robot: that.id_robot,
@@ -155,6 +157,13 @@ class PhntmBridgeClient extends EventTarget {
             );
         });
 
+        this.socket.on('instance', (id_instance) => {
+            console.warn('Got id instance: '+id_instance);
+            socket_auth.id_instance = id_instance;
+            console.log(this.socket)
+            // that._process_robot_data(robot_data, return_callback);
+        });
+
         this.socket.on('robot', (robot_data, return_callback) => {
             that._process_robot_data(robot_data, return_callback);
         });
@@ -164,10 +173,8 @@ class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on("disconnect", () => {
-            console.log('Socker.io disconnected'); // undefined
+            console.log('Socket.io disconnected'); // undefined
         });
-
-
 
         this.socket.on("introspection", (state) => {
             console.log('Got introspetion state '+state); // undefined
@@ -526,6 +533,11 @@ class PhntmBridgeClient extends EventTarget {
 
         console.warn('Recieved robot state data: ', this.id_robot, robot_data);
 
+        if (!this.pc) {
+            console.warn('Creating new webrtc peer');
+            this.pc = this._init_peer_connection(this.id_robot);
+        }
+
         let error = robot_data['err'] ? robot_data['err'] : null;
         if (error) {
             let msg = robot_data['msg']
@@ -652,16 +664,11 @@ class PhntmBridgeClient extends EventTarget {
     _make_read_data_channel(topic, dc_id, msg_type) {
 
         if (this.topic_dcs[topic]) {
-            console.log('DC already created for '+topic);
+            console.log('DC already exists for '+topic);
             return;
         }
 
-        console.log('creating dc w ', topic, {
-            negotiated: true,
-            ordered: false,
-            maxRetransmits: 0,
-            id:dc_id
-        }, this.pc);
+        console.log('Creating DC for '+topic);
 
         let dc = this.pc.createDataChannel(topic, {
             negotiated: true,
@@ -896,6 +903,12 @@ class PhntmBridgeClient extends EventTarget {
 
                 that.emit('peer_disconnected')
 
+                Object.keys(that.subscribers).forEach((sub) => {
+
+                });
+
+                that.pc.close();
+                that.pc = null;
                 // return;
 
                 // window.gamepadController.ClearProducers();
