@@ -45,7 +45,11 @@ class Subscriber {
         this.client = client;
         this.id_source = id_source;
         this.msg_type = null;
+
+        this.latest = null;
     }
+
+
 }
 
 class PhntmBridgeClient extends EventTarget {
@@ -108,6 +112,7 @@ class PhntmBridgeClient extends EventTarget {
         this.topic_writers = {}; //id => writer
         this.subscribers = {}; //id => topic ot cam reader
         this.media_streams = {}; //id_stream => stream
+        this.latest = {};
 
         this.supported_msg_types = null;
         this.msg_types_src = opts.msg_types_src !== undefined ? opts.msg_types_src : '/static/msg_types.json' // json defs generated from .idl files
@@ -390,7 +395,6 @@ class PhntmBridgeClient extends EventTarget {
         this.event_calbacks[event].push(cb);
 
         if (event.indexOf('/') === 0) {  // topic or camera id
-            console.log('Subscribing to '+event);
             this.create_subscriber(event);
         }
     }
@@ -441,11 +445,11 @@ class PhntmBridgeClient extends EventTarget {
     create_subscriber(id_source) {
 
         if (this.subscribers[id_source]) {
-            console.log('Reusing subscriber for '+id_source)
+            console.log('Reusing subscriber for '+id_source+'; init_complete='+this.init_complete);
             return this.subscribers[id_source];
         }
 
-        console.log('Creating subscriber for '+id_source)
+        console.log('Creating subscriber for '+id_source+'; init_complete='+this.init_complete)
 
         this.subscribers[id_source] = new Subscriber(this, id_source);
 
@@ -454,7 +458,7 @@ class PhntmBridgeClient extends EventTarget {
                 id_robot: this.id_robot,
                 sources: [ id_source ]
             }, (res) => {
-                 console.warn('Res sub', res);
+                //  console.warn('Res sub', res);
             });
         }
 
@@ -717,6 +721,12 @@ class PhntmBridgeClient extends EventTarget {
             }
 
             that.emit(topic, decoded, ev)
+            that.latest[topic] = {
+                msg: decoded,
+                ev: ev
+            };
+
+
 
             // if (topic == '/robot_description') {
             //     console.warn('Got robot descripotion: ', decoded);

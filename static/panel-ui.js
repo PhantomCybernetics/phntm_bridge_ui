@@ -77,6 +77,8 @@ class Panel {
 
         this.grid_widget = grid.addWidget(widget_opts);
 
+        this.ui.client.on(id_source, this._on_data_context_wrapper);
+
         window.setTimeout(()=>{
             panels[id_source].onResize()
         }, 300); // resize at the end of the animation
@@ -114,28 +116,34 @@ class Panel {
                 $('#panel_source_'+this.n).addClass('enabled');
             }
 
-            if (['video', 'sensor_msgs/msg/Image'].indexOf(msg_type) > -1) {
-                this.ui.client.on(this.id_source, this._on_stream_context_wrapper);
-            } else {
+            this.initiated = true;
 
-                this.ui.client.on(this.id_source, this._on_data_context_wrapper);
+            //use latest msg
+
+            let latest = this.ui.client.latest[this.id_source];
+            if (latest) {
+                this._on_data_context_wrapper(latest.msg, latest.ev)
             }
 
-            this.initiated = true;
         }
 
         this.setMenu()
         this.onResize();
-
-
-    }
-
-    _on_stream_context_wrapper = (stream) => {
-        this.on_stream(stream);
     }
 
     _on_data_context_wrapper = (msg, ev) => {
-        this.on_data(msg, ev);
+
+        if (!this.initiated) {
+            console.error(this.id_source+'; got data before initialized', msg);
+            return;
+        }
+
+        if (['video', 'sensor_msgs/msg/Image'].indexOf(this.msg_type) > -1) {
+            this.on_stream(stream);
+        } else {
+            this.on_data(msg, ev);
+        }
+
     }
 
     setMenu() {
@@ -399,7 +407,7 @@ class Panel {
             // Panel.TogglePanel(that.id_source, null, false);
         // }
 
-        this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
+        // this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
         this.ui.client.off(this.id_source, this._on_data_context_wrapper);
 
         if ($('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').length > 0) {
