@@ -1,6 +1,6 @@
-window.InputWidgets = {}
 
-window.InputWidgets.ServiceCallInput_Empty = (el, service, client) => {
+
+export function ServiceCallInput_Empty (el, service, client) {
 
     $(el).html('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
 
@@ -21,7 +21,7 @@ window.InputWidgets.ServiceCallInput_Empty = (el, service, client) => {
     });
 }
 
-window.InputWidgets.ServiceCallInput_Bool = (el, service, client) => {
+export function ServiceCallInput_Bool (el, service, client) {
     $(el).html(
         '<button class="service_button true" id="service_btn_'+service.n+'_true" data-service="'+service.service+'" data-name="Btn_True">True</button>' +
         '<button class="service_button false" id="service_btn_'+service.n+'_false" data-service="'+service.service+'" data-name="Btn_False">False</button>'

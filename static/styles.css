@@ -626,6 +626,12 @@ BUTTON#trigger_wifi_scan.working {
 
 .panel_msg_types_line {
     padding-bottom: 10px;
+    padding-top: 4px;
+    border-radius: 5px 0px 0px 0px;
+}
+
+.right .panel_msg_types_line {
+    border-radius: 0px 5px 0px 0px;
 }
 
 .panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {

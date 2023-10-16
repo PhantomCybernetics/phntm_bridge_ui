@@ -51,6 +51,7 @@
     "path": "^0.12.7",
     "socket.io": "^4.6.1",
     "socket.io-client": "^4.6.1",
+    "three": "^0.157.0",
     "typescript": "^5.0.4",
     "xml-formatter": "^3.4.1"
   },

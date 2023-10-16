@@ -20,7 +20,7 @@
 //     }
 // }
 
-class GamepadController {
+export class GamepadController {
 
     constructor(client, axes_config) {
 

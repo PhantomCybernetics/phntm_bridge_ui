@@ -1,3 +1,8 @@
+import { URDFWidget, BatteryStateWidget, LogWidget, ImuWidget, LaserScanWidget, RangeWidget, VideoWidget } from './panel-widgets.js'
+import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
+
+import { lerpColor, linkifyURLs, escapeHtml } from "./lib.js";
+
 class Panel {
 
     ui = null;
@@ -106,10 +111,15 @@ class Panel {
                 // }
             }
 
-            if (this.ui.widgets[this.msg_type] != undefined) {
+            if (this.ui.topic_widgets[this.id_source] != undefined) {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.ui.widgets[this.msg_type].widget(this, null) //no data yet
+                    this.ui.topic_widgets[this.id_source].widget(this, null) //no data yet
+                }
+            } else if (this.ui.type_widgets[this.msg_type] != undefined) {
+                if (!this.display_widget) { //only once
+                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
+                    this.ui.type_widgets[this.msg_type].widget(this, null) //no data yet
                 }
             } else {  //no widget, show source
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
@@ -323,10 +333,12 @@ class Panel {
 
         } else if (msg) {
             datahr = JSON.stringify(msg, null, 2);
-
-            if (this.ui.widgets[this.msg_type] && this.ui.widgets[this.msg_type].widget)
-                this.ui.widgets[this.msg_type].widget(this, msg);
         }
+
+        if (this.ui.topic_widgets[this.id_source] && this.ui.topic_widgets[this.id_source].widget)
+            this.ui.topic_widgets[this.id_source].widget(this, msg);
+        else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
+            this.ui.type_widgets[this.msg_type].widget(this, msg);
 
         $('#panel_source_'+this.n).html(
             'Received: '+ev.timeStamp + '<br>' + // this is local stamp
@@ -430,7 +442,7 @@ class Panel {
 
 }
 
-class PanelUI {
+export class PanelUI {
 
     panels = {};
 
@@ -438,19 +450,22 @@ class PanelUI {
     lastESSID = null;
 
     // override or edit to customize topic panel defaults
-    widgets = {
-        'sensor_msgs/msg/BatteryState' : { widget: window.PanelWidgets.BatteryStateWidget, w:4, h:2 } ,
-        'sensor_msgs/msg/Range' : { widget: window.PanelWidgets.RangeWidget, w:2, h:2 },
-        'sensor_msgs/msg/LaserScan' : { widget: window.PanelWidgets.LaserScanWidget, w:7, h:4 },
-        'sensor_msgs/msg/Imu' : { widget: window.PanelWidgets.ImuWidget, w:2, h:2 },
-        'rcl_interfaces/msg/Log' : { widget: window.PanelWidgets.LogWidget, w:8, h:2 },
-        'sensor_msgs/msg/Image' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
-        'video' : { widget: window.PanelWidgets.VideoWidget, w:5, h:4 },
+    topic_widgets = {
+        '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
+    };
+    type_widgets = {
+        'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,
+        'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
+        'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:7, h:4 },
+        'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
+        'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
+        'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
+        'video' : { widget: VideoWidget, w:5, h:4 },
     };
 
     input_widgets = {
-        'std_srvs/srv/Empty' : window.InputWidgets.ServiceCallInput_Empty,
-        'std_srvs/srv/SetBool' : window.InputWidgets.ServiceCallInput_Bool
+        'std_srvs/srv/Empty' : ServiceCallInput_Empty,
+        'std_srvs/srv/SetBool' : ServiceCallInput_Bool
     }
 
     constructor(client, grid_cell_height, gamepad) {
@@ -897,9 +912,12 @@ class PanelUI {
             let w = 3; let h = 3; //defaults overridden by widgets
             let msg_type = that.client.discovered_topics[id_topic]['msg_types'][0];
 
-            if (that.widgets[msg_type]) {
-                w = that.widgets[msg_type].w;
-                h = that.widgets[msg_type].h;
+            if (that.topic_widgets[id_topic]) {
+                w = that.topic_widgets[id_topic].w;
+                h = that.topic_widgets[id_topic].h;
+            } else if (that.type_widgets[msg_type]) {
+                w = that.type_widgets[msg_type].w;
+                h = that.type_widgets[msg_type].h;
             }
             let trigger_el = this;
 

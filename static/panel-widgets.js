@@ -1,8 +1,10 @@
 
-window.PanelWidgets = {}
+import { lerpColor, linkifyURLs } from "./lib.js";
+import * as THREE from 'three';
+import { OrbitControls } from './three-addons/controls/OrbitControls.js';
 
 // BATTERY VISUALIZATION
-window.PanelWidgets.VideoWidget = (panel, ignored) => {
+export function VideoWidget (panel, ignored) {
 
     if (!panel.display_widget) {
 
@@ -52,7 +54,7 @@ window.PanelWidgets.VideoWidget = (panel, ignored) => {
 }
 
 // BATTERY VISUALIZATION
-window.PanelWidgets.BatteryStateWidget = (panel, decoded) => {
+export function BatteryStateWidget (panel, decoded) {
 
     let minVoltage = 3.2*3; //todo load from robot
     let maxVoltage = 4.2*3;
@@ -185,7 +187,7 @@ window.PanelWidgets.BatteryStateWidget = (panel, decoded) => {
 
 
 // RANGE VISUALIZATION
-window.PanelWidgets.RangeWidget = (panel, decoded) => {
+export function RangeWidget (panel, decoded) {
 
     if (!panel.display_widget) {
 
@@ -264,7 +266,7 @@ window.PanelWidgets.RangeWidget = (panel, decoded) => {
 
 
 //laser scan visualization
-window.PanelWidgets.LaserScanWidget = (panel, decoded) => {
+export function LaserScanWidget (panel, decoded) {
 
     if (!panel.display_widget) {
         panel.max_trace_length = 5;
@@ -411,7 +413,7 @@ function LaserScanWidget_Render(panel) {
 
 
 //IMU VISUALIZATION
-window.PanelWidgets.ImuWidget = (panel, decoded) => {
+export function ImuWidget (panel, decoded) {
 
     if (!panel.display_widget) {
 
@@ -488,7 +490,7 @@ function ImuWidget_Render(panel) {
     panel.renderer.render( panel.scene, panel.camera );
 }
 
-window.PanelWidgets.LogWidget = (panel, decoded) => {
+export function LogWidget (panel, decoded) {
 
     if (!$('#panel_widget_'+panel.n).hasClass('enabled')) {
         $('#panel_widget_'+panel.n).addClass('enabled log');
@@ -540,4 +542,95 @@ function deg2rad(degrees)
 {
   var pi = Math.PI;
   return degrees * (pi/180);
+}
+
+//IMU VISUALIZATION
+export function URDFWidget (panel, decoded) {
+
+    if (!panel.display_widget) {
+
+        $('#panel_widget_'+panel.n).addClass('enabled imu');
+        $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
+
+        // let q = decoded.orientation;
+        [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
+
+        panel.scene = new THREE.Scene();
+        panel.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
+
+        panel.renderer = new THREE.WebGLRenderer({
+            antialias : false,
+        });
+        panel.renderer.setSize( panel.widget_width, panel.widget_height );
+        document.getElementById('panel_widget_'+panel.n).appendChild( panel.renderer.domElement );
+
+        // const geometry = new THREE.BoxGeometry( .1, .1, .1 );
+        // const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
+        panel.model = new THREE.Object3D()
+        panel.scene.add( panel.model );
+        panel.model.position.y = .5
+
+        panel.model.add(panel.camera)
+        panel.camera.position.z = 2;
+        panel.camera.position.x = 0;
+        panel.camera.position.y = 1;
+        panel.scene.add(panel.camera)
+        panel.camera.lookAt(panel.model.position);
+
+        panel.controls = new OrbitControls( panel.camera, panel.renderer.domElement );
+        panel.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
+            ev.preventDefault(); //stop from moving the panel
+        } );
+        panel.controls.update();
+
+        // const light = new THREE.AmbientLight( 0x404040 ); // soft white light
+        // panel.scene.add( light );
+
+        const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+        panel.scene.add( directionalLight );
+        directionalLight.position.set( 1, 2, 1 );
+        directionalLight.lookAt(panel.model.position);
+
+        // const axesHelper = new THREE.AxesHelper( 5 );
+        // panel.scene.add( axesHelper );
+
+        // const axesHelperCube = new THREE.AxesHelper( 5 );
+        // axesHelperCube.scale.set(1, 1, 1); //show z forward like in ROS
+        // panel.model.add( axesHelperCube );
+
+        const gridHelper = new THREE.GridHelper( 10, 10 );
+        panel.scene.add( gridHelper );
+
+        panel.display_widget = panel.renderer;
+
+        // panel.animate();
+
+        // window.addEventListener('resize', () => {
+        //     ResizeWidget(panel);
+        //     RenderImu(panel);
+        // });
+        // $('#display_panel_source_'+panel.n).change(() => {
+        //     ResizeWidget(panel);
+        //     RenderImu(panel);
+        // });
+        panel.resize_event_handler = function () {
+            // ResizeWidget(panel);
+            URDFWidget_Render(panel);
+        };
+    }
+
+    if (panel.display_widget && decoded) {
+        // LHS (ROS) => RHS (Three)
+        // panel.cube.quaternion.set(-decoded.orientation.y, decoded.orientation.z, -decoded.orientation.x, decoded.orientation.w);
+        URDFWidget_Render(panel)
+    }
+}
+
+//logger
+function URDFWidget_Render(panel) {
+    panel.controls.update();
+    panel.renderer.render( panel.scene, panel.camera );
+    window.requestAnimationFrame((step)=>{
+        URDFWidget_Render(panel);
+    });
 }
