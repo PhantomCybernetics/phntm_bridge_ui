@@ -51,14 +51,19 @@
     <div id="gamepad_status" title="Gamepad Settings"></div>
     <div id="gamepad_latency" title="Latency"></div>
     <div id="gamepad_settings">
-        <input type="checkbox" id="gamepad_enabled" checked="checked"/> <label for="gamepad_enabled">Transmitting</label>
-        <select id="gamepad_driver">
-            <!-- <option value="Joy">Joy -> /joy</option> -->
-            <!-- <option value="Twist" selected="selected">Twist -> /cmd_vel </option> -->
-            <!-- <option value="TwistStamped">TwistStamped -> /cmd_vel </option> -->
-        </select>
+        <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled">
+            <h3 id="gamepad_id"></h3>
+        </label>
+        <div class="cleaner"></div>
+        <select id="gamepad_driver"></select>
+        <div id="gamepad_settings_controls">
+            <button id="gamepad_map">Map</button>
+            <button id="gamepad_config_toggle">Config</button>
+            <button id="gamepad_config_save">Save to cookie</button>
+        </div>
         <div id="gamepad_debug">
             <div class="col" id="gamepad_debug_input">Initializing...</div>
+            <div class="col" id="gamepad_config"><textarea id="gamepad_config_input" spellcheck="false"></textarea></div>
             <div class="col" id="gamepad_debug_output">Initializing...</div>
         </div>
     </div>
@@ -90,15 +95,20 @@
 
         });
 
-        const gamepad_axes_config = {  // TODO: load from config file or cookie?
-            0: { dead_zone: [ -0.02, 0.02, 0.0 ] }, // dead zone min, max, dead value (optional)
-            1: { dead_zone: [ -0.02, 0.02, 0.0 ], scale: 3.0 },
-            2: { dead_zone: [ -0.02, 0.02, 0.0 ] },
-            3: { dead_zone: [ -10.0, -0.98, -10.0 ] },
-            4: { dead_zone: [ -10.0, -0.98, -10.0 ] },
-        }
+        const gamepad_config = {  // TODO: load from config file or cookie?
+            axes: {
+                0: { dead_min: -0.02, dead_max: 0.02 }, // dead zone min, max, dead value (optional)
+                1: { dead_min: -0.02, dead_max: 0.02, scale: 3.0 },
+                2: { dead_min: -0.02, dead_max: 0.02 },
+                3: { dead_min: -10.0, dead_max: -0.98, dead_value: -10.0 },
+                4: { dead_min: -10.0, dead_max: -0.98, dead_value: -10.0 },
+            },
+            buttons: {
+                10: '#trigger_wifi_scan'
+            }
+        };
 
-        let gamepad = new GamepadController(robot, gamepad_axes_config); // creates write channels when gamepad is connected
+        let gamepad = new GamepadController(robot, gamepad_config); // creates write channels when gamepad is connected
         gamepad.add_driver('Joy to /joy', '/joy', 'sensor_msgs/msg/Joy', JoyDriver, true);
         gamepad.add_driver('Twist to /cmd_vel (Mecanum Wheels)', '/cmd_vel', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
 
@@ -156,17 +166,17 @@
         // });
 
         // subscribes to /battery
-        robot.on('/battery', (msg)=>{
+        // robot.on('/battery', (msg)=>{
 
-        });
+        // });
 
         // robot.on('media_stream', (stream)=>{
         //     console.log('Got a stream', stream);
         // });
 
-        robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
-             console.log('Got picamera stream', stream);
-        });
+        // robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
+        //      console.log('Got picamera stream', stream);
+        // });
 
         // robot.on('/htop', (msg)=>{
         //     //TODO

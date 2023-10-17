@@ -817,13 +817,6 @@ export class PanelUI {
             }
         });
 
-        $('#gamepad_status').click(() => {
-            if ($('#gamepad').hasClass('debug_on')) {
-                $('#gamepad').removeClass('debug_on');
-            } else {
-                $('#gamepad').addClass('debug_on');
-            }
-        });
 
         $('#trigger_wifi_scan').click(() => {
             that.trigger_wifi_scan();

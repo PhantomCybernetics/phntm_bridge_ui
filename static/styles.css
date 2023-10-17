@@ -962,7 +962,7 @@ SPAN.error {
 
 #gamepad #gamepad_settings SElECT {
     color: black;
-    margin-left: 5px;
+    margin-top: 5px;
 }
 
 #gamepad #gamepad_debug {
@@ -972,8 +972,57 @@ SPAN.error {
     margin-left: -5px;
     margin-right: -5px;
     margin-bottom: -5px;
-    width: 525px;
+    width: max-content;
     overflow-x: hidden;
+}
+
+#gamepad #gamepad_debug.config {
+    /* width: 790px; */
+}
+
+#gamepad_settings_controls {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}
+
+#gamepad_settings_controls button {
+    background: #101089;
+    border: 0px;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+#gamepad_settings_controls button#gamepad_config_save {
+    background-color: #008700;
+    display: none;
+}
+
+#gamepad_config {
+    display: none;
+}
+
+#gamepad_config TEXTAREA {
+    width: 295px;
+    height: 600px;
+    grid-auto-columns: 0px;
+    background: transparent;
+    outline: none;
+    color: #fff;
+    border: none;
+    white-space: pre;
+    resize: vertical;
+    word-wrap: break-word;
+    white-space: pre;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+#gamepad_debug.config #gamepad_config {
+    display: block;
+    background-color: #0a0f52;
+    width: 300px;
+    border: 2px dashed white;
 }
 
 #gamepad_debug .col {

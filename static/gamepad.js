@@ -22,7 +22,7 @@
 
 export class GamepadController {
 
-    constructor(client, axes_config) {
+    constructor(client, config) {
 
         this.client = client;
         // this.ui = null;
@@ -37,21 +37,25 @@ export class GamepadController {
 
         this.loop_delay = 33.3; //ms, 30Hz updates
 
-        this.id_gamepad = null;
+        this.gamepad = null;
         this.capturing_gamepad_input = false;
         this.captured_gamepad_input = [];
         this.gamepad_service_mapping = {}
 
-        this.axes_config = axes_config ? axes_config : {};
+        this.config = config;
+
+        // this.axes_config = axes_config ? axes_config : {};
 
         this.load_gamepad_service_mapping(); // from cookie
 
         let that = this;
+
         window.addEventListener('gamepadconnected', (event) => {
             console.warn('Gamepad connected:', event.gamepad);
-            that.id_gamepad = event.gamepad.index;
+            that.gamepad = event.gamepad;
 
             $('#gamepad').addClass('connected');
+            $('#gamepad_id').html(that.gamepad.id);
 
             if (that.client.supported_msg_types === null) {
                 //wait for message defs to load
@@ -66,13 +70,37 @@ export class GamepadController {
         });
 
         window.addEventListener('gamepaddisconnected', (event) => {
-            if (that.id_gamepad == event.gamepad.index) {
-                that.id_gamepad = null; //kills the loop
+            if (that.gamepad.id == event.gamepad.id) {
+                that.gamepad = null; //kills the loop
                 console.warn('Gamepad disconnected:', event.gamepad);
                 $('#gamepad').removeClass('connected');
             }
         });
 
+        $('#gamepad_config_toggle').click(() =>{
+            if ($('#gamepad_debug').hasClass('config')) {
+                $('#gamepad_debug').removeClass('config');
+                $('#gamepad_config_toggle').text('Config');
+                $('#gamepad_config_save').css('display', 'none')
+                $('#gamepad_map').css('display', 'inline')
+            } else {
+                $('#gamepad_debug').addClass('config');
+                let cfg = JSON.stringify(that.config, null, 2);
+                cfg = cfg.replace(/"([^"]+)":/g, '$1:')
+                $('#gamepad_config_input').text(cfg);
+                $('#gamepad_config_toggle').text('Cancel');
+                $('#gamepad_config_save').css('display', 'inline')
+                $('#gamepad_map').css('display', 'none')
+            }
+        });
+
+        $('#gamepad_status').click(() => {
+            if ($('#gamepad').hasClass('debug_on')) {
+                $('#gamepad').removeClass('debug_on');
+            } else {
+                $('#gamepad').addClass('debug_on');
+            }
+        });
 
     }
 
@@ -102,7 +130,7 @@ export class GamepadController {
 
     run_loop() {
 
-        if (this.id_gamepad == null) {
+        if (this.gamepad == null) {
             console.log('Gamepad loop failed, this=', this)
             return; //stop loop
         }
@@ -126,7 +154,7 @@ export class GamepadController {
                 return window.setTimeout(this.run_loop, this.loop_delay); //try again
         }
 
-        const gp = navigator.getGamepads()[this.id_gamepad];
+        const gp = navigator.getGamepads()[this.gamepad.index];
 
         let buttons = gp.buttons;
         let axes = gp.axes;
@@ -146,8 +174,8 @@ export class GamepadController {
             debug.buttons[i] = buttons[i].pressed;
         }
 
-        $('#gamepad_debug_input').html('<b>Axes raw:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
-                                       '<b>Btns raw:</b><br>' + JSON.stringify(debug.buttons, null, 2));
+        $('#gamepad_debug_input').html('<b>Raw Axes:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
+                                       '<b>Raw Buttons:</b><br>' + JSON.stringify(debug.buttons, null, 2));
 
         if (this.capturing_gamepad_input) {
             this.capture_gamepad_input(buttons, axes);
@@ -274,10 +302,16 @@ export class GamepadController {
     }
 
     apply_axis_deadzone(val, id_axis) {
-        if (this.axes_config[id_axis] && this.axes_config[id_axis]['dead_zone']
-            && val > this.axes_config[id_axis]['dead_zone'][0] && val < this.axes_config[id_axis]['dead_zone'][1]
-        )
-            return this.axes_config[id_axis]['dead_zone'][2] // return dead val
+
+        if (!this.config || !this.config.axes || !this.config.axes[id_axis] || !this.config.axes[id_axis]['dead_zone'] || this.config.axes[id_axis]['dead_zone'].length != 2)
+            return val;
+
+        let min = this.config.axes[id_axis]['dead_zone'][0];
+        let max = this.config.axes[id_axis]['dead_zone'][1];
+        let dead_val = this.config.axes[id_axis]['dead_value'] ? this.config.axes[id_axis]['dead_value'] : 0.0;
+
+        if (val > min && val < max)
+            return dead_val;
 
         return val;
     }
