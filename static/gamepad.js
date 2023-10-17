@@ -25,12 +25,10 @@ export class GamepadController {
     constructor(client, axes_config) {
 
         this.client = client;
+        // this.ui = null;
 
-        this.transmit_types = {
-            'Joy' : { topic: '/joy', msg_type: 'sensor_msgs/msg/Joy' },
-            'Twist' : { topic: '/cmd_vel', msg_type:'geometry_msgs/msg/Twist' },
-            //'TwistStamped' : { msg_type:'geometry_msgs/msg/TwistStamped', topic: '/cmd_vel' },
-        }
+        this.drivers = [];
+
         this.writers = {} // by topic
         this.msg_classes = {} // by msg type
         this.msg_writers = {} // by msg type
@@ -55,7 +53,16 @@ export class GamepadController {
 
             $('#gamepad').addClass('connected');
 
-            that.run_loop();
+            if (that.client.supported_msg_types === null) {
+                //wait for message defs to load
+                console.log('Gamepad loop delayed')
+                that.client.once('message_types_loaded', () => {
+                    console.log('message_types_loaded');
+                    that.run_loop();
+                });
+            } else {
+                that.run_loop();
+            }
         });
 
         window.addEventListener('gamepaddisconnected', (event) => {
@@ -69,16 +76,49 @@ export class GamepadController {
 
     }
 
+    add_driver(label, topic, msg_type, handler, is_default) {
+        this.drivers.push({
+            label: label,
+            topic: topic,
+            msg_type: msg_type,
+            handler: handler,
+            is_default: is_default
+        });
+        console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
+        this.update_ui();
+    }
+
+    update_ui() {
+        let opts = [];
+        for (let i = 0; i < this.drivers.length; i++) {
+            let d = this.drivers[i];
+            opts.push(
+                '<option value="'+i+'"'+(d['is_default'] ? ' selected="selected"' : '')+'>' +
+                d['label'] +
+                '</option>')
+        }
+        $('#gamepad_driver').html(opts.join("\n"));
+    }
+
     run_loop() {
 
-        if (this.id_gamepad == null)
+        if (this.id_gamepad == null) {
+            console.log('Gamepad loop failed, this=', this)
             return; //stop loop
+        }
 
-        let transmitting_type = $('#gamepad_msg_type').val();
+        // console.log('Gamepad loop running')
+
+        let id_driver = $('#gamepad_driver').val();
         let transmitting = $('#gamepad_enabled').is(':checked');
 
-        let msg_type = this.transmit_types[transmitting_type].msg_type;
-        let topic = this.transmit_types[transmitting_type].topic;
+        if (!this.drivers[id_driver]) {
+            console.warn('Gamepad has no driver, waiting...');
+            return window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
+        }
+
+        let msg_type = this.drivers[id_driver].msg_type;
+        let topic = this.drivers[id_driver].topic;
 
         if (!this.writers[topic]) {
             this.writers[topic] = this.client.create_writer(topic, msg_type);
@@ -91,88 +131,9 @@ export class GamepadController {
         let buttons = gp.buttons;
         let axes = gp.axes;
 
-        let now_ms = Date.now(); //window.performance.now()
-        let sec = Math.floor(now_ms / 1000)
-        let nanosec = (now_ms - sec*1000) * 1000000
         // console.log(now)
 
-        let msg = {}
-
-        switch (transmitting_type) {
-            case 'Joy': //forward joy
-                msg = {
-                    header: {
-                        stamp: {
-                            sec: sec,
-                            nanosec: nanosec
-                        },
-                        frame_id: 'gamepad'
-                    },
-                    axes: [],
-                    buttons: []
-                }
-                for (let id_axis = 0; id_axis < axes.length; id_axis++) {
-                    let val = this.apply_axis_deadzone(axes[id_axis], id_axis)
-                    msg.axes[id_axis] = val
-                }
-                for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
-                    msg.buttons[id_btn] = buttons[id_btn].pressed;
-                }
-                break;
-            case 'Twist':
-            // case 'TwistStamped':
-
-                let fw_speed = this.apply_axis_deadzone(axes[1], 1); // (-1,1)
-
-                let val_strife = 0.0;
-                let val_strife_l = this.apply_axis_deadzone(axes[4], 4)
-                if (val_strife_l > -1) {
-                    val_strife -= (val_strife_l + 1.0) / 4.0; // (-.5,0)
-                }
-                let val_strife_r = this.apply_axis_deadzone(axes[3], 3)
-                if (val_strife_r > -1) {
-                    val_strife += (val_strife_r + 1.0) / 4.0; // (0,.5)
-                }
-                let turn_amount = this.apply_axis_deadzone(-axes[2], 2); // (-1,1)
-                let turn_speed_max = 2.0; //at 0.0 fw speed
-                let turn_speed_min = 0.7; //at 1.0 fw speed
-                let turn_speed = this.lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
-                msg = {
-                        "linear": {
-                            "x": fw_speed * 3, //fw / back (-1,1)
-                            "y": val_strife, //strife (-.5,0.5)
-                            "z": 0
-                        },
-                        "angular": {
-                            "x": 0,
-                            "y": 0,
-                            "z": turn_amount * turn_speed, //turn (-3,3)
-                        }
-                }
-
-                //select triggers iw scan and roam
-                if (buttons[10].pressed) {
-                    this.ui.trigger_wifi_scan();
-                }
-
-                // if (transmitting_type == 'TwistStamped') {
-                //     msg = {
-                //         header: {
-                //             stamp: {
-                //                 sec: sec,
-                //                 nanosec: nanosec
-                //             },
-                //             frame_id: 'phntm'
-                //         },
-                //         twist: msg
-                //     }
-                // }
-
-                break;
-            default:
-                console.error('Invalid transmitting_type val: '+transmitting_type)
-                return;
-        }
+        let msg = this.drivers[id_driver]['handler'](this, axes, buttons);
 
         let debug = {
             buttons: {},
@@ -197,7 +158,7 @@ export class GamepadController {
         }
 
         if (this.gamepad_service_mapping) {
-            for (const [service_name, service_mapping] of Object.entries(gamepad_service_mapping)) {
+            for (const [service_name, service_mapping] of Object.entries(this.gamepad_service_mapping)) {
                 //let  = gamepad_service_mapping[service_name];
                 for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
                     //let  = gamepad_service_mapping[service_name][btn_name];
@@ -220,11 +181,11 @@ export class GamepadController {
                             } else {
                                 console.log('Not triggering '+service_name+' btn '+btn_name+'; btn not found (service not discovered yet?)');
                             }
-                            gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
+                            this.gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
 
                         }
                     } else if (btns_config['needs_reset']) {
-                        gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
+                        this.gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
                     }
                 }
                 // if (buttons[service.btn_id].pressed) {
@@ -233,7 +194,7 @@ export class GamepadController {
             }
         }
 
-        window.setTimeout(window.gamepadController.run_loop, this.loop_delay);
+        window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
     }
 
 
@@ -314,7 +275,7 @@ export class GamepadController {
 
     apply_axis_deadzone(val, id_axis) {
         if (this.axes_config[id_axis] && this.axes_config[id_axis]['dead_zone']
-            && val > axes_config[id_axis]['dead_zone'][0] && val < axes_config[id_axis]['dead_zone'][1]
+            && val > this.axes_config[id_axis]['dead_zone'][0] && val < this.axes_config[id_axis]['dead_zone'][1]
         )
             return this.axes_config[id_axis]['dead_zone'][2] // return dead val
 

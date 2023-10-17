@@ -911,7 +911,7 @@ SPAN.error {
     right: 0;
     top: 0;
     display: block;
-    z-index: 15;
+    z-index: 35;
 }
 
 #gamepad_latency {

@@ -37,6 +37,7 @@ class TopicWriter {
         let payload = this.msg_writer.writeMessage(msg); //to binary
         //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
         this.dc.send(payload);
+        return true;
     }
 }
 
@@ -420,11 +421,11 @@ export class PhntmBridgeClient extends EventTarget {
         let p = this.event_calbacks[event].indexOf(cb)
         if (p !== -1) {
             this.event_calbacks[event].splice(p, 1);
-            console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
+            // console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
             if (Object.keys(this.event_calbacks[event]).length == 0) {
                 delete this.event_calbacks[event];
                 if (event.indexOf('/') === 0) { // topic or camera id
-                    console.log('Unsubscribing from '+event);
+                    // console.log('Unsubscribing from '+event);
                     this.remove_subscriber(event);
                 }
             }
@@ -437,9 +438,10 @@ export class PhntmBridgeClient extends EventTarget {
     emit(event, ...args) {
         if (!this.event_calbacks[event])
             return;
-        this.event_calbacks[event].forEach((cb) => {
+        let callbacks = Object.values(this.event_calbacks[event]);
+        callbacks.forEach((cb) => {
             cb(...args)
-        })
+        });
     }
 
     create_subscriber(id_source) {
@@ -492,24 +494,46 @@ export class PhntmBridgeClient extends EventTarget {
 
     create_writer(topic, msg_type, on_ready_cb) {
 
-        if (this.topic_writers[topic])
+        if (this.topic_writers[topic]) {
+            console.log('Reusing writer for '+topic+'; init_complete='+this.init_complete);
             return this.topic_writers[topic];
+        }
+
+        console.log('Beginning writing into '+topic+'; init_complete='+this.init_complete)
 
         this.topic_writers[topic] = new TopicWriter(this, topic, msg_type, on_ready_cb);
 
         if (this.init_complete) { //not waiting for initial subs
-            this.socket.this.emit('topic:write', [ [ topic, msg_type ] ] ,  (res_sub) => {
-                // console.wanm('Res pub: ', res_sub);
+            this.socket.emit('subscribe:write', {
+                id_robot: this.id_robot,
+                sources: [[ topic, msg_type ]]
+            },  (res_sub) => {
+                console.warn('Res pub: ', res_sub);
             });
         }
-
-        //init dc async
 
         return this.topic_writers[topic];
     }
 
-    clear_writer(topic) {
-        //TODO
+    remove_writer(topic) {
+        if (!this.writers[topic]) {
+            console.log('Writer not found for '+topic+'; not removing')
+            return;
+        }
+
+        console.log('Removing writer for '+topic);
+        // this.topic_dcs
+
+        delete this.writers[topic];
+
+        if (this.init_complete) { //not waiting for initial subs
+            this.socket.emit('unsubscribe:write', {
+                id_robot: this.id_robot,
+                sources: [ topic ]
+            }, (res) => {
+                console.warn('Res unpub', res);
+            });
+        }
     }
 
     load_message_types() {
@@ -525,7 +549,8 @@ export class PhntmBridgeClient extends EventTarget {
 
     connect() {
         if (this.supported_msg_types === null) {
-            this.once('message_types_loaded', () => { this.connect() } )
+            //wait for messages defs to load
+            this.once('message_types_loaded', () => { this.connect(); });
             return;
         }
 
@@ -595,7 +620,16 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (robot_data['write_data_channels']) {
             robot_data['write_data_channels'].forEach((topic_data)=>{
-
+                let topic = topic_data[0];
+                let dc_id = topic_data[1];
+                let msg_type = topic_data[2];
+                if (dc_id && msg_type) {
+                    this._make_write_data_channel(topic, dc_id, msg_type)
+                } else if (topic && this.topic_writers[topic] && this.topic_writers[topic].dc) {
+                    console.log('Topic '+topic+' closed by the client')
+                    this.topic_writers[topic].dc.close();
+                    this.topic_writers[topic].dc = null;
+                }
             });
         }
 
@@ -748,6 +782,32 @@ export class PhntmBridgeClient extends EventTarget {
             // panel.onData(ev, decoded, raw_type, raw_len);
         });
     }
+
+    _make_write_data_channel(topic, dc_id, msg_type) {
+
+        if (!this.topic_writers[topic]) {
+            console.log('Writer not found for '+topic);
+            return;
+        }
+
+        if (this.topic_writers[topic].dc) {
+            console.log('DC already exists for '+topic);
+            return;
+        }
+
+        console.log('Creating write DC for '+topic);
+
+        this.topic_writers[topic].dc = this.pc.createDataChannel(
+            topic,
+            {
+                negotiated: true,
+                ordered: false,
+                maxRetransmits: 0,
+                id:dc_id
+            }
+        );
+    }
+
 
     _init_peer_connection(id_robot) {
 
@@ -1180,305 +1240,305 @@ function GetFile(url) {
 //     //     });
 // }
 
-function _DoSetTopicsSubscription(id_robot, topics_list, subscribe) {
+// function _DoSetTopicsSubscription(id_robot, topics_list, subscribe) {
 
-    console.log((subscribe ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topics_list.join(', '));
+//     console.log((subscribe ? 'Subscribing to read ' : 'Unsubscribing from reading ') + topics_list.join(', '));
 
-    let data = {
-        id_robot: id_robot,
-        topics: [],
-    };
-    for (let i = 0; i < topics_list.length; i++) {
-        if (!topics[topics_list[i]])
-            continue;
-        topics[topics_list[i]].subscribed = subscribe;
-        data.topics.push([ topics_list[i], subscribe ? 1 : 0 ]);
-    }
+//     let data = {
+//         id_robot: id_robot,
+//         topics: [],
+//     };
+//     for (let i = 0; i < topics_list.length; i++) {
+//         if (!topics[topics_list[i]])
+//             continue;
+//         topics[topics_list[i]].subscribed = subscribe;
+//         data.topics.push([ topics_list[i], subscribe ? 1 : 0 ]);
+//     }
 
-    if (!data['topics'].length) {
-        return
-    }
+//     if (!data['topics'].length) {
+//         return
+//     }
 
-    return socket.emit('subcribe:read', data, (res) => {
-        if (!res || !res['success']) {
-            console.error('Read subscription err: ', res);
-            return;
-        }
+//     return socket.emit('subcribe:read', data, (res) => {
+//         if (!res || !res['success']) {
+//             console.error('Read subscription err: ', res);
+//             return;
+//         }
 
-        if (subscribe) {
+//         if (subscribe) {
 
-            if (!res['offer_sdp']) {
-                console.error('Read subscription err: no sdp offer received');
-                return;
-            }
+//             if (!res['offer_sdp']) {
+//                 console.error('Read subscription err: no sdp offer received');
+//                 return;
+//             }
 
-            let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
-            console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
+//             let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
+//             console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
 
-            // _HandleTopicSubscriptionReply(res); // preps video panel to be found when new media stream is added
+//             // _HandleTopicSubscriptionReply(res); // preps video panel to be found when new media stream is added
 
-            pc.setRemoteDescription(robot_offer)
-            .then(() => {
+//             pc.setRemoteDescription(robot_offer)
+//             .then(() => {
 
-                pc.createAnswer()
-                .then((answer) => {
-                    pc.setLocalDescription(answer)
-                    .then(()=>{
-                        let answer_data = {
-                            id_robot: id_robot,
-                            sdp: answer.sdp,
-                        };
-                        socket.emit('sdp:answer', answer_data, (res_answer) => {
-                            if (!res_answer || !res_answer['success']) {
-                                console.error('Error answering topic read subscription offer: ', res_answer);
-                                return;
-                            }
-                        });
-                    })
-                })
-            });
+//                 pc.createAnswer()
+//                 .then((answer) => {
+//                     pc.setLocalDescription(answer)
+//                     .then(()=>{
+//                         let answer_data = {
+//                             id_robot: id_robot,
+//                             sdp: answer.sdp,
+//                         };
+//                         socket.emit('sdp:answer', answer_data, (res_answer) => {
+//                             if (!res_answer || !res_answer['success']) {
+//                                 console.error('Error answering topic read subscription offer: ', res_answer);
+//                                 return;
+//                             }
+//                         });
+//                     })
+//                 })
+//             });
 
-        } else { // unsubscribe => no negotiation needed
-            // _HandleTopicSubscriptionReply(res);
-        }
-    });
-}
+//         } else { // unsubscribe => no negotiation needed
+//             // _HandleTopicSubscriptionReply(res);
+//         }
+//     });
+// }
 
-function _HandleTopicSubscriptionReply(res) {
+// function _HandleTopicSubscriptionReply(res) {
 
-    console.log('Handling topic subscription data: ', res);
+//     console.log('Handling topic subscription data: ', res);
 
-    for (let i = 0; i < res['subscribed'].length; i++) {
+//     for (let i = 0; i < res['subscribed'].length; i++) {
 
-        let topic = res['subscribed'][i][0];
-        let id = res['subscribed'][i][1];
+//         let topic = res['subscribed'][i][0];
+//         let id = res['subscribed'][i][1];
 
-        if (!topics[topic]) {
-            console.warn('Topic '+topic+' not found in topics list', topics);
-            continue;
-        }
+//         if (!topics[topic]) {
+//             console.warn('Topic '+topic+' not found in topics list', topics);
+//             continue;
+//         }
 
-        let is_image = topics[topic]['msg_types'][0] == 'sensor_msgs/msg/Image'
+//         let is_image = topics[topic]['msg_types'][0] == 'sensor_msgs/msg/Image'
 
-        if (!is_image) { //subscribed data
+//         if (!is_image) { //subscribed data
 
-            if (topic_dcs[topic]) {
-                continue;
-            }
+//             if (topic_dcs[topic]) {
+//                 continue;
+//             }
 
-            console.log('Opening local read DC '+topic+' id='+id)
-            let dc = pc.createDataChannel(topic, {
-                negotiated: true,
-                ordered: false,
-                maxRetransmits: 0,
-                id:id
-            });
+//             console.log('Opening local read DC '+topic+' id='+id)
+//             let dc = pc.createDataChannel(topic, {
+//                 negotiated: true,
+//                 ordered: false,
+//                 maxRetransmits: 0,
+//                 id:id
+//             });
 
-            let Reader = window.Serialization.MessageReader;
-            let msg_type_class = find_message_type(topics[topic]['msg_types'][0], supported_msg_types)
-            let msg_reader = new Reader( [ msg_type_class ].concat(supported_msg_types) );
+//             let Reader = window.Serialization.MessageReader;
+//             let msg_type_class = find_message_type(topics[topic]['msg_types'][0], supported_msg_types)
+//             let msg_reader = new Reader( [ msg_type_class ].concat(supported_msg_types) );
 
-            topic_dcs[topic] = dc;
+//             topic_dcs[topic] = dc;
 
-            dc.addEventListener('open', (ev)=> {
-                console.warn('DC '+topic+' open', dc)
-            });
-            dc.addEventListener('close', (ev)=> {
-                console.warn('DC '+topic+' close')
-                delete topic_dcs[topic];
-            });
-            dc.addEventListener('error', (ev)=> {
-                console.error('DC '+topic+' error', ev)
-                delete topic_dcs[topic]
-            });
-            dc.addEventListener('message', (ev)=> {
+//             dc.addEventListener('open', (ev)=> {
+//                 console.warn('DC '+topic+' open', dc)
+//             });
+//             dc.addEventListener('close', (ev)=> {
+//                 console.warn('DC '+topic+' close')
+//                 delete topic_dcs[topic];
+//             });
+//             dc.addEventListener('error', (ev)=> {
+//                 console.error('DC '+topic+' error', ev)
+//                 delete topic_dcs[topic]
+//             });
+//             dc.addEventListener('message', (ev)=> {
 
-                let rawData = ev.data; //arraybuffer
-                let decoded = null;
-                let raw_len = 0;
-                let raw_type = ""
+//                 let rawData = ev.data; //arraybuffer
+//                 let decoded = null;
+//                 let raw_len = 0;
+//                 let raw_type = ""
 
-                if (rawData instanceof ArrayBuffer) {
-                    if (msg_reader != null) {
-                        let v = new DataView(rawData)
-                        decoded = msg_reader.readMessage(v);
-                    } else {
-                        decoded = buf2hex(rawData)
-                    }
-                    raw_len = rawData.byteLength;
-                    raw_type = 'ArrayBuffer';
-                } else { //string
-                    decoded = rawData;
-                    raw_len = decoded.length;
-                    raw_type = 'String';
-                }
+//                 if (rawData instanceof ArrayBuffer) {
+//                     if (msg_reader != null) {
+//                         let v = new DataView(rawData)
+//                         decoded = msg_reader.readMessage(v);
+//                     } else {
+//                         decoded = buf2hex(rawData)
+//                     }
+//                     raw_len = rawData.byteLength;
+//                     raw_type = 'ArrayBuffer';
+//                 } else { //string
+//                     decoded = rawData;
+//                     raw_len = decoded.length;
+//                     raw_type = 'String';
+//                 }
 
-                if (topic == '/robot_description') {
-                    console.warn('Got robot descripotion: ', decoded);
-                }
+//                 if (topic == '/robot_description') {
+//                     console.warn('Got robot descripotion: ', decoded);
+//                 }
 
-                let panel = panels[topic];
-                if (!panel) {
-                    console.error('panel not found for '+topic+' (data)')
-                    return;
-                }
+//                 let panel = panels[topic];
+//                 if (!panel) {
+//                     console.error('panel not found for '+topic+' (data)')
+//                     return;
+//                 }
 
-                if (!$('#update_panel_'+panel.n).is(':checked')) {
-                    // console.error('panel not updating '+topic+' (data)')
-                    return;
-                }
+//                 if (!$('#update_panel_'+panel.n).is(':checked')) {
+//                     // console.error('panel not updating '+topic+' (data)')
+//                     return;
+//                 }
 
-                // console.log('panel '+topic+' has data', ev)
+//                 // console.log('panel '+topic+' has data', ev)
 
-                panel.onData(ev, decoded, raw_type, raw_len);
-            });
+//                 panel.onData(ev, decoded, raw_type, raw_len);
+//             });
 
-        } else { //image topic subscribed as video stream
+//         } else { //image topic subscribed as video stream
 
-            console.log('Subscribing to video track '+topic+' id stream='+id+'; local streams:', media_streams);
+//             console.log('Subscribing to video track '+topic+' id stream='+id+'; local streams:', media_streams);
 
-            topics[topic].id_stream = id;
+//             topics[topic].id_stream = id;
 
-            let panel = panels[topic];
-            if (!panel) {
-                console.error('Panel not found for '+topic);
-                continue;
-            }
+//             let panel = panels[topic];
+//             if (!panel) {
+//                 console.error('Panel not found for '+topic);
+//                 continue;
+//             }
 
-            // if this is the first time stream is subscribed,
-            // panel will be found by 'track' event fires
-            panel.id_stream = id;
+//             // if this is the first time stream is subscribed,
+//             // panel will be found by 'track' event fires
+//             panel.id_stream = id;
 
-            // otherwise we reuse existing panel
-            if (media_streams[id]) {
-                console.log('Found stream for '+topic+' id='+id);
-                document.getElementById('panel_video_'+panel.n).srcObject = media_streams[id];
-            }
+//             // otherwise we reuse existing panel
+//             if (media_streams[id]) {
+//                 console.log('Found stream for '+topic+' id='+id);
+//                 document.getElementById('panel_video_'+panel.n).srcObject = media_streams[id];
+//             }
 
-        }
+//         }
 
-    }
+//     }
 
-    if (res['unsubscribed']) {
-        for (let i = 0; i < res['unsubscribed'].length; i++) {
+//     if (res['unsubscribed']) {
+//         for (let i = 0; i < res['unsubscribed'].length; i++) {
 
-            let id_topic = res['unsubscribed'][i][0];
-            let id = res['unsubscribed'][i][1];
-            let topic = topics[id_topic];
+//             let id_topic = res['unsubscribed'][i][0];
+//             let id = res['unsubscribed'][i][1];
+//             let topic = topics[id_topic];
 
-            if (topic_dcs[id_topic]) {
-                console.warn('Now closing local read DC '+id_topic);
-                // topic_dcs[id_topic].close();
-                // delete topic_dcs[id_topic];
-            }
+//             if (topic_dcs[id_topic]) {
+//                 console.warn('Now closing local read DC '+id_topic);
+//                 // topic_dcs[id_topic].close();
+//                 // delete topic_dcs[id_topic];
+//             }
 
-            // if (topic.id_stream && media_streams[topic.id_stream]) {
+//             // if (topic.id_stream && media_streams[topic.id_stream]) {
 
-            //     console.warn('Stopping media stream for '+id_topic);
+//             //     console.warn('Stopping media stream for '+id_topic);
 
-            //     // topic_video_tracks[topic].stop()
+//             //     // topic_video_tracks[topic].stop()
 
-            //     media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
-            //     delete media_streams[topic.id_stream];
+//             //     media_streams[topic.id_stream].getTracks().forEach(track => track.stop());
+//             //     delete media_streams[topic.id_stream];
 
-            //     if (panels[id_topic]) {
-            //         console.log('Closing video panel for '+id_topic, document.getElementById('panel_video_'+panels[id_topic].n));
-            //         document.getElementById('panel_video_'+panels[id_topic].n).srcObject = undefined;
-            //     }
-            //     //pc.removeTrack(topic_transceivers[topic].receiver);
-            //     //topic_video_tracks[topic].stop();
-            //     //delete topic_video_tracks[topic];
-            // }
-        }
-    }
+//             //     if (panels[id_topic]) {
+//             //         console.log('Closing video panel for '+id_topic, document.getElementById('panel_video_'+panels[id_topic].n));
+//             //         document.getElementById('panel_video_'+panels[id_topic].n).srcObject = undefined;
+//             //     }
+//             //     //pc.removeTrack(topic_transceivers[topic].receiver);
+//             //     //topic_video_tracks[topic].stop();
+//             //     //delete topic_video_tracks[topic];
+//             // }
+//         }
+//     }
 
-    if (res['err']) {
-        for (let i = 0; i < res['err'].length; i++) {
+//     if (res['err']) {
+//         for (let i = 0; i < res['err'].length; i++) {
 
-            let topic = res['err'][i][0];
-            let msg = res['err'][i][1];
-            console.info('Topic '+topic+' subscription err: '+msg);
+//             let topic = res['err'][i][0];
+//             let msg = res['err'][i][1];
+//             console.info('Topic '+topic+' subscription err: '+msg);
 
-            if (topics[topic]) {
-                topics[topic].subscribed = false;
-            }
-        }
-    }
-}
+//             if (topics[topic]) {
+//                 topics[topic].subscribed = false;
+//             }
+//         }
+//     }
+// }
 
 
-let cameras_to_subscribe = []; // str cam
-let cameras_to_unsubscribe = []; // str cam
-function SetCameraSubscription(id_robot, camera_list, subscribe) {
+// let cameras_to_subscribe = []; // str cam
+// let cameras_to_unsubscribe = []; // str cam
+// function SetCameraSubscription(id_robot, camera_list, subscribe) {
 
-    for (let i = 0; i < camera_list.length; i++) {
-        let cam = camera_list[i];
-        if (subscribe) {
-            let pSubscribe = cameras_to_subscribe.indexOf(cam);
-            if (cameras[cam] && cameras[cam].subscribed) {
-                console.info('Camera '+cam+' already subscribed to (we cool)');
-                if (pSubscribe !== -1)
-                    cameras_to_subscribe.splice(pSubscribe, 1);
-                continue;
-            }
-            if (pSubscribe === -1)
-                cameras_to_subscribe.push(cam);
-            let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
-            if (pUnsubscribe !== -1)
-                cameras_to_unsubscribe.splice(pUnsubscribe, 1);
-        } else {
-            let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
-            if (cameras[cam] && !cameras[cam].subscribed) {
-                console.info('Camera '+cam+' already unsubscribed from (we cool)');
-                if (pUnsubscribe !== -1)
-                    cameras_to_unsubscribe.splice(pUnsubscribe, 1);
-                continue;
-            }
-            if (pUnsubscribe === -1)
-                cameras_to_unsubscribe.push(cam);
-            let pSubscribe = cameras_to_subscribe.indexOf(cam);
-            if (pSubscribe !== -1)
-                cameras_to_subscribe.splice(pSubscribe, 1);
-        }
-    }
+//     for (let i = 0; i < camera_list.length; i++) {
+//         let cam = camera_list[i];
+//         if (subscribe) {
+//             let pSubscribe = cameras_to_subscribe.indexOf(cam);
+//             if (cameras[cam] && cameras[cam].subscribed) {
+//                 console.info('Camera '+cam+' already subscribed to (we cool)');
+//                 if (pSubscribe !== -1)
+//                     cameras_to_subscribe.splice(pSubscribe, 1);
+//                 continue;
+//             }
+//             if (pSubscribe === -1)
+//                 cameras_to_subscribe.push(cam);
+//             let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
+//             if (pUnsubscribe !== -1)
+//                 cameras_to_unsubscribe.splice(pUnsubscribe, 1);
+//         } else {
+//             let pUnsubscribe = cameras_to_unsubscribe.indexOf(cam);
+//             if (cameras[cam] && !cameras[cam].subscribed) {
+//                 console.info('Camera '+cam+' already unsubscribed from (we cool)');
+//                 if (pUnsubscribe !== -1)
+//                     cameras_to_unsubscribe.splice(pUnsubscribe, 1);
+//                 continue;
+//             }
+//             if (pUnsubscribe === -1)
+//                 cameras_to_unsubscribe.push(cam);
+//             let pSubscribe = cameras_to_subscribe.indexOf(cam);
+//             if (pSubscribe !== -1)
+//                 cameras_to_subscribe.splice(pSubscribe, 1);
+//         }
+//     }
 
-    let cum_cameras_list = subscribe ? cameras_to_subscribe : cameras_to_unsubscribe;
+//     let cum_cameras_list = subscribe ? cameras_to_subscribe : cameras_to_unsubscribe;
 
-    if (!cum_cameras_list.length) {
-        console.info('No cameras to '+(subscribe?'subscribe to':'unsubscribe from')+' in SetCameraSubscription (we cool)');
-        return;
-    }
+//     if (!cum_cameras_list.length) {
+//         console.info('No cameras to '+(subscribe?'subscribe to':'unsubscribe from')+' in SetCameraSubscription (we cool)');
+//         return;
+//     }
 
-    if (subscribe) {
+//     if (subscribe) {
 
-        if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
-            if (pc && pc.connectionState == 'failed') {
-                console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
-                //connect will trigger this again
-                return;
-            }
+//         if (!pc || pc.signalingState != 'stable' || !pc.localDescription) {
+//             if (pc && pc.connectionState == 'failed') {
+//                 console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
+//                 //connect will trigger this again
+//                 return;
+//             }
 
-            if (pc)
-                console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
-            else
-                console.info('Cannot subscribe to cameras, pc=null; waiting... '+cum_cameras_list.join(', '));
+//             if (pc)
+//                 console.info('Cannot subscribe to cameras, pc.connectionState='+pc.connectionState+'; pc.signalingState='+pc.signalingState+'; pc.localDescription='+pc.localDescription+'; waiting... '+cum_cameras_list.join(', '));
+//             else
+//                 console.info('Cannot subscribe to cameras, pc=null; waiting... '+cum_cameras_list.join(', '));
 
-            setTimeout(() => {
-                SetCameraSubscription(id_robot, [], subscribe) //all alteady in queues
-            }, 1000); //try again when stable
-            return;
-        }
+//             setTimeout(() => {
+//                 SetCameraSubscription(id_robot, [], subscribe) //all alteady in queues
+//             }, 1000); //try again when stable
+//             return;
+//         }
 
-        _DoSetCamerasSubscription(id_robot, cum_cameras_list, true)
-        cameras_to_subscribe = [];
+//         _DoSetCamerasSubscription(id_robot, cum_cameras_list, true)
+//         cameras_to_subscribe = [];
 
-    } else {
-        // unsubscribe, no need to renegotiate
-        _DoSetCamerasSubscription(id_robot, cum_cameras_list, false)
-        cameras_to_unsubscribe = [];
-    }
+//     } else {
+//         // unsubscribe, no need to renegotiate
+//         _DoSetCamerasSubscription(id_robot, cum_cameras_list, false)
+//         cameras_to_unsubscribe = [];
+//     }
 
-}
+// }
 
 // assuming pc state is stable when subscribing to new cameras here
 // function _DoInitCamerasSubscription() {
@@ -1514,131 +1574,131 @@ function SetCameraSubscription(id_robot, camera_list, subscribe) {
 //         });
 // }
 
-function _DoSetCamerasSubscription(id_robot, cameras_list, subscribe) {
+// function _DoSetCamerasSubscription(id_robot, cameras_list, subscribe) {
 
-    console.log((subscribe ? 'Subscribing to cameras ' : 'Unsubscribing from cameras ') + cameras_list.join(', '));
+//     console.log((subscribe ? 'Subscribing to cameras ' : 'Unsubscribing from cameras ') + cameras_list.join(', '));
 
-    let data = {
-        id_robot: id_robot,
-        cameras: [],
-    };
-    for (let i = 0; i < cameras_list.length; i++) {
-        if (!cameras[cameras_list[i]])
-            continue;
-        cameras[cameras_list[i]].subscribed = subscribe;
-        data.cameras.push([ cameras_list[i], subscribe ? 1 : 0 ]);
-    }
+//     let data = {
+//         id_robot: id_robot,
+//         cameras: [],
+//     };
+//     for (let i = 0; i < cameras_list.length; i++) {
+//         if (!cameras[cameras_list[i]])
+//             continue;
+//         cameras[cameras_list[i]].subscribed = subscribe;
+//         data.cameras.push([ cameras_list[i], subscribe ? 1 : 0 ]);
+//     }
 
-    if (!data['cameras'].length) {
-        return
-    }
+//     if (!data['cameras'].length) {
+//         return
+//     }
 
-    return socket.emit('cameras:read', data, (res) => {
-        if (!res || !res['success']) {
-            console.error('Camera subscription err: ', res);
-            return;
-        }
+//     return socket.emit('cameras:read', data, (res) => {
+//         if (!res || !res['success']) {
+//             console.error('Camera subscription err: ', res);
+//             return;
+//         }
 
-        if (subscribe) {
+//         if (subscribe) {
 
-            if (!res['offer_sdp']) {
-                console.error('Read subscription err: no sdp offer received');
-                return;
-            }
-            let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
-            console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
+//             if (!res['offer_sdp']) {
+//                 console.error('Read subscription err: no sdp offer received');
+//                 return;
+//             }
+//             let robot_offer = new RTCSessionDescription({ sdp: res['offer_sdp'], type: 'offer' });
+//             console.log('Setting robot offer, signalling state='+pc.signalingState, robot_offer);
 
-            pc.setRemoteDescription(robot_offer)
-            .then(() => {
+//             pc.setRemoteDescription(robot_offer)
+//             .then(() => {
 
-                pc.createAnswer()
-                .then((answer) => {
-                    pc.setLocalDescription(answer)
-                    .then(()=>{
-                        let answer_data = {
-                            id_robot: id_robot,
-                            sdp: answer.sdp,
-                        };
-                        socket.emit('sdp:answer', answer_data, (res_answer) => {
-                            if (!res_answer || !res_answer['success']) {
-                                console.error('Error answering camera read subscription offer: ', res_answer);
-                                return;
-                            }
-                            _HandleCamerasSubscriptionReply(res); // preps video panel to be found when new media stream is added
-                        });
-                    })
-                })
-            });
+//                 pc.createAnswer()
+//                 .then((answer) => {
+//                     pc.setLocalDescription(answer)
+//                     .then(()=>{
+//                         let answer_data = {
+//                             id_robot: id_robot,
+//                             sdp: answer.sdp,
+//                         };
+//                         socket.emit('sdp:answer', answer_data, (res_answer) => {
+//                             if (!res_answer || !res_answer['success']) {
+//                                 console.error('Error answering camera read subscription offer: ', res_answer);
+//                                 return;
+//                             }
+//                             _HandleCamerasSubscriptionReply(res); // preps video panel to be found when new media stream is added
+//                         });
+//                     })
+//                 })
+//             });
 
-        } else { // unsubscribe => no negotiation needed
-            _HandleCamerasSubscriptionReply(res);
-        }
-    });
-}
+//         } else { // unsubscribe => no negotiation needed
+//             _HandleCamerasSubscriptionReply(res);
+//         }
+//     });
+// }
 
-function _HandleCamerasSubscriptionReply(res) {
+// function _HandleCamerasSubscriptionReply(res) {
 
-    // console.log('Handling cameras subscription data: ', res);
+//     // console.log('Handling cameras subscription data: ', res);
 
-    for (let i = 0; i < res['subscribed'].length; i++) {
+//     for (let i = 0; i < res['subscribed'].length; i++) {
 
-        let id_cam = res['subscribed'][i][0];
-        let id_stream = res['subscribed'][i][1];
+//         let id_cam = res['subscribed'][i][0];
+//         let id_stream = res['subscribed'][i][1];
 
-        if (!cameras[id_cam]) {
-            console.warn('Camera '+id_cam+' not found in detected cameras list', cameras);
-            continue;
-        }
+//         if (!cameras[id_cam]) {
+//             console.warn('Camera '+id_cam+' not found in detected cameras list', cameras);
+//             continue;
+//         }
 
-        console.log('Subscribing to video track '+id_cam+' id stream='+id_stream+'; local media streams:', media_streams);
+//         console.log('Subscribing to video track '+id_cam+' id stream='+id_stream+'; local media streams:', media_streams);
 
-        cameras[id_cam].id_stream = id_stream;
+//         cameras[id_cam].id_stream = id_stream;
 
-        let panel = panels[id_cam];
-        if (!panel) {
-            console.error('Panel not found for '+id_cam);
-            continue;
-        }
+//         let panel = panels[id_cam];
+//         if (!panel) {
+//             console.error('Panel not found for '+id_cam);
+//             continue;
+//         }
 
-        // if this is the first time stream is subscribed,
-        // panel will be found by 'track' event fires
-        panel.id_stream = id_stream;
+//         // if this is the first time stream is subscribed,
+//         // panel will be found by 'track' event fires
+//         panel.id_stream = id_stream;
 
-        if (media_streams[id_stream]) {
-            console.log('Found stream for '+id_cam+' id='+id_stream);
-            document.getElementById('panel_video_'+panel.n).srcObject = media_streams[id_stream];
-        }
-    }
+//         if (media_streams[id_stream]) {
+//             console.log('Found stream for '+id_cam+' id='+id_stream);
+//             document.getElementById('panel_video_'+panel.n).srcObject = media_streams[id_stream];
+//         }
+//     }
 
-    if (res['unsubscribed']) {
-        for (let i = 0; i < res['unsubscribed'].length; i++) {
+//     if (res['unsubscribed']) {
+//         for (let i = 0; i < res['unsubscribed'].length; i++) {
 
-            let id_cam = res['unsubscribed'][i][0];
-            let id_stream = res['unsubscribed'][i][1];
+//             let id_cam = res['unsubscribed'][i][0];
+//             let id_stream = res['unsubscribed'][i][1];
 
-            if (topic_media_streams[id_cam]) {
+//             if (topic_media_streams[id_cam]) {
 
-                console.warn('Pausing video track for '+id_cam);
+//                 console.warn('Pausing video track for '+id_cam);
 
-                const elements = document.querySelectorAll(`[srcObject="${topic_media_streams[id_cam].id}"]`);
-                elements.forEach(element => {
-                    element.srcObject = null;
-                });
-            }
-        }
-    }
+//                 const elements = document.querySelectorAll(`[srcObject="${topic_media_streams[id_cam].id}"]`);
+//                 elements.forEach(element => {
+//                     element.srcObject = null;
+//                 });
+//             }
+//         }
+//     }
 
-    if (res['err']) {
-        for (let i = 0; i < res['err'].length; i++) {
+//     if (res['err']) {
+//         for (let i = 0; i < res['err'].length; i++) {
 
-            let id_cam = res['err'][i][0];
-            let msg = res['err'][i][1];
-            console.info('Camera '+id_cam+' subscription err: '+msg);
+//             let id_cam = res['err'][i][0];
+//             let msg = res['err'][i][1];
+//             console.info('Camera '+id_cam+' subscription err: '+msg);
 
-            if (cameras[id_cam]) {
-                cameras[id_cam].subscribed = false;
-            }
-        }
-    }
+//             if (cameras[id_cam]) {
+//                 cameras[id_cam].subscribed = false;
+//             }
+//         }
+//     }
 
-}
+// }

@@ -509,6 +509,33 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         });
     });
 
+    appSocket.on('subscribe:write', async function (data:{ id_robot:string, sources:any[]}, returnCallback) {
+
+        $d.log('App requesting write subscription to:', data);
+
+        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
+        if (!robot)
+            return;
+
+        if (!data.sources) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid write subscription data'
+                })
+            }
+            return;
+        }
+
+        robot.socket.emit('subscribe:write', data, (resData:any) => {
+
+            $d.log('Got robot\'s write subscription answer:', resData);
+
+            return returnCallback(resData);
+        });
+
+    });
+
     appSocket.on('unsubscribe', async function (data:{ id_robot:string, sources:string[]}, returnCallback) {
         $d.log('App unsubscribing from:', data);
 
@@ -536,32 +563,32 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         });
     });
 
-    appSocket.on('cameras:read', async function (data:{ id_robot:string, cameras:[string, number][]}, returnCallback) {
+    // appSocket.on('cameras:read', async function (data:{ id_robot:string, cameras:[string, number][]}, returnCallback) {
 
-        $d.log('App requesting robot camera access with:', data);
+    //     $d.log('App requesting robot camera access with:', data);
 
-        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
-        if (!robot)
-            return;
+    //     let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
+    //     if (!robot)
+    //         return;
 
-        if (!data.cameras) {
-            if (returnCallback) {
-                returnCallback({
-                    'err': 1,
-                    'msg': 'Invalid subscription data'
-                })
-            }
-            return;
-        }
+    //     if (!data.cameras) {
+    //         if (returnCallback) {
+    //             returnCallback({
+    //                 'err': 1,
+    //                 'msg': 'Invalid subscription data'
+    //             })
+    //         }
+    //         return;
+    //     }
 
-        robot.socket.emit('cameras:read', data, (resData:any) => {
+    //     robot.socket.emit('cameras:read', data, (resData:any) => {
 
-            $d.log('Got robot\'s camera subscription answer:', resData);
+    //         $d.log('Got robot\'s camera subscription answer:', resData);
 
-            return returnCallback(resData);
-        });
+    //         return returnCallback(resData);
+    //     });
 
-    });
+    // });
 
     appSocket.on('sdp:answer', async function (data:{ id_robot:string, sdp:string}, returnCallback) {
         $d.log('App sending sdp answer with:', data);
@@ -588,32 +615,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         });
     });
 
-    appSocket.on('subcribe:write', async function (data:{ id_robot:string, topics:[string, number][]}, returnCallback) {
 
-        $d.log('App requesting write subscription to robot with:', data);
-
-        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
-        if (!robot)
-            return;
-
-        if (!data.topics) {
-            if (returnCallback) {
-                returnCallback({
-                    'err': 1,
-                    'msg': 'Invalid subscription data'
-                })
-            }
-            return;
-        }
-
-        robot.socket.emit('subscription:write', data, (resData:any) => {
-
-            $d.log('Got robot\'s write subscription answer:', resData);
-
-            return returnCallback(resData);
-        });
-
-    });
 
     appSocket.on('service', async function (data:{ id_robot:string, service:string, msg:any}, returnCallback) {
 

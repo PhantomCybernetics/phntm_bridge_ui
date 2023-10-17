@@ -476,6 +476,7 @@ export class PanelUI {
 
         this.panels = {}
         this.gamepad = gamepad;
+        this.gamepad.ui = this;
 
         this.last_pc_stats = null;
 

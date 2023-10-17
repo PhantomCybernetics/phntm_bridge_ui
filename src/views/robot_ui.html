@@ -52,9 +52,9 @@
     <div id="gamepad_latency" title="Latency"></div>
     <div id="gamepad_settings">
         <input type="checkbox" id="gamepad_enabled" checked="checked"/> <label for="gamepad_enabled">Transmitting</label>
-        <select id="gamepad_msg_type">
-            <option value="Joy">Joy -> /joy</option>
-            <option value="Twist" selected="selected">Twist -> /cmd_vel </option>
+        <select id="gamepad_driver">
+            <!-- <option value="Joy">Joy -> /joy</option> -->
+            <!-- <option value="Twist" selected="selected">Twist -> /cmd_vel </option> -->
             <!-- <option value="TwistStamped">TwistStamped -> /cmd_vel </option> -->
         </select>
         <div id="gamepad_debug">
@@ -72,6 +72,7 @@
     import { PhntmBridgeClient } from '/static/client.js';
     import { GamepadController } from '/static/gamepad.js';
     import { PanelUI } from '/static/panel-ui.js';
+    import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
 
     $(document).ready(function() {
 
@@ -90,15 +91,23 @@
         });
 
         const gamepad_axes_config = {  // TODO: load from config file or cookie?
-            0: { dead_zone: [ -0.02, 0.02, 0.0 ] }, //dead zone min, max, dead value (optional)
-            1: { dead_zone: [ -0.02, 0.02, 0.0 ] },
+            0: { dead_zone: [ -0.02, 0.02, 0.0 ] }, // dead zone min, max, dead value (optional)
+            1: { dead_zone: [ -0.02, 0.02, 0.0 ], scale: 3.0 },
             2: { dead_zone: [ -0.02, 0.02, 0.0 ] },
             3: { dead_zone: [ -10.0, -0.98, -10.0 ] },
             4: { dead_zone: [ -10.0, -0.98, -10.0 ] },
         }
+
         let gamepad = new GamepadController(robot, gamepad_axes_config); // creates write channels when gamepad is connected
+        gamepad.add_driver('Joy to /joy', '/joy', 'sensor_msgs/msg/Joy', JoyDriver, true);
+        gamepad.add_driver('Twist to /cmd_vel (Mecanum Wheels)', '/cmd_vel', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
+
+        // if (buttons[10].pressed) {
+        //     panel_ui.trigger_wifi_scan();
+        // }
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
+
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets
         panel_ui.panels_from_url_hash(window.location.hash);
