@@ -42,7 +42,7 @@ const UI_URL:string = CONFIG['WEB_UI'].url;
 import { ImportMessageTypes } from './lib/messageTypesImporter';
 
 console.log('-----------------------------------------------------------------------'.yellow);
-console.log(' PHNTM GRIDGE WEB UI'.yellow);
+console.log(' PHNTM BRIDGE WEB UI'.yellow);
 console.log('');
 console.log((' '+UI_HOST+':'+UI_PORT+UI_URL+'__ID__').green);
 console.log((' ').green);
