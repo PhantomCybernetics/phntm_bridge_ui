@@ -5,39 +5,18 @@ const $d:Debugger = Debugger.Get('[Cloud Bridge]');
 
 import { RegisterRobot, RegisterApp, GetCerts, UncaughtExceptionHandler } from './lib/helpers'
 const bcrypt = require('bcrypt-nodejs');
-
-// includes start //
-
 const fs = require('fs');
-
 import * as C from 'colors'; C; //force import typings with string prototype extension
-
-
-//import { MessageReader } from "@foxglove/rosmsg2-serialization"
-
 const _ = require('lodash');
-
-// import { Validation as $v} from './lib/validation';
-
 const https = require('https');
-
-//import { AuthLib } from './lib/auth';
-
-//const { MongoClient } = require("mongodb");
-//MongoLogger.setLevel("debug");
-//const mongoClient = require('mongodb').MongoClient;
 import { MongoClient, Db, Collection, MongoError, InsertOneResult, ObjectId } from 'mongodb';
-
-// import { RouteObjectStateByKey, RouteAppCmdByKey, RouteAppStateByKey, RouteSessionStateByKey } from './lib/topicRouters';
-
-
 import * as SocketIO from "socket.io";
+import * as express from "express";
 
 import { App, AppSocket } from './lib/app'
 import { Robot, RobotSocket } from './lib/robot'
 
 // load config & ssl certs //
-
 const dir:string  = __dirname + "/..";
 
 if (!fs.existsSync(dir+'/config.jsonc')) {
@@ -45,109 +24,22 @@ if (!fs.existsSync(dir+'/config.jsonc')) {
     process.exit();
 };
 
-// import * as path from 'path'
-// import * as ejs from 'ejs';
-// import { off } from 'process';
-
 import * as JSONC from 'comment-json';
 const defaultConfig = JSONC.parse(fs.readFileSync(dir+'/config.jsonc').toString());
 const CONFIG = _.merge(defaultConfig);
-
 const SIO_PORT:number = CONFIG['BRIDGE'].sioPort;
-// const UI_PORT:number = CONFIG['BRIDGE'].webPort;
 const UI_ADDRESS_PREFIX:string = CONFIG['BRIDGE'].uiAddressPrefix;
 const PUBLIC_ADDRESS:string = CONFIG['BRIDGE'].address;
 const DB_URL:string = CONFIG.dbUrl;
-
 const SSL_CERT_PRIVATE =  CONFIG['BRIDGE'].ssl.private;
 const SSL_CERT_PUBLIC =  CONFIG['BRIDGE'].ssl.public;
-
 const DIE_ON_EXCEPTION:boolean = CONFIG.dieOnException;
-
 const VERBOSE:boolean = CONFIG['BRIDGE'].verbose;
-
-// const MSG_TYPES_DIR = CONFIG['BRIDGE'].msgTypesDir;
-// const MSG_TYPES_JSON_FILE = CONFIG['BRIDGE'].msgTypesJsonFile;
-
 const certFiles:string[] = GetCerts(dir+"/"+SSL_CERT_PRIVATE, dir+"/"+SSL_CERT_PUBLIC);
 const HTTPS_SERVER_OPTIONS = {
     key: fs.readFileSync(certFiles[0]),
     cert: fs.readFileSync(certFiles[1]),
 };
-
-
-////////////////////////////////////////////////////////////////////////////////////
-
-// import { MessageReader } from "@foxglove/rosmsg2-serialization"
-// import { MessageWriter } from "@foxglove/rosmsg2-serialization";
-
-// import { ImportMessageTypes } from './lib/messageTypesImporter';
-
-
-/*
-let def_Time = fs.readFileSync(dir+'/static/msg_types/buildin_interfaces/Time.msg').toString()
-const timeDefinitions:MessageDefinition[] = parse(def_Time, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
-//console.log('Time:', JSON.stringify(timeDefinition, null, 2));
-
-let def_Header = fs.readFileSync(dir+'/static/msg_types/std_msgs/Header.msg').toString()
-const headerDefinitions:MessageDefinition[] = parse(def_Header, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
-//console.log('Header:', JSON.stringify(headerDefinition, null, 2));
-
-
-let def_BatteryState = fs.readFileSync(dir+'/static/msg_types/sensor_msgs/BatteryState.msg').toString()
-const batteryStateDefinitions:MessageDefinition[] = parse(def_BatteryState, { ros2:true, skipTypeFixup:true }); // for ROS 2 definitions
-
-let allDefinitions = [].concat(timeDefinitions).concat(headerDefinitions).concat(batteryStateDefinitions);
-*/
-
-
-// let hex = //'00 01 00 00 c5 f6 72 64 30 dc 73 10 08 00 00 00 62 61 74 74 65 72 79 00 c1 15 43 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00'
-//           '00 01 00 00 01 00 00 00 c1 f6 72 64 e7 47 6f 12 05 00 00 00 6f 64 6f 6d 00 6c 69 6e 0a 00 00 00 62 61 73 65 5f 6c 69 6e 6b 00 65 6c de 29 a7 a1 d4 48 53 bf d1 2e e8 8c 09 13 36 bf 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a4 b2 ec 4a 70 75 c2 3f 2f 80 36 04 5f aa ef 3f'
-//           ;
-// let msg_type = //'sensor_msgs/msg/BatteryState'
-//             'tf2_msgs/msg/TFMessage'
-//             ;
-
-// hex = hex.replace(' ', '');
-// let payload = new Uint8Array(hex.match(/[\da-f]{2}/gi).map(function (h) {
-//   return parseInt(h, 16)
-// }))
-
-// console.log('Payload '+payload.byteLength+'B: '+hex);
-
-
-// let msg_type_def = null;
-
-// for (let i = 0; i < allDefinitions.length; i++) {
-//     if (allDefinitions[i].name == msg_type) {
-//         msg_type_def = allDefinitions[i];
-//         break;
-//     }
-// }
-// if (!msg_type_def) {
-//     $d.err('No msg type def found for '+msg_type);
-//     process.exit(1)
-// }
-
-// try {
-//    const reader = new MessageReader( [] );
-//    const writer = new MessageWriter( [] );
-
-//     // // deserialize a buffer into an object
-//     const message = reader.readMessage(payload);
-
-//     console.log('message: ', message);
-
-// } catch (e) {
-//     $d.err('Error while reading: '+e.message);
-// }
-
-// process.exit(1)
-
-
-////////////////////////////////////////////////////////////////////////////////////
-
-
 
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE NODE'.yellow);
@@ -156,30 +48,16 @@ console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/info                     System i
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/socket.io/         Robot API').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?yaml      Register new robot').green);
 console.log(('                                                          & download config YAML/JSON').green);
-// console.log((' '+PUBLIC_ADDRESS+':'+UI_PORT+'/robot/__ID__              Robot web UI').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/         Human API').red);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/           App API').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/register             Register new App').green);
-//console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
+console.log('');
 console.log('----------------------------------------------------------------------'.yellow);
 
-// important global stuffs on this node defined here:
-let activeUsers : { [id:number]:any } = {}; // all users active in this region
-let activeLocations: { [id:number]:any } = {}; // all areas loaded and active in this region
-let activeRobots: { [iRobot:number]:any } = {}; // all areas loaded and active in this region
 let db:Db = null;
 let humansCollection:Collection = null;
 let robotsCollection:Collection = null;
 let appsCollection:Collection = null;
-
-//let knownAppKeys:string[] = [];
-
-// let imporrtedDefinitions = ImportMessageTypes(dir, MSG_TYPES_DIR, MSG_TYPES_JSON_FILE);
-
-// const reader = new MessageReader( imporrtedDefinitions );
-// const writer = new MessageWriter( imporrtedDefinitions );
-
-import * as express from "express";
 
 const sioExpressApp = express();
 const sioHttpServer = https.createServer(HTTPS_SERVER_OPTIONS, sioExpressApp);
@@ -256,21 +134,8 @@ sioExpressApp.get('/app/register', async function(req:express.Request, res:expre
     );
 });
 
-
-//const uri = "<connection string uri>";
-// $d.log('conecting to db');
 const mongoClient = new MongoClient(DB_URL);
-// $d.log(mongoClient.    );
-//const database = mongoClient.db('phntm');
-// $d.log(database);
-
 mongoClient.connect().then((client:MongoClient) => {
-    //DB_URL, , function(err:any,database:any) {
-    // if(err) {
-    //     $d.log("Error connecting to database!".red);
-
-    // }
-
     $d.log(("We are connected to "+DB_URL).green);
 
     db = client.db('phntm');
@@ -279,13 +144,11 @@ mongoClient.connect().then((client:MongoClient) => {
     appsCollection = db.collection('apps');
 
     sioHttpServer.listen(SIO_PORT);
-    // webHttpServer.listen(UI_PORT);
     $d.l(('Socket.io listening on port '+SIO_PORT).green);
 }).catch(()=>{
     $d.err("Error connecting to", DB_URL);
     process.exit();
 });
-
 
 
 // Robot Socket.io
@@ -436,123 +299,6 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.IntrospectionToSubscribers();
     });
 
-
-    /*if (user.loginInProgress) {
-        return returnCallback({ res: 0, msg: 'Another login in progress' });
-    }
-
-    if (data && !data.clientVersion) {
-        return returnCallback({ res: 0, msg: 'Client version not provided' });
-    } else if (data && data.clientVersion && data.clientVersion < 0.1) {
-        if (data['password']) { data['password'] = '****'; } //safe logs
-        $d.err("Invalid client version received from "+user.clientAddress+" with data", data);
-        return returnCallback({ res: 0, msg: "Unsupported client version detected, update Phantom via the App Store!\n(consider automatic updates for better experience)" });
-    }
-
-    if (data) {
-
-        if ($v.isSet(data.clientType)) { user.clientType = data.clientType; }
-        if ($v.isSet(data.deviceType)) { user.deviceType = data.deviceType; }
-
-        if (!data.gps) {
-            $d.err("Client GPS coords not provided");
-            return returnCallback( { 'res':0, 'msg':'No GPS coordinates provided'} );
-        }
-        if (!data.gpsAccuracy || !$v.isSet(data.gpsAccuracy[0]) || !$v.isSet(data.gpsAccuracy[1])) {
-            $d.err("Gps accuracy not provided or invalid", data.gpsAccuracy);
-            return returnCallback( { 'res':0, 'msg':'No or invalid GPS accuracy provided'} );
-        }
-        user.lastGps = new Gps(data.gps[0], data.gps[1], data.gps[2]);
-        user.gpsAccuracy = data.gpsAccuracy[0];
-
-        if (!data.northVector) {
-            $d.err("Session north vector not provided");
-            return returnCallback( { 'res':0, 'msg':'No session north vector provided'} );
-        }
-        user.northVector = vec3.fromValues(data.northVector[0], data.northVector[1], data.northVector[2]);
-        if (!$v.isSet(data.compassAccuracy)) {
-            $d.err("Compass accuracy not provided");
-            return returnCallback( { 'res':0, 'msg':'No compass accuracy provided'} );
-        }
-        user.compassAccuracy = data.compassAccuracy;
-
-        if (!$v.isSet(data.deviceSensorOffset)) {
-            $d.err("Device sensor offset not provided");
-            return returnCallback( { 'res':0, 'msg':'Device sensor offset not provided'} );
-        }
-        user.deviceSensorOffset = data.deviceSensorOffset;
-
-        $d.log('User GPS is: '.gray+(user.lastGps? user.lastGps.toString():'null').yellow+(' (h-acc='+data.gpsAccuracy[0]+'); ' +
-                'north vector: ['+ArrayToFixed(user.northVector)+'] (compass acc='+user.compassAccuracy+')').gray);
-
-        //try session id login
-        if ($v.isSet(data.sessionCookie)) {
-            user.loginInProgress = true;
-
-            return AuthLib.LoginWithSessionCookieAsync( //calls returnCallback with { res: 0 } or { res: 1, userData: {} }
-                data.sessionCookie, user, activeUsers,
-                worldDb, appsDb,
-                kafkaProducer, activeSessions, STATIC_SERVER_ADDRESS, returnCallback, VERBOSE,
-                () => { //onSuccess when session is created:
-                    //SessionHelpers.LocalizeEveryoneFollowingUser(user.idUser, activeSessions, activeUsers, sessionObjects, appObjects, loadingAppObjectBatches, kafkaProducer);
-                }
-            );
-        }
-
-        //anonymous but unique device id
-        else if ($v.isSet(data.idDevice) && data.idDevice) {
-            user.loginInProgress = true;
-            return AuthLib.AnonymousLoginWithIdDeviceAsync ( //calls returnCallback with { res: 0 } or { res: 1, userData: {} }
-                data.idDevice, user, DEFAULT_USER_APP_KEYS, activeUsers,
-                worldDb, appsDb,
-                kafkaProducer, activeSessions, STATIC_SERVER_ADDRESS, returnCallback, VERBOSE,
-                () => { //onSuccess after session is created
-                    //SessionHelpers.LocalizeEveryoneFollowingUser(user.idUser, activeSessions, activeUsers, sessionObjects, appObjects, loadingAppObjectBatches, kafkaProducer);
-                }
-            );
-        }
-
-        //credentials
-        else if ($v.isSet(data.handle) && $v.isSet(data.password) && data.handle && data.password) {
-            user.loginInProgress = true;
-            return AuthLib.LoginWithCredentialsAsync ( //calls returnCallback with { res: 0 } or { res: 1, userData: {} }
-                data.handle, data.password, user, activeUsers,
-                worldDb, appsDb,
-                kafkaProducer, activeSessions, STATIC_SERVER_ADDRESS, returnCallback, VERBOSE,
-                () => { //onSuccess after session is created
-                    //SessionHelpers.LocalizeEveryoneFollowingUser(user.idUser, activeSessions, activeUsers, sessionObjects, appObjects, loadingAppObjectBatches, kafkaProducer);
-                }
-            );
-        }
-    }
-
-    //user log out (but still connected)
-    else if (!data && user) {
-
-        $d.log((user+' logged out from '+user.clientAddress).blue);
-
-        SessionHelpers.ClearUser(user, activeUsers, activeSessions, activeAreas, sessionObjects, activeObjects, kafkaProducer, VERBOSE);
-
-        //loged out but not disconnected - make a new session obj bcs the old one is destroyed
-        user = new User(socket);
-        user.isConnected = true;
-        user.regionPartition = REGION_PARTITION;
-        user.isAuthentificated = false;
-        user.idSession = new ObjectID().toHexString();
-
-        //init cave fix to zero
-        //user.caveFix = mat4.create(); mat4.identity(user.caveFix);
-
-        socket.user = user;
-
-        returnCallback({ res: 1 });
-
-        return;
-
-    }
-    */
-
-
     /*
      * client disconnected
      */
@@ -565,16 +311,6 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         robot.services = null;
         robot.socket = null;
         robot.removeFromConnected(!shuttingDown);
-
-        /*if (user != null && user.clientType == ClientType.PHNTM) {
-            $d.log((user+' at '+user.clientAddress+' disconnected').blue);
-            SessionHelpers.ClearUser(user, activeUsers, activeSessions, activeAreas, sessionObjects, activeObjects, kafkaProducer, VERBOSE);
-
-        } else if (user != null) {
-            $d.log((NodeTypeToName(user.clientType, [ user.regionPartition ]) +' at '+user.clientAddress+' disconnected'));
-        }*/
-
-        //SessionHelpers.ClientDisconnectHandler(user, activeUsers, activeSessions, sessionObjects, activeObjects, kafkaProducer);
     });
 
     robotSocket.on('disconnecting', (reason:any) => {
@@ -588,7 +324,7 @@ sioApps.use(async (appSocket:AppSocket, next) => {
 
     //err.data = { content: "Please retry later" }; // additional details
     let idApp = appSocket.handshake.auth.id_app;
-    let key = appSocket.handshake.auth.key;
+    let appKey = appSocket.handshake.auth.key;
 
     if (!ObjectId.isValid(idApp)) {
         $d.err('Invalidid id_app provided: '+idApp)
@@ -596,7 +332,7 @@ sioApps.use(async (appSocket:AppSocket, next) => {
         return next(err);
     }
 
-    if (!appSocket.handshake.auth.key) {
+    if (!appKey) {
         $d.err('Missin key from: '+idApp)
         const err = new Error("Missing auth key");
         return next(err);
@@ -606,7 +342,7 @@ sioApps.use(async (appSocket:AppSocket, next) => {
     const dbApp = (await appsCollection.findOne({_id: searchId }));
 
     if (dbApp) {
-        bcrypt.compare(appSocket.handshake.auth.key, dbApp.key_hash, function(err:any, res:any) {
+        bcrypt.compare(appKey, dbApp.key_hash, function(err:any, res:any) {
             if (res) { //pass match => good
                 $d.l(('App '+idApp+' connected from '+appSocket.handshake.address).green);
                 appSocket.dbData = dbApp;
@@ -745,31 +481,6 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             return returnCallback(answerData);
         });
     });
-
-    // appSocket.on('offer', async function (data:{ id_robot:string, sdp:string}, returnCallback) {
-    //     $d.log('App sending initial webrtc offer to robot', data);
-
-    //     let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
-    //     if (!robot)
-    //         return;
-
-    //     if (!data.sdp) {
-    //         if (returnCallback) {
-    //             returnCallback({
-    //                 'err': 1,
-    //                 'msg': 'Invalid offer sdp'
-    //             })
-    //         }
-    //         return;
-    //     }
-
-    //     robot.socket.emit('offer', data, (answerData:{ sdp:string}) => {
-
-    //         $d.log('Got robot\'s answer:', answerData);
-
-    //         return returnCallback(answerData);
-    //     });
-    // });
 
     appSocket.on('subscribe', async function (data:{ id_robot:string, sources:string[]}, returnCallback) {
         $d.log('App subscribing to:', data);
@@ -932,58 +643,6 @@ sioApps.on('connect', async function(appSocket : AppSocket){
 
     });
 
-    // appSocket.on('answer', async function (answer:{ id_robot:string, sdp:string, type:string, id_app?:string, id_instance?:string}, returnCallback) {
-
-    //     $d.log('App sending webrtc answer to robot', answer);
-
-    //     if (!answer.id_robot || !answer.sdp || !answer.type) {
-    //         if (returnCallback) {
-    //             returnCallback({
-    //                 'err': 1,
-    //                 'msg': 'Invalid answer data'
-    //             })
-    //         }
-    //         return;
-    //     }
-
-    //     if (!ObjectId.isValid(answer.id_robot)) {
-    //         if (returnCallback) {
-    //             returnCallback({
-    //                 'err': 1,
-    //                 'msg': 'Invalid robot id '+answer.id_robot
-    //             })
-    //         }
-    //         return;
-    //     }
-    //     let id_robot = new ObjectId(answer.id_robot);
-    //     let robot = Robot.FindConnected(id_robot);
-    //     if (!robot || !robot.socket) {
-    //         if (returnCallback) {
-    //             returnCallback({
-    //                 'err': 1,
-    //                 'msg': 'Robot not connected'
-    //             })
-    //         }
-    //         return;
-    //     }
-
-    //     delete answer['id_robot'];
-    //     answer['id_app'] = app.id_app.toString();
-    //     answer['id_instance'] = app.id_instance.toString();
-
-    //     robot.socket.emit('answer', answer, (answerReplyData:any) => {
-
-    //         $d.log('Got robot\'s answer reply:', answerReplyData);
-
-    //         return returnCallback(answerReplyData);
-
-    //         //if (i == 0 && returnCallback) { //only the 1st triggers reply (only 1 expected)
-    //         //    returnCallback(replyData)
-    //        // }
-    //     });
-
-    // });
-
     /*
      * client disconnected
      */
@@ -1006,23 +665,12 @@ sioApps.on('connect', async function(appSocket : AppSocket){
                 });
             }
         }
-
-        /*if (user != null && user.clientType == ClientType.PHNTM) {
-            $d.log((user+' at '+user.clientAddress+' disconnected').blue);
-            SessionHelpers.ClearUser(user, activeUsers, activeSessions, activeAreas, sessionObjects, activeObjects, kafkaProducer, VERBOSE);
-
-        } else if (user != null) {
-            $d.log((NodeTypeToName(user.clientType, [ user.regionPartition ]) +' at '+user.clientAddress+' disconnected'));
-        }*/
-
-        //SessionHelpers.ClientDisconnectHandler(user, activeUsers, activeSessions, sessionObjects, activeObjects, kafkaProducer);
     });
 
     appSocket.on('disconnecting', (reason:any) => {
         $d.l(('Socket disconnecting from app: '+reason).gray);
     });
 });
-
 
 
 //error handling & shutdown
@@ -1041,8 +689,6 @@ process.on('SIGINT', (code:any) => {
 });
 
 let shuttingDown:boolean = false;
-//let cleanupTimer:NodeJS.Timeout = null;
-
 function _Clear() {
     if (shuttingDown) return;
     shuttingDown = true;
@@ -1052,25 +698,8 @@ function _Clear() {
     sioRobots.close();
     sioHumans.close();
     sioApps.close();
-    //clearInterval(cleanupTimer);
-    //_SaveAndClearAbandonedSessions(); //will wait until areas and sessions clear
 }
 
 function ShutdownWhenClear() {
-    /*if ((consumerWrapper && consumerWrapper.connected)
-        || ObjectSize(activeSessions)
-        || ObjectSize(activeAreas)
-    ) {
-        return setTimeout(ShutdownWhenClear, 10);
-    }
-
-    if (kafkaProducerConnected) {
-        kafkaProducer.disconnect();
-    }
-
-    if (kafkaProducerConnected) {
-        return setTimeout(ShutdownWhenClear, 10);
-    }*/
-
     process.exit(0);
 }
