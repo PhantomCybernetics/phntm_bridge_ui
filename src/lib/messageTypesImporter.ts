@@ -1,7 +1,7 @@
 import { Debugger } from "./debugger";
 const $d:Debugger = Debugger.Get();
 
-import { parse, fixupTypes, parseRos2idl, stringify } from "@foxglove/rosmsg";
+import { parseRos2idl } from "@foxglove/rosmsg";
 import { MessageDefinition } from "@foxglove/message-definition";
 
 const fs = require('fs');

@@ -45,16 +45,17 @@ if (!fs.existsSync(dir+'/config.jsonc')) {
     process.exit();
 };
 
-import * as path from 'path'
-import * as ejs from 'ejs';
-import { off } from 'process';
+// import * as path from 'path'
+// import * as ejs from 'ejs';
+// import { off } from 'process';
 
 import * as JSONC from 'comment-json';
 const defaultConfig = JSONC.parse(fs.readFileSync(dir+'/config.jsonc').toString());
 const CONFIG = _.merge(defaultConfig);
 
 const SIO_PORT:number = CONFIG['BRIDGE'].sioPort;
-const UI_PORT:number = CONFIG['BRIDGE'].webPort;
+// const UI_PORT:number = CONFIG['BRIDGE'].webPort;
+const UI_ADDRESS_PREFIX:string = CONFIG['BRIDGE'].uiAddressPrefix;
 const PUBLIC_ADDRESS:string = CONFIG['BRIDGE'].address;
 const DB_URL:string = CONFIG.dbUrl;
 
@@ -65,8 +66,8 @@ const DIE_ON_EXCEPTION:boolean = CONFIG.dieOnException;
 
 const VERBOSE:boolean = CONFIG['BRIDGE'].verbose;
 
-const MSG_TYPES_DIR = CONFIG['BRIDGE'].msgTypesDir;
-const MSG_TYPES_JSON_FILE = CONFIG['BRIDGE'].msgTypesJsonFile;
+// const MSG_TYPES_DIR = CONFIG['BRIDGE'].msgTypesDir;
+// const MSG_TYPES_JSON_FILE = CONFIG['BRIDGE'].msgTypesJsonFile;
 
 const certFiles:string[] = GetCerts(dir+"/"+SSL_CERT_PRIVATE, dir+"/"+SSL_CERT_PUBLIC);
 const HTTPS_SERVER_OPTIONS = {
@@ -77,10 +78,10 @@ const HTTPS_SERVER_OPTIONS = {
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-import { MessageReader } from "@foxglove/rosmsg2-serialization"
-import { MessageWriter } from "@foxglove/rosmsg2-serialization";
+// import { MessageReader } from "@foxglove/rosmsg2-serialization"
+// import { MessageWriter } from "@foxglove/rosmsg2-serialization";
 
-import { ImportMessageTypes } from './lib/messageTypesImporter';
+// import { ImportMessageTypes } from './lib/messageTypesImporter';
 
 
 /*
@@ -155,7 +156,7 @@ console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/info                     System i
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/socket.io/         Robot API').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?yaml      Register new robot').green);
 console.log(('                                                          & download config YAML/JSON').green);
-console.log((' '+PUBLIC_ADDRESS+':'+UI_PORT+'/robot/__ID__              Robot web UI').green);
+// console.log((' '+PUBLIC_ADDRESS+':'+UI_PORT+'/robot/__ID__              Robot web UI').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/         Human API').red);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/           App API').green);
 console.log((' '+PUBLIC_ADDRESS+':'+SIO_PORT+'/app/register             Register new App').green);
@@ -173,10 +174,10 @@ let appsCollection:Collection = null;
 
 //let knownAppKeys:string[] = [];
 
-let imporrtedDefinitions = ImportMessageTypes(dir, MSG_TYPES_DIR, MSG_TYPES_JSON_FILE);
+// let imporrtedDefinitions = ImportMessageTypes(dir, MSG_TYPES_DIR, MSG_TYPES_JSON_FILE);
 
-const reader = new MessageReader( imporrtedDefinitions );
-const writer = new MessageWriter( imporrtedDefinitions );
+// const reader = new MessageReader( imporrtedDefinitions );
+// const writer = new MessageWriter( imporrtedDefinitions );
 
 import * as express from "express";
 
@@ -232,7 +233,7 @@ sioExpressApp.get('/info', function(req: any, res: any) {
     for (let i = 0; i < Robot.connectedRobots.length; i++) {
         let id_robot:string = (Robot.connectedRobots[i].id_robot as ObjectId).toString();
         let one = {};
-        let ui_url = PUBLIC_ADDRESS+':'+UI_PORT+'/robot/'+id_robot;
+        let ui_url = UI_ADDRESS_PREFIX+'/'+id_robot;
         connectedData.push(ui_url);
     }
     robot_data.push({
@@ -278,8 +279,8 @@ mongoClient.connect().then((client:MongoClient) => {
     appsCollection = db.collection('apps');
 
     sioHttpServer.listen(SIO_PORT);
-    webHttpServer.listen(UI_PORT);
-    $d.l(('SIO Server listening on port '+SIO_PORT+'; Web UI listening on port '+UI_PORT).green);
+    // webHttpServer.listen(UI_PORT);
+    $d.l(('Socket.io listening on port '+SIO_PORT).green);
 }).catch(()=>{
     $d.err("Error connecting to", DB_URL);
     process.exit();
@@ -1021,46 +1022,6 @@ sioApps.on('connect', async function(appSocket : AppSocket){
         $d.l(('Socket disconnecting from app: '+reason).gray);
     });
 });
-
-
-
-const webExpressApp = express();
-const webHttpServer = https.createServer(HTTPS_SERVER_OPTIONS, webExpressApp);
-
-webExpressApp.engine('.html', ejs.renderFile);
-webExpressApp.set('views', path.join(__dirname, '../src/views'));
-webExpressApp.set('view engine', 'html');
-webExpressApp.use('/static/', express.static('static/'));
-webExpressApp.use('/static/socket.io/', express.static('node_modules/socket.io-client/dist/'));
-
-webExpressApp.use('/static/gridstack/', express.static('node_modules/gridstack/dist/'));
-webExpressApp.use('/static/gridstack-forked/', express.static('/root/gridstack.js/dist/'));
-
-webExpressApp.use('/static/three/', express.static('node_modules/three/build/'));
-webExpressApp.use('/static/three-addons/', express.static('node_modules/three/examples/jsm/'));
-
-// temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
-
-
-webExpressApp.get('/robot/:ID', async function(req:express.Request, res:express.Response) {
-
-    let ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
-
-    res.setHeader('Content-Type', 'text/html');
-
-    res.render('robot_ui', {
-        //user: req.user, flashMessage: req.flash('info'), flashMessageError: req.flash('error'),
-        //activeTab: 'models', title: 'Models',
-        //models: modelItems
-        id_robot: req.params.ID,
-    });
-});
-
-
-
-
-
-
 
 
 
