@@ -22,12 +22,12 @@
 
 export class GamepadController {
 
-    constructor(client, config) {
+    constructor(client) {
 
         this.client = client;
         // this.ui = null;
 
-        this.drivers = [];
+        this.drivers = {}; //id -> driver
 
         // this.writers = {} // by topic
         //this.msg_classes = {} // by msg type
@@ -41,8 +41,6 @@ export class GamepadController {
         this.capturing_gamepad_input = false;
         this.captured_gamepad_input = [];
         this.gamepad_service_mapping = {}
-
-        this.config = config;
 
         // this.axes_config = axes_config ? axes_config : {};
 
@@ -79,17 +77,18 @@ export class GamepadController {
 
         $('#gamepad_config_toggle').click(() =>{
             if ($('#gamepad_debug').hasClass('config')) {
+                //disable config edit
                 $('#gamepad_debug').removeClass('config');
                 $('#gamepad_config_toggle').text('Config');
-                $('#gamepad_config_save').css('display', 'none')
-                $('#gamepad_map').css('display', 'inline')
+                $('#gamepad_config_save').css('display', 'none');
+                $('#gamepad_config_default').css('display', 'none');
+                $('#gamepad_map').css('display', 'inline');
             } else {
+                //enable confir edit
                 $('#gamepad_debug').addClass('config');
-                let cfg = JSON.stringify(that.config, null, 2);
-                cfg = cfg.replace(/"([^"]+)":/g, '$1:')
-                $('#gamepad_config_input').text(cfg);
                 $('#gamepad_config_toggle').text('Cancel');
-                $('#gamepad_config_save').css('display', 'inline')
+                $('#gamepad_config_save').css('display', 'inline');
+                $('#gamepad_config_default').css('display', 'inline');
                 $('#gamepad_map').css('display', 'none')
             }
         });
@@ -102,56 +101,90 @@ export class GamepadController {
             }
         });
 
+        $('#gamepad_driver').change((ev) => {
+            that.select_driver($(ev.target).val());
+        });
+
+        $('#gamepad_config_save').click((ev) => {
+            that.set_driver_config();
+        });
+
     }
 
-    add_driver(label, topic, msg_type, handler, is_default) {
-        this.drivers.push({
+    add_driver(id, label, msg_type, driver, is_selected) {
+
+        this.drivers[id] = {
+            id: id,
             label: label,
-            topic: topic,
-            msg_type: msg_type,
-            handler: handler,
-            is_default: is_default
-        });
+            driver: new driver(msg_type),
+            is_selected: is_selected
+        };
+        let topic = this.drivers[id].driver.config.topic;
         console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
         this.update_ui();
     }
 
     update_ui() {
         let opts = [];
-        for (let i = 0; i < this.drivers.length; i++) {
-            let d = this.drivers[i];
+        Object.keys(this.drivers).forEach((id) => {
+            let label = this.drivers[id].label;
+            let selected = this.current_driver == this.drivers[id].driver;
             opts.push(
-                '<option value="'+i+'"'+(d['is_default'] ? ' selected="selected"' : '')+'>' +
-                d['label'] +
+                '<option value="'+id+'"'+(selected ? ' selected="selected"' : '')+'>' +
+                label +
                 '</option>')
-        }
+        })
         $('#gamepad_driver').html(opts.join("\n"));
+    }
+
+    select_driver(id_driver) {
+        console.info('Setting driver to ', id_driver);
+        this.current_driver = this.drivers[id_driver].driver;
+
+        let cfg = JSON.stringify(this.current_driver.config, null, 4);
+        cfg = this.unquote(cfg);
+
+        $('#gamepad_config_input').val(cfg);
+    }
+
+    set_driver_config(src) {
+        try {
+            let src = $('#gamepad_config_input').val();
+            src = src.replace("\n","")
+            let config = null;
+            eval('config = '+src);
+            console.log('Parsed config: ', config);
+            $('#gamepad_config_input').removeClass('err');
+
+            this.current_driver.config = config;
+        } catch (error) {
+            $('#gamepad_config_input').addClass('err');
+            console.log('Error parsing JSON config', error);
+        }
+
     }
 
     run_loop() {
 
         if (this.gamepad == null) {
-            console.log('Gamepad loop failed, this=', this)
-            return; //stop loop
+            console.log('Gamepad loop stopped')
+            return;
         }
 
         // console.log('Gamepad loop running')
 
-        let id_driver = $('#gamepad_driver').val();
         let transmitting = $('#gamepad_enabled').is(':checked');
 
-        if (!this.drivers[id_driver]) {
+        if (!this.current_driver) {
             console.warn('Gamepad has no driver, waiting...');
             return window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
         }
 
-        let msg_type = this.drivers[id_driver].msg_type;
-        let topic = this.drivers[id_driver].topic;
+        let msg_type = this.current_driver.msg_type;
+        let topic = this.current_driver.config.topic;
 
         if (!this.client.topic_writers[topic]) {
             this.client.create_writer(topic, msg_type);
-            // if (!this.writers[topic])
-            //     return window.setTimeout(this.run_loop, this.loop_delay); //try again
         }
 
         const gp = navigator.getGamepads()[this.gamepad.index];
@@ -161,7 +194,7 @@ export class GamepadController {
 
         // console.log(now)
 
-        let msg = this.drivers[id_driver]['handler'](this, axes, buttons);
+        let msg = this.current_driver.read(this, axes, buttons);
 
         let debug = {
             buttons: {},
@@ -174,14 +207,15 @@ export class GamepadController {
             debug.buttons[i] = buttons[i].pressed;
         }
 
-        $('#gamepad_debug_input').html('<b>Raw Axes:</b><br>' + JSON.stringify(debug.axis, null, 2) + '<br><br>' +
-                                       '<b>Raw Buttons:</b><br>' + JSON.stringify(debug.buttons, null, 2));
+        $('#gamepad_debug_input').html('<b>Raw Axes:</b><br><div class="p">' + this.unquote(JSON.stringify(debug.axis, null, 4)) + '</div>' +
+                                       '<b>Raw Buttons:</b><br><div class="p">' + this.unquote(JSON.stringify(debug.buttons, null, 4)) + '</div>'
+                                       );
 
         if (this.capturing_gamepad_input) {
             this.capture_gamepad_input(buttons, axes);
         } else  if (transmitting) {
             if (this.client.topic_writers[topic].send(msg)) { // true when ready and written
-                $('#gamepad_debug_output').html('<b>'+msg_type+' -> '+topic+'</b><br>' + JSON.stringify(msg, null, 2));
+                $('#gamepad_debug_output').html('<b>'+msg_type+' -> '+topic+'</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
             }
         }
 
@@ -297,23 +331,10 @@ export class GamepadController {
 
 
 
-    lerp(a, b, alpha) {
-        return a + alpha * (b-a)
-    }
 
-    apply_axis_deadzone(val, id_axis) {
 
-        if (!this.config || !this.config.axes || !this.config.axes[id_axis] || !this.config.axes[id_axis]['dead_zone'] || this.config.axes[id_axis]['dead_zone'].length != 2)
-            return val;
-
-        let min = this.config.axes[id_axis]['dead_zone'][0];
-        let max = this.config.axes[id_axis]['dead_zone'][1];
-        let dead_val = this.config.axes[id_axis]['dead_value'] ? this.config.axes[id_axis]['dead_value'] : 0.0;
-
-        if (val > min && val < max)
-            return dead_val;
-
-        return val;
+    unquote(str) {
+        return str.replace(/"([^"]+)":/g, '$1:')
     }
 
     // SampleLatency(decoded) {

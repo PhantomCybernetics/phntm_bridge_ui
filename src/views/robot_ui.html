@@ -59,12 +59,13 @@
         <div id="gamepad_settings_controls">
             <button id="gamepad_map">Map</button>
             <button id="gamepad_config_toggle">Config</button>
+            <button id="gamepad_config_default">Default</button>
             <button id="gamepad_config_save">Save to cookie</button>
         </div>
         <div id="gamepad_debug">
-            <div class="col" id="gamepad_debug_input">Initializing...</div>
-            <div class="col" id="gamepad_config"><textarea id="gamepad_config_input" spellcheck="false"></textarea></div>
-            <div class="col" id="gamepad_debug_output">Initializing...</div>
+            <div class="col" id="gamepad_debug_input"><b>Input:</b><br><div class="p">Initializing...</div></div>
+            <div class="col" id="gamepad_config"><b>Driver Config:</b><br><textarea id="gamepad_config_input" spellcheck="false"></textarea></div>
+            <div class="col" id="gamepad_debug_output"><b>Output:</b><br><div class="p">n/a</div></div>
         </div>
     </div>
 </div>
@@ -95,26 +96,11 @@
 
         });
 
-        const gamepad_config = {  // TODO: load from config file or cookie?
-            axes: {
-                0: { dead_min: -0.02, dead_max: 0.02 }, // dead zone min, max, dead value (optional)
-                1: { dead_min: -0.02, dead_max: 0.02, scale: 3.0 },
-                2: { dead_min: -0.02, dead_max: 0.02 },
-                3: { dead_min: -10.0, dead_max: -0.98, dead_value: -10.0 },
-                4: { dead_min: -10.0, dead_max: -0.98, dead_value: -10.0 },
-            },
-            buttons: {
-                10: '#trigger_wifi_scan'
-            }
-        };
-
-        let gamepad = new GamepadController(robot, gamepad_config); // creates write channels when gamepad is connected
-        gamepad.add_driver('Joy to /joy', '/joy', 'sensor_msgs/msg/Joy', JoyDriver, true);
-        gamepad.add_driver('Twist to /cmd_vel (Mecanum Wheels)', '/cmd_vel', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
-
-        // if (buttons[10].pressed) {
-        //     panel_ui.trigger_wifi_scan();
-        // }
+        let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
+        gamepad.add_driver('joy', 'Joy', 'sensor_msgs/msg/Joy', JoyDriver);
+        gamepad.add_driver('twist', 'Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
+        gamepad.add_driver('twist_stamped', 'TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
+        gamepad.select_driver('joy');
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
 

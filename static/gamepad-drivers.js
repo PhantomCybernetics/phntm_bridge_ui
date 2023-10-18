@@ -1,66 +1,204 @@
-export function JoyDriver (gamepad, axes, buttons) {
-    let now_ms = Date.now(); //window.performance.now()
-    let sec = Math.floor(now_ms / 1000)
-    let nanosec = (now_ms - sec*1000) * 1000000
+class Driver {
 
-    // sensor_msgs/msg/Joy
-    let msg = {
-        header: {
+    constructor(msg_type) {
+        this.msg_type = msg_type;
+    }
+
+    get_header() {
+        let now_ms = Date.now(); //window.performance.now()
+        let sec = Math.floor(now_ms / 1000);
+        let nanosec = (now_ms - sec*1000) * 1000000;
+        return {
             stamp: {
                 sec: sec,
                 nanosec: nanosec
             },
             frame_id: 'gamepad'
-        },
-        axes: [],
-        buttons: []
+        }
     }
 
-    for (let id_axis = 0; id_axis < axes.length; id_axis++) {
-        let val = gamepad.apply_axis_deadzone(axes[id_axis], id_axis)
-        msg.axes[id_axis] = val
-    }
+    apply_axis_deadzone(val, cfg) {
 
-    for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
-        msg.buttons[id_btn] = buttons[id_btn].pressed;
-    }
+        if (!cfg || cfg['dead_min'] === undefined || cfg['dead_max'] === undefined)
+            return val;
 
-    return msg;
+        let dead_val = cfg['dead_value'] ? cfg['dead_value'] : 0.0;
+        if (val > cfg['dead_min'] && val < cfg['dead_max'])
+            return dead_val;
+
+        return val;
+    }
 }
 
-export function TwistMecanumDriver (gamepad, axes, buttons) {
-    let fw_speed = gamepad.apply_axis_deadzone(axes[1], 1); // (-1,1)
-    // console.log('fw_speed, raw=', axes[1], fw_speed, this.axes_config[1])
+export class JoyDriver extends Driver {
 
-    let val_strife = 0.0;
-    let val_strife_l = gamepad.apply_axis_deadzone(axes[4], 4)
-    if (val_strife_l > -1) {
-        val_strife -= (val_strife_l + 1.0) / 4.0; // (-.5,0)
+    static default_config = {
+        topic : '/joy',
     }
-    let val_strife_r = gamepad.apply_axis_deadzone(axes[3], 3)
-    if (val_strife_r > -1) {
-        val_strife += (val_strife_r + 1.0) / 4.0; // (0,.5)
-    }
-    let turn_amount = gamepad.apply_axis_deadzone(-axes[2], 2); // (-1,1)
-    let turn_speed_max = 2.0; //at 0.0 fw speed
-    let turn_speed_min = 0.7; //at 1.0 fw speed
-    let turn_speed = gamepad.lerp(turn_speed_max, turn_speed_min, Math.abs(fw_speed))
 
-    // geometry_msgs/msg/Twist
-    let msg = {
+    constructor(msg_type, config=null) {
+        super(msg_type);
+        this.config = JoyDriver.default_config;
+        if (config)
+            this.config = config;
+    }
+
+    read(gamepad, axes, buttons) {
+
+        // sensor_msgs/msg/Joy
+        let msg = {
+            header: this.get_header(),
+            axes: [],
+            buttons: []
+        }
+
+        for (let id_axis = 0; id_axis < axes.length; id_axis++) {
+            // let val = this.apply_axis_deadzone(, this.cfg)
+            msg.axes[id_axis] = axes[id_axis];
+        }
+
+        for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
+            msg.buttons[id_btn] = buttons[id_btn].pressed;
+        }
+
+        return msg;
+    }
+}
+
+export class TwistMecanumDriver extends Driver {
+
+    static default_config = {
+        topic : '/cmd_vel',
+
+        linear: {
+            x: { // fw/back
+                axis: 1,
+                dead_min: -0.02,
+                dead_max: 0.02,
+                scale: 1
+            },
+            y: { // left/right strife
+                axis_positive: 3,
+                axis_negative: 4,
+                offset: 1,
+                scale: .25,
+                dead_min: -10.0,
+                dead_max: -0.98,
+                dead_value: -10.0,
+            }
+        },
+        angular: {
+            z: { // left/right
+                axis: 2,
+                dead_min: -0.02,
+                dead_max: 0.02,
+                scale: -1.0,
+                multiply_lerp: {
+                    abs_value: 'linear.x',
+                    min: 3.0, // fast turns on the spot
+                    max: 0.7, // slower when going fast
+                }
+            }
+        },
+        buttons: {
+            10: '#trigger_wifi_scan' //select
+        }
+    }
+
+    constructor(msg_type, config=null) {
+        super(msg_type);
+        this.config = TwistMecanumDriver.default_config;
+        if (config)
+            this.config = config;
+    }
+
+    read_axis(axes, cfg) {
+        let offset = cfg.offset === undefined ? 0.0 : cfg.offset;
+        let scale = cfg.scale === undefined ? 1.0 : cfg.scale;
+
+        if (cfg.axis !== undefined) {
+            let val = this.apply_axis_deadzone(axes[cfg.axis], cfg);
+            val += offset;
+            val *= scale;
+            return val;
+        } else if (cfg.axis_positive !== undefined && cfg.axis_negative !== undefined) {
+            let val = 0.0;
+            let val_positive = this.apply_axis_deadzone(axes[cfg.axis_positive], cfg)
+            if (val_positive > -1) {
+                val += (val_positive + offset) * scale;
+            }
+            let val_negative = this.apply_axis_deadzone(axes[cfg.axis_negative], cfg)
+            if (val_negative > -1) {
+                val -= (val_negative + offset) * scale; // (-.5,0)
+            }
+            return val;
+        }
+    }
+
+    lerp_abs(cfg, msg) {
+        let by = cfg['abs_value'].split('.');
+        let abs_val = Math.abs(msg[by[0]][[by[1]]]);
+
+        let min = cfg['min'] === undefined ? 1.0 : cfg.min;
+        let max = cfg['max'] === undefined ? 1.0 : cfg.max;
+
+        return this.lerp(min, max, abs_val);
+    }
+
+    // set_output(val, msg, output) {
+    //     let o = output.split('.');
+    //     if (msg[o[0]]) {
+    //         msg[o[0]][o[1]] = val;
+    //     }
+    // }
+
+    lerp(a, b, alpha) {
+        return a + alpha * (b-a)
+    }
+
+    read(gamepad, axes, buttons) {
+
+        // geometry_msgs/msg/Twist
+        let msg = {
             "linear": {
-                "x": fw_speed, //fw / back (-1,1)
-                "y": val_strife, //strife (-.5,0.5)
+                "x": 0,
+                "y": 0,
                 "z": 0
             },
             "angular": {
                 "x": 0,
                 "y": 0,
-                "z": turn_amount * turn_speed, //turn (-3,3)
+                "z": 0,
             }
+        }
+
+        Object.keys(msg).forEach ((grp) => {
+            if (!this.config[grp])
+                return;
+            Object.keys(msg[grp]).forEach((axis) => {
+                if (!this.config[grp][axis])
+                    return;
+                msg[grp][axis] = this.read_axis(axes, this.config[grp][axis]);
+            });
+        });
+
+        Object.keys(msg).forEach ((grp) => {
+            if (!this.config[grp])
+                return;
+            Object.keys(msg[grp]).forEach((axis) => {
+                if (!this.config[grp][axis] || !this.config[grp][axis]['multiply_lerp'])
+                    return;
+                msg[grp][axis] = msg[grp][axis] * this.lerp_abs(this.config[grp][axis]['multiply_lerp'], msg);
+            });
+        });
+
+        if (this.msg_type == 'geometry_msgs/msg/TwistStamped') {
+            msg = {
+                header: this.get_header(),
+                twist: msg
+            }
+        }
+
+        return msg;
     }
-
-
-
-    return msg;
 }

@@ -1004,7 +1004,7 @@ SPAN.error {
 
 #gamepad_config TEXTAREA {
     width: 295px;
-    height: 600px;
+    height: 460px;
     grid-auto-columns: 0px;
     background: transparent;
     outline: none;
@@ -1016,24 +1016,34 @@ SPAN.error {
     white-space: pre;
     font-size: 12px;
     font-family: monospace;
+    background-color: #0a0f52;
+    border: 2px dashed white;
+    padding: 5px;
+    margin-top: 5px;
+    border-radius: 5px;
+}
+
+#gamepad_config TEXTAREA.err {
+    border-color:red;
 }
 
 #gamepad_debug.config #gamepad_config {
     display: block;
-    background-color: #0a0f52;
-    width: 300px;
-    border: 2px dashed white;
+    width: 308px;
 }
 
 #gamepad_debug .col {
     float: left;
     width: 250px;
-    background: #001649;
     margin-right: 5px;
-    background: #400042;
+}
+
+#gamepad_debug .col .p {
     white-space: pre;
     padding: 5px;
     border-radius: 5px;
+    background: #400042;
+    margin: 5px 0px 10px 0px;
 }
 
 #gamepad_debug .col:last-child {
