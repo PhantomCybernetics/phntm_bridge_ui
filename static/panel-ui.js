@@ -492,6 +492,9 @@ export class PanelUI {
                 $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
             }
         });
+        client.on('peer_disconnected', ()=>{
+            $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+        });
 
         window.addEventListener("resize", (event) => {
             that.update_layout_width()
@@ -750,11 +753,11 @@ export class PanelUI {
 
         // browsers Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect',  () => {
-            $('#socketio_status').html('Socket.io: <span class="online">Connected</span>');
+            $('#socketio_status').html('Bridge: <span class="online">Connected</span>');
         });
 
         client.socket.on('disconnect',  () => {
-            $('#socketio_status').html('Socket.io: <span class="offline">Disconnected</span>');
+            $('#socketio_status').html('Bridge: <span class="offline">Disconnected</span>');
         });
 
         setInterval(() => {

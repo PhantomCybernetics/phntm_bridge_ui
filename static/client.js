@@ -509,9 +509,11 @@ export class PhntmBridgeClient extends EventTarget {
                 sources: [[ topic, msg_type ]]
             },  (res_sub) => {
                 console.warn('Res pub: ', res_sub);
+                if (res_sub && res_sub.err) {
+                    console.error('Res pub err: ', res_sub.err);
+                }
             });
         }
-
         return this.topic_writers[topic];
     }
 
@@ -797,7 +799,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         console.log('Creating write DC for '+topic);
 
-        this.topic_writers[topic].dc = this.pc.createDataChannel(
+        let dc = this.pc.createDataChannel(
             topic,
             {
                 negotiated: true,
@@ -806,6 +808,21 @@ export class PhntmBridgeClient extends EventTarget {
                 id:dc_id
             }
         );
+
+        this.topic_writers[topic].dc = dc;
+
+        let that = this;
+        dc.addEventListener('open', (ev)=> {
+            console.warn('Write DC '+topic+' open', dc)
+        });
+        dc.addEventListener('close', (ev)=> {
+            console.warn('Write DC '+topic+' closed')
+            delete that.topic_writers[topic].dc;
+        });
+        dc.addEventListener('error', (ev)=> {
+            console.error('write DC '+topic+' error', ev)
+            delete that.topic_writers[topic].dc;
+        });
     }
 
 
@@ -971,7 +988,7 @@ export class PhntmBridgeClient extends EventTarget {
 
                 pc.connected = false;
 
-                that.emit('peer_disconnected')
+                that.emit('peer_disconnected');
 
                 Object.keys(that.subscribers).forEach((sub) => {
 

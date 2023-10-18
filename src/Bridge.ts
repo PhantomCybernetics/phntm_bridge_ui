@@ -499,7 +499,7 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             return;
         }
 
-        app.addToRobotSubscriptions(robot.id_robot, data.sources)
+        app.addToRobotSubscriptions(robot.id_robot, data.sources, null)
 
         robot.socket.emit('subscribe', data, (resData:any) => {
 
@@ -527,6 +527,8 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             return;
         }
 
+        app.addToRobotSubscriptions(robot.id_robot, null, data.sources)
+
         robot.socket.emit('subscribe:write', data, (resData:any) => {
 
             $d.log('Got robot\'s write subscription answer:', resData);
@@ -553,9 +555,36 @@ sioApps.on('connect', async function(appSocket : AppSocket){
             return;
         }
 
-        app.removeFromRobotSubscriptions(robot.id_robot, data.sources);
+        app.removeFromRobotSubscriptions(robot.id_robot, data.sources, null);
 
         robot.socket.emit('unsubscribe', data, (resData:any) => {
+
+            $d.log('Got robot\'s unsubscription answer:', resData);
+
+            return returnCallback(resData);
+        });
+    });
+
+    appSocket.on('unsubscribe:write', async function (data:{ id_robot:string, sources:string[]}, returnCallback) {
+        $d.log('App unsubscribing from:', data);
+
+        let robot:Robot = ProcessForwardRequest(app, data, returnCallback) as Robot;
+        if (!robot)
+            return;
+
+        if (!data.sources) {
+            if (returnCallback) {
+                returnCallback({
+                    'err': 1,
+                    'msg': 'Invalid unsubscription sources'
+                })
+            }
+            return;
+        }
+
+        app.removeFromRobotSubscriptions(robot.id_robot, null, data.sources);
+
+        robot.socket.emit('unsubscribe:write', data, (resData:any) => {
 
             $d.log('Got robot\'s unsubscription answer:', resData);
 

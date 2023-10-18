@@ -129,9 +129,9 @@
         //robot connected via Socket.io
         robot.on('online', (state)=>{
             if (state)
-                console.info('(Socket.io) Robot is online');
+                console.info('(Socket.io) Robot connected to Bridge server');
             else
-                console.info('(Socket.io) Robot is offline');
+                console.info('(Socket.io) Robot disconnected from Bridge server');
         });
 
         // introspection running in the robot

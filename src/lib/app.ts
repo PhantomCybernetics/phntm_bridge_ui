@@ -91,7 +91,7 @@ export class App {
         }
     }
 
-    public removeFromRobotSubscriptions(idRobot: ObjectId, read?:string[], write?:string[][]) {
+    public removeFromRobotSubscriptions(idRobot: ObjectId, read?:string[], write?:string[]) {
         for (let i = 0; i < this.robotSubscriptions.length; i++) {
             if (this.robotSubscriptions[i].id_robot.equals(idRobot)) {
 
@@ -104,9 +104,12 @@ export class App {
                 }
                 if (write) {
                     write.forEach((id_src)=>{
-                        let p = this.robotSubscriptions[i].write.indexOf(id_src);
-                        if (p !== -1)
-                            this.robotSubscriptions[i].write.splice(p, 1);
+                        for (let i = 0; i < this.robotSubscriptions[i].write.length; i++) {
+                            if (this.robotSubscriptions[i].write[i][0] == id_src) {
+                                this.robotSubscriptions[i].write.splice(i, 1)
+                                i--;
+                            }
+                        }
                     });
                 }
                 return;

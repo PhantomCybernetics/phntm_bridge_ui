@@ -29,9 +29,9 @@ export class GamepadController {
 
         this.drivers = [];
 
-        this.writers = {} // by topic
-        this.msg_classes = {} // by msg type
-        this.msg_writers = {} // by msg type
+        // this.writers = {} // by topic
+        //this.msg_classes = {} // by msg type
+        //this.msg_writers = {} // by msg type
 
         // this.msg_writers[this.twist_stamped_msg_type] = new Writer( [ this.twist_stamped_msg_class ].concat(supported_msg_types) );
 
@@ -148,10 +148,10 @@ export class GamepadController {
         let msg_type = this.drivers[id_driver].msg_type;
         let topic = this.drivers[id_driver].topic;
 
-        if (!this.writers[topic]) {
-            this.writers[topic] = this.client.create_writer(topic, msg_type);
-            if (!this.writers[topic])
-                return window.setTimeout(this.run_loop, this.loop_delay); //try again
+        if (!this.client.topic_writers[topic]) {
+            this.client.create_writer(topic, msg_type);
+            // if (!this.writers[topic])
+            //     return window.setTimeout(this.run_loop, this.loop_delay); //try again
         }
 
         const gp = navigator.getGamepads()[this.gamepad.index];
@@ -180,7 +180,7 @@ export class GamepadController {
         if (this.capturing_gamepad_input) {
             this.capture_gamepad_input(buttons, axes);
         } else  if (transmitting) {
-            if (this.writers[topic].send(msg)) { // true when ready and written
+            if (this.client.topic_writers[topic].send(msg)) { // true when ready and written
                 $('#gamepad_debug_output').html('<b>'+msg_type+' -> '+topic+'</b><br>' + JSON.stringify(msg, null, 2));
             }
         }
@@ -226,13 +226,13 @@ export class GamepadController {
     }
 
 
-    init_writer (topic, msg_type) {
+    // init_writer (topic, msg_type) {
 
 
 
-        this.dcs[topic] = this.client.create_dc(topic);
+    //     this.dcs[topic] = this.client.create_dc(topic);
 
-        return this.dcs[topic];
+    //     return this.dcs[topic];
         // let subscription_data = {
         //     id_robot: this.id_robot,
         //     topics: []
@@ -282,17 +282,17 @@ export class GamepadController {
         //         console.warn('Error setting up gamepad publisher: ', res);
         //     }
         // });
-    }
+    // }
 
 
 
-    clearProducers() {
-        for (const topic of Object.keys(this.dcs)) {
-            if (this.dcs[topic])
-                this.dcs[topic].close();
-        }
-        this.dcs = {}
-    }
+    // clearProducers() {
+        // for (const topic of Object.keys(this.dcs)) {
+        //     if (this.dcs[topic])
+        //         this.dcs[topic].close();
+        // }
+        // this.dcs = {}
+    // }
 
 
 
