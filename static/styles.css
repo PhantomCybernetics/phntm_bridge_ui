@@ -987,19 +987,22 @@ SPAN.error {
 }
 
 #gamepad_settings_controls button,
-#gamepad_config_controls button {
+#gamepad_config_controls button,
+#gamepad_shortcuts_controls button {
     background: #101089;
     border: 0px;
     padding: 2px 5px;
     border-radius: 3px;
 }
 
-#gamepad_config_controls button#gamepad_config_save {
+#gamepad_config_controls button#gamepad_config_save,
+#gamepad_shortcuts_controls button#gamepad_shortcuts_save {
     background-color: #008700;
     /* display: none; */
 }
 
-#gamepad_config {
+#gamepad_config,
+#gamepad_shortcuts {
     display: none;
 }
 
@@ -1010,7 +1013,8 @@ SPAN.error {
     margin-right: 3px;
 }
 
-#gamepad_config TEXTAREA {
+#gamepad_config TEXTAREA,
+#gamepad_shortcuts TEXTAREA {
     width: 295px;
     height: 460px;
     grid-auto-columns: 0px;
@@ -1031,13 +1035,23 @@ SPAN.error {
     border-radius: 5px;
 }
 
-#gamepad_config TEXTAREA.err {
+#gamepad_shortcuts TEXTAREA {
+    width: 375px;
+}
+
+#gamepad_config TEXTAREA.err,
+#gamepad_shortcuts TEXTAREA.err {
     border-color:red;
 }
 
-#gamepad_debug.config #gamepad_config {
+#gamepad_debug.config #gamepad_config,
+#gamepad_debug.shortcuts #gamepad_shortcuts {
     display: block;
     width: 308px;
+}
+
+#gamepad_debug.shortcuts #gamepad_shortcuts {
+    width: 388px;
 }
 
 #gamepad_debug .col {
