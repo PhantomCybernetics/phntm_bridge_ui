@@ -55,9 +55,10 @@ export class Robot {
             if (!app.socket)
                 return;
 
-            this.getStateData(answerData);
-
             $d.log('Got robot\'s answer:', answerData);
+
+            answerData = this.getStateData(answerData);
+
             if (returnCallback) {
                 returnCallback(answerData);
             } else {
@@ -94,7 +95,7 @@ export class Robot {
     }
 
     public getStateData(data:any=null):any {
-        if (data == null)
+        if (!data || typeof data !== 'object')
             data = {};
 
         data['id_robot'] = this.id_robot.toString()

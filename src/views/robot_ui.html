@@ -47,28 +47,7 @@
 
 <!-- <div id="monitors" style="display:none"></div> -->
 
-<div id="gamepad">
-    <div id="gamepad_status" title="Gamepad Settings"></div>
-    <div id="gamepad_latency" title="Latency"></div>
-    <div id="gamepad_settings">
-        <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled">
-            <h3 id="gamepad_id"></h3>
-        </label>
-        <div class="cleaner"></div>
-        <select id="gamepad_driver"></select>
-        <div id="gamepad_settings_controls">
-            <button id="gamepad_map">Map</button>
-            <button id="gamepad_config_toggle">Config</button>
-            <button id="gamepad_config_default">Default</button>
-            <button id="gamepad_config_save">Save to cookie</button>
-        </div>
-        <div id="gamepad_debug">
-            <div class="col" id="gamepad_debug_input"><b>Input:</b><br><div class="p">Initializing...</div></div>
-            <div class="col" id="gamepad_config"><b>Driver Config:</b><br><textarea id="gamepad_config_input" spellcheck="false"></textarea></div>
-            <div class="col" id="gamepad_debug_output"><b>Output:</b><br><div class="p">n/a</div></div>
-        </div>
-    </div>
-</div>
+<%- include('partial/gamepad.html'); %>
 
 <div id="mapping-confirmation"></div>
 <div id="msg_type-dialog"></div>
@@ -97,10 +76,9 @@
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
-        gamepad.add_driver('joy', 'Joy', 'sensor_msgs/msg/Joy', JoyDriver);
-        gamepad.add_driver('twist', 'Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
-        gamepad.add_driver('twist_stamped', 'TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
-        gamepad.select_driver('joy');
+        gamepad.add_driver('Joy', 'sensor_msgs/msg/Joy (forward)', 'sensor_msgs/msg/Joy', JoyDriver);
+        gamepad.add_driver('Twist', 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
+        gamepad.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
 

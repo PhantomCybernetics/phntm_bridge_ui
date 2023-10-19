@@ -1,0 +1,34 @@
+<div id="gamepad">
+    <div id="gamepad_status" title="Gamepad Settings"></div>
+    <div id="gamepad_latency" title="Latency"></div>
+    <div id="gamepad_settings">
+        <h3 id="gamepad_id"></h3>
+        <div class="cleaner"></div>
+        <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled">Enabled and generating </label>
+        <select id="gamepad_driver"></select>
+        <div id="gamepad_settings_controls">
+            <button id="gamepad_map">Map Shortcuts</button>
+            <button id="gamepad_config_toggle">Config</button>
+        </div>
+        <div id="gamepad_debug">
+            <div class="col" id="gamepad_debug_input">
+                <b>Input:</b><br>
+                <div class="p">Initializing...</div>
+            </div>
+            <div class="col" id="gamepad_config">
+                <b>Driver Config:</b><br>
+                <textarea id="gamepad_config_input" spellcheck="false"></textarea>
+                <div id="gamepad_config_controls">
+                    <button id="gamepad_config_cancel">Close</button>
+                    <button id="gamepad_config_default">Reset</button>
+                    <button id="gamepad_config_apply">Apply</button>
+                    <button id="gamepad_config_save">SAVE</button>
+                </div>
+            </div>
+            <div class="col" id="gamepad_debug_output">
+                <b>Output:</b><br>
+                <div class="p">Waiting for data...</div>
+            </div>
+        </div>
+    </div>
+</div>

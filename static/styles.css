@@ -986,20 +986,28 @@ SPAN.error {
     top: 10px;
 }
 
-#gamepad_settings_controls button {
+#gamepad_settings_controls button,
+#gamepad_config_controls button {
     background: #101089;
     border: 0px;
     padding: 2px 5px;
     border-radius: 3px;
 }
 
-#gamepad_settings_controls button#gamepad_config_save {
+#gamepad_config_controls button#gamepad_config_save {
     background-color: #008700;
-    display: none;
+    /* display: none; */
 }
 
 #gamepad_config {
     display: none;
+}
+
+#gamepad_enabled {
+    top: 7px;
+    position: relative;
+    float: left;
+    margin-right: 3px;
 }
 
 #gamepad_config TEXTAREA {
@@ -1035,7 +1043,7 @@ SPAN.error {
 #gamepad_debug .col {
     float: left;
     width: 250px;
-    margin-right: 5px;
+    margin-right: 10px;
 }
 
 #gamepad_debug .col .p {

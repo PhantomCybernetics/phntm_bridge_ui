@@ -564,7 +564,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         console.warn('Recieved robot state data: ', this.id_robot, robot_data);
 
-        if (!this.pc) {
+        if (!this.pc || this.pc.signalingState == 'closed') {
             console.warn('Creating new webrtc peer');
             this.pc = this._init_peer_connection(this.id_robot);
         }
@@ -709,6 +709,10 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         console.log('Creating DC for '+topic);
+
+        if (this.pc.signalingState == 'closed') {
+            return console.err('Cannot create read DC for '+topic+'; pc.signalingState=closed');
+        }
 
         let dc = this.pc.createDataChannel(topic, {
             negotiated: true,

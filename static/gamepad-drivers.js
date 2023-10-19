@@ -1,7 +1,10 @@
 class Driver {
 
-    constructor(msg_type) {
+    constructor(id, msg_type, label) {
+        this.id = id;
         this.msg_type = msg_type;
+        this.label = label;
+        this.config = null;
     }
 
     get_header() {
@@ -36,11 +39,9 @@ export class JoyDriver extends Driver {
         topic : '/joy',
     }
 
-    constructor(msg_type, config=null) {
-        super(msg_type);
-        this.config = JoyDriver.default_config;
-        if (config)
-            this.config = config;
+    constructor(id, msg_type, label) {
+        super(id, msg_type, label);
+        this.default_config = JoyDriver.default_config;
     }
 
     read(gamepad, axes, buttons) {
@@ -99,17 +100,12 @@ export class TwistMecanumDriver extends Driver {
                     max: 0.7, // slower when going fast
                 }
             }
-        },
-        buttons: {
-            10: '#trigger_wifi_scan' //select
         }
     }
 
-    constructor(msg_type, config=null) {
-        super(msg_type);
-        this.config = TwistMecanumDriver.default_config;
-        if (config)
-            this.config = config;
+    constructor(id, msg_type, label) {
+        super(id, msg_type, label);
+        this.default_config = TwistMecanumDriver.default_config;
     }
 
     read_axis(axes, cfg) {

@@ -44,16 +44,41 @@ export class GamepadController {
 
         // this.axes_config = axes_config ? axes_config : {};
 
-        this.load_gamepad_service_mapping(); // from cookie
+        // this.load_gamepad_service_mapping(); // from cookie
 
         let that = this;
 
         window.addEventListener('gamepadconnected', (event) => {
-            console.warn('Gamepad connected:', event.gamepad);
+            console.warn('Gamepad connected:', event.gamepad.id);
             that.gamepad = event.gamepad;
 
             $('#gamepad').addClass('connected');
             $('#gamepad_id').html(that.gamepad.id);
+
+            let enabled = that.load_gamepad_enabled(that.gamepad.id);
+            $('#gamepad_enabled').prop('checked', enabled);
+
+            Object.keys(that.drivers).forEach((id_driver)=>{
+                if (that.drivers[id_driver].config !== null) {
+                    return; //only load once
+                }
+                let cfg = that.load_driver_config(that.gamepad.id, id_driver);
+                if (cfg)
+                    that.drivers[id_driver].config = cfg;
+                else
+                    that.drivers[id_driver].config = that.drivers[id_driver].default_config;
+            });
+
+            let dri = that.load_gamepad_driver(that.gamepad.id);
+            if (dri && that.drivers[dri]) {
+                that.select_driver(dri);
+            } else if (Object.keys(that.drivers).length > 0) {
+                dri = Object.keys(that.drivers)[0]
+                console.log('Gamepad defaulting to '+dri);
+                that.select_driver(dri);
+            }
+
+            that.update_ui();
 
             if (that.client.supported_msg_types === null) {
                 //wait for message defs to load
@@ -86,7 +111,7 @@ export class GamepadController {
             } else {
                 //enable confir edit
                 $('#gamepad_debug').addClass('config');
-                $('#gamepad_config_toggle').text('Cancel');
+                $('#gamepad_config_toggle').text('Close editor');
                 $('#gamepad_config_save').css('display', 'inline');
                 $('#gamepad_config_default').css('display', 'inline');
                 $('#gamepad_map').css('display', 'none')
@@ -102,52 +127,79 @@ export class GamepadController {
         });
 
         $('#gamepad_driver').change((ev) => {
-            that.select_driver($(ev.target).val());
+            if (that.select_driver($(ev.target).val())) {
+                that.save_gamepad_driver();
+            }
+        });
+
+        $('#gamepad_config_cancel').click((ev) => {
+            $('#gamepad_config_toggle').click();
+        });
+
+        $('#gamepad_config_default').click((ev) => {
+            that.set_default_config();
+        });
+
+        $('#gamepad_config_apply').click((ev) => {
+            that.parse_driver_config();
+        });
+
+        $('#gamepad_enabled').change(function(ev) {
+            let state = this.checked;
+            that.save_gamepad_enabled(state)
         });
 
         $('#gamepad_config_save').click((ev) => {
-            that.set_driver_config();
+            if (that.parse_driver_config()) {
+                that.save_driver_config();
+            }
         });
-
     }
 
-    add_driver(id, label, msg_type, driver, is_selected) {
+    add_driver(id, label, msg_type, driver_class) {
 
-        this.drivers[id] = {
-            id: id,
-            label: label,
-            driver: new driver(msg_type),
-            is_selected: is_selected
-        };
-        let topic = this.drivers[id].driver.config.topic;
-        console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
-        this.update_ui();
+        this.drivers[id] = new driver_class(id, msg_type, label);
+
+        // let topic = this.drivers[id].config.topic;
+        // console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
+        // this.update_ui();
     }
 
     update_ui() {
         let opts = [];
         Object.keys(this.drivers).forEach((id) => {
             let label = this.drivers[id].label;
-            let selected = this.current_driver == this.drivers[id].driver;
+            let selected = this.current_driver == this.drivers[id];
             opts.push(
                 '<option value="'+id+'"'+(selected ? ' selected="selected"' : '')+'>' +
-                label +
+                this.drivers[id].label +
                 '</option>')
         })
         $('#gamepad_driver').html(opts.join("\n"));
     }
 
     select_driver(id_driver) {
-        console.info('Setting driver to ', id_driver);
-        this.current_driver = this.drivers[id_driver].driver;
 
+        if (!this.drivers[id_driver]) {
+            console.error('Gamepad driver not found: '+id_driver)
+            return false;
+        }
+
+        console.info('Setting driver to ', id_driver);
+        this.current_driver = this.drivers[id_driver];
+
+        this.config_to_editor();
+
+        return true;
+    }
+
+    config_to_editor() {
         let cfg = JSON.stringify(this.current_driver.config, null, 4);
         cfg = this.unquote(cfg);
-
         $('#gamepad_config_input').val(cfg);
     }
 
-    set_driver_config(src) {
+    parse_driver_config() {
         try {
             let src = $('#gamepad_config_input').val();
             src = src.replace("\n","")
@@ -157,11 +209,76 @@ export class GamepadController {
             $('#gamepad_config_input').removeClass('err');
 
             this.current_driver.config = config;
+            return true;
         } catch (error) {
             $('#gamepad_config_input').addClass('err');
             console.log('Error parsing JSON config', error);
+            return false;
         }
 
+    }
+
+    save_gamepad_enabled(state) {
+        localStorage.setItem('gamepad-enabled:' + this.client.id_robot
+                            + ':' + this.gamepad.id,
+                            state);
+        console.log('Saved gamepad enabled for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'":', state);
+    }
+
+    load_gamepad_enabled(id_gamepad) {
+        let state = localStorage.getItem('gamepad-enabled:' + this.client.id_robot
+                                        + ':' + id_gamepad);
+
+        state = state === 'true';
+        console.log('Loaded gamepad enabled for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'":', state);
+        return state;
+    }
+
+    save_gamepad_driver() {
+        localStorage.setItem('gamepad-dri:' + this.client.id_robot
+                            + ':' + this.gamepad.id,
+                            this.current_driver.id);
+        console.log('Saved gamepad driver for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'":', this.current_driver.id);
+    }
+
+    load_gamepad_driver(id_gamepad) {
+        let dri = localStorage.getItem('gamepad-dri:' + this.client.id_robot
+                                        + ':' + id_gamepad);
+        console.log('Loaded gamepad driver for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'":', dri);
+        return dri;
+    }
+
+    save_driver_config() {
+        localStorage.setItem('gamepad-cfg:' + this.client.id_robot
+                                + ':' + this.gamepad.id
+                                + ':' + this.current_driver.id,
+                            JSON.stringify(this.current_driver.config));
+        console.log('Saved gamepad config for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'", driver '+this.current_driver.id+':', this.current_driver.config);
+    }
+
+    load_driver_config(id_gamepad, id_driver) {
+        let cfg = localStorage.getItem('gamepad-cfg:' + this.client.id_robot
+                                + ':' + id_gamepad
+                                + ':' + id_driver);
+
+        if (cfg) {
+            try {
+                cfg = JSON.parse(cfg);
+            }
+            catch {
+                cfg = null;
+            }
+
+        }
+
+        console.log('Loaded gamepad config for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'", driver '+id_driver+':', cfg);
+        return cfg;
+    }
+
+    set_default_config() {
+        this.current_driver.config = this.current_driver.default_config;
+        $('#gamepad_config_input').removeClass('err');
+        this.config_to_editor();
     }
 
     run_loop() {
@@ -171,12 +288,10 @@ export class GamepadController {
             return;
         }
 
-        // console.log('Gamepad loop running')
-
         let transmitting = $('#gamepad_enabled').is(':checked');
 
-        if (!this.current_driver) {
-            console.warn('Gamepad has no driver, waiting...');
+        if (!this.current_driver || !this.current_driver.config) {
+            // wait for init
             return window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
         }
 

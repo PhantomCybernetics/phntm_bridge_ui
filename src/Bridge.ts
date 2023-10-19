@@ -224,7 +224,7 @@ sioRobots.on('connect', async function(robotSocket : RobotSocket){
         let id_instance:ObjectId = update_data['id_instance'] && ObjectId.isValid(update_data['id_instance']) ? new ObjectId(update_data['id_instance']) : null;
         delete update_data['id_app']
         delete update_data['id_instance']
-        robot.getStateData(update_data)
+        update_data = robot.getStateData(update_data)
 
         $d.l("Got peer:update from "+robot.id_robot+" for peer "+id_app+"/"+id_instance+": ", update_data);
         let app = App.FindConnected(id_app, id_instance);
