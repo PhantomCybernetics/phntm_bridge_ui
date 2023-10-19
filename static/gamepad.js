@@ -31,6 +31,7 @@ export class GamepadController {
         this.default_shortcuts_config = {};
         this.shortcuts_config = null;
         this.last_buttons = [];
+        this.editor_listening = false;
         // this.writers = {} // by topic
         //this.msg_classes = {} // by msg type
         //this.msg_writers = {} // by msg type
@@ -181,10 +182,20 @@ export class GamepadController {
             that.save_gamepad_enabled(state)
         });
 
+        $('#gamepad_shortcuts_listen').click((ev) => {
+            if (!$('#gamepad_shortcuts_listen').hasClass('listening')) {
+                $('#gamepad_shortcuts_listen').addClass('listening');
+                that.editor_listening = true;
+            } else {
+                $('#gamepad_shortcuts_listen').removeClass('listening');
+                that.editor_listening = false;
+            }
+        });
 
         $('#gamepad_shortcuts_cancel').click((ev) => {
             $('#gamepad_shortcuts_toggle').click();
         });
+
         $('#gamepad_shortcuts_default').click((ev) => {
             that.set_default_shortcuts();
         });
@@ -431,17 +442,29 @@ export class GamepadController {
             }
         }
 
-        if ($("#gamepad_shortcuts_input").is(":focus")) {
+        if (this.editor_listening && $("#gamepad_shortcuts_input").is(":focus")) {
 
             for (let i = 0; i < buttons.length; i++) {
                 if (buttons[i] && buttons[i].pressed && (!this.last_buttons[i] || !this.last_buttons[i].pressed)) {
+
+                    this.editor_listening = false;
+                    $('#gamepad_shortcuts_listen').removeClass('listening');
+
+                    let pos = document.getElementById("gamepad_shortcuts_input").selectionStart;
                     let curr_val = $('#gamepad_shortcuts_input').val();
-                    let pos_start = curr_val.indexOf('{');
-                    let pos_end = curr_val.lastIndexOf('}');
-                    let line = '    '+i+': "#ui_element_to_click"\n}';
-                    let empty = pos_end-pos_start == 1;
-                    curr_val = curr_val.substr(0, empty?pos_end:pos_end-1) + (empty?'':',') + '\n' + line
-                    $('#gamepad_shortcuts_input').val(curr_val);
+                    let insert = ''+i+': {}';
+                    let val = curr_val.slice(0,pos)+insert+curr_val.slice(pos)
+                    $('#gamepad_shortcuts_input').val(val);
+
+                    break;
+                    // let curr_val = $('#gamepad_shortcuts_input').val();
+                    // let pos_start = curr_val.indexOf('{');
+                    // let pos_end = curr_val.lastIndexOf('}');
+                    // let line = '    '+i+': "#ui_element_to_click"\n}';
+                    // let empty = pos_end-pos_start == 1;
+                    // curr_val = curr_val.substr(0, empty?pos_end:pos_end-1) + (empty?'':',') + '\n' + line
+                    //$('#gamepad_shortcuts_input').val(curr_val);
+
                 }
             }
 

@@ -1001,6 +1001,12 @@ SPAN.error {
     /* display: none; */
 }
 
+#gamepad_shortcuts_controls button.listening {
+    background-color: #0869f9;
+    color: black;
+}
+
+
 #gamepad_config,
 #gamepad_shortcuts {
     display: none;
