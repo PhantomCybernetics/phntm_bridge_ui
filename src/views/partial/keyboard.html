@@ -1,33 +1,36 @@
-<div id="gamepad">
-    <div id="gamepad_status" title="Gamepad Settings"></div>
-    <div id="gamepad_settings">
-        <h3 id="gamepad_id"></h3>
+<div id="keyboard">
+    <div id="keyboard_status" title="Keyboard Settings"></div>
+
+    <div id="keyboard_settings">
+        <h3>Keyboard Controls</h3>
         <div class="cleaner"></div>
-        <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled" class="prevent-select">Enabled and generating </label>
-        <select id="gamepad_driver"></select>
-        <div id="gamepad_settings_controls">
-            <button id="gamepad_shortcuts_toggle">Key mapping</button>
-            <button id="gamepad_config_toggle">Config</button>
+        <input type="checkbox" id="keyboard_enabled"/> <label for="keyboard_enabled" class="prevent-select">Enabled and generating </label>
+        <select id="keyboard_driver"></select>
+
+        <div id="keyboard_settings_controls">
+            <button id="kb_shortcuts_toggle">Key mapping</button>
+            <button id="kb_config_toggle">Config</button>
         </div>
-        <div id="gamepad_debug">
-            <div class="col" id="gamepad_debug_input">
+
+        <div id="keyboard_debug">
+            <div class="col" id="keyboard_debug_input">
                 <b>Input:</b><br>
                 <div class="p">Initializing...</div>
             </div>
-            <div class="col" id="gamepad_config">
+            <div class="col" id="keyboard_config">
                 <b>Driver Config:</b><br>
-                <textarea id="gamepad_config_input" spellcheck="false"></textarea>
-                <div id="gamepad_config_controls">
+                <textarea id="kb_config_input" spellcheck="false"></textarea>
+                <div id="keyboard_config_controls">
                     <button id="gamepad_config_cancel">Close</button>
                     <button id="gamepad_config_default">Reset</button>
                     <button id="gamepad_config_apply">Apply</button>
                     <button id="gamepad_config_save">SAVE</button>
                 </div>
             </div>
-            <div class="col" id="gamepad_shortcuts">
+            <div class="col" id="keyboard_shortcuts">
                 <b>Shortcuts Config:</b><br>
-                <textarea id="gamepad_shortcuts_input" spellcheck="false"></textarea>
-                <div id="gamepad_shortcuts_controls">
+                <textarea id="kb_shortcuts_input" spellcheck="false"></textarea>
+                <div id="keyboard_shortcuts_controls">
                     <button id="gamepad_shortcuts_listen">Listen</button>
                     <button id="gamepad_shortcuts_cancel">Close</button>
                     <button id="gamepad_shortcuts_default">Reset</button>
@@ -35,7 +38,7 @@
                     <button id="gamepad_shortcuts_save">SAVE</button>
                 </div>
             </div>
-            <div class="col" id="gamepad_debug_output">
+            <div class="col" id="keyboard_debug_output">
                 <b>Output:</b><br>
                 <div class="p">Waiting for data...</div>
             </div>

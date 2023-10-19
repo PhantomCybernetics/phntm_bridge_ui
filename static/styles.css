@@ -906,7 +906,8 @@ SPAN.error {
 }
 
 
-#gamepad {
+#gamepad,
+#keyboard {
     position: absolute;
     right: 0;
     top: 0;
@@ -914,18 +915,15 @@ SPAN.error {
     z-index: 35;
 }
 
-#gamepad_latency {
-    color: #fff;
-    font-size: 10px;
-    position: absolute;
-    right: 0px;
+#keyboard {
+    right: 66px;
+    width: 60px;
+    height: 45px;
+    border-radius: 10px 10px 0px 0px;
 }
 
-#gamepad.connected {
-
-}
-
-#gamepad_status {
+#gamepad_status,
+#keyboard_status {
     width: 50px;
     height: 50px;
     background: url(/static/gamepad.png);
@@ -936,15 +934,38 @@ SPAN.error {
     filter: grayscale(1) opacity(.2);
 }
 
-#gamepad.connected #gamepad_status {
+#keyboard_status {
+    background: url(/static/keyboard.png);
+    width: 50px;
+    height: 27px;
+    background-size: 100px;
+    margin-top: 10px;
+    margin-left: 5px;
+}
+
+#gamepad.connected #gamepad_status,
+#keyboard.on #keyboard_status,
+#keyboard_status:hover,
+#keyboard.enabled #keyboard_status {
     filter: grayscale(0);
 }
 
-#gamepad.connected #gamepad_status.active {
+#gamepad.connected.enabled #gamepad_status {
     background-position: -50px 3px;
 }
 
-#gamepad #gamepad_settings {
+#keyboard.enabled #keyboard_status {
+    background-position: -50px 0px;
+}
+
+#gamepad.connected.on,
+#keyboard.on {
+    background-color: #5d53b0e3;
+    border-radius: 10px 10px 0px 0px;
+}
+
+#gamepad #gamepad_settings,
+#keyboard #keyboard_settings {
     position: absolute;
     background: #5d53b0e3;
     /* width: 800px; */
@@ -960,12 +981,14 @@ SPAN.error {
     z-index: 2;
 }
 
-#gamepad #gamepad_settings SElECT {
+#gamepad #gamepad_settings SElECT,
+#keyboard #keyboard_settings SElECT {
     color: black;
     margin-top: 5px;
 }
 
-#gamepad #gamepad_debug {
+#gamepad #gamepad_debug,
+#keyboard #keyboard_debug {
     padding: 5px;
     border-radius: 5px;
     margin-top: 10px;
@@ -976,11 +999,8 @@ SPAN.error {
     overflow-x: hidden;
 }
 
-#gamepad #gamepad_debug.config {
-    /* width: 790px; */
-}
-
-#gamepad_settings_controls {
+#gamepad_settings_controls,
+#keyboard_settings_controls {
     position: absolute;
     right: 10px;
     top: 10px;
@@ -988,7 +1008,10 @@ SPAN.error {
 
 #gamepad_settings_controls button,
 #gamepad_config_controls button,
-#gamepad_shortcuts_controls button {
+#gamepad_shortcuts_controls button,
+#keyboard_settings_controls button,
+#keyboard_config_controls button,
+#keyboard_shortcuts_controls button {
     background: #101089;
     border: 0px;
     padding: 2px 5px;
@@ -996,7 +1019,9 @@ SPAN.error {
 }
 
 #gamepad_config_controls button#gamepad_config_save,
-#gamepad_shortcuts_controls button#gamepad_shortcuts_save {
+#gamepad_shortcuts_controls button#gamepad_shortcuts_save,
+#keyboard_shortcuts_controls button#kb_shortcuts_save,
+#keyboard_config_controls button#kb_config_save {
     background-color: #008700;
     /* display: none; */
 }
@@ -1008,11 +1033,14 @@ SPAN.error {
 
 
 #gamepad_config,
-#gamepad_shortcuts {
+#gamepad_shortcuts,
+#keyboard_config,
+#keyboard_shortcuts {
     display: none;
 }
 
-#gamepad_enabled {
+#gamepad_enabled,
+#keyboard_enabled {
     top: 7px;
     position: relative;
     float: left;
@@ -1020,7 +1048,9 @@ SPAN.error {
 }
 
 #gamepad_config TEXTAREA,
-#gamepad_shortcuts TEXTAREA {
+#gamepad_shortcuts TEXTAREA,
+#keyboard_config TEXTAREA,
+#keyboard_shortcuts TEXTAREA {
     width: 295px;
     height: 460px;
     grid-auto-columns: 0px;
@@ -1041,32 +1071,39 @@ SPAN.error {
     border-radius: 5px;
 }
 
-#gamepad_shortcuts TEXTAREA {
+#gamepad_shortcuts TEXTAREA,
+#keyboard_shortcuts TEXTAREA {
     width: 375px;
 }
 
 #gamepad_config TEXTAREA.err,
-#gamepad_shortcuts TEXTAREA.err {
+#gamepad_shortcuts TEXTAREA.err,
+#keyboard_config TEXTAREA.err,
+#keyboard_shortcuts TEXTAREA.err {
     border-color:red;
 }
 
 #gamepad_debug.config #gamepad_config,
-#gamepad_debug.shortcuts #gamepad_shortcuts {
+#keyboard_debug.config #keyboard_config {
     display: block;
     width: 308px;
 }
 
-#gamepad_debug.shortcuts #gamepad_shortcuts {
+#gamepad_debug.shortcuts #gamepad_shortcuts,
+#keyboard_debug.shortcuts #keyboard_shortcuts {
+    display: block;
     width: 388px;
 }
 
-#gamepad_debug .col {
+#gamepad_debug .col,
+#keyboard_debug .col {
     float: left;
     width: 250px;
     margin-right: 10px;
 }
 
-#gamepad_debug .col .p {
+#gamepad_debug .col .p,
+#keyboard_debug .col .p {
     white-space: pre;
     padding: 5px;
     border-radius: 5px;
@@ -1074,13 +1111,15 @@ SPAN.error {
     margin: 5px 0px 10px 0px;
 }
 
-#gamepad_debug .col:last-child {
+#gamepad_debug .col:last-child,
+#keuboard_debug .col:last-child {
     float: left;
     width: 250px;
     margin-right: 0px;
 }
 
-#gamepad.connected.debug_on #gamepad_settings {
+#gamepad.connected.on #gamepad_settings,
+#keyboard.on #keyboard_settings {
    display: block;
 }
 

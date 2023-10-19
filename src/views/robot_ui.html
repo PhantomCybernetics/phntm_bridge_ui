@@ -46,6 +46,7 @@
 
 <!-- <div id="monitors" style="display:none"></div> -->
 
+<%- include('partial/keyboard.html'); %>
 <%- include('partial/gamepad.html'); %>
 
 <div id="mapping-confirmation"></div>
@@ -55,6 +56,7 @@
 
     import { PhntmBridgeClient } from '/static/client.js';
     import { GamepadController } from '/static/gamepad.js';
+    import { KeyboardController } from '/static/keyboard.js';
     import { PanelUI } from '/static/panel-ui.js';
     import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
 
@@ -78,6 +80,11 @@
         gamepad.add_driver('Joy', 'sensor_msgs/msg/Joy (forward)', 'sensor_msgs/msg/Joy', JoyDriver);
         gamepad.add_driver('Twist', 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
         gamepad.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
+
+        let kb = new KeyboardController(robot); // creates write channels when enabled
+        kb.add_driver('Joy', 'sensor_msgs/msg/Joy', 'sensor_msgs/msg/Joy', JoyDriver);
+        kb.add_driver('Twist', 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
+        kb.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
 

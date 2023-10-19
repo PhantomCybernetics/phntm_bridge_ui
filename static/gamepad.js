@@ -60,6 +60,11 @@ export class GamepadController {
 
             let enabled = that.load_gamepad_enabled(that.gamepad.id);
             $('#gamepad_enabled').prop('checked', enabled);
+            if (enabled) {
+                $('#gamepad').addClass('enabled');
+            } else {
+                $('#gamepad').removeClass('enabled');
+            }
 
             Object.keys(that.drivers).forEach((id_driver)=>{
                 if (that.drivers[id_driver].config !== null) {
@@ -146,10 +151,11 @@ export class GamepadController {
         });
 
         $('#gamepad_status').click(() => {
-            if ($('#gamepad').hasClass('debug_on')) {
-                $('#gamepad').removeClass('debug_on');
+            $('#keyboard').removeClass('on');
+            if ($('#gamepad').hasClass('on')) {
+                $('#gamepad').removeClass('on');
             } else {
-                $('#gamepad').addClass('debug_on');
+                $('#gamepad').addClass('on');
             }
         });
 
@@ -178,8 +184,13 @@ export class GamepadController {
         });
 
         $('#gamepad_enabled').change(function(ev) {
-            let state = this.checked;
-            that.save_gamepad_enabled(state)
+            let enabled = this.checked;
+            that.save_gamepad_enabled(enabled)
+            if (enabled) {
+                $('#gamepad').addClass('enabled');
+            } else {
+                $('#gamepad').removeClass('enabled');
+            }
         });
 
         $('#gamepad_shortcuts_listen').click((ev) => {
