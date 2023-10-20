@@ -1026,7 +1026,9 @@ SPAN.error {
     /* display: none; */
 }
 
-#gamepad_shortcuts_controls button.listening {
+#gamepad_shortcuts_controls button.listening,
+#keyboard_config_controls button.listening,
+#keyboard_shortcuts_controls button.listening {
     background-color: #0869f9;
     color: black;
 }
@@ -1092,7 +1094,7 @@ SPAN.error {
 #gamepad_debug.shortcuts #gamepad_shortcuts,
 #keyboard_debug.shortcuts #keyboard_shortcuts {
     display: block;
-    width: 388px;
+    width: 377px;
 }
 
 #gamepad_debug .col,

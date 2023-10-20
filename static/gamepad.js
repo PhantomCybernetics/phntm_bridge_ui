@@ -88,11 +88,10 @@ export class GamepadController {
 
             if (that.shortcuts_config == null) {
                 let shortcuts = that.load_shortcuts(that.gamepad.id);
-                if (shortcuts) {
+                if (shortcuts)
                     that.shortcuts_config = shortcuts;
-                } else {
+                else
                     that.shortcuts_config = that.default_shortcuts_config;
-                }
                 this.shortcuts_to_editor();
             }
 
@@ -123,16 +122,16 @@ export class GamepadController {
                 //disable config edit
                 $('#gamepad_debug').removeClass('config');
                 $('#gamepad_config_toggle').text('Config');
-                $('#gamepad_config_save').css('display', 'none');
-                $('#gamepad_config_default').css('display', 'none');
+                // $('#gamepad_config_save').css('display', 'none');
+                // $('#gamepad_config_default').css('display', 'none');
                 $('#gamepad_shortcuts_toggle').css('display', 'inline');
             } else {
                 //enable config edit
                 $('#gamepad_debug').addClass('config');
                 $('#gamepad_config_toggle').text('Close editor');
-                $('#gamepad_config_save').css('display', 'inline');
-                $('#gamepad_config_default').css('display', 'inline');
-                $('#gamepad_shortcuts_toggle').css('display', 'none')
+                // $('#gamepad_config_save').css('display', 'inline');
+                // $('#gamepad_config_default').css('display', 'inline');
+                $('#gamepad_shortcuts_toggle').css('display', 'none');
             }
         });
 
@@ -142,11 +141,13 @@ export class GamepadController {
                 $('#gamepad_debug').removeClass('shortcuts');
                 $('#gamepad_shortcuts_toggle').text('Key mapping');
                 $('#gamepad_config_toggle').css('display', 'inline');
+                $('#gamepad_debug_output').css('display', 'block');
             } else {
                 //enable mapping edit
                 $('#gamepad_debug').addClass('shortcuts');
                 $('#gamepad_shortcuts_toggle').text('Close mapping');
-                $('#gamepad_config_toggle').css('display', 'none')
+                $('#gamepad_config_toggle').css('display', 'none');
+                $('#gamepad_debug_output').css('display', 'none');
             }
         });
 
@@ -197,6 +198,7 @@ export class GamepadController {
             if (!$('#gamepad_shortcuts_listen').hasClass('listening')) {
                 $('#gamepad_shortcuts_listen').addClass('listening');
                 that.editor_listening = true;
+                $('#gamepad_shortcuts_input').focus();
             } else {
                 $('#gamepad_shortcuts_listen').removeClass('listening');
                 that.editor_listening = false;
@@ -425,32 +427,32 @@ export class GamepadController {
         let buttons = gp.buttons;
         let axes = gp.axes;
 
-        // console.log(now)
-
-        let msg = this.current_driver.read(this, axes, buttons);
-
-        let debug = {
-            buttons: {},
-            axis: {}
-        }
+        let axes_debug = {};
         for (let i = 0; i < axes.length; i++) {
-            debug.axis[i] = axes[i];
-        }
-        for (let i = 0; i < buttons.length; i++) {
-            debug.buttons[i] = buttons[i].pressed;
+            axes_debug[i] = axes[i]
         }
 
-        $('#gamepad_debug_input').html('<b>Raw Axes:</b><br><div class="p">' + this.unquote(JSON.stringify(debug.axis, null, 4)) + '</div>' +
-                                       '<b>Raw Buttons:</b><br><div class="p">' + this.unquote(JSON.stringify(debug.buttons, null, 4)) + '</div>'
+        let buttons_debug = {};
+        for (let i = 0; i < buttons.length; i++) {
+            buttons_debug[i] = buttons[i].pressed;
+        }
+
+        $('#gamepad_debug_input').html('<b>Raw Axes:</b><br><div class="p">' + this.unquote(JSON.stringify(axes_debug, null, 4)) + '</div>' +
+                                       '<b>Raw Buttons:</b><br><div class="p">' + this.unquote(JSON.stringify(buttons_debug, null, 4)) + '</div>'
                                        );
 
         // if (this.capturing_gamepad_input) {
             // this.capture_gamepad_input(buttons, axes);
         // } else
         if (transmitting) {
+            let msg = this.current_driver.read(axes, buttons);
+
             if (this.client.topic_writers[topic].send(msg)) { // true when ready and written
-                $('#gamepad_debug_output').html('<b>'+msg_type+' -> '+topic+'</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
+                this.display_output(msg);
             }
+        } else if (!this.enabled && $('#gamepad').hasClass('on')) {
+            let msg = this.current_driver.read(axes, buttons);
+            this.display_output(msg);
         }
 
         if (this.editor_listening && $("#gamepad_shortcuts_input").is(":focus")) {
@@ -463,10 +465,11 @@ export class GamepadController {
 
                     let pos = document.getElementById("gamepad_shortcuts_input").selectionStart;
                     let curr_val = $('#gamepad_shortcuts_input').val();
-                    let insert = ''+i+': {}';
+                    let insert = ''+i+'';
                     let val = curr_val.slice(0,pos)+insert+curr_val.slice(pos)
                     $('#gamepad_shortcuts_input').val(val);
-
+                    let new_pos = pos+insert.length;
+                    document.getElementById('gamepad_shortcuts_input').setSelectionRange(new_pos, new_pos);
                     break;
                     // let curr_val = $('#gamepad_shortcuts_input').val();
                     // let pos_start = curr_val.indexOf('{');
@@ -530,6 +533,10 @@ export class GamepadController {
         // }
 
         window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
+    }
+
+    display_output(msg) {
+        $('#gamepad_debug_output').html('<b>'+this.current_driver.msg_type+' -> '+this.current_driver.config.topic+'</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
     }
 
     handle_shortcut(cfg) {

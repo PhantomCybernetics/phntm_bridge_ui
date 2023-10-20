@@ -14,28 +14,29 @@
 
         <div id="keyboard_debug">
             <div class="col" id="keyboard_debug_input">
-                <b>Input:</b><br>
+                <b>Keyboard input:</b><br>
                 <div class="p">Initializing...</div>
             </div>
             <div class="col" id="keyboard_config">
                 <b>Driver Config:</b><br>
                 <textarea id="kb_config_input" spellcheck="false"></textarea>
                 <div id="keyboard_config_controls">
-                    <button id="gamepad_config_cancel">Close</button>
-                    <button id="gamepad_config_default">Reset</button>
-                    <button id="gamepad_config_apply">Apply</button>
-                    <button id="gamepad_config_save">SAVE</button>
+                    <button id="kb_config_listen">Listen</button>
+                    <button id="kb_config_cancel">Close</button>
+                    <button id="kb_config_default">Reset</button>
+                    <button id="kb_config_apply">Apply</button>
+                    <button id="kb_config_save">Save</button>
                 </div>
             </div>
             <div class="col" id="keyboard_shortcuts">
-                <b>Shortcuts Config:</b><br>
+                <b>Shortcuts Config: </b> <span class="comment">(executed regardless of generating status)</span><br>
                 <textarea id="kb_shortcuts_input" spellcheck="false"></textarea>
                 <div id="keyboard_shortcuts_controls">
-                    <button id="gamepad_shortcuts_listen">Listen</button>
-                    <button id="gamepad_shortcuts_cancel">Close</button>
-                    <button id="gamepad_shortcuts_default">Reset</button>
-                    <button id="gamepad_shortcuts_apply">Apply</button>
-                    <button id="gamepad_shortcuts_save">SAVE</button>
+                    <button id="kb_shortcuts_listen">Listen</button>
+                    <button id="kb_shortcuts_cancel">Close</button>
+                    <button id="kb_shortcuts_default">Reset</button>
+                    <button id="kb_shortcuts_apply">Apply</button>
+                    <button id="kb_shortcuts_save">Save</button>
                 </div>
             </div>
             <div class="col" id="keyboard_debug_output">
