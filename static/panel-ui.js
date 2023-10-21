@@ -517,8 +517,18 @@ export class PanelUI {
             that.set_webrtc_status_label()
         });
 
-        client.on('media_stream', (stream)=>{
-            console.warn('Client got a stream', stream);
+        client.on('media_stream', (id_src, stream)=>{
+            console.warn('Client got a stream for '+id_src, stream);
+
+            let panel = that.panels[id_src];
+            console.log('id_panel: '+id_src+'; panel=', panel, that.panels)
+            if (!panel)
+                return;
+
+
+            console.log('Found video panel for new media stream '+stream.id+' src='+id_src);
+            document.getElementById('panel_video_'+panel.n).srcObject = stream;
+
         });
 
         client.on('/iw_status', (msg) => that.update_wifi_status(msg));
@@ -653,8 +663,8 @@ export class PanelUI {
                 let id_cam = $(this).parent('DIV.camera').data('camera');
                 let state = this.checked;
 
-                let w = panel_widgets['video'].w;
-                let h = panel_widgets['video'].h;
+                let w = that.type_widgets['video'].w;
+                let h = that.type_widgets['video'].h;
 
                 that.toggle_panel(id_cam, 'video', state, w, h);
                 // client.SetCameraSubscription(id_robot, [ cam ], state);
@@ -859,6 +869,8 @@ export class PanelUI {
                     if (unique_topics.indexOf(id_topic) === -1)
                         unique_topics.push(id_topic)
 
+                    let msg_type = nodes[node].publishers[id_topic].msg_types[0];
+
                     $('#topic_list').append('<div class="topic" data-topic="'+id_topic+'" data-msg_types="'+nodes[node].publishers[id_topic].msg_types.join(',')+'">'
                         + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
                         //+ (!topic.robotTubscribed?' disabled':'')
@@ -881,7 +893,7 @@ export class PanelUI {
                     // let subscribe = $('#cb_topic_'+i).is(':checked');
 
                     if (this.panels[id_topic]) {
-                        this.panels[id_topic].init(nodes[node].publishers[id_topic].msg_types[0]); //init w message type
+                        this.panels[id_topic].init(msg_type); //init w message type
                         // subscribe = true;
                     }
 
@@ -1071,19 +1083,21 @@ export class PanelUI {
         if (state) {
             if (!panel) {
                 panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
-                panel.init(msg_type)
+                panel.init(msg_type);
             }
         } else if (panel) {
             panel.close();
         }
     }
 
-    make_panel(id_source, msg_type, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+    make_panel(id_source, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
+        //msg type unknown here
         let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
-        // panel.init(msg_type)
+
+        //panel.init(msg_type);
 
         // this.client.on(panel.id_source, panel._on_data_context_wrapper);
 
@@ -1201,7 +1215,7 @@ export class PanelUI {
 
             //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
-            this.make_panel(id_source, null, w, h, x, y, src_on, zoom)
+            this.make_panel(id_source, w, h, x, y, src_on, zoom)
         }
 
         return this.panels;

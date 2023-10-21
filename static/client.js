@@ -71,9 +71,12 @@ export class PhntmBridgeClient extends EventTarget {
     discovered_cameras = {}; // str id => { info: {}}
     discovered_docker_containers = {}; // str id => { info: {}}
 
+    topic_streams = {}; //topic/cam => is_stream
+    media_streams = {}; // id_stream => MediaStream
+
     transievers = []; // RTCRtpTransceiver[]
     // let topic_media_streams = {}; // str topic => MediaStream
-    media_streams = {}; // str id_stream => MediaStream
+
     preferedVideoCodecs = [];
 
     socket = null;
@@ -112,6 +115,7 @@ export class PhntmBridgeClient extends EventTarget {
         this.msg_readers = {}; //msg_type => reader
         this.topic_writers = {}; //id => writer
         this.subscribers = {}; //id => topic ot cam reader
+        this.topic_streams = {};
         this.media_streams = {}; //id_stream => stream
         this.latest = {};
 
@@ -480,6 +484,13 @@ export class PhntmBridgeClient extends EventTarget {
 
         delete this.subscribers[id_source];
 
+        if (this.topic_streams[id_source]) {
+            console.log('Clearing media stream for '+id_source);
+            // if (this.media_streams[this.topic_streams[id_source]])
+            //     delete this.media_streams[this.topic_streams[id_source]];
+            delete this.topic_streams[id_source];
+        }
+
         if (this.init_complete) { //not waiting for initial subs
             this.socket.emit('unsubscribe', {
                 id_robot: this.id_robot,
@@ -616,7 +627,26 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (robot_data['read_video_streams']) {
             robot_data['read_video_streams'].forEach((stream_data)=>{
+                let id_src = stream_data[0];
+                let id_stream = stream_data[1];
+                if (id_stream) {
+                    if (!this.topic_streams[id_src] || this.topic_streams[id_src] != id_stream) {
+                        console.log('Setting stream to '+id_stream+' for '+id_src);
+                        this.topic_streams[id_src] = id_stream;
+                        if (this.media_streams[id_stream]) {
+                            this.emit('media_stream', id_src, this.media_streams[id_stream]);
+                        }
+                    } else {
+                        console.log('Stream already exists for '+id_src +'; old='+this.topic_streams[id_src]+' new='+id_stream+'');
+                    }
 
+                } else if (this.topic_streams[id_src]) {
+                    //stream closed
+                    console.log('Stream closed for '+id_src +'; '+this.topic_streams[id_src]);
+                    // if (this.media_streams[this.topic_streams[id_src]])
+                    //     delete this.media_streams[this.topic_streams[id_src]];
+                    delete this.topic_streams[id_src];
+                }
             });
         }
 
@@ -895,7 +925,11 @@ export class PhntmBridgeClient extends EventTarget {
 
                 that.media_streams[stream.id] = stream;
 
-                that.emit('media_stream', '', stream)
+                Object.keys(that.topic_streams).forEach((id_src)=>{
+                    if (that.topic_streams[id_src] == stream.id) {
+                        that.emit('media_stream', id_src, stream)
+                    }
+                })
 
                 stream.addEventListener('addtrack', (evt) => {
                     console.warn('Stream added track '+stream.id, evt);
