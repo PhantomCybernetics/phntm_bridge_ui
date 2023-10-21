@@ -1066,11 +1066,12 @@ SPAN.error {
     white-space: pre;
     font-size: 12px;
     font-family: monospace;
-    background-color: #0a0f52;
-    border: 2px dashed white;
+    background-color: #072867;
+    border: 2px dotted white;
     padding: 5px;
     margin-top: 5px;
     border-radius: 5px;
+    color: #4eff20;
 }
 
 #gamepad_shortcuts TEXTAREA,

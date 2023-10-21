@@ -106,13 +106,36 @@ export class JoyDriver extends Driver {
             buttons: []
         }
 
-        for (let id_axis = 0; id_axis < axes.length; id_axis++) {
-            // let val = this.apply_axis_deadzone(, this.cfg)
-            msg.axes[id_axis] = axes[id_axis];
+        if (this.config.axes) { //remapping
+            Object.keys(this.config.axes).forEach((axis) => {
+                if (this.config.axes[axis].axis != undefined) {
+                    msg.axes[axis] = axes[this.config.axes[axis].axis];
+
+                    if (this.config.axes[axis].scale != undefined) {
+                        msg.axes[axis] *= this.config.axes[axis].scale;
+                    }
+                }
+
+            });
+        } else { //as is
+            for (let id_axis = 0; id_axis < axes.length; id_axis++) {
+                // let val = this.apply_axis_deadzone(, this.cfg)
+                msg.axes[id_axis] = axes[id_axis];
+            }
         }
 
-        for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
-            msg.buttons[id_btn] = buttons[id_btn].pressed;
+        if (this.config.buttons) { //remapping
+            Object.keys(this.config.buttons).forEach((btn) => {
+                if (this.config.buttons[btn] === true) {
+                    msg.buttons[btn] = true;
+                } else {
+                    msg.buttons[btn] = buttons[this.config.buttons[btn]].pressed;
+                }
+            });
+        } else { //as is
+            for (let id_btn = 0; id_btn < buttons.length; id_btn++) {
+                msg.buttons[id_btn] = buttons[id_btn].pressed;
+            }
         }
 
         return msg;
@@ -264,6 +287,26 @@ export class TwistMecanumDriver extends Driver {
     read_keyboard_axis(pressed_keys, cfg) {
         // let offset = cfg.offset === undefined ? 0.0 : cfg.offset;
         let scale = cfg.scale === undefined ? 1.0 : cfg.scale;
+
+        ['shift', 'alt', 'ctrl', 'meta' ].forEach((mod)=>{
+            if (cfg['_'+mod]) {
+                let base = mod.charAt(0).toUpperCase() + mod.slice(1);
+                let mod_keys = [ base+'Left', base+'Right' ];
+                let mod_on = false;
+                for (let i = 0; i < mod_keys.length; i++) {
+                    if (pressed_keys[mod_keys[i]]) {
+                        mod_on = true;
+                        break;
+                    }
+                }
+
+                if (mod_on) {
+                    if (cfg['_'+mod].scale) {
+                        scale = cfg['_'+mod].scale;
+                    }
+                }
+            }
+        });
 
         let val = 0;
         if (pressed_keys[cfg.key_0])
