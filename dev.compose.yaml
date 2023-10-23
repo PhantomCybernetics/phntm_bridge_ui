@@ -12,8 +12,8 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       - ~/cloud_bridge:/phntm_cloud_bridge
     command:
-      /bin/sh -c "while sleep 1000; do :; done"
-      #/bin/sh /phntm_cloud_bridge/run.bridge.sh
+      #/bin/sh -c "while sleep 1000; do :; done"
+      /bin/sh /phntm_cloud_bridge/run.bridge.sh
 
   phntm_bridge_ui:
     image: phntm/cloud-bridge:latest
@@ -29,5 +29,5 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       - ~/cloud_bridge:/phntm_cloud_bridge
     command:
-      /bin/sh -c "while sleep 1000; do :; done"
-      #/bin/sh /phntm_cloud_bridge/run.web-ui.sh
+      #/bin/sh -c "while sleep 1000; do :; done"
+      /bin/sh /phntm_cloud_bridge/run.web-ui.sh
