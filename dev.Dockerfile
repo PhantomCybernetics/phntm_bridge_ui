@@ -5,11 +5,24 @@ RUN apt-get install -y  ssh \
                         vim mc \
                         iputils-ping net-tools iproute2 curl
 
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-ENV apt-get update -y --fix-missing
+# Node from NodeSource
+RUN apt-get install -y ca-certificates curl gnupg
+RUN  mkdir -p /etc/apt/keyrings
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 
-RUN apt-get install -y  nodejs
-                        # npm
+ENV NODE_MAJOR 18
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+
+RUN apt-get update
+RUN apt-get install nodejs -y
+
+# Mongo
+# RUN curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+# RUN echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+# RUN apt-get update
+# RUN apt-get install -y mongodb-org
+
+
 ENV PHNTM_WS /phntm_cloud_bridge
 
 # RUN mkdir -p $PHNTM_WS
@@ -25,7 +38,7 @@ ENV PHNTM_WS /phntm_cloud_bridge
 
 WORKDIR /
 
-RUN --mount=type=bind,source=./phntm_cloud_bridge,target=$PHNTM_WS \
+RUN --mount=type=bind,source=./cloud_bridge,target=$PHNTM_WS \
         cd $PHNTM_WS && npm install -g
 
 WORKDIR $PHNTM_WS

@@ -35,11 +35,13 @@ const SSL_CERT_PRIVATE =  CONFIG['BRIDGE'].ssl.private;
 const SSL_CERT_PUBLIC =  CONFIG['BRIDGE'].ssl.public;
 const DIE_ON_EXCEPTION:boolean = CONFIG.dieOnException;
 const VERBOSE:boolean = CONFIG['BRIDGE'].verbose;
-const certFiles:string[] = GetCerts(dir+"/"+SSL_CERT_PRIVATE, dir+"/"+SSL_CERT_PUBLIC);
+const certFiles:string[] = GetCerts(SSL_CERT_PRIVATE, SSL_CERT_PUBLIC);
 const HTTPS_SERVER_OPTIONS = {
     key: fs.readFileSync(certFiles[0]),
     cert: fs.readFileSync(certFiles[1]),
 };
+const ADMIN_USERNAME:string = CONFIG['BRIDGE'].admin.username;
+const ADMIN_PASSWORD:string = CONFIG['BRIDGE'].admin.password;
 
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE NODE'.yellow);
@@ -92,14 +94,40 @@ const sioApps:SocketIO.Server = new SocketIO.Server(
 sioExpressApp.get('/', function(req: any, res: any) {
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({
-        phntm_bridge: true,
-        robot: '/robot/socket.io/',
-        human: '/human/socket.io/',
-        app: '/app/socket.io/',
+        phntm_cloud_bridge: Date.now(),
+        robot: PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/socket.io/',
+        new_robot_json: PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?json',
+        new_robot_yaml: PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?yaml',
+        human: PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/',
+        app: PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/',
+        info: PUBLIC_ADDRESS+':'+SIO_PORT+'/info',
     }, null, 4));
 });
 
 sioExpressApp.get('/info', function(req: any, res: any) {
+
+	const reject = () => {
+		res.setHeader("www-authenticate", "Basic");
+		res.sendStatus(401);
+	};
+
+ 	const authorization = req.headers.authorization;
+
+	if (!authorization) {
+   		 return reject();
+ 	}
+
+  	const [username, password] = Buffer.from(
+    		authorization.replace("Basic ", ""),
+    			"base64"
+  		)
+    	.toString()
+    	.split(":");
+
+  	if (!(username === ADMIN_USERNAME && password === ADMIN_PASSWORD)) {
+    		return reject();
+  	}
+
     res.setHeader('Content-Type', 'application/json');
 
     let robot_data:any[] = [ {

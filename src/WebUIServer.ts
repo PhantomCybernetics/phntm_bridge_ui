@@ -26,7 +26,7 @@ const CONFIG = _.merge(defaultConfig);
 const SSL_CERT_PRIVATE =  CONFIG['WEB_UI'].ssl.private;
 const SSL_CERT_PUBLIC =  CONFIG['WEB_UI'].ssl.public;
 
-const certFiles:string[] = GetCerts(dir+"/"+SSL_CERT_PRIVATE, dir+"/"+SSL_CERT_PUBLIC);
+const certFiles:string[] = GetCerts(SSL_CERT_PRIVATE, SSL_CERT_PUBLIC);
 const HTTPS_SERVER_OPTIONS = {
     key: fs.readFileSync(certFiles[0]),
     cert: fs.readFileSync(certFiles[1]),
