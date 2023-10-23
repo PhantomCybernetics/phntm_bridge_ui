@@ -39,12 +39,19 @@ const UI_PORT:number = CONFIG['WEB_UI'].port;
 const UI_HOST:string = CONFIG['WEB_UI'].host;
 const UI_URL:string = CONFIG['WEB_UI'].url;
 
+const BRIDGE_SOCKET_URL:string = CONFIG['WEB_UI'].bridgeSocketUrl;
+const APP_ID:string = CONFIG['WEB_UI'].appId;
+const APP_KEY:string = CONFIG['WEB_UI'].appKey;
+
 import { ImportMessageTypes } from './lib/messageTypesImporter';
 
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE WEB UI'.yellow);
 console.log('');
 console.log((' '+UI_HOST+':'+UI_PORT+UI_URL+'__ID__').green);
+console.log((' Bridge Socket.io: '+BRIDGE_SOCKET_URL+'').green);
+console.log((' App ID: '+APP_ID+'').green);
+console.log((' App Key: '+APP_KEY+'').green);
 console.log((' ').green);
 //console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
 console.log('----------------------------------------------------------------------'.yellow);
@@ -64,7 +71,7 @@ webExpressApp.use('/static/', express.static('static/'));
 webExpressApp.use('/static/socket.io/', express.static('node_modules/socket.io-client/dist/'));
 
 webExpressApp.use('/static/gridstack/', express.static('node_modules/gridstack/dist/'));
-webExpressApp.use('/static/gridstack-forked/', express.static('/root/gridstack.js/dist/'));
+webExpressApp.use('/static/gridstack-forked/', express.static('node_modules/gridstack/dist/'));
 
 webExpressApp.use('/static/three/', express.static('node_modules/three/build/'));
 webExpressApp.use('/static/three-addons/', express.static('node_modules/three/examples/jsm/'));
@@ -82,6 +89,9 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
         //activeTab: 'models', title: 'Models',
         //models: modelItems
         id_robot: req.params.ID,
+	bridge_socket_url: BRIDGE_SOCKET_URL,
+	app_id: APP_ID,
+	app_key: APP_KEY
     });
 });
 

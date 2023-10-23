@@ -64,13 +64,11 @@
 
         let robot = new PhntmBridgeClient({
 
-            socket_url: 'https://mrkbk.local:1337',
+            socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
             socket_auto_connect: false,
-
-            app_id: '6476b0cb2a6d250ce840ad5e',
-            app_key: '6476b0cb2a6d250ce840ad5d',
-
+            app_id: '<%= app_id %>',
+            app_key: '<%= app_key%>',
             id_robot: '<%= id_robot %>',
             msg_types_src: '/static/msg_types.json'
 

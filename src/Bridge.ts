@@ -100,6 +100,7 @@ sioExpressApp.get('/', function(req: any, res: any) {
         new_robot_yaml: PUBLIC_ADDRESS+':'+SIO_PORT+'/robot/register?yaml',
         human: PUBLIC_ADDRESS+':'+SIO_PORT+'/human/socket.io/',
         app: PUBLIC_ADDRESS+':'+SIO_PORT+'/app/socket.io/',
+        new_app_json: PUBLIC_ADDRESS+':'+SIO_PORT+'/app/register',
         info: PUBLIC_ADDRESS+':'+SIO_PORT+'/info',
     }, null, 4));
 });
@@ -111,10 +112,9 @@ sioExpressApp.get('/info', function(req: any, res: any) {
 		res.sendStatus(401);
 	};
 
- 	const authorization = req.headers.authorization;
-
+	const authorization = req.headers.authorization;
 	if (!authorization) {
-   		 return reject();
+   		return reject();
  	}
 
   	const [username, password] = Buffer.from(
@@ -130,22 +130,38 @@ sioExpressApp.get('/info', function(req: any, res: any) {
 
     res.setHeader('Content-Type', 'application/json');
 
-    let robot_data:any[] = [ {
-        connectedRobots:
-        Robot.connectedRobots.length,
-        time: new Date()
-    }];
-    let connectedData = [];
+    let info_data:any = {
+        time: new Date(),
+        numConnectedRobots: Robot.connectedRobots.length,
+        numConnectedApps: App.connectedApps.length,
+	robots: [],
+	apps: [],
+    };
+    let robotsData = [];
     for (let i = 0; i < Robot.connectedRobots.length; i++) {
         let id_robot:string = (Robot.connectedRobots[i].id_robot as ObjectId).toString();
-        let one = {};
-        let ui_url = UI_ADDRESS_PREFIX+'/'+id_robot;
-        connectedData.push(ui_url);
+        let ui_url = UI_ADDRESS_PREFIX+id_robot;
+        robotsData.push({
+		'id': id_robot, 
+		'ui': ui_url,
+		'ip': Robot.connectedRobots[i].socket.handshake.address,
+	});
     }
-    robot_data.push({
-        connectedRobots: connectedData
-    })
-    res.send(JSON.stringify(robot_data, null, 4));
+    info_data['robots'] = robotsData;
+
+    let appsData = [];
+    for (let i = 0; i < App.connectedApps.length; i++) {
+        let id_app:string = (App.connectedApps[i].id_app as ObjectId).toString();
+        appsData.push({
+		'id': id_app,
+		'inst': App.connectedApps[i].id_instance,
+		'ip': App.connectedApps[i].socket.handshake.address,
+	});
+    }
+    info_data['apps'] = appsData;
+
+
+    res.send(JSON.stringify(info_data, null, 4));
 });
 
 sioExpressApp.get('/robot/register', async function(req:express.Request, res:express.Response) {
@@ -156,6 +172,29 @@ sioExpressApp.get('/robot/register', async function(req:express.Request, res:exp
 });
 
 sioExpressApp.get('/app/register', async function(req:express.Request, res:express.Response) {
+
+	const reject = () => {
+		res.setHeader("www-authenticate", "Basic");
+		res.sendStatus(401);
+	};
+
+
+	const authorization = req.headers.authorization;
+	if (!authorization) {
+   		return reject();
+ 	}
+
+  	const [username, password] = Buffer.from(
+    		authorization.replace("Basic ", ""),
+    			"base64"
+  		)
+    	.toString()
+    	.split(":");
+
+  	if (!(username === ADMIN_USERNAME && password === ADMIN_PASSWORD)) {
+    		return reject();
+  	}
+
     return RegisterApp(
         req, res, new ObjectId().toString(),
         appsCollection
