@@ -31,6 +31,8 @@ services:
     hostname: phntm-bridge-ui.local
     restart: unless-stopped
     privileged: true
+    environment:
+      - TERM=xterm
     ports:
       - 443:443
     volumes:
@@ -45,7 +47,7 @@ Run:
 docker compose up phntm_bridge_ui -d
 docker exec -it phntm-bridge-ui bash
 npm install # on first run
-.run.web-ui.sh
+./run.web-ui.sh
 ```
 
 ### Production mode
@@ -57,7 +59,7 @@ docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
 
 Make config.jsonc (see more below):
 ```
-wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/config.example.jsonc -O phntm_bridge_ui.config.jsonc
+wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/config.example.jsonc -O bridge_ui.config.jsonc
 ```
 
 Add phntm_bridge_ui service to your compose.yaml file with congig.jsonc remapped:
@@ -69,11 +71,13 @@ services:
     hostname: phntm-bridge-ui.local
     restart: unless-stopped
     privileged: true
+    environment:
+      - TERM=xterm
     ports:
       - 443:443
     volumes:
       - /etc/letsencrypt:/ssl
-      - ~phntm_bridge_ui.config.jsonc:/phntm_bridge_ui/config.jsonc
+      - ~bridge_ui.config.jsonc:/phntm_bridge_ui/config.jsonc
     command:
       /bin/sh /phntm_bridge_ui/run.web-ui.sh
 ```

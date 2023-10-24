@@ -5,11 +5,14 @@ services:
     hostname: phntm-bridge-ui.local
     restart: unless-stopped
     privileged: true
-    network_mode: host
+    environment:
+      - TERM=xterm
     ports:
       - 443:443
     volumes:
       - /etc/letsencrypt:/ssl
       - ~/bridge_ui:/phntm_bridge_ui
+      # - ~/bridge_ui:/phntm_bridge_ui
     command:
+      # /bin/sh -c "while sleep 1000; do :; done"
       /bin/sh /phntm_bridge_ui/run.web-ui.sh

@@ -32,8 +32,6 @@ const HTTPS_SERVER_OPTIONS = {
     cert: fs.readFileSync(certFiles[1]),
 };
 
-$d.l('Loading cert files:', certFiles);
-
 const MSG_TYPES_DIR = CONFIG['WEB_UI'].msgTypesDir;
 const MSG_TYPES_JSON_FILE = CONFIG['WEB_UI'].msgTypesJsonFile;
 
