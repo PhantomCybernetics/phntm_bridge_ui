@@ -1301,8 +1301,8 @@ export class PanelUI {
             essidclass = 'new'
         }
 
-        let html = '// <span class="eeid '+essidclass+'">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+msg.frequency.toFixed(3)+' GHz, </span> ' +
-                    '<span style="color:'+brc+'">BitRate: '+msg.bit_rate.toFixed(1) + ' Mb/s</span> ' +
+        let html = '// <span class="eeid '+essidclass+'">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+(msg.frequency ? msg.frequency.toFixed(3) : null)+' GHz, </span> ' +
+                    '<span style="color:'+brc+'">BitRate: '+(msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + ' Mb/s</span> ' +
                     '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
                     'Level: '+ msg.level + ' ' +
                     '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> '
