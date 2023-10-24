@@ -1,6 +1,0 @@
-{
-  "extends": "./common",
-  "include": [
-    "../src/Bridge.ts"
-  ]
-}

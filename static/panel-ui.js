@@ -434,6 +434,7 @@ class Panel {
 
         this.ui.grid.removeWidget(this.grid_widget);
 
+        console.warn('Removing panel '+this.id_source, this.ui.panels[this.id_source]);
         delete this.ui.panels[this.id_source];
 
         $('.grid_panel[data-source="'+this.id_source+'"]').remove(); //updates url hash
@@ -521,14 +522,15 @@ export class PanelUI {
             console.warn('Client got a stream for '+id_src, stream);
 
             let panel = that.panels[id_src];
-            console.log('id_panel: '+id_src+'; panel=', panel, that.panels)
+            // console.log('id_panel: '+id_src+'; panel=', panel, that.panels)
             if (!panel)
                 return;
 
-
+            panel.id_stream = stream.id;
             console.log('Found video panel for new media stream '+stream.id+' src='+id_src);
-            document.getElementById('panel_video_'+panel.n).srcObject = stream;
-
+            if (document.getElementById('panel_video_'+panel.n)) {
+                document.getElementById('panel_video_'+panel.n).srcObject = stream;
+            }
         });
 
         client.on('/iw_status', (msg) => that.update_wifi_status(msg));

@@ -18,6 +18,10 @@ export function VideoWidget (panel, ignored) {
 
         panel.display_widget = $('#panel_video_'+panel.n);
 
+        if (panel.id_stream && panel.ui.client.media_streams[panel.id_stream]) { // assign stream, if already available
+            document.getElementById('panel_video_'+panel.n).srcObject = panel.ui.client.media_streams[panel.id_stream];
+        }
+
         panel.widget_menu_cb = function(panel) {
 
             //fps menu toggle

@@ -1,13 +1,13 @@
 FROM ubuntu:latest
 
 RUN apt-get update -y --fix-missing
-RUN apt-get install -y  ssh \
+RUN apt-get install -y  ssh git \
                         vim mc \
                         iputils-ping net-tools iproute2 curl
 
 # Node from NodeSource
 RUN apt-get install -y ca-certificates curl gnupg
-RUN  mkdir -p /etc/apt/keyrings
+RUN mkdir -p /etc/apt/keyrings
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 
 ENV NODE_MAJOR 18
@@ -23,7 +23,7 @@ RUN apt-get install nodejs -y
 # RUN apt-get install -y mongodb-org
 
 
-ENV PHNTM_WS /phntm_cloud_bridge
+ENV PHNTM_WS /phntm_bridge_ui
 
 # RUN mkdir -p $PHNTM_WS
 
@@ -36,12 +36,12 @@ ENV PHNTM_WS /phntm_cloud_bridge
 # COPY ./phntm_cloud_bridge/package.json /tmp/package.json
 # RUN cd /tmp && npm install -g
 
-WORKDIR /
+# WORKDIR /
 
-RUN --mount=type=bind,source=./cloud_bridge,target=$PHNTM_WS \
-        cd $PHNTM_WS && npm install -g
-
+# RUN mkdir $PHNTM_WS/node_modules
+RUN git clone https://github.com/PhantomCybernetics/bridge_ui.git $PHNTM_WS
 WORKDIR $PHNTM_WS
+RUN npm install
 
 # From here we load our application's code in, therefore the previous docker
 # "layer" thats been cached will be used if possible
@@ -52,7 +52,7 @@ WORKDIR $PHNTM_WS
 # RUN ros2 run phntm_bridge phntm_bridge
 
 # pimp up prompt with hostame and color
-RUN echo "PS1='\${debian_chroot:+(\$debian_chroot)}\\[\\033[01;35m\\]\\u@\\h\\[\\033[00m\\] \\[\\033[01;34m\\]\\w\\[\\033[00m\\] 🌈 '"  >> /root/.bashrc
+RUN echo "PS1='\${debian_chroot:+(\$debian_chroot)}\\[\\033[01;35m\\]\\u@\\h\\[\\033[00m\\] \\[\\033[01;34m\\]\\w\\[\\033[00m\\] 🐵 '"  >> /root/.bashrc
 
 # ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD [ "bash" ]

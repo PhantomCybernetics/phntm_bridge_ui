@@ -32,6 +32,8 @@ const HTTPS_SERVER_OPTIONS = {
     cert: fs.readFileSync(certFiles[1]),
 };
 
+$d.l('Loading cert files:', certFiles);
+
 const MSG_TYPES_DIR = CONFIG['WEB_UI'].msgTypesDir;
 const MSG_TYPES_JSON_FILE = CONFIG['WEB_UI'].msgTypesJsonFile;
 
@@ -78,6 +80,14 @@ webExpressApp.use('/static/three-addons/', express.static('node_modules/three/ex
 
 // temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
 
+webExpressApp.get('/', async function(req:express.Request, res:express.Response) {
+
+    // let ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send("Ohi, this is Bridge UI server");
+});
+
 webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.Response) {
 
     let ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
@@ -89,10 +99,11 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
         //activeTab: 'models', title: 'Models',
         //models: modelItems
         id_robot: req.params.ID,
-	bridge_socket_url: BRIDGE_SOCKET_URL,
-	app_id: APP_ID,
-	app_key: APP_KEY
+        bridge_socket_url: BRIDGE_SOCKET_URL,
+        app_id: APP_ID,
+        app_key: APP_KEY
     });
 });
 
 webHttpServer.listen(UI_PORT);
+console.log(('HTTPS server listening on port '+UI_PORT).green);

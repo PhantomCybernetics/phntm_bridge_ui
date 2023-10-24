@@ -1,0 +1,15 @@
+services:
+  phntm_bridge_ui:
+    image: phntm/bridge-ui:latest
+    container_name: phntm-bridge-ui
+    hostname: phntm-bridge-ui.local
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    ports:
+      - 443:443
+    volumes:
+      - /etc/letsencrypt:/ssl
+      - ~/bridge_ui:/phntm_bridge_ui
+    command:
+      /bin/sh /phntm_bridge_ui/run.web-ui.sh
