@@ -4,7 +4,7 @@ This server hosts Web UI for the Phantom Bridge. It needs to be hosted on a publ
 
 The itself server does not connect to anything, it only servers HTML and JavaScript to users web browser, which then connects to Cloud Bridge server via Socket.io and to a robot via WebRTC.
 
-## Install Docker & Compose
+### Install Docker & Compose
 ```
 sudo apt install docker docker-buildx docker-compose-v2
 ```
@@ -86,7 +86,7 @@ Run:
 docker compose up phntm_bridge_ui -d
 ```
 
-## Edit Config
+## Edit config.jsonc
 ssl: certificates cerificates need to me mounted in the docker (Use certbot or the ssl/gen.sh script for self signed dev certificates)
 port: where the UI is available (443)
 host: host name of the ui server (https://bridge.phntm.io)

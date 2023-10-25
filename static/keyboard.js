@@ -45,13 +45,13 @@ export class KeyboardController {
         document.addEventListener('keydown', (ev) => this._key_down_monitor(ev));
         document.addEventListener('keyup', (ev) => this._key_up_monitor(ev));
         window.addEventListener("blur", (event) => {
-            console.warn('Window lost focus');
+            // console.warn('Window lost focus');
             this.pressed_keys = {};
             this.update_input_ui();
         });
 
         $('#kb_config_input').on('focus', (ev) => {
-            console.warn('Editor focused');
+            // console.warn('Editor focused');
             this.pressed_keys = {};
             this.update_input_ui();
         });
