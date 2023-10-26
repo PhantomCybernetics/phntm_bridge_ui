@@ -27,7 +27,7 @@ wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/config.
 
 ### Register new App on Cloud Bridge
 To Phantom Bridge this UI is an App, individual browser clients running it are its instances. An app needs to register with the Cloud Bridge server it intends to use first. The following link will return a new appId/appKey pair, put these in your config.jsonc:
-[https://bridge.phntm.io:1337/app/register]
+[https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
 
 ### Add service to compose.yaml:
 Add phntm_bridge_ui service to your compose.yaml file with congig.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
