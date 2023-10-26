@@ -30,7 +30,7 @@ To Phantom Bridge this UI is an App, individual browser clients running it are i
 [https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
 
 ### Add service to compose.yaml:
-Add phntm_bridge_ui service to your compose.yaml file with congig.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
+Add phntm_bridge_ui service to your compose.yaml file with config.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
 ```
 services:
   phntm_bridge_ui:
@@ -49,8 +49,7 @@ services:
     command:
       /bin/sh /phntm_bridge_ui/run.web-ui.sh
 ```
-
-#### Launch:
+### Launch:
 ```
 docker compose up phntm_bridge_ui
 ```
@@ -76,20 +75,20 @@ Launch server manually for better control:
 ```
 docker compose up phntm_bridge_ui -d
 docker exec -it phntm-bridge-ui bash
-npm install # necessary on first run from new source!
+npm install # necessary on the first run from new source!
 ./run.web-ui.sh
 ```
 
 # Config.jsonc
-**ssl**: certificates need to be exposed to the docker container (Use certbot or the ssl/gen.sh script for self signed dev certificates)
-**port**: where the UI is available (443)
-**host**: host name of the ui server (https://bridge.phntm.io)
-**url**: base address of the ui (/)
-**msgTypesDir**: .idl files are searched here
-**msgTypesJsonFile**: .json message definitions are written here
-**bridgeSocketUrl**: Socket.io url and port on the Cloud Bridge where the client should connect to (https://bridge.phntm.io:1337)
-**appId**: unique app id received by Cloud Bridge on app registration
-**appKey**: revokeable app key
+**ssl**: certificates need to be exposed to the docker container (Use certbot or the ssl/gen.sh script for self signed dev certificates) 
+**port**: where the UI is available (443) 
+**host**: host name of the ui server (https://bridge.phntm.io) 
+**url**: base address of the ui (/) 
+**msgTypesDir**: .idl files are searched here 
+**msgTypesJsonFile**: .json message definitions are written here 
+**bridgeSocketUrl**: Socket.io url and port on the Cloud Bridge where the client should connect to (https://bridge.phntm.io:1337) 
+**appId**: unique app id received by Cloud Bridge on app registration 
+**appKey**: revokeable app key 
 
 # Custom ROS Message Types
 When starting, the UI server looks for .idl files in msgTypesDir (static/msg_types/grp_name/*.idl) and generates a JSON definition into a single .json file (static/msg_types.json) that the clients' web browsers then fetch. If you want to add support for ROS message types, just add add new .idl to the source folder, restart the UI server and reload web browser.
