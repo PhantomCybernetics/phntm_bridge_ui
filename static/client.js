@@ -167,6 +167,18 @@ export class PhntmBridgeClient extends EventTarget {
             );
         });
 
+        this.socket.on("disconnect", () => {
+            console.log('Socket.io disconnected'); // undefined
+        });
+
+        this.socket.on("error", (err) => {
+            console.error('Socket.io error', err); // undefined
+        });
+
+        this.socket.on("connect_error", (err) => {
+            console.error('Socket.io connect error:', err); // undefined
+        });
+
         this.socket.on('instance', (id_instance) => {
             console.warn('Got id instance: '+id_instance);
             socket_auth.id_instance = id_instance;
@@ -182,9 +194,7 @@ export class PhntmBridgeClient extends EventTarget {
             that._process_robot_data(update_data, return_callback);
         });
 
-        this.socket.on("disconnect", () => {
-            console.log('Socket.io disconnected'); // undefined
-        });
+      
 
         this.socket.on("introspection", (state) => {
             console.log('Got introspetion state '+state); // undefined

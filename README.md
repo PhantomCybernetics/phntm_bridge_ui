@@ -56,7 +56,7 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
 }
 ```
 
-### Add service to compose.yaml
+### Add service to your compose.yaml
 Add phntm_bridge_ui service to your compose.yaml file with config.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
 ```yaml
 services:
@@ -72,7 +72,7 @@ services:
       - 443:443
     volumes:
       - /etc/letsencrypt:/ssl
-      - ~bridge_ui_config.jsonc:/phntm_bridge_ui/config.jsonc
+      - ~/bridge_ui_config.jsonc:/phntm_bridge_ui/config.jsonc
     command:
       /bin/sh /phntm_bridge_ui/run.web-ui.sh
 ```
