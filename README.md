@@ -21,8 +21,7 @@ docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
 ```
 
 ### Create Config File
-Copy & paste into a new config file:
-`nano bridge_ui_config.jsonc`
+Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
 ```jsonc
 {
     "dieOnException": true,
@@ -41,7 +40,7 @@ Copy & paste into a new config file:
         // .idl files are searched here  
         "msgTypesDir": "static/msg_types/",
         // .json message definitions are written here  
-        "msgTypesJsonFile": "static/msg_types.json", //generated from .idl files found in msgTypesDir
+        "msgTypesJsonFile": "static/msg_types.json",
 
         // Cloud Bridge Socket.io where the client browsers should connect to
         "bridgeSocketUrl": "https://bridge.phntm.io:1337",
