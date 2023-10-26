@@ -7,22 +7,32 @@ The web server itself does not connect to anything, it merely servers semi-stati
 You can fork this repository and host it yourself to customize the default UI provided. The configuration file specifies which Cloud Bridge server shall the client connect to.
 
 # Install Bridge UI Server
+
 ### Install Docker & Docker Compose
 ```
 sudo apt install docker docker-buildx docker-compose-v2
 ```
+
 ### Build Docker Image
 ```
 cd ~
 wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/Dockerfile -O phntm-bridge-ui.Dockerfile
 docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
 ```
-### Edit config.jsonc (see more below):
+
+### Create config.jsonc (see more below):
 ```
-wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/config.example.jsonc -O bridge_ui.config.jsonc
+wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/config.example.jsonc -O config.jsonc
 ```
+
+### Register new App on Cloud Bridge
+To Phantom Bridge this UI is an App, individual browser clients running it are its instances. An app needs to register with the Cloud Bridge server it intends to use first. The following link will return a new appId/appKey pair, put these in your config.jsonc.
+```
+https://bridge.phntm.io:1337/app/register
+```
+
 ### Add service to compose.yaml:
-Add phntm_bridge_ui service to your compose.yaml file with congig.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates exposed:
+Add phntm_bridge_ui service to your compose.yaml file with congig.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
 ```
 services:
   phntm_bridge_ui:
@@ -37,10 +47,11 @@ services:
       - 443:443
     volumes:
       - /etc/letsencrypt:/ssl
-      - ~bridge_ui.config.jsonc:/phntm_bridge_ui/config.jsonc
+      - ~config.jsonc:/phntm_bridge_ui/config.jsonc
     command:
       /bin/sh /phntm_bridge_ui/run.web-ui.sh
 ```
+
 #### Launch:
 ```
 docker compose up phntm_bridge_ui
@@ -60,11 +71,10 @@ services:
     volumes:
       - ~/bridge_ui:/phntm_bridge_ui
     command:
-      /bin/sh -c "while sleep 1000; do :; done" # starting manually for better control
-      # /bin/sh /phntm_bridge_ui/run.web-ui.sh
+      /bin/sh -c "while sleep 1000; do :; done"
 ```
 
-Run:
+Launch server manually for better control:
 ```
 docker compose up phntm_bridge_ui -d
 docker exec -it phntm-bridge-ui bash
@@ -82,17 +92,6 @@ msgTypesJsonFile: .json message definitions are written here
 bridgeSocketUrl: Socket.io url and port on the Cloud Bridge where the client should connect to (https://bridge.phntm.io:1337)
 appId: unique app id received by Cloud Bridge on app registration
 appKey: revokeable app key
-
-# Registering App with Cloud Bridge
-To Phantom Bridge this UI is an App, individual browser clients running it are its instances. An app needs to register with the Cloud Bridge server it intends to use. The following link will return a new appId/appKey pair:
-```
-https://bridge.phntm.io:1337/app/register
-```
-> {
->     "appId": "65372a11132641f870a0fc58",
->     "appKey": "65372a11132641f870a0fc57"
-> }
-Put these in your bridge_ui/config.jsonc
 
 # Custom ROS Message Types
 When starting, the UI server looks for .idl files in msgTypesDir (static/msg_types/grp_name/*.idl) and generates a JSON definition into a single .json file (static/msg_types.json) that the clients' web browsers then fetch. If you want to add support for ROS message types, just add add new .idl to the source folder, restart the UI server and reload web browser.
