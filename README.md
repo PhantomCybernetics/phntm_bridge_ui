@@ -22,8 +22,8 @@ docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
 
 ### Create Config File
 Copy & paste into a new config file:
-```json
-# nano bridge_ui_config.jsonc:
+`nano bridge_ui_config.jsonc`
+```jsonc
 {
     "dieOnException": true,
     "WEB_UI": {
