@@ -20,6 +20,10 @@ wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/Dockerf
 docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
 ```
 
+### Register new App on Cloud Bridge
+To Phantom Bridge, this UI represents an app, individual browser clients running web ui are considered app instances. New app needs to register with the Cloud Bridge server it intends to use. The following link will return a new appId/appKey pair, put these in your config.jsonc below.
+[https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
+
 ### Create Config File
 Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
 ```jsonc
@@ -51,9 +55,6 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
     }
 }
 ```
-
-### Register new App on Cloud Bridge
-To Phantom Bridge this UI is an App, individual browser clients running it are its instances. An app needs to register with the Cloud Bridge server it intends to use first. The following link will return a new appId/appKey pair, put these in your config.jsonc: [https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
 
 ### Add service to compose.yaml
 Add phntm_bridge_ui service to your compose.yaml file with config.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
@@ -115,7 +116,7 @@ This web UI enables you to connect a gamepad or use keyboard to generate standar
 
 See Input and Controls for details.
 
-# Customizing This UI
+# Customizing this UI
 The UI is meant to be customized and extended. src/robot_ui.html is the best place to start. It uses PhntmBridgeClient (static/client.js) to facilitate the connection to both Robot and Cloud Bridge.
 
 See Customizing the UI
