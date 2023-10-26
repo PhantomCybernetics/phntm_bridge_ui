@@ -58,7 +58,7 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
 
 ### Add service to compose.yaml
 Add phntm_bridge_ui service to your compose.yaml file with config.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
-```
+```yaml
 services:
   phntm_bridge_ui:
     image: phntm/bridge-ui:latest
@@ -89,7 +89,7 @@ git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
 ```
 
 Make the following changes to your docker compose service in compose.yaml:
-```
+```yaml
 services:
   phntm_bridge_ui:
     volumes:
