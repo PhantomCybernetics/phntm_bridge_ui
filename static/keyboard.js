@@ -390,7 +390,7 @@ export class KeyboardController {
             return false;
         }
 
-        console.info('Setting driver to ', id_driver);
+        console.info('Setting keyboard driver to '+id_driver);
         this.current_driver = this.drivers[id_driver];
 
         this.config_to_editor();
@@ -406,12 +406,12 @@ export class KeyboardController {
 
     save_driver() {
         localStorage.setItem('kb-gamepad-dri:' + this.client.id_robot, this.current_driver.id);
-        console.log('Saved keyboard driver for robot '+this.client.id_robot+':', this.current_driver.id);
+        // console.log('Saved keyboard driver for robot '+this.client.id_robot+':', this.current_driver.id);
     }
 
     load_driver() {
         let dri = localStorage.getItem('kb-gamepad-dri:' + this.client.id_robot);
-        console.log('Loaded keyboard driver for robot '+this.client.id_robot+':', dri);
+        // console.log('Loaded keyboard driver for robot '+this.client.id_robot+':', dri);
         return dri;
     }
 
@@ -470,14 +470,15 @@ export class KeyboardController {
 
     save_keyboard_enabled(state) {
         localStorage.setItem('kb-enabled:' + this.client.id_robot, state);
-        console.log('Saved keyboard enabled for robot '+this.client.id_robot+':', state);
+        // console.log('Saved keyboard enabled for robot '+this.client.id_robot+':', state);
     }
 
     load_keyboard_enabled() {
         let state = localStorage.getItem('kb-enabled:' + this.client.id_robot);
 
         state = state === 'true';
-        console.log('Loaded keyboard enabled for robot '+this.client.id_robot+':', state);
+        if (state)
+            console.log('Loaded keyboard enabled for robot '+this.client.id_robot+':', state);
         return state;
     }
 
@@ -500,7 +501,8 @@ export class KeyboardController {
             }
         }
 
-        console.log('Loaded keyboard driver config for robot '+this.client.id_robot+', driver '+id_driver+':', cfg);
+        if (cfg)
+            console.log('Loaded keyboard driver config for robot '+this.client.id_robot+', driver '+id_driver+':', cfg);
         return cfg;
     }
 
@@ -520,7 +522,8 @@ export class KeyboardController {
                 cfg = null;
             }
         }
-        console.log('Loaded keybaord shortcuts keys for robot '+this.client.id_robot+':', cfg);
+        if (cfg)
+            console.log('Loaded keybaord shortcuts keys for robot '+this.client.id_robot+':', cfg);
         return cfg;
     }
 

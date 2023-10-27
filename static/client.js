@@ -106,9 +106,9 @@ export class PhntmBridgeClient extends EventTarget {
         this.socket_path = opts.socket_path !== undefined ? opts.socket_path : '/app/socket.io/';
         this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
 
-        this.ice_server_urls = opts.ice_server_urls ? opts.ice_server_urls : [
-            'stun:stun.l.google.com:19302'
-        ];
+        this.ice_servers_config = opts.ice_servers ? opts.ice_servers : [{urls:[
+            "stun:stun.l.google.com:19302",
+        ]}];
 
         this.init_complete = false;
         this.msg_writers = {}; //msg_type => writer
@@ -137,10 +137,9 @@ export class PhntmBridgeClient extends EventTarget {
             autoConnect: this.socket_auto_connect
         });
 
-        this.socket.on("connect", (data) => {
+        this.socket.on("connect", () => {
 
-            console.log('Socket.io connected with id '+that.socket.id+', requesting robot...')
-            console.log('Conn data:', data);
+            console.log('Socket.io connected with id '+that.socket.id+', requesting robot '+that.id_robot);
 
             let subscribe = Object.keys(that.subscribers);
             let writers = [];
@@ -679,20 +678,30 @@ export class PhntmBridgeClient extends EventTarget {
             console.log('Got sdp offer', robot_data['offer'])
             let robot_offer = new RTCSessionDescription({ sdp: robot_data['offer'], type: 'offer' });
             let that = this;
-            this.pc.setRemoteDescription(robot_offer)
-            .then(() => {
-                that.pc.createAnswer()
-                .then((answer) => {
+
+            that.pc.setRemoteDescription(robot_offer).then(() => {
+                that.pc.createAnswer().then((answer) => {
                     that.pc.setLocalDescription(answer)
                     .then(()=>{
-                        let answer_data = {
-                            id_robot: that.id_robot,
-                            sdp: answer.sdp,
-                        };
-                        console.log('Sending sdp asnwer')
-                        answer_callback(answer_data);
-                    })
-                })
+
+                        that._wait_for_ice_gathering().then(()=>{
+                            console.log('Ice cool, state=', that.pc.iceGatheringState);
+                            console.log('Ice servers:', that.ice_servers_config);
+                            // console.log('First local description:', that.pc.localDescription.sdp);
+
+                            let answer_data = {
+                                id_robot: that.id_robot,
+                                sdp: that.pc.localDescription.sdp,
+                            };
+                            console.log('Sending sdp asnwer', answer_data.sdp)
+                            answer_callback(answer_data);
+
+                        }).catch(()=>{
+                            console.error('Error handling robot\'s offer');
+                        });
+                       
+                    });
+                });
             });
         }
 
@@ -739,6 +748,35 @@ export class PhntmBridgeClient extends EventTarget {
 
 
 
+    }
+
+    _ice_checker(resolve, reject, start_time) {
+        if (this.pc && this.pc.iceGatheringState == 'complete')
+            return resolve();
+
+        if (start_time === undefined)
+            start_time = Date.now();
+        else if (Date.now() - start_time > 10000) {
+            console.error('Timed out while waiting for ICE gathering, state='+this.pc.iceGatheringState);
+            if (reject)
+                return reject();
+            return;
+        }
+
+        console.log('Waiting for ICE gathering, state='+this.pc.iceGatheringState);
+
+        // Simulating a delayed network call to the server
+        let that = this;
+        setTimeout(() => {
+            that._ice_checker(resolve, reject, start_time);
+        }, 100);
+    }
+
+    _wait_for_ice_gathering() {
+        let that = this;
+        return new Promise((resolve, reject) => {
+            return that._ice_checker(resolve, reject);
+        });
     }
 
     _make_read_data_channel(topic, dc_id, msg_type) {
@@ -874,9 +912,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         let config = {
             sdpSemantics: 'unified-plan',
-            iceServers: [{urls:[
-                                 "stun:stun.l.google.com:19302",
-                        ]}],
+            iceServers: this.ice_servers_config,
             // bundlePolicy: 'max-compat'
         };
 
@@ -922,6 +958,14 @@ export class PhntmBridgeClient extends EventTarget {
         //     console.log('data_receiver.MSG:', evt)
         // });
         //ordered=true, protocol='test.protocol/lala.hm'
+
+        pc.addEventListener('icegatheringstatechange', (evt) => {
+            console.warn('Ice gathering state changed: ', pc.iceGatheringState);
+        });
+
+        pc.addEventListener('iceconnectionstatechange', (evt) => {
+            console.warn('Ice connection state changed: ', pc.iceConnectionState);
+        });
 
         // connect audio / video
         pc.addEventListener('track', (evt) => {
@@ -1011,7 +1055,13 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         pc.addEventListener("connectionstatechange", (evt) => {
-            console.warn('Peer connection state: ',  evt.currentTarget.connectionState);
+
+            let newState = evt.currentTarget.connectionState;
+            if (newState == 'failed') {
+                console.error('Peer connection state: ', evt.currentTarget.connectionState);
+            } else {
+                console.warn('Peer connection state: ', evt.currentTarget.connectionState);
+            }
 
             if (evt.currentTarget.connectionState == 'connected') {
                 if (!pc.connected) { //just connected

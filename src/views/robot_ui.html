@@ -70,8 +70,21 @@
             app_id: '<%= app_id %>',
             app_key: '<%= app_key%>',
             id_robot: '<%= id_robot %>',
-            msg_types_src: '/static/msg_types.json'
-
+            msg_types_src: '/static/msg_types.json',
+            ice_servers: [{
+                    urls:[
+                        'stun:stun1.l.google.com:19302',
+                        // 'stun:stun1.voiceeclipse.net:3478',
+                        'stun:stun2.l.google.com:19302',
+                        'stun:stun3.l.google.com:19302',
+                        'stun:stun4.l.google.com:19302',
+                        "stun:stun.l.google.com:19302",
+                        // "turn:turn.phntm.io:3478",
+                        // "turn:turn.phntm.io:5349"
+                    ],
+                    // username: 'robopass',
+                    // credential: 'robopass'
+                }]
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
