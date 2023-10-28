@@ -46,7 +46,7 @@ class Panel {
 
         let html =
             '<div class="grid_panel" data-source="'+id_source+'">' +
-                '<h3>'+id_source+'</h3>' +
+                '<h3 class="panel-title">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
                 '<div class="monitor_menu">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
@@ -473,7 +473,7 @@ export class PanelUI {
         this.client = client;
 
         let GridStack = window.exports.GridStack;
-        this.grid = GridStack.init({ float: false, cellHeight: grid_cell_height });
+        this.grid = GridStack.init({ float: false, cellHeight: grid_cell_height, handle: '.panel-title' });
 
         this.panels = {}
         this.gamepad = gamepad;

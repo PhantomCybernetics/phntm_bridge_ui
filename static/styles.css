@@ -658,7 +658,7 @@ BUTTON#trigger_wifi_scan.working {
     background: #c20000;
 }
 
-.grid_panel h3 {
+.panel-title {
     z-index: 2;
     position: relative;
     padding-right: 10px;
@@ -667,6 +667,13 @@ BUTTON#trigger_wifi_scan.working {
     margin-right: 20px;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* background-color: red; */
+    position: relative;
+    top: -10px;
+    padding-top: 10px;
+    margin-bottom: -20px;
+    padding-bottom: 10px;
+    cursor: grab;
 }
 
 .grid-stack>.grid-stack-item>.grid-stack-item-content {
