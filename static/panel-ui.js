@@ -1311,24 +1311,50 @@ export class PanelUI {
         $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
         $('#robot_wifi_info').removeClass('offline');
 
+        // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
+        // console.log('Selected pair', selected_pair);
+
         if (this.last_pc_stats) { // from timer
+            // this.last_pc_stats.forEach((report) => {
+
+            //     if (report.type == 'local-candidate') {
+            //         console.warn('Report local-candidate', report);
+            //         // return;
+            //     }
+                
+            //     if (report.type == 'remote-candidate') {
+            //         console.warn('Report remote-candidate', report);
+            //         // return;
+            //     }
+
+            // });
+            
+            let min_rtt = -1;
+
             this.last_pc_stats.forEach((report) => {
+                if (report.type != 'candidate-pair' || !report.nominated)
+                    return;
                 Object.keys(report).forEach((statName) => {
                     if (statName == 'currentRoundTripTime') {
-                        let rtt_ms = report[statName] * 1000;
-                        let rttc = ''
-                        if (rtt_ms > 50)
-                            rttc = 'red'
-                        else if (rtt_ms > 30)
-                            rttc = 'orange'
-                        else if (rtt_ms > 15)
-                            rttc = 'yellow'
-                        else
-                            rttc = 'lime'
-                        html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'ms</span>';
+                        if (min_rtt < 0 || report[statName] < min_rtt)
+                            min_rtt = report[statName];
                     }
                 });
             });
+
+            if (min_rtt > 0) {
+                let rtt_ms = min_rtt * 1000; //ms
+                let rttc = ''
+                if (rtt_ms > 50)
+                    rttc = 'red'
+                else if (rtt_ms > 30)
+                    rttc = 'orange'
+                else if (rtt_ms > 15)
+                    rttc = 'yellow'
+                else
+                    rttc = 'lime'
+                html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'m</span> ';
+            }
         }
 
         $('#robot_wifi_stats').html(html)

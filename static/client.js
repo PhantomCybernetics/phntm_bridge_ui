@@ -56,7 +56,7 @@ class Subscriber {
 export class PhntmBridgeClient extends EventTarget {
 
     id_robot = null;
-
+    session = null;
     supported_msg_types = null; //fetched static
 
     pc = null;
@@ -100,6 +100,7 @@ export class PhntmBridgeClient extends EventTarget {
             console.error("Missing opts.app_key")
             return false;
         }
+        this.session = null;
 
         //defaults to phntm bridge service
         this.socket_url = opts.socket_url !== undefined ? opts.socket_url : 'https://bridge.phntm.io:1337';
@@ -125,7 +126,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         let that = this;
 
-        let socket_auth = {
+        this.socket_auth = {
             id_app: this.app_id,
             key: this.app_key,
             id_instance: null, // stored for reconnects when known
@@ -133,13 +134,11 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket = io(this.socket_url, {
             path: this.socket_path,
-            auth: socket_auth,
+            auth: this.socket_auth,
             autoConnect: this.socket_auto_connect
         });
 
         this.socket.on("connect", () => {
-
-            console.log('Socket.io connected with id '+that.socket.id+', requesting robot '+that.id_robot);
 
             let subscribe = Object.keys(that.subscribers);
             let writers = [];
@@ -148,11 +147,15 @@ export class PhntmBridgeClient extends EventTarget {
             })
             that.init_complete = true;
 
-            that.socket.emit('robot', {
+            let req_data = {
                 id_robot: that.id_robot,
                 read: subscribe,
                 write: writers,
-            },
+            }
+
+            console.log('Socket.io connected with id '+that.socket.id+', requesting:', req_data);
+
+            that.socket.emit('robot', req_data,
                 (robot_data) => {
                     that._process_robot_data(robot_data, (answer_data) => {
                         that.socket.emit('sdp:answer', answer_data, (res_answer) => {
@@ -180,8 +183,8 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on('instance', (id_instance) => {
             console.warn('Got id instance: '+id_instance);
-            socket_auth.id_instance = id_instance;
-            console.log(this.socket)
+            that.socket_auth.id_instance = id_instance;
+            // console.log(this.socket)
             // that._process_robot_data(robot_data, return_callback);
         });
 
@@ -584,7 +587,19 @@ export class PhntmBridgeClient extends EventTarget {
 
         console.warn('Recieved robot state data: ', this.id_robot, robot_data);
 
-        if (!this.pc || this.pc.signalingState == 'closed') {
+        if (robot_data['session']) { // no session means server pushed just brief info
+            if (this.session != robot_data['session']) {
+                console.warn('NEW PC SESSION '+robot_data['session'])
+                if (this.pc != null) {
+                    this.pc.close(); // make new pc
+                    this.pc = null;
+                }
+            }
+            this.session = robot_data['session'];
+        }
+        
+
+        if (!this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn('Creating new webrtc peer');
             this.pc = this._init_peer_connection(this.id_robot);
         }
@@ -783,7 +798,13 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (this.topic_dcs[topic]) {
             console.log('DC already exists for '+topic);
-            return;
+            // if (dc_id != this.topic_dcs[topic].id) {
+            //     console.warn('DC for '+topic+' has new id: '+dc_id+', old='+this.topic_dcs[topic].id);
+            //     this.topic_dcs[topic].close();
+            //     delete this.topic_dcs[topic];
+            // } else {
+            return; //we cool here
+            // }
         }
 
         console.log('Creating DC for '+topic);
@@ -875,8 +896,14 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         if (this.topic_writers[topic].dc) {
-            console.log('DC already exists for '+topic);
-            return;
+            console.log('Write DC already exists for '+topic);
+            // if (dc_id != this.topic_writers[topic].dc.id) {
+            //     console.warn('Write DC for '+topic+' has new id: '+dc_id+', old='+this.topic_writers[topic].dc.id);
+            //     this.topic_writers[topic].dc.close();
+            //     delete this.topic_writers[topic].dc
+            // } else {
+             return; //we cool here
+            // }
         }
 
         console.log('Creating write DC for '+topic);
@@ -965,6 +992,10 @@ export class PhntmBridgeClient extends EventTarget {
 
         pc.addEventListener('iceconnectionstatechange', (evt) => {
             console.warn('Ice connection state changed: ', pc.iceConnectionState);
+        });
+
+        pc.addEventListener('negotiationneeded', (evt) => {
+            console.warn('Negotiation needed! ');
         });
 
         // connect audio / video
@@ -1057,7 +1088,7 @@ export class PhntmBridgeClient extends EventTarget {
         pc.addEventListener("connectionstatechange", (evt) => {
 
             let newState = evt.currentTarget.connectionState;
-            if (newState == 'failed') {
+            if (newState == 'failed' || newState == 'disconnected') {
                 console.error('Peer connection state: ', evt.currentTarget.connectionState);
             } else {
                 console.warn('Peer connection state: ', evt.currentTarget.connectionState);
@@ -1080,7 +1111,7 @@ export class PhntmBridgeClient extends EventTarget {
                     //     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
 
                 }
-            } else if (pc.connected) { //just disconnected
+            } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
                 console.error('Peer disconnected', evt);
 
@@ -1092,8 +1123,11 @@ export class PhntmBridgeClient extends EventTarget {
 
                 });
 
-                that.pc.close();
-                that.pc = null;
+                // that.pc.close();
+                // that.pc = null;
+
+                // that.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
+
                 // return;
 
                 // window.gamepadController.ClearProducers();
