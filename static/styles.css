@@ -61,6 +61,7 @@ h3 {
 }
 
 #topic_controls,
+#widget_controls,
 #service_controls,
 #camera_controls,
 #docker_controls {
@@ -78,6 +79,7 @@ h3 {
 
 
 #topic_controls:hover,
+#widget_controls:hover,
 #service_controls:hover,
 #camera_controls:hover,
 #docker_controls:hover {
@@ -86,6 +88,11 @@ h3 {
 
 #topic_controls {
     width: 150px;
+}
+
+#widget_controls {
+    width: 80px;
+    background: #112fb3;
 }
 
 #service_controls {
@@ -105,6 +112,19 @@ h3 {
 
 
 #topic_list {
+    overflow-x: hidden;
+    width: 400px;
+    padding: 5px 10px 5px 10px;
+    display: none;
+    max-height: 520px;
+    overflow: scroll;
+    position: absolute;
+    left: 1px;
+    top: 46px;
+    background: #deeeff;
+}
+
+#widget_list {
     overflow-x: hidden;
     width: 400px;
     padding: 5px 10px 5px 10px;
@@ -157,6 +177,7 @@ h3 {
 #service_controls H3,
 #camera_controls H3,
 #docker_controls H3,
+#widget_controls H3,
 #topic_controls H3 {
     color: #fff;
     cursor: default;
@@ -166,6 +187,7 @@ h3 {
 #camera_controls,
 #docker_controls,
 #topic_controls,
+#widget_controls,
 #service_controls {
     margin-top: 2px;
     margin-bottom: 5px;
@@ -174,6 +196,11 @@ h3 {
 #topic_controls.active:hover {
     border-top: 2px solid #6f98c4;
     border-bottom: 5px solid #6f98c4;
+}
+
+#widget_controls.active:hover {
+    border-top: 2px solid #112fb3;
+    border-bottom: 5px solid #112fb3;
 }
 
 #camera_controls.active:hover {
@@ -196,6 +223,7 @@ h3 {
 #camera_controls.active:hover,
 #docker_controls.active:hover,
 #topic_controls.active:hover,
+#widget_controls.active:hover,
 #service_controls.active.setting_shortcuts {
     border-radius: 5px 5px 0px 0px;
     margin-top: 0px;
@@ -320,6 +348,7 @@ h3 {
 
 #service_controls.active:hover #service_list,
 #topic_controls.active:hover #topic_list,
+#widget_controls.active:hover #widget_list,
 #camera_controls.active:hover #cameras_list,
 #docker_controls.active:hover #docker_list,
 #service_controls.active.setting_shortcuts #service_list {

@@ -21,6 +21,11 @@
         <div id="topic_list"></div>
     </div>
 
+    <div id="widget_controls">
+        <h3 id="widgets_heading">Widgets</h3>
+        <div id="widget_list"></div>
+    </div>
+
     <div id="service_controls">
         <h3 id="services_heading">Services</h3>
         <div id="service_list"></div>
@@ -57,7 +62,8 @@
     import { PhntmBridgeClient } from '/static/client.js';
     import { GamepadController } from '/static/gamepad.js';
     import { KeyboardController } from '/static/keyboard.js';
-    import { PanelUI } from '/static/panel-ui.js';
+    import { PanelUI  } from '/static/panel-ui.js';
+    import { LaserOdometryWidget } from '/static/panel-widgets.js';
     import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
 
     $(document).ready(function() {
@@ -72,19 +78,19 @@
             id_robot: '<%= id_robot %>',
             msg_types_src: '/static/msg_types.json',
             ice_servers: [{
-                    urls:[
-                        'stun:stun1.l.google.com:19302',
-                        // 'stun:stun1.voiceeclipse.net:3478',
-                        'stun:stun2.l.google.com:19302',
-                        'stun:stun3.l.google.com:19302',
-                        'stun:stun4.l.google.com:19302',
-                        "stun:stun.l.google.com:19302",
-                        // "turn:turn.phntm.io:3478",
-                        // "turn:turn.phntm.io:5349"
-                    ],
-                    // username: 'robopass',
-                    // credential: 'robopass'
-                }]
+                            urls:[
+                                // 'stun:stun1.l.google.com:19302',
+                                // 'stun:stun1.voiceeclipse.net:3478',
+                                // 'stun:stun2.l.google.com:19302',
+                                // 'stun:stun3.l.google.com:19302',
+                                "turn:turn.phntm.io:3478",
+                                "turn:turn.phntm.io:5349"
+                                //'stun:stun4.l.google.com:19302',
+                                //"stun:stun.l.google.com:19302",
+                            ],
+                            username: 'robo',
+                            credential: 'robopass'
+                        }]
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
@@ -98,6 +104,7 @@
         kb.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
+        panel_ui.add_widget(LaserOdometryWidget);
 
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets

@@ -320,15 +320,22 @@ class Panel {
 
             let str_val = null;
             if (this.msg_type == 'std_msgs/msg/String')
-                str_val = msg.data;
+                str_val = msg.data.text();
             else
                 str_val = msg;
 
-            if (str_val.indexOf('xml') !== -1)  {
-                datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
-            } else {
-                datahr = linkifyURLs(escapeHtml(str_val));
+            try{
+                if (str_val == null || str_val == undefined) 
+                    datahr = '';
+                else if (str_val.indexOf('xml') !== -1)  {
+                    datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
+                } else {
+                    datahr = linkifyURLs(escapeHtml(str_val));
+                }    
+            } catch (e) {
+                console.error('Err parsing str_val, this.msg_type='+this.msg_type, e, str_val);
             }
+            
             //console.log(window.xmlFormatter)
 
         } else if (msg) {
@@ -463,6 +470,7 @@ export class PanelUI {
         'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
         'video' : { widget: VideoWidget, w:5, h:4 },
     };
+    widgets = {}; // custom and/or compound
 
     input_widgets = {
         'std_srvs/srv/Empty' : ServiceCallInput_Empty,
@@ -951,6 +959,82 @@ export class PanelUI {
         } else {
             $('#topic_controls').removeClass('active');
         }
+
+    }
+
+    add_widget(widget_class) {
+        this.widgets[widget_class.name] = {
+            label: widget_class.label,
+            widget_class: widget_class,
+        };
+        this.widgets_menu();
+    }
+
+    widgets_menu() {
+         $('#widget_list').empty();
+         let num_widgets = Object.keys(this.widgets).length;
+
+         if (num_widgets > 0) {
+             $('#widget_controls').addClass('active');
+         } else {
+             $('#widget_controls').removeClass('active');
+         }
+         $('#widgets_heading').html(num_widgets+' '+(num_widgets == 1 ? 'Widget' : 'Widgets'));
+
+         let that = this;
+
+         let i = 0;
+         // let subscribe_cameras = [];
+         Object.keys(this.widgets).forEach((widget_class) => {
+            let w = that.widgets[widget_class];
+             $('#widget_list').append('<div class="widget" data-class="'+widget_class+'">'
+                 + '<input type="checkbox" class="enabled" id="cb_widget_'+i+'"'
+                 //+ (!topic.robotTubscribed?' disabled':'')
+                 + (that.panels[widget_class] ? ' checked': '' )
+                 + '/> '
+                 + '<span '
+                 + 'class="custom_widget" '
+                 + '>'
+                 + '<label for="cb_widget_'+i+'" class="prevent-select">'+w.label+'</label>'
+                 + '</span>'
+                 + '</div>'
+             );
+
+             // let subscribe = $('#cb_camera_'+i).is(':checked');
+
+             if (that.panels[widget_class]) {
+                that.panels[widget_class].init(w.widget_class);
+             }
+
+             //if (!old_topics[topic.topic]) {
+
+             // if (subscribe) {
+             //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
+             //     subscribe_cameras.push(camera_data.id);
+             // } else {
+             //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
+             // }
+
+             //TogglePanel(topic.topic, true);
+             //}
+
+             i++;
+         });
+
+
+         // if (subscribe_cameras.length)
+         //     SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+         $('#widget_list INPUT.enabled:checkbox').change(function(event) {
+             let widget_class = $(this).parent('DIV.widget').data('class');
+             let state = this.checked;
+
+             let w = that.widgets[widget_class].widget_class.default_width;
+             let h = that.widgets[widget_class].widget_class.default_height;
+
+             that.toggle_panel(widget_class, widget_class, state, w, h);
+             // client.SetCameraSubscription(id_robot, [ cam ], state);
+         });
 
     }
 

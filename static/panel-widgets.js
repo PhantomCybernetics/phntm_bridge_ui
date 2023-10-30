@@ -3,6 +3,12 @@ import { lerpColor, linkifyURLs } from "./lib.js";
 import * as THREE from 'three';
 import { OrbitControls } from './three-addons/controls/OrbitControls.js';
 
+export class LaserOdometryWidget {
+    static label = 'Laser Scan + Odometry Map (2D)';
+    static default_width = 5;
+    static default_height = 4;
+}
+
 // BATTERY VISUALIZATION
 export function VideoWidget (panel, ignored) {
 
