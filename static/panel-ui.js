@@ -246,7 +246,9 @@ class Panel {
         let ref = this.grid_widget;
 
         let w = $(ref).innerWidth();
-        let h = $(ref).innerHeight(); //padding
+        let h = parseInt($(ref).css('height'));
+
+        console.log('Max h', h);
 
         w -= 30;
         h -= 66;
@@ -263,10 +265,21 @@ class Panel {
         $('#panel_widget_'+this.n).parent()
             .css('height', this.widget_height)
 
-        let canvas = document.getElementById('panel_canvas_'+this.n)
+        $('#panel_source_'+this.n)
+            .css('height', this.widget_height-23)
+
+        this.widget_width = this.src_visible ? (this.widget_width/2.0) : this.widget_width;
+
+        let canvas = document.getElementById('panel_canvas_'+this.n);
         if (canvas) {
-            canvas.width = Math.round(this.widget_width);
-            canvas.height = Math.round(this.widget_height);
+            canvas.width = this.widget_width;
+            canvas.height = this.widget_height;
+            // let ctx = canvas.getContext('2d');
+
+            // Event handler to resize the canvas when the document view is changed
+           
+            // canvas.width = window.innerWidth + 'px';
+            // canvas.height = window.innerHeight;
         }
 
         //  auto scale canvas
@@ -310,6 +323,9 @@ class Panel {
         if (ev.data instanceof ArrayBuffer) {
             raw_len = ev.data.byteLength;
             raw_type = 'ArrayBuffer';
+        } else if (ev.data instanceof Blob) {
+            raw_len = ev.data.size;
+            raw_type = 'Blob';
         } else {
             raw_len = msg.length;
             raw_type = 'String';
@@ -320,20 +336,22 @@ class Panel {
 
             let str_val = null;
             if (this.msg_type == 'std_msgs/msg/String')
-                str_val = msg.data.text();
+                str_val = msg.data;
             else
                 str_val = msg;
 
             try{
                 if (str_val == null || str_val == undefined) 
                     datahr = '';
-                else if (str_val.indexOf('xml') !== -1)  {
+                else if ((typeof str_val === 'string' || str_val instanceof String) && str_val.indexOf('xml') !== -1)  {
                     datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
                 } else {
                     datahr = linkifyURLs(escapeHtml(str_val));
                 }    
             } catch (e) {
-                console.error('Err parsing str_val, this.msg_type='+this.msg_type, e, str_val);
+                console.error('Err parsing str_val, this.msg_type='+this.msg_type+'; raw_type='+raw_type+'; ev.data='+(typeof ev.data), e, str_val);
+                console.error('ev.data', ev.data);
+                console.error('decoded msg', msg);
             }
             
             //console.log(window.xmlFormatter)
@@ -1352,6 +1370,11 @@ export class PanelUI {
             $('#robot_wifi_info').addClass('narrow_screen')
         else
             $('#robot_wifi_info').removeClass('narrow_screen')
+        
+        Object.values(this.panels).forEach((panel)=>{
+            panel.onResize();
+        });
+
     }
 
     update_wifi_status(msg) { // /iw_status in

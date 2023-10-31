@@ -1,4 +1,3 @@
-
 class TopicWriter {
     constructor(client, topic, msg_type, on_ready_cb) {
         this.client = client;
@@ -597,12 +596,7 @@ export class PhntmBridgeClient extends EventTarget {
             }
             this.session = robot_data['session'];
         }
-        
-
-        if (!this.pc /*|| this.pc.signalingState == 'closed' */) {
-            console.warn('Creating new webrtc peer');
-            this.pc = this._init_peer_connection(this.id_robot);
-        }
+    
 
         let error = robot_data['err'] ? robot_data['err'] : null;
         if (error) {
@@ -623,6 +617,11 @@ export class PhntmBridgeClient extends EventTarget {
         this.ip = robot_data['ip'];
         let prev_introspection = this.introspection;
         this.introspection = robot_data['introspection']
+
+        if (this.online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
+            console.warn('Creating new webrtc peer');
+            this.pc = this._init_peer_connection(this.id_robot);
+        }
 
         if (prev_online != this.online)
             this.emit('online', this.online);
@@ -771,7 +770,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (start_time === undefined)
             start_time = Date.now();
-        else if (Date.now() - start_time > 10000) {
+        else if (Date.now() - start_time > 20000) {
             console.error('Timed out while waiting for ICE gathering, state='+this.pc.iceGatheringState);
             if (reject)
                 return reject();
@@ -821,9 +820,10 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         let Reader = window.Serialization.MessageReader;
+        console.warn('reader=', Reader);
         let msg_type_class = this.find_message_type(msg_type, this.supported_msg_types)
         let msg_reader = new Reader( [ msg_type_class ].concat(this.supported_msg_types) );
-
+        console.warn('reader inst=', msg_reader);
         this.topic_dcs[topic] = dc;
 
         let that = this;
@@ -846,17 +846,38 @@ export class PhntmBridgeClient extends EventTarget {
             let raw_len = 0;
             let raw_type = ""
 
-            if (rawData instanceof ArrayBuffer) {
-                if (msg_reader != null) {
+            if (rawData instanceof ArrayBuffer ) {
+                raw_len = rawData.byteLength;
+                raw_type = 'ArrayBuffer';
+                if (msg_reader != null) {                    
                     let v = new DataView(rawData)
                     decoded = msg_reader.readMessage(v);
                 } else {
                     decoded = buf2hex(rawData)
                 }
-                raw_len = rawData.byteLength;
-                raw_type = 'ArrayBuffer';
-            } else { //string
-                decoded = rawData;
+            } else if (rawData instanceof Blob) {
+                raw_len = rawData.size;
+                raw_type = 'Blob';
+                if (msg_reader != null) {                    
+                
+                    new Response(rawData).arrayBuffer()
+                    .then((buff)=>{
+                        let v = new DataView(buff)
+                        decoded = msg_reader.readMessage(v);
+                        that.emit(topic, decoded, ev)
+                        that.latest[topic] = {
+                            msg: decoded,
+                            ev: ev
+                        };
+                    });
+                    return; //async
+
+                } else {
+                    decoded = buf2hex(rawData)
+                }
+                
+            } else { // fail => string
+                decoded = rawData; 
             }
 
             that.emit(topic, decoded, ev)

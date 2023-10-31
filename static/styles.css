@@ -181,6 +181,7 @@ h3 {
 #topic_controls H3 {
     color: #fff;
     cursor: default;
+    line-height: 21px;
 }
 
 #service_controls,
@@ -634,6 +635,7 @@ BUTTON#trigger_wifi_scan.working {
     text-decoration: none;
     display: block;
     padding: 5px 5px 5px 8px;
+    white-space: nowrap;
 }
 
 .grid_panel .menu_line:last-child A {
@@ -703,6 +705,7 @@ BUTTON#trigger_wifi_scan.working {
     margin-bottom: -20px;
     padding-bottom: 10px;
     cursor: grab;
+    white-space: nowrap;
 }
 
 .grid-stack>.grid-stack-item>.grid-stack-item-content {
@@ -752,6 +755,7 @@ SPAN.error {
     border-radius: 5px;
     overflow: scroll;
     display: none;
+    height: -moz-available;
     height: -webkit-fill-available;
     /* overflow: hidden; */
     /* margin-bottom: 5px; */

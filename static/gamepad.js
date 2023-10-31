@@ -458,17 +458,23 @@ export class GamepadController {
         if (this.editor_listening && $("#gamepad_shortcuts_input").is(":focus")) {
 
             for (let i = 0; i < buttons.length; i++) {
-                if (buttons[i] && buttons[i].pressed && (!this.last_buttons[i] || !this.last_buttons[i].pressed)) {
+
+                if (buttons[i] && buttons[i].pressed) {
+                    console.log('Btn pressed: '+i+'; last=', this.last_buttons[i])
+                }
+
+                if (buttons[i] && buttons[i].pressed && (this.last_buttons[i] == undefined || !this.last_buttons[i])) {
 
                     this.editor_listening = false;
                     $('#gamepad_shortcuts_listen').removeClass('listening');
-
+                    
                     let pos = document.getElementById("gamepad_shortcuts_input").selectionStart;
                     let curr_val = $('#gamepad_shortcuts_input').val();
                     let insert = ''+i+'';
                     let val = curr_val.slice(0,pos)+insert+curr_val.slice(pos)
                     $('#gamepad_shortcuts_input').val(val);
                     let new_pos = pos+insert.length;
+                    
                     document.getElementById('gamepad_shortcuts_input').setSelectionRange(new_pos, new_pos);
                     break;
                     // let curr_val = $('#gamepad_shortcuts_input').val();
@@ -493,7 +499,11 @@ export class GamepadController {
             }
 
         }
-        this.last_buttons = buttons;
+        this.last_buttons = [];
+        for (let i = 0; i < buttons.length; i++) {
+            this.last_buttons.push(buttons[i].pressed);
+        }
+    
 
         // if (this.gamepad_service_mapping) {
         //     for (const [service_name, service_mapping] of Object.entries(this.gamepad_service_mapping)) {

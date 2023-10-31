@@ -68,6 +68,35 @@
 
     $(document).ready(function() {
 
+        // function handlePermission() {
+        //     navigator.permissions.query({ name: "camera" }).then((result) => {
+        //         if (result.state === "granted") {
+        //             report(result.state);
+        //             //geoBtn.style.display = "none";
+        //         } else if (result.state === "prompt") {
+        //             report(result.state);
+        //             // geoBtn.style.display = "none";
+        //             // navigator.geolocation.getCurrentPosition(
+        //             //     revealPosition,
+        //             //     positionDenied,
+        //             //     geoSettings,
+        //             // );
+        //         } else if (result.state === "denied") {
+        //             report(result.state);
+        //             // geoBtn.style.display = "inline";
+        //         }
+        //         result.addEventListener("change", () => {
+        //             report(result.state);
+        //         });
+        //     });
+        // }
+
+        // function report(state) {
+        //     console.log(`Permission ${state}`);
+        // }
+
+        // handlePermission();
+
         let robot = new PhntmBridgeClient({
 
             socket_url: '<%= bridge_socket_url %>',
@@ -77,20 +106,36 @@
             app_key: '<%= app_key%>',
             id_robot: '<%= id_robot %>',
             msg_types_src: '/static/msg_types.json',
-            ice_servers: [{
-                            urls:[
-                                // 'stun:stun1.l.google.com:19302',
-                                // 'stun:stun1.voiceeclipse.net:3478',
-                                // 'stun:stun2.l.google.com:19302',
-                                // 'stun:stun3.l.google.com:19302',
-                                "turn:turn.phntm.io:3478",
-                                "turn:turn.phntm.io:5349"
-                                //'stun:stun4.l.google.com:19302',
-                                //"stun:stun.l.google.com:19302",
-                            ],
-                            username: 'robo',
-                            credential: 'robopass'
-                        }]
+            ice_servers: [
+                // {
+                //                 urls:[
+                //                      "turn:turn.phntm.io:3478?transport=udp",
+                //                      "turn:turn.phntm.io:5349?transport=udp"
+                //                     //'stun:stun4.l.google.com:19302',
+                //                     //"stun:stun.l.google.com:19302",
+                //                 ],
+                //                 username: 'x',
+                //                 credential: 'x'
+                //             }, 
+                // {
+                //     urls: [
+                //         'stun:stun4.l.google.com:19302',
+                //         "stun:stun.l.google.com:19302"
+                //     ]
+                // },
+                {
+                    urls: [  'stun:stun4.l.google.com:19302',
+                        "stun:stun.l.google.com:19302" ] 
+                },
+                {
+                    urls: [
+                        "turn:turn.phntm.io:3478",
+                        "turn:turn.phntm.io:5349",
+                    ],
+                    username: 'x',
+                    credential: 'x'
+                }
+            ]
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
@@ -124,19 +169,19 @@
 
         // introspection running in the robot
         robot.on('introspection',  (state) => {
-            if (state)
-                console.info('(Socket.io) Robot introspection running');
-            else
-                console.info('(Socket.io) Robot introspection stopped');
+            // if (state)
+            //     console.info('(Socket.io) Robot introspection running');
+            // else
+            //     console.info('(Socket.io) Robot introspection stopped');
         });
 
         // robot's state changed
         robot.on('update', ()=>{
-            console.info('(Socket.io) robot updated');
+            // console.info('(Socket.io) robot updated');
         });
 
         robot.on('nodes', (nodes)=>{
-            console.warn('(Socket.io) got nodes:', nodes);
+            // console.warn('(Socket.io) got nodes:', nodes);
         });
 
         // subscribes to /robot_description
