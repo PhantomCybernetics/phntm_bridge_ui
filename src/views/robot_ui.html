@@ -98,7 +98,6 @@
         // handlePermission();
 
         let robot = new PhntmBridgeClient({
-
             socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
             socket_auto_connect: false,
@@ -106,36 +105,14 @@
             app_key: '<%= app_key%>',
             id_robot: '<%= id_robot %>',
             msg_types_src: '/static/msg_types.json',
-            ice_servers: [
-                // {
-                //                 urls:[
-                //                      "turn:turn.phntm.io:3478?transport=udp",
-                //                      "turn:turn.phntm.io:5349?transport=udp"
-                //                     //'stun:stun4.l.google.com:19302',
-                //                     //"stun:stun.l.google.com:19302",
-                //                 ],
-                //                 username: 'x',
-                //                 credential: 'x'
-                //             }, 
-                // {
-                //     urls: [
-                //         'stun:stun4.l.google.com:19302',
-                //         "stun:stun.l.google.com:19302"
-                //     ]
-                // },
-                {
-                    urls: [  'stun:stun4.l.google.com:19302',
-                        "stun:stun.l.google.com:19302" ] 
-                },
-                {
-                    urls: [
-                        "turn:turn.phntm.io:3478",
-                        "turn:turn.phntm.io:5349",
-                    ],
-                    username: 'x',
-                    credential: 'x'
-                }
-            ]
+            ice_servers: [{
+                urls: [
+                    "turn:turn.phntm.io:3478",
+                    "turn:turn.phntm.io:3479",
+                ],
+                username: 'app',
+                credential: 'pass'
+            }]
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected

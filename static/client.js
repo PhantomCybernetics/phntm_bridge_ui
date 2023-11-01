@@ -770,7 +770,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (start_time === undefined)
             start_time = Date.now();
-        else if (Date.now() - start_time > 20000) {
+        else if (Date.now() - start_time > 30000) {
             console.error('Timed out while waiting for ICE gathering, state='+this.pc.iceGatheringState);
             if (reject)
                 return reject();

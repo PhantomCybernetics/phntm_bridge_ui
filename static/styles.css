@@ -700,7 +700,7 @@ BUTTON#trigger_wifi_scan.working {
     text-overflow: ellipsis;
     /* background-color: red; */
     position: relative;
-    top: -10px;
+    top: -7px;
     padding-top: 10px;
     margin-bottom: -20px;
     padding-bottom: 10px;
@@ -846,13 +846,12 @@ SPAN.error {
     background: black;
     color: #fff;
     font-size: 12px;
-    padding: 10px;
-    height: -webkit-fill-available;
+    height: 100%;
     overflow: scroll;
 }
 
 .panel_widget.log .log_line {
-    padding: 1px 0px;
+    padding: 2px 5px;
 }
 
 .panel_widget.log .log_line:hover {
