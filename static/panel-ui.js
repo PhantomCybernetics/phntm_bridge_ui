@@ -241,6 +241,17 @@ class Panel {
 
     }
 
+    auto_menu_position() {
+        let menu_el = $('#monitor_menu_content_'+this.n);
+        let pos = menu_el.parent().offset();
+        // console.log(this.id_source+' menuburger pos ', pos);
+        if (pos.left < 150) {
+            menu_el.addClass('right')   
+        } else {
+            menu_el.removeClass('right')
+        }
+    }
+
     getAvailableWidgetSize() {
 
         let ref = this.grid_widget;
@@ -248,7 +259,7 @@ class Panel {
         let w = $(ref).innerWidth();
         let h = parseInt($(ref).css('height'));
 
-        console.log('Max h', h);
+        // console.log('Max h', h);
 
         w -= 30;
         h -= 66;
@@ -810,11 +821,11 @@ export class PanelUI {
         this.grid.on('added removed change', function(e, items) {
             if (items) {
                 items.forEach(function(item) {
-                    if (item.w < 3 && item.x == 0) {
-                        $(item.el).find('.monitor_menu_content').addClass('right')
-                    } else {
-                        $(item.el).find('.monitor_menu_content').removeClass('right')
-                    }
+                    let id_src = $(item.el).find('.grid_panel').attr('data-source');
+                    if (that.panels[id_src])
+                        that.panels[id_src].auto_menu_position();
+                    // if (item.w < 3 && item.x == 0) {
+                    //     
                 });
             }
             that.update_url_hash();
