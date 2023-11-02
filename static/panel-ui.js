@@ -243,6 +243,8 @@ class Panel {
 
     auto_menu_position() {
         let menu_el = $('#monitor_menu_content_'+this.n);
+        if (!menu_el.length)
+            return;
         let pos = menu_el.parent().offset();
         // console.log(this.id_source+' menuburger pos ', pos);
         if (pos.left < 150) {
