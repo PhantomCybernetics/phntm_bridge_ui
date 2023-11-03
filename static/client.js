@@ -885,27 +885,6 @@ export class PhntmBridgeClient extends EventTarget {
                 msg: decoded,
                 ev: ev
             };
-
-
-
-            // if (topic == '/robot_description') {
-            //     console.warn('Got robot descripotion: ', decoded);
-            // }
-
-            // let panel = panels[topic];
-            // if (!panel) {
-            //     console.error('panel not found for '+topic+' (data)')
-            //     return;
-            // }
-
-            // if (!$('#update_panel_'+panel.n).is(':checked')) {
-            //     // console.error('panel not updating '+topic+' (data)')
-            //     return;
-            // }
-
-            // // console.log('panel '+topic+' has data', ev)
-
-            // panel.onData(ev, decoded, raw_type, raw_len);
         });
     }
 

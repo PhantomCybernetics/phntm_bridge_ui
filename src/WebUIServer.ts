@@ -42,6 +42,7 @@ const UI_URL:string = CONFIG['WEB_UI'].url;
 const BRIDGE_SOCKET_URL:string = CONFIG['WEB_UI'].bridgeSocketUrl;
 const APP_ID:string = CONFIG['WEB_UI'].appId;
 const APP_KEY:string = CONFIG['WEB_UI'].appKey;
+const ANALYTICS_CODE:string[] = CONFIG['WEB_UI'].analyticsCode;
 
 import { ImportMessageTypes } from './lib/messageTypesImporter';
 
@@ -99,7 +100,8 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
         id_robot: req.params.ID,
         bridge_socket_url: BRIDGE_SOCKET_URL,
         app_id: APP_ID,
-        app_key: APP_KEY
+        app_key: APP_KEY,
+        analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : ''
     });
 });
 

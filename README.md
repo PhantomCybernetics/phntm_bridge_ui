@@ -51,7 +51,10 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
 
         // app credentials generated upon registration on Cloud Bridge
         "appId": "",
-        "appKey": ""
+        "appKey": "",
+
+        // lines of an analytics tracker code to append to HTML
+        "analyticsCode": []
     }
 }
 ```

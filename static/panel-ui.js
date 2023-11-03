@@ -397,51 +397,6 @@ class Panel {
         console.log('Got stream for '+this.id_source+': ', stream)
     }
 
-    onData(ev, decoded, raw_type, raw_len) {
-
-
-
-
-        //let oldh = $('#panel_content_'+this.n).height();
-        // //$('#panel_content_'+this.n).height('auto');
-        // if (rawData instanceof ArrayBuffer) {
-
-        //     // if (this.id_source == '/robot_description')
-        //     //     console.warn(this.id_source+' onData (buff): ' + rawData.byteLength + 'B');
-
-
-
-        //         // if (this.id_source == '/joy')
-        //         //     window.gamepadController.SampleLatency(decoded);
-
-
-        //         //datahr = rawData.
-        //     } else {
-        //         datahr = buf2hex(rawData)
-        //     }
-
-
-
-        //     if (panel_widgets[this.msg_type] && panel_widgets[this.msg_type].widget)
-        //         panel_widgets[this.msg_type].widget(this, decoded);
-
-        // } else { //string data
-
-        //     let datahr = ev.data;
-
-        //     $('#panel_source_'+this.n).html(
-        //         'Rcvd stamp: '+ev.timeStamp + '<br>' + // this is local stamp
-        //         '<br>' +
-        //         datahr
-        //     );
-
-        // }
-
-        //$('#panel_content_'+this.n).height(this.max_height);
-
-
-    }
-
     close() {
 
         if ($('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').length > 0) {
