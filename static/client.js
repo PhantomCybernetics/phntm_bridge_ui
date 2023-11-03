@@ -652,6 +652,12 @@ export class PhntmBridgeClient extends EventTarget {
             robot_data['read_video_streams'].forEach((stream_data)=>{
                 let id_src = stream_data[0];
                 let id_stream = stream_data[1];
+
+                if (Array.isArray(id_stream) && id_stream.length > 1) {
+                    id_stream = id_stream[0];
+                    let src_type = id_stream[1] // sensor_msgs/msg/Image
+                }
+
                 if (id_stream) {
                     if (!this.topic_streams[id_src] || this.topic_streams[id_src] != id_stream) {
                         console.log('Setting stream to '+id_stream+' for '+id_src);
