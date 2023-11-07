@@ -1428,7 +1428,7 @@ export class PanelUI {
                     rttc = 'yellow'
                 else
                     rttc = 'lime'
-                html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'m</span> ';
+                html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'ms</span> ';
             }
         }
 
