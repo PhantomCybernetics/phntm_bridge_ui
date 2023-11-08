@@ -655,14 +655,17 @@ BUTTON#trigger_wifi_scan.working {
     border-radius: 0px 0px 5px 5px;
 }
 
-.panel_msg_types_line {
-    padding-bottom: 10px;
-    padding-top: 4px;
+.grid_panel .menu_line:first-child {
     border-radius: 5px 0px 0px 0px;
+    padding-top: 4px;
 }
 
-.right .panel_msg_types_line {
+.grid_panel .right .menu_line:first-child {
     border-radius: 0px 5px 0px 0px;
+}
+
+.panel_msg_types_line {
+    padding-bottom: 10px;
 }
 
 .panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
@@ -835,6 +838,12 @@ SPAN.error {
 
 .panel_widget.laser_scan {
     background-color: #072038;
+    cursor: all-scroll;
+    position: relative;
+}
+
+.panel_widget.laser_scan .arrow {
+    position: absolute;
 }
 
 /* .panel_widget.laser_scan CANVAS {
@@ -1236,6 +1245,7 @@ SPAN.error {
     height: 35px;
     text-align: center;
     position: relative;
+    min-width: 180px;
   }
 
   .menu_line.zoom_ctrl .minus {
@@ -1253,7 +1263,7 @@ SPAN.error {
   .menu_line.zoom_ctrl .minus,
   .menu_line.zoom_ctrl .plus {
     position: absolute;
-    top: 0px;
+    bottom: 5px;
     display:block;
     width: 40px;
     cursor: pointer;
@@ -1261,6 +1271,9 @@ SPAN.error {
     font-size: 20px;
     background-color: #0051ff;
     border-radius: 5px;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
   }
 
   .menu_line.zoom_ctrl .minus:hover,

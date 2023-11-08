@@ -22,7 +22,8 @@ class Panel {
     widget_menu_cb = null;
 
     max_trace_length = 100;
-    zoom = 1;
+    zoom = null;
+    default_zoom = 1;
 
     grid_widget = null;
 
@@ -31,7 +32,7 @@ class Panel {
     src_visible = false;
     //const event = new Event("build");
 
-    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom = 1.0) {
+    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom) {
         this.ui = ui;
         let panels = ui.panels;
         let grid = ui.grid;
@@ -46,7 +47,7 @@ class Panel {
 
         let html =
             '<div class="grid_panel" data-source="'+id_source+'">' +
-                '<h3 class="panel-title">'+id_source+'</h3>' +
+                '<h3 class="panel-title" id="panel_title_'+this.n+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
                 '<div class="monitor_menu">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
@@ -93,22 +94,34 @@ class Panel {
     // might get called with null gefore we receive the message type
     init(msg_type=null) {
 
-        this.msg_type = msg_type;
-        if (this.msg_type && !this.initiated) {
+        if (msg_type && !this.initiated) {
 
-            if (this.msg_type != 'video') {
-                this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
-                $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
+            if (this.ui.widgets[msg_type]) {
 
-                if (this.msg_type_class == null && this.msg_type != null) {
-                    $('#panel_msg_types_'+this.n).addClass('err');
-                    $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
+                if (!this.display_widget) { //only once
+                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
+                    this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
                 }
 
-                // if (this.msg_type != null) {
-                //     let Reader = window.Serialization.MessageReader;
-                //     this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
-                // }
+            } else {
+                this.msg_type = msg_type;
+                if (this.zoom === undefined || this.zoom === null) {
+                    this.zoom = this.default_zoom;
+                }
+                if (msg_type != 'video') {
+                    this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
+                    $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
+    
+                    if (this.msg_type_class == null && this.msg_type != null) {
+                        $('#panel_msg_types_'+this.n).addClass('err');
+                        $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
+                    }
+    
+                    // if (this.msg_type != null) {
+                    //     let Reader = window.Serialization.MessageReader;
+                    //     this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
+                    // }
+                }
             }
 
             if (this.ui.topic_widgets[this.id_source] != undefined) {
@@ -121,7 +134,7 @@ class Panel {
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.ui.type_widgets[this.msg_type].widget(this, null) //no data yet
                 }
-            } else {  //no widget, show source
+            } else if (!this.ui.widgets[msg_type]) {  //no widget, show source
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
                 $('#panel_source_'+this.n).addClass('enabled');
             }
@@ -169,7 +182,7 @@ class Panel {
 
         els.push('<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>')
 
-        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>'+els.join('\n'));
+        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div><div class="menu_lines">'+els.join('\n')+'</div>');
 
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
@@ -218,8 +231,9 @@ class Panel {
         });
 
         $('#close_panel_link_'+this.n).click(function(ev) {
-            /*console.log('click '+that.n)
-            let el = $('#panel_msg_type_'+that.n);
+            console.log('click '+that.n)
+
+            /*let el = $('#panel_msg_type_'+that.n);
             if (el.css('display') != 'block')
                 el.css('display', 'block');
             else if (!el.hasClass('err'))
@@ -227,6 +241,8 @@ class Panel {
                 */
 
             that.close();
+            if (that.ui.widgets[that.id_source])
+                that.ui.widgets_menu();
 
             //that.Close();
             //delete panels[that.topic];
@@ -420,6 +436,10 @@ class Panel {
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
+        }
+
+        if (this.display_widget && this.display_widget.onClose) {
+            this.display_widget.onClose();
         }
 
         // let x = parseInt($(this.grid_widget).attr('gs-x'));
@@ -948,10 +968,10 @@ export class PanelUI {
 
     }
 
-    add_widget(widget_class) {
+    add_widget(widget_class, conf) {
         this.widgets[widget_class.name] = {
             label: widget_class.label,
-            widget_class: widget_class,
+            class: widget_class,
         };
         this.widgets_menu();
     }
@@ -989,7 +1009,7 @@ export class PanelUI {
              // let subscribe = $('#cb_camera_'+i).is(':checked');
 
              if (that.panels[widget_class]) {
-                that.panels[widget_class].init(w.widget_class);
+                that.panels[widget_class].init(widget_class);
              }
 
              //if (!old_topics[topic.topic]) {
@@ -1015,8 +1035,8 @@ export class PanelUI {
              let widget_class = $(this).parent('DIV.widget').data('class');
              let state = this.checked;
 
-             let w = that.widgets[widget_class].widget_class.default_width;
-             let h = that.widgets[widget_class].widget_class.default_height;
+             let w = that.widgets[widget_class].class.default_width;
+             let h = that.widgets[widget_class].class.default_height;
 
              that.toggle_panel(widget_class, widget_class, state, w, h);
              // client.SetCameraSubscription(id_robot, [ cam ], state);
@@ -1150,7 +1170,7 @@ export class PanelUI {
 
     //widget_opts = {};
 
-    toggle_panel(id_source, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+    toggle_panel(id_source, msg_type, state, w, h, x=null, y=null, src_visible=false, zoom) {
         let panel = this.panels[id_source];
         if (state) {
             if (!panel) {
@@ -1162,7 +1182,7 @@ export class PanelUI {
         }
     }
 
-    make_panel(id_source, w, h, x=null, y=null, src_visible=false, zoom=1.0) {
+    make_panel(id_source, w, h, x=null, y=null, src_visible=false, zoom) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
@@ -1214,7 +1234,7 @@ export class PanelUI {
     update_url_hash() {
         let hash = [];
 
-        //console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
+        console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
         let that = this;
 
         $('#grid-stack').children('.grid-stack-item').each(function () {
@@ -1232,7 +1252,9 @@ export class PanelUI {
             ];
             if (that.panels[id_source].src_visible)
                 parts.push('src');
-            if (that.panels[id_source].zoom != 1)
+            if (that.panels[id_source].zoom !== undefined
+                && that.panels[id_source].zoom !== null
+                && that.panels[id_source].zoom != that.panels[id_source].default_zoom)
                 parts.push('z='+that.panels[id_source].zoom);
 
             hash.push(parts.join(':'));
@@ -1274,7 +1296,7 @@ export class PanelUI {
 
             //opional vars follow
             let src_on = false;
-            let zoom = 1;
+            let zoom = null;
             for (let j = 2; j < src_vars.length; j++) {
                 if (src_vars[j] == 'src') {
                     src_on = true;
@@ -1288,8 +1310,13 @@ export class PanelUI {
             //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
             this.make_panel(id_source, w, h, x, y, src_on, zoom)
+            if (this.widgets[id_source]) {
+                this.panels[id_source].init(id_source);
+            }
+
         }
 
+        this.widgets_menu();
         return this.panels;
     }
 

@@ -1,3 +1,5 @@
+import { lerp } from "./lib.js";
+
 class Driver {
 
     constructor(id, msg_type, label) {
@@ -323,7 +325,7 @@ export class TwistMecanumDriver extends Driver {
         let min = cfg['min'] === undefined ? 1.0 : cfg.min;
         let max = cfg['max'] === undefined ? 1.0 : cfg.max;
 
-        return this.lerp(min, max, abs_val);
+        return lerp(min, max, abs_val);
     }
 
     // set_output(val, msg, output) {
@@ -332,10 +334,6 @@ export class TwistMecanumDriver extends Driver {
     //         msg[o[0]][o[1]] = val;
     //     }
     // }
-
-    lerp(a, b, alpha) {
-        return a + alpha * (b-a)
-    }
 
     read(axes, buttons) {
 

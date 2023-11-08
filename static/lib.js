@@ -81,9 +81,13 @@ export function lerpColor(a, b, amount) {
         ar = ah >> 16, ag = ah >> 8 & 0xff, ab = ah & 0xff,
         bh = parseInt(b.replace(/#/g, ''), 16),
         br = bh >> 16, bg = bh >> 8 & 0xff, bb = bh & 0xff,
-        rr = ar + amount * (br - ar),
-        rg = ag + amount * (bg - ag),
-        rb = ab + amount * (bb - ab);
+        rr = (1.0-amount)*ar + amount * (br),
+        rg = (1.0-amount)*ag + amount * (bg),
+        rb = (1.0-amount)*ab + amount * (bb);
 
     return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
+}
+
+export function lerp(a, b, alpha) {
+    return (1.0-alpha) * a + alpha * (b)
 }
