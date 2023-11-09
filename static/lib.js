@@ -14,6 +14,12 @@ export function escapeHtml(unsafe)
          .replace(/'/g, "&#039;");
  }
 
+export function deg2rad(degrees)
+{
+  var pi = Math.PI;
+  return degrees * (pi/180);
+}
+
 export function nl2br (str, is_xhtml) {
     if (typeof str === 'undefined' || str === null) {
         return '';

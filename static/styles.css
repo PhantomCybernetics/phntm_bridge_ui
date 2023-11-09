@@ -838,12 +838,17 @@ SPAN.error {
 
 .panel_widget.laser_scan {
     background-color: #072038;
-    cursor: all-scroll;
     position: relative;
+    height: 100%;
 }
 
 .panel_widget.laser_scan .arrow {
     position: absolute;
+    z-index: 3;
+}
+
+.scrollable {
+    cursor: all-scroll;
 }
 
 /* .panel_widget.laser_scan CANVAS {
@@ -944,6 +949,14 @@ SPAN.error {
 
 .panel_widget canvas {
     border-radius: 5px;
+}
+
+.panel_widget .canvas_container {
+    position: absolute;
+}
+
+.panel_widget canvas.big_canvas {
+    position: absolute;
 }
 
 .cleaner {
@@ -1253,7 +1266,16 @@ SPAN.error {
   }
 
   .menu_line.zoom_ctrl .val {
-    display:block;
+    display: block;
+    margin: 0px 0px 0px -40px;
+    float: none;
+    padding: 0px;
+    background: transparent;
+    border: 0px;
+    width: auto;
+    position: absolute;
+    left: 50%;
+    width: 80px;
   }
 
   .menu_line.zoom_ctrl .plus {
