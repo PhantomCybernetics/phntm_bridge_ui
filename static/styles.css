@@ -845,6 +845,7 @@ SPAN.error {
 .panel_widget.laser_scan .arrow {
     position: absolute;
     z-index: 3;
+    display: none; /* show on zoom */
 }
 
 .scrollable {

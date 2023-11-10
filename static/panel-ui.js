@@ -1234,7 +1234,7 @@ export class PanelUI {
     update_url_hash() {
         let hash = [];
 
-        console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
+        // console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
         let that = this;
 
         $('#grid-stack').children('.grid-stack-item').each(function () {
@@ -1254,8 +1254,10 @@ export class PanelUI {
                 parts.push('src');
             if (that.panels[id_source].zoom !== undefined
                 && that.panels[id_source].zoom !== null
-                && that.panels[id_source].zoom != that.panels[id_source].default_zoom)
-                parts.push('z='+that.panels[id_source].zoom);
+                && that.panels[id_source].zoom != that.panels[id_source].default_zoom) {
+                    let z = Math.round(that.panels[id_source].zoom * 100) / 100;
+                    parts.push('z='+z);
+                }
 
             hash.push(parts.join(':'));
         });

@@ -231,7 +231,7 @@ export class LaserOdometryWidget {
             left: pos.left-(newPos.left-oldPos.left),
             top: pos.top-(newPos.top-oldPos.top),
         });
-        this.render(true);
+        this.render(true); // redraw pose
     }
 
     on_odometry_data = (odo) => {
@@ -432,7 +432,8 @@ export class LaserOdometryWidget {
                 left: (x-10)+'px',
                 top: (y-10)+'px',
                 transform: 'rotate('+a+'rad)',
-                scale: 1.0/this.panel.zoom
+                scale: 1.0/this.panel.zoom,
+                display: 'block'
             });
 
             if (this.follow_target) {
