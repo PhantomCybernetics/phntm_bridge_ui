@@ -845,7 +845,9 @@ SPAN.error {
 .panel_widget.laser_scan .arrow {
     position: absolute;
     z-index: 3;
-    display: none; /* show on zoom */
+    display: none; /* show on 1st render */
+    width: 20px;
+    height: 20px;
 }
 
 .scrollable {
@@ -956,9 +958,13 @@ SPAN.error {
     position: absolute;
 }
 
-.panel_widget canvas.big_canvas {
+.panel_widget canvas.canvas_tile {
     position: absolute;
+    /* background-color: rgba(0, 0, 0, 0.1); */
+    border-radius: 0px;
 }
+
+
 
 .cleaner {
     clear: both;

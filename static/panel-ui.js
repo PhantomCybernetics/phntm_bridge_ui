@@ -300,7 +300,7 @@ class Panel {
         this.widget_width = this.src_visible ? (this.widget_width/2.0) : this.widget_width;
 
         let canvas = document.getElementById('panel_canvas_'+this.n);
-        if (canvas && !$(canvas).hasClass('big_canvas')) {
+        if (canvas && !$(canvas).hasClass('big_canvas') && !$(canvas).hasClass('canvas_tile')) {
             canvas.width = this.widget_width;
             canvas.height = this.widget_height;
             // let ctx = canvas.getContext('2d');
