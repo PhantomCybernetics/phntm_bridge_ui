@@ -220,8 +220,8 @@ export class LaserOdometryWidget {
                 cy * this.tile_size - t_half,
             ]
             let canvas = $(this.canvas_container).append(
-                '<canvas class="canvas_tile" id="canvas_tile_'+cx+'x'+cy+'" width="'+ this.tile_size +'" height="'+ this.tile_size +'" style="left: '+base[0]+'px; top: '+base[1]+'px; z-index: '+layer+'"></canvas>'
-            ).find('#canvas_tile_'+cx+'x'+cy)[0];
+                '<canvas class="canvas_tile" id="canvas_tile_'+cx+'x'+cy+'_'+layer+'" width="'+ this.tile_size +'" height="'+ this.tile_size +'" style="left: '+base[0]+'px; top: '+base[1]+'px; z-index: '+layer+'"></canvas>'
+            ).find('#canvas_tile_'+cx+'x'+cy+'_'+layer)[0];
             // console.log(canvas);
             this.tiles[cx][cy][layer].canvas = canvas;
             this.tiles[cx][cy][layer].ctx = canvas.getContext('2d');
@@ -402,23 +402,19 @@ export class LaserOdometryWidget {
             this.render_dirty = true;
         }
         
+        let that = this;
         if (this.clear_scan || this.clear_pose) {
             // console.log('tiles x:', Object.keys(this.tiles));
-            Object.keys(this.tiles).forEach((x)=>{
+            Object.keys(that.tiles).forEach((x)=>{
                 // console.log('tiles y['+x+']:', Object.keys(this.tiles[x]));
-                Object.keys(this.tiles[x]).forEach((y)=>{
+                Object.keys(that.tiles[x]).forEach((y)=>{
 
-                    // console.log('tiles', x, y);
-
-                    // if (this.clear_scan && this.tiles[x][y]['0']) {
-                    //     // console.log('clearing scan['+x+';'+y+']');
-                    //     this.tiles[x][y]['0'].ctx.clearRect(0, 0, this.tile_size, this.tile_size);
-                    // }
+                    if (that.clear_scan && that.tiles[x][y][0]) {
+                        that.tiles[x][y][0].ctx.clearRect(0, 0, this.tile_size, this.tile_size);
+                    }
                         
-                    if (this.clear_pose && this.tiles[x][y][1]) {
-                        console.log('clearing pose['+x+';'+y+']');
-                        //this.tiles[x][y]['1'].canvas.remove();
-                        this.tiles[x][y][1].ctx.clearRect(0, 0, this.tile_size, this.tile_size);
+                    if (that.clear_pose && that.tiles[x][y][1]) {
+                        that.tiles[x][y][1].ctx.clearRect(0, 0, that.tile_size, that.tile_size);
                     }
                         
                 });
@@ -438,7 +434,6 @@ export class LaserOdometryWidget {
         if (!this.rendering)
             return; // loop end
 
-        let that = this;
         if (!this.render_dirty) {
             return window.requestAnimationFrame((step)=>{
                 that.rendering_loop();
@@ -501,8 +496,8 @@ export class LaserOdometryWidget {
                     this.pose_graph[i][2] * this.render_scale,
                 ]
 
-                tile0 = this.get_tile(p0[0], p0[1], 0);
-                tile1 = this.get_tile(p1[0], p1[1], 0);
+                tile0 = this.get_tile(p0[0], p0[1], 1);
+                tile1 = this.get_tile(p1[0], p1[1], 1);
 
                 if (tile0 != tile1 && tile_dirty) {
 
@@ -602,7 +597,7 @@ export class LaserOdometryWidget {
                     let x = this.scan_graph[i][j][0] * this.render_scale;
                     let y = this.scan_graph[i][j][1] * this.render_scale;
 
-                    let tile = this.get_tile(x, y, 1);
+                    let tile = this.get_tile(x, y, 0);
 
                     tile.ctx.fillStyle = c + a;
 
