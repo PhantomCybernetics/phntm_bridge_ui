@@ -165,10 +165,6 @@ export class LaserOdometryWidget {
             // console.log(ev);
             if (ev.button === 0) {
                 ev.preventDefault();
-                if (that.follow_target) {
-                    $('#follow_target_'+panel.n).prop('checked', false);
-                    that.follow_target = false;
-                }
         
                 that.drag_mouse_offset = [ ev.originalEvent.pageX, ev.originalEvent.pageY ];
                 let cont_pos = $('#canvas_container_'+panel.n).position();
@@ -177,9 +173,22 @@ export class LaserOdometryWidget {
             }
         });
 
+        $('#panel_widget_'+panel.n).on('wheel', (ev) => {
+            ev.preventDefault();
+            let d = ev.originalEvent.deltaY;
+            this.setZoom(this.panel.zoom - d*0.005);
+            // console.log('wheel', );
+        });
+
         $(window.document).on('mousemove touchmove', function(ev) {
             if(that.dragging) {
                 ev.preventDefault();
+
+                if (that.follow_target) {
+                    that.follow_target = false;
+                    $('#follow_target_'+panel.n).prop('checked', false);
+                }
+
                 $('#canvas_container_'+panel.n).css({
                     left: that.drag_frame_offset[0] + (ev.originalEvent.pageX - that.drag_mouse_offset[0]),
                     top: that.drag_frame_offset[1] + (ev.originalEvent.pageY - that.drag_mouse_offset[1])
@@ -206,6 +215,11 @@ export class LaserOdometryWidget {
 
     setZoom(zoom) {
         let panel = this.panel;
+        if (zoom < 0.1) {
+            zoom = 0.1;
+        } else if (zoom > 5.0) {
+            zoom = 5.0;
+        }
         panel.zoom = zoom;
         $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
         panel.ui.update_url_hash();
