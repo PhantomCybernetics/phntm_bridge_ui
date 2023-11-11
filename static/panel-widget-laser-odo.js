@@ -114,6 +114,12 @@ export class LaserOdometryWidget {
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
+            $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+
+            $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+
             $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             
@@ -393,10 +399,12 @@ export class LaserOdometryWidget {
      
     rendering_loop() {
 
+        let clear_tiles = false;
         if (this.do_clear) {
             this.do_clear = false;
             this.clear_pose = true;
             this.clear_scan= true;
+            clear_tiles = true;
             this.scan_graph = [];
             this.pose_graph = [];
             this.render_dirty = true;
@@ -411,10 +419,18 @@ export class LaserOdometryWidget {
 
                     if (that.clear_scan && that.tiles[x][y][0]) {
                         that.tiles[x][y][0].ctx.clearRect(0, 0, this.tile_size, this.tile_size);
+                        if (clear_tiles) {
+                            $('#canvas_tile_'+x+'x'+y+'_0').remove();
+                            delete that.tiles[x][y][0];
+                        }
                     }
                         
                     if (that.clear_pose && that.tiles[x][y][1]) {
                         that.tiles[x][y][1].ctx.clearRect(0, 0, that.tile_size, that.tile_size);
+                        if (clear_tiles) {
+                            $('#canvas_tile_'+x+'x'+y+'_1').remove();
+                            delete that.tiles[x][y][1];
+                        }
                     }
                         
                 });

@@ -848,6 +848,7 @@ SPAN.error {
     display: none; /* show on 1st render */
     width: 20px;
     height: 20px;
+    cursor: pointer;
 }
 
 .scrollable {
@@ -960,7 +961,7 @@ SPAN.error {
 
 .panel_widget canvas.canvas_tile {
     position: absolute;
-    /* background-color: rgba(0, 0, 0, 0.1); */
+    background-color: rgba(0, 0, 0, 0.1);
     border-radius: 0px;
 }
 
