@@ -133,7 +133,7 @@ export class DescriptionTFWidget {
             $('<div class="menu_line"><label for="render_joints_'+panel.n+'" class="render_joints_" id="render_joints_label_'+panel.n+'"><input type="checkbox" id="frender_joints_'+panel.n+'" class="render_joints" checked title=Render joints"/> Render joints</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
-            $('<div class="menu_line"><label for="render_joints_names_'+panel.n+'" class="render_joint_names_" id="render_joint_names_label_'+panel.n+'"><input type="checkbox" id="frender_joint_names_'+panel.n+'" class="render_joint_names" checked title=Render joint names"/> Show names</label></div>')
+            $('<div class="menu_line"><label for="render_joints_names_'+panel.n+'" class="render_joint_names_" id="render_joint_names_label_'+panel.n+'"><input type="checkbox" id="frender_joint_names_'+panel.n+'" class="render_joint_names" checked title=Render joint names"/> Show labels</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
             $('#render_joints_'+panel.n).change(function(ev) {

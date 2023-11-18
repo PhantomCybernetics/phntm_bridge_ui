@@ -1,5 +1,7 @@
 <%- include('partial/header.html'); %>
 
+<div id="page_message"></div>
+
 <h1 id="robot_name">Waiting for Connection...</h1>
 <div class="cleaner"></div>
 <div id="robot_info">Contacting <%= id_robot %>...</div><div id="socketio_status"></div>
@@ -212,6 +214,10 @@
 
 </script>
 
-
+<script type="text/javascript">
+if (navigator.userAgent.toLowerCase().includes('firefox')) {
+    $('#page_message').html('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>').addClass('error');
+}
+</script>
 
 <%- include('partial/footer.html'); %>

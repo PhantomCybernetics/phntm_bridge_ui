@@ -1311,3 +1311,21 @@ SPAN.error {
   .menu_line.zoom_ctrl .plus:hover {
     background-color: #006dff;
   }
+
+  #page_message {
+    font-size: 16px;
+    padding: 15px;
+    margin: -20px -20px 10px -20px;
+    text-align: center;
+    display: none;
+  }
+
+  #page_message.error {
+    background-color: #cc0000;
+    color: #fff;
+    display: block;
+  }
+
+  #page_message.error A {
+    color: #fff;
+  }
