@@ -75,7 +75,8 @@ webExpressApp.use('/static/gridstack/', express.static('node_modules/gridstack/d
 webExpressApp.use('/static/gridstack-forked/', express.static('node_modules/gridstack/dist/'));
 
 webExpressApp.use('/static/three/', express.static('node_modules/three/build/'));
-webExpressApp.use('/static/three-addons/', express.static('node_modules/three/examples/jsm/'));
+webExpressApp.use('/static/three/examaples/', express.static('node_modules/three/examples/'));
+webExpressApp.use('/static/urdf-loader/', express.static('node_modules/urdf-loader/src/'));
 
 // temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
 

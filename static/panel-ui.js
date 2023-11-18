@@ -1,4 +1,4 @@
-import { URDFWidget, BatteryStateWidget, LogWidget, ImuWidget, LaserScanWidget, RangeWidget, VideoWidget } from './panel-widgets.js'
+import { BatteryStateWidget, LogWidget, ImuWidget, LaserScanWidget, RangeWidget, VideoWidget } from './panel-widgets.js'
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 
 import { lerpColor, linkifyURLs, escapeHtml } from "./lib.js";
@@ -465,7 +465,7 @@ export class PanelUI {
 
     // override or edit to customize topic panel defaults
     topic_widgets = {
-        '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
+        // '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
     };
     type_widgets = {
         'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,

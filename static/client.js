@@ -847,6 +847,10 @@ export class PhntmBridgeClient extends EventTarget {
         });
         dc.addEventListener('message', (ev)=> {
 
+            // if (topic == '/tf_static' || topic == '/robot_description') {
+            //     console.error(topic+': ', ev.data)
+            // }
+
             let rawData = ev.data; //arraybuffer
             let decoded = null;
             let raw_len = 0;
@@ -861,7 +865,7 @@ export class PhntmBridgeClient extends EventTarget {
                 } else {
                     decoded = buf2hex(rawData)
                 }
-            } else if (rawData instanceof Blob) {
+            } else if (rawData instanceof Blob) { //firefox
                 raw_len = rawData.size;
                 raw_type = 'Blob';
                 if (msg_reader != null) {                    

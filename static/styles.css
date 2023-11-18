@@ -73,6 +73,7 @@ h3 {
     float: left;
     margin: 0px 10px 10px 0px;
     z-index: 1;
+    white-space: nowrap;
 }
 
 
@@ -87,26 +88,26 @@ h3 {
 }
 
 #topic_controls {
-    width: 150px;
+    /* width: 150px; */
 }
 
 #widget_controls {
-    width: 80px;
+    /* width: 80px; */
     background: #112fb3;
 }
 
 #service_controls {
-    width: 180px;
+    /* width: 180px; */
     background: #b311a3;
 }
 
 #camera_controls {
-    width: 170px;
+    /* width: 170px; */
     background: #82b727;
 }
 
 #docker_controls {
-    width: 190px;
+    /* width: 190px; */
     background: #de5a30;
 }
 
@@ -961,7 +962,7 @@ SPAN.error {
 
 .panel_widget canvas.canvas_tile {
     position: absolute;
-    background-color: rgba(0, 0, 0, 0.1);
+    /* background-color: rgba(0, 0, 0, 0.1); */
     border-radius: 0px;
 }
 

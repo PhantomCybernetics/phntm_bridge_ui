@@ -14,14 +14,18 @@
     <link rel="stylesheet" href="/static/normalize.css"/>
     <link rel="stylesheet" href="/static/styles.css"/>
 
+    <!-- <script type="importmap" src="/static/urdf-loader/URDFLoader.js.map"></script> -->
     <script type="importmap">
         {
           "imports": {
-            "three": "/static/three/three.module.js"
+            "three": "/static/three/three.module.js",
+            "orbit-controls" : "/static/three/examaples/jsm/controls/OrbitControls.js",
+            "three/examples/" : "/static/three/examaples/",
+            "urdf-loader" : "/static/urdf-loader/URDFLoader.js"
           }
         }
     </script>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 

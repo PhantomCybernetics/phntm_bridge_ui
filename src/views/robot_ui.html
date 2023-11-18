@@ -64,6 +64,7 @@
     import { KeyboardController } from '/static/keyboard.js';
     import { PanelUI  } from '/static/panel-ui.js';
     import { LaserOdometryWidget } from '/static/panel-widget-laser-odo.js';
+    import { DescriptionTFWidget } from '/static/panel-widget-description-tf.js';
     import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
 
     $(document).ready(function() {
@@ -127,6 +128,7 @@
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
         panel_ui.add_widget(LaserOdometryWidget);
+        panel_ui.add_widget(DescriptionTFWidget);
 
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets

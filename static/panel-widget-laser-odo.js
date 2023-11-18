@@ -27,7 +27,7 @@ export class LaserOdometryWidget {
             '<div class="canvas_container" id="canvas_container_'+panel.n+'">' +
                 // '<canvas id="panel_overlay_canvas_'+panel.n+'" class="big_canvas canvas_overlay" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
                 // '<canvas id="panel_canvas_'+panel.n+'" class="big_canvas" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
-                '<img id="panel_arrow_'+panel.n+'" class="arrow" src="/static/arrow.png">' +
+                '<img id="panel_arrow_'+panel.n+'" title="Follow target" class="arrow" src="/static/arrow.png">' +
             '</div>');
         // this.canvas = canvases[0]
         // this.canvas_overlay = canvases[1];
@@ -42,6 +42,11 @@ export class LaserOdometryWidget {
         });
 
         this.img = $('#panel_arrow_'+panel.n);
+        $(this.img).click((ev)=>{
+            ev.preventDefault(); //stop from moving the panel
+            $('#follow_target_'+panel.n).prop('checked', true);
+            that.follow_target = true;
+        });
 
         // $(this.canvas).css({
         //     left: -this.canvas_size[0]/2.0,
