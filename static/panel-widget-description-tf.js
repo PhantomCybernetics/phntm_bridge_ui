@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'orbit-controls';
 import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
+import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 
 export class DescriptionTFWidget {
     static label = 'Robot Description + TF';
@@ -33,13 +34,20 @@ export class DescriptionTFWidget {
             
         });
         panel.renderer.shadowMap.enabled = true;
-        panel.renderer.setSize( panel.widget_width, panel.widget_height );
-        document.getElementById('panel_widget_'+panel.n).appendChild( panel.renderer.domElement );
+        panel.renderer.setSize(panel.widget_width, panel.widget_height);
+        panel.renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('panel_widget_'+panel.n).appendChild(panel.renderer.domElement);
+
+        this.labelRenderer = new CSS2DRenderer();
+        this.labelRenderer.setSize(panel.widget_width, panel.widget_height);
+        this.labelRenderer.domElement.style.position = 'absolute';
+        this.labelRenderer.domElement.style.top = '0px';
+        document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
 
         // const geometry = new THREE.BoxGeometry( .1, .1, .1 );
         // const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
         panel.model = new THREE.Object3D()
-        panel.scene.add( panel.model );
+        panel.scene.add(panel.model);
         panel.model.position.y = .5
 
         panel.model.add(panel.camera)
@@ -49,7 +57,7 @@ export class DescriptionTFWidget {
         panel.scene.add(panel.camera)
         panel.camera.lookAt(panel.model.position);
 
-        panel.controls = new OrbitControls( panel.camera, panel.renderer.domElement );
+        panel.controls = new OrbitControls( panel.camera, this.labelRenderer.domElement );
         panel.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
             ev.preventDefault(); //stop from moving the panel
         } );
@@ -74,6 +82,9 @@ export class DescriptionTFWidget {
 
         const ambience = new THREE.AmbientLight( 0x404040 ); // soft white light
         panel.scene.add( ambience );
+
+        panel.camera.layers.enableAll();
+
 
         // const axesHelper = new THREE.AxesHelper( 5 );
         // panel.scene.add( axesHelper );
@@ -115,9 +126,12 @@ export class DescriptionTFWidget {
         //     ResizeWidget(panel);
         //     RenderImu(panel);
         // });
+        let that = this;
         panel.resize_event_handler = function () {
             // ResizeWidget(panel);
             // URDFWidget_Render(panel);
+            that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
+
         };
 
         // this.last_odo = null;
@@ -130,14 +144,26 @@ export class DescriptionTFWidget {
 
         panel.widget_menu_cb = () => {
 
-            $('<div class="menu_line"><label for="render_joints_'+panel.n+'" class="render_joints_" id="render_joints_label_'+panel.n+'"><input type="checkbox" id="frender_joints_'+panel.n+'" class="render_joints" checked title=Render joints"/> Render joints</label></div>')
+            $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" id="render_joints_'+panel.n+'" checked title="Render joints"> Render joints</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
-            $('<div class="menu_line"><label for="render_joints_names_'+panel.n+'" class="render_joint_names_" id="render_joint_names_label_'+panel.n+'"><input type="checkbox" id="frender_joint_names_'+panel.n+'" class="render_joint_names" checked title=Render joint names"/> Show labels</label></div>')
+            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" checked title="Render labels"> Show labels</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
             $('#render_joints_'+panel.n).change(function(ev) {
                 that.render_joints = $(this).prop('checked');
+                if (that.render_joints)
+                    panel.camera.layers.enable(2);
+                else
+                    panel.camera.layers.disable(2);
+            });
+
+            $('#render_labels_'+panel.n).change(function(ev) {
+                that.render_labels = $(this).prop('checked');
+                if (that.render_labels)
+                    panel.camera.layers.enable(1);
+                else
+                    panel.camera.layers.disable(1);
             });
         }
     }
@@ -163,13 +189,21 @@ export class DescriptionTFWidget {
         this.world.clear();
         this.world.add(this.robot);
         this.world.position.set(0,0,0);
+
+        let that = this;
+
+        this.robot.layers.enableAll();
+
         if (this.robot.links['base_footprint']) {
             let v = new THREE.Vector3();
             this.robot.links['base_footprint'].getWorldPosition(v);
             console.log('base_footprint offset:', v);
             this.world.position.copy(v.negate());
         }
-        let that = this;
+        if (this.robot.links['base_link']) {
+            that.make_mark(that.robot.links['base_link'], 'base_link')
+        }
+        
         this.robot.children.forEach((ch)=>{
             if (ch.children && ch.children.length) {
                 ch.children[0].castShadow = true;
@@ -177,14 +211,33 @@ export class DescriptionTFWidget {
         });
         Object.keys(this.robot.joints).forEach((key)=>{
             console.log('joint:', that.robot.joints[key]);
-            const axesHelper = new THREE.AxesHelper( .05 );
-            that.robot.joints[key].add( axesHelper );
-            axesHelper.material.depthTest = false;
+            that.make_mark(that.robot.joints[key], key)
             // that.robot.visual[key].castShadow = true;
             // that.robot.visual[key].receiveShadow = true;
             // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
-
         });
+
+    }
+
+    make_mark(target, label_text) {
+        const axesHelper = new THREE.AxesHelper(.05);
+        axesHelper.material.depthTest = false;
+        target.add(axesHelper);
+        axesHelper.layers.set(2);
+
+        const el = document.createElement('div');
+        el.className = 'label';
+        el.textContent = label_text;
+        el.style.backgroundColor = 'transparent';
+        el.style.color = '#ffffff';
+        el.style.fontSize = '12px';
+
+        target.layers.enableAll();
+        const label = new CSS2DObject(el);
+        target.add(label);
+        label.center.set(0.5, 0);
+        label.position.set(0, 0, .02);
+        label.layers.set(1);
 
     }
 
@@ -194,7 +247,8 @@ export class DescriptionTFWidget {
             return;
 
         this.panel.controls.update();
-        this.panel.renderer.render( this.panel.scene, this.panel.camera );
+        this.panel.renderer.render(this.panel.scene, this.panel.camera);
+        this.labelRenderer.render(this.panel.scene, this.panel.camera);
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()
         });
