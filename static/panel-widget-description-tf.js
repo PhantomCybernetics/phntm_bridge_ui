@@ -15,6 +15,7 @@ export class DescriptionTFWidget {
 
         this.manager = new LoadingManager();
         this.loader = new URDFLoader(this.manager);
+        this.loader.parseCollision = true;
         this.robot = null;
 
         // this.loader = 
@@ -84,7 +85,17 @@ export class DescriptionTFWidget {
         panel.scene.add( ambience );
 
         panel.camera.layers.enableAll();
-        panel.camera.layers.disable(1); //labels off by default
+        panel.camera.layers.disable(2); //colliders off by default
+        panel.camera.layers.disable(4); //labels off by default
+
+        this.collider_mat = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffff00,
+            wireframe: true,
+            // depthFunc: THREE.LessEqualDepth
+        });
+
+
 
         // const axesHelper = new THREE.AxesHelper( 5 );
         // panel.scene.add( axesHelper );
@@ -146,24 +157,42 @@ export class DescriptionTFWidget {
 
             $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" id="render_joints_'+panel.n+'" checked title="Render joints"> Render joints</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
-
-            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
-
             $('#render_joints_'+panel.n).change(function(ev) {
                 that.render_joints = $(this).prop('checked');
                 if (that.render_joints)
-                    panel.camera.layers.enable(2);
+                    panel.camera.layers.enable(3);
                 else
-                    panel.camera.layers.disable(2);
+                    panel.camera.layers.disable(3);
             });
 
+            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_labels_'+panel.n).change(function(ev) {
                 that.render_labels = $(this).prop('checked');
                 if (that.render_labels)
+                    panel.camera.layers.enable(4);
+                else
+                    panel.camera.layers.disable(4);
+            });
+
+            $('<div class="menu_line"><label for="render_visuals_'+panel.n+'""><input type="checkbox" checked id="render_visuals_'+panel.n+'" title="Render visuals"> Show visuals</label></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+            $('#render_visuals_'+panel.n).change(function(ev) {
+                that.render_visuals = $(this).prop('checked');
+                if (that.render_visuals)
                     panel.camera.layers.enable(1);
                 else
                     panel.camera.layers.disable(1);
+            });
+
+            $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+            $('#render_collisions_'+panel.n).change(function(ev) {
+                that.render_collisions = $(this).prop('checked');
+                if (that.render_collisions)
+                    panel.camera.layers.enable(2);
+                else
+                    panel.camera.layers.disable(2);
             });
         }
     }
@@ -183,6 +212,15 @@ export class DescriptionTFWidget {
 
     on_description_data = (desc) => {
         // console.log('got desc: ', desc.data);
+
+        if (this.robot) {
+            this.world.remove(this.robot);
+            this.robot = null;
+            while (this.labelRenderer.domElement.children.length > 0) {
+                this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
+            }
+        }
+
         this.robot = this.loader.parse(desc.data);
         this.robot.castShadow = true;
         console.log('parsed urdf robot', this.robot);
@@ -197,21 +235,51 @@ export class DescriptionTFWidget {
         if (this.robot.links['base_footprint']) {
             let v = new THREE.Vector3();
             this.robot.links['base_footprint'].getWorldPosition(v);
-            console.log('base_footprint offset:', v);
             this.world.position.copy(v.negate());
         }
         if (this.robot.links['base_link']) {
             that.make_mark(that.robot.links['base_link'], 'base_link')
         }
         
-        this.robot.children.forEach((ch)=>{
-            if (ch.children && ch.children.length) {
-                ch.children[0].castShadow = true;
-            }
-        });
+
+
+        // this.robot.children.forEach((ch)=>{
+        //     if (ch.children && ch.children.length) {
+        //         ch.children[0].castShadow = true;
+        //     }
+        //     if (ch.isURDFCollider) {
+        //         ch.layers.set(2);
+        //     } else {
+        //         ch.layers.set(1);
+        //     }
+        // });
         Object.keys(this.robot.joints).forEach((key)=>{
-            console.log('joint:', that.robot.joints[key]);
+
             that.make_mark(that.robot.joints[key], key)
+            // that.robot.visual[key].castShadow = true;
+            // that.robot.visual[key].receiveShadow = true;
+            // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
+        });
+
+        Object.keys(this.robot.frames).forEach((key)=>{
+
+            if (this.robot.frames[key].children) {
+                this.robot.frames[key].children.forEach((ch)=>{
+                    if (ch.isObject3D) {
+                        if (ch.isURDFVisual) {
+                            ch.children[0].layers.set(1);
+                            ch.children[0].castShadow = true;
+                            // ch.children[0].renderOrder = 2;
+                        } else if (ch.isURDFCollider) {
+                            ch.children[0].layers.set(2);
+                            ch.children[0].material = this.collider_mat;
+                            ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
+                        } 
+                    }
+                });
+            }
+
+            // that.make_mark(that.robot.joints[key], key)
             // that.robot.visual[key].castShadow = true;
             // that.robot.visual[key].receiveShadow = true;
             // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
@@ -223,7 +291,7 @@ export class DescriptionTFWidget {
         const axesHelper = new THREE.AxesHelper(.05);
         axesHelper.material.depthTest = false;
         target.add(axesHelper);
-        axesHelper.layers.set(2);
+        axesHelper.layers.set(3);
 
         const el = document.createElement('div');
         el.className = 'label';
@@ -232,13 +300,11 @@ export class DescriptionTFWidget {
         el.style.color = '#ffffff';
         el.style.fontSize = '12px';
 
-        target.layers.enableAll();
         const label = new CSS2DObject(el);
         target.add(label);
         label.center.set(-0.1, 0);
         label.position.set(0, 0, .02);
-        label.layers.set(1);
-
+        label.layers.set(4);
     }
 
     rendering_loop() {
