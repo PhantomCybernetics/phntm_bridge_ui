@@ -84,7 +84,7 @@ export class DescriptionTFWidget {
         panel.scene.add( ambience );
 
         panel.camera.layers.enableAll();
-
+        panel.camera.layers.disable(1); //labels off by default
 
         // const axesHelper = new THREE.AxesHelper( 5 );
         // panel.scene.add( axesHelper );
@@ -147,7 +147,7 @@ export class DescriptionTFWidget {
             $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" id="render_joints_'+panel.n+'" checked title="Render joints"> Render joints</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
-            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" checked title="Render labels"> Show labels</label></div>')
+            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
 
             $('#render_joints_'+panel.n).change(function(ev) {
@@ -235,7 +235,7 @@ export class DescriptionTFWidget {
         target.layers.enableAll();
         const label = new CSS2DObject(el);
         target.add(label);
-        label.center.set(0.5, 0);
+        label.center.set(-0.1, 0);
         label.position.set(0, 0, .02);
         label.layers.set(1);
 
