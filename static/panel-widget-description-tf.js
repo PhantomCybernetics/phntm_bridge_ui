@@ -168,8 +168,7 @@ export class DescriptionTFWidget {
                 } else {
                     panel.camera.layers.disable(3);
                     panel.camera.layers.disable(4); //labels
-                }
-                    
+                }                    
             });
 
             $('<div class="menu_line"><label for="render_links_'+panel.n+'"><input type="checkbox" id="render_links_'+panel.n+'" checked title="Render links"> Render links</label></div>')
@@ -311,7 +310,7 @@ export class DescriptionTFWidget {
 
         const label = new CSS2DObject(el);
         target.add(label);
-        label.center.set(layer_labels == 4 ? -0.1 : 1.1, 0);
+        label.center.set(layer_labels == 4 ? 1.1 : -0.1, 0); // joints left, links right
         label.position.set(0, 0, .02);
         label.layers.set(layer_labels);
     }
