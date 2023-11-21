@@ -97,7 +97,11 @@ export class DescriptionTFWidget {
             // depthFunc: THREE.LessEqualDepth
         });
 
-
+        this.render_collisions = false;
+        this.render_visuals = true;
+        this.render_labels = false;
+        this.render_links = true;
+        this.render_joints = false;
 
         // const axesHelper = new THREE.AxesHelper( 5 );
         // panel.scene.add( axesHelper );
@@ -150,6 +154,10 @@ export class DescriptionTFWidget {
         this.rendering = true;
         this.rendering_loop();
 
+        this.applyTransforms = [];
+        this.apply_tf = false;
+        this.fix_base = true;
+
         // this.last_odo = null;
         panel.ui.client.on('/tf_static', this.on_tf_data);
         panel.ui.client.on('/tf', this.on_tf_data);
@@ -157,7 +165,7 @@ export class DescriptionTFWidget {
 
         panel.widget_menu_cb = () => {
 
-            $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" id="render_joints_'+panel.n+'" title="Render joints"> Render joints</label></div>')
+            $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" '+(that.render_joints?'checked':'')+' id="render_joints_'+panel.n+'" title="Render joints"> Render joints</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_joints_'+panel.n).change(function(ev) {
                 that.render_joints = $(this).prop('checked');
@@ -171,7 +179,7 @@ export class DescriptionTFWidget {
                 }                    
             });
 
-            $('<div class="menu_line"><label for="render_links_'+panel.n+'"><input type="checkbox" id="render_links_'+panel.n+'" checked title="Render links"> Render links</label></div>')
+            $('<div class="menu_line"><label for="render_links_'+panel.n+'"><input type="checkbox" '+(that.render_links?'checked':'')+' id="render_links_'+panel.n+'" title="Render links"> Render links</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_links_'+panel.n).change(function(ev) {
                 that.render_links = $(this).prop('checked');
@@ -185,7 +193,7 @@ export class DescriptionTFWidget {
                 }
             });
 
-            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
+            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" '+(that.render_labels?'checked':'')+' id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_labels_'+panel.n).change(function(ev) {
                 that.render_labels = $(this).prop('checked');
@@ -200,7 +208,7 @@ export class DescriptionTFWidget {
                 }
             });
 
-            $('<div class="menu_line"><label for="render_visuals_'+panel.n+'""><input type="checkbox" checked id="render_visuals_'+panel.n+'" title="Render visuals"> Show visuals</label></div>')
+            $('<div class="menu_line"><label for="render_visuals_'+panel.n+'""><input type="checkbox" '+(that.render_visuals?'checked':'')+' id="render_visuals_'+panel.n+'" title="Render visuals"> Show visuals</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_visuals_'+panel.n).change(function(ev) {
                 that.render_visuals = $(this).prop('checked');
@@ -210,7 +218,7 @@ export class DescriptionTFWidget {
                     panel.camera.layers.disable(1);
             });
 
-            $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
+            $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" '+(that.render_collisions?'checked':'')+' id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
             $('#render_collisions_'+panel.n).change(function(ev) {
                 that.render_collisions = $(this).prop('checked');
@@ -218,6 +226,18 @@ export class DescriptionTFWidget {
                     panel.camera.layers.enable(2);
                 else
                     panel.camera.layers.disable(2);
+            });
+
+            $('<div class="menu_line"><label for="apply_tf_'+panel.n+'""><input type="checkbox" '+(that.apply_tf?'checked':'')+' id="apply_tf_'+panel.n+'" title="Apply transforms"> Apply transforms</label></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+            $('#apply_tf_'+panel.n).change(function(ev) {
+                that.apply_tf = $(this).prop('checked');
+            });
+
+            $('<div class="menu_line"><label for="fix_base_'+panel.n+'""><input type="checkbox" '+(that.fix_base?'checked':'')+' id="fix_base_'+panel.n+'" title="Fix robot base"> Fix base</label></div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+            $('#fix_base_'+panel.n).change(function(ev) {
+                that.fix_base = $(this).prop('checked');
             });
         }
     }
@@ -232,7 +252,27 @@ export class DescriptionTFWidget {
 
 
     on_tf_data = (tf) => {
+
+        //TODO: store unused or failed as dirty
+        //TODO: are transforms local or offset from base_link?!
+
         // console.log('got tf: ', tf);
+        if (!this.apply_tf)
+            return; //ignore
+        
+        for (let i = 0; i < tf.transforms.length; i++) {
+            let id_parent = tf.transforms[i].header.frame_id;
+            let id_child = tf.transforms[i].child_frame_id;
+
+            if (id_child == 'base_link' && this.fix_base)
+                continue;
+
+            let t = tf.transforms[i].transform;
+            if (this.robot && this.robot.links[id_child]) {
+                this.robot.links[id_child].position.set(t.translation.x, t.translation.y, t.translation.z);
+                this.robot.links[id_child].quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+            }
+        }
     }
 
     on_description_data = (desc) => {
@@ -275,14 +315,20 @@ export class DescriptionTFWidget {
                 this.robot.frames[key].children.forEach((ch)=>{
                     if (ch.isObject3D) {
                         if (ch.isURDFVisual) {
-                            ch.children[0].layers.set(1);
-                            ch.children[0].castShadow = true;
-                            // ch.children[0].renderOrder = 2;
+                            if (ch.children && ch.children.length > 0) {
+                                if (ch.children[0].layers)
+                                    ch.children[0].layers.set(1);
+                                ch.children[0].castShadow = true;
+                                // ch.children[0].renderOrder = 2;
+                            }
                         } else if (ch.isURDFCollider) {
-                            ch.children[0].layers.set(2);
-                            ch.children[0].material = this.collider_mat;
-                            ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
-                        } 
+                            if (ch.children && ch.children.length > 0) { 
+                                if (ch.children[0].layers)
+                                    ch.children[0].layers.set(2);
+                                ch.children[0].material = this.collider_mat;
+                                ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
+                            }
+                        }
                     }
                 });
             }
