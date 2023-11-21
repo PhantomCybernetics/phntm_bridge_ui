@@ -147,13 +147,13 @@ export class DescriptionTFWidget {
 
         };
 
+        this.rendering = true;
+        this.rendering_loop();
+
         // this.last_odo = null;
         panel.ui.client.on('/tf_static', this.on_tf_data);
         panel.ui.client.on('/tf', this.on_tf_data);
         panel.ui.client.on('/robot_description', this.on_description_data);
-        
-        this.rendering = true;
-        this.rendering_loop();
 
         panel.widget_menu_cb = () => {
 

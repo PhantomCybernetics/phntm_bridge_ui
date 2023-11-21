@@ -412,6 +412,10 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (event.indexOf('/') === 0) {  // topic or camera id
             this.create_subscriber(event);
+
+            if (this.latest[event]) {
+                cb(this.latest[event].msg, this.latest[event].ev);
+            }
         }
     }
 

@@ -28,6 +28,7 @@ class Panel {
     grid_widget = null;
 
     initiated = false;
+    init_data = null;
     resize_event_handler = null;
     src_visible = false;
     //const event = new Event("build");
@@ -141,12 +142,16 @@ class Panel {
 
             this.initiated = true;
 
+            if (this.init_data != null) {
+                this._on_data_context_wrapper(this.init_data[0], this.init_data[1]);
+                this.init_data = null;
+            }
             //use latest msg
 
-            let latest = this.ui.client.latest[this.id_source];
-            if (latest) {
-                this._on_data_context_wrapper(latest.msg, latest.ev)
-            }
+            // let latest = this.ui.client.latest[this.id_source];
+            // if (latest) {
+            //     this._on_data_context_wrapper(latest.msg, latest.ev)
+            // }
 
         }
 
@@ -157,7 +162,7 @@ class Panel {
     _on_data_context_wrapper = (msg, ev) => {
 
         if (!this.initiated) {
-            console.error(this.id_source+'; got data before initialized', msg);
+            this.init_data = [ msg, ev ]; //store for after init
             return;
         }
 
