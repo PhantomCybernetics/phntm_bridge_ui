@@ -214,6 +214,7 @@ class Panel {
         let widget_el = $('#panel_widget_'+this.n);
         $('#display_panel_source_'+this.n).change(function(ev) {
             if ($(this).prop('checked')) {
+                
                 source_el.addClass('enabled');
                 widget_el.addClass('source_visible');
                 that.src_visible = true;
@@ -226,12 +227,15 @@ class Panel {
                     that.onResize();
                     that.ui.update_url_hash();
                 }
+
             } else {
+
                 source_el.removeClass('enabled');
                 widget_el.removeClass('source_visible');
                 let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
                 that.src_visible = false;
                 that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
+
             }
         });
 
