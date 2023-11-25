@@ -192,13 +192,14 @@ class Panel {
         let that = this;
         $('#panel_msg_types_'+this.n).click(function(ev) {
 
-            $('#msg_type-dialog').attr('title', that.msg_type);
+            // $('#msg_type-dialog').attr('title', );
             $('#msg_type-dialog').html((that.msg_type_class ? JSON.stringify(that.msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>'));
             $( "#msg_type-dialog" ).dialog({
                 resizable: true,
                 height: 700,
                 width: 500,
                 modal: true,
+                title: that.msg_type,
                 buttons: {
                     Okay: function() {
                         $(this).dialog( "close" );

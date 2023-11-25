@@ -356,7 +356,12 @@ export class DescriptionTFWidget {
     }
 
     make_mark(target, label_text, layer_axes, layer_labels) {
-        const axesHelper = new THREE.AxesHelper(.05);
+
+        let axis_size = .05;
+        if (label_text == 'base_link') {
+            axis_size = .15;
+        }
+        const axesHelper = new THREE.AxesHelper(axis_size);
         axesHelper.material.depthTest = false;
         target.add(axesHelper);
         axesHelper.layers.set(layer_axes);
