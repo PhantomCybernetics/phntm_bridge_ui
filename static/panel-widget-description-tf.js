@@ -174,6 +174,7 @@ export class DescriptionTFWidget {
         this.rendering_loop();
 
         this.transforms_queue = [];
+        this.last_tf_stamps = {};
         this.apply_tf = true;
         this.fix_base = false;
 
@@ -390,7 +391,13 @@ export class DescriptionTFWidget {
                 let id_parent = this.transforms_queue[i].header.frame_id;
                 let id_child = this.transforms_queue[i].child_frame_id;
                 let t = this.transforms_queue[i].transform;
-    
+                let s = this.transforms_queue[i].header.stamp;
+                let t_sec = (s.sec * 1000000000.0 + s.nanosec) / 1000000000.0;
+                let tf_id = id_parent+'>'+id_child;
+                if (this.last_tf_stamps[tf_id] && this.last_tf_stamps[tf_id] > t_sec) 
+                    continue;
+
+                this.last_tf_stamps[tf_id] = t_sec;
                 let p = this.robot.links[id_parent];
                 let ch = this.robot.links[id_child];
     

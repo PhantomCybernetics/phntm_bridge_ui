@@ -46,11 +46,11 @@ export class JoyDriver extends Driver {
             },
             1: {
                 axis: 1,
-                scale: 1
+                scale: 1.0
             },
             2: {
                 axis: 2,
-                scale: 1
+                scale: 1.0
             }
         },
         buttons: {
@@ -71,18 +71,18 @@ export class JoyDriver extends Driver {
         topic : '/joy',
         axes: {
             0: { //side step
-                key_0: 'KeyS',
-                key_1: 'KeyF',
+                key_0: 'KeyF',
+                key_1: 'KeyS',
                 scale: 0.5,
             },
             1: { //fw back
-                key_0: 'KeyE',
-                key_1: 'KeyD',
+                key_0: 'KeyD',
+                key_1: 'KeyE',
                 scale: 1.0,
             },
             2: { //turn
-                key_0: 'ArrowLeft',
-                key_1: 'ArrowRight',
+                key_1: 'ArrowLeft',
+                key_0: 'ArrowRight',
                 scale: 1.0,
             }
         },
@@ -202,13 +202,13 @@ export class TwistMecanumDriver extends Driver {
                 axis: 1,
                 dead_min: -0.02,
                 dead_max: 0.02,
-                scale: 1
+                scale: 1.0
             },
             y: { // left/right strife
                 axis_positive: 3,
                 axis_negative: 4,
                 offset: 1,
-                scale: .25,
+                scale: 0.25,
                 dead_min: -10.0,
                 dead_max: -0.98,
                 dead_value: -10.0,
@@ -219,7 +219,7 @@ export class TwistMecanumDriver extends Driver {
                 axis: 2,
                 dead_min: -0.02,
                 dead_max: 0.02,
-                scale: -1.0,
+                scale: 1.0,
                 multiply_lerp: {
                     abs_value: 'linear.x',
                     min: 3.0, // fast turns on the spot
@@ -233,21 +233,21 @@ export class TwistMecanumDriver extends Driver {
         topic : '/cmd_vel',
         linear: {
             x: { // fw/back
-                key_0: 'KeyE',
-                key_1: 'KeyD',
-                scale: 1
+                key_0: 'KeyD',
+                key_1: 'KeyE',
+                scale: 1.0
             },
             y: { // //side step
-                key_0: 'KeyS',
-                key_1: 'KeyF',
-                scale: .5
+                key_0: 'KeyF',
+                key_1: 'KeyS',
+                scale: 0.5
             }
         },
         angular: {
             z: { // left/right
-                key_0: 'ArrowLeft',
-                key_1: 'ArrowRight',
-                scale: -1.0,
+                key_0: 'ArrowRight',
+                key_1: 'ArrowLeft',
+                scale: 1.0,
                 multiply_lerp: {
                     abs_value: 'linear.x',
                     min: 3.0, // fast turns on the spot
@@ -265,22 +265,22 @@ export class TwistMecanumDriver extends Driver {
 
     read_axis(axes, cfg) {
         let offset = cfg.offset === undefined ? 0.0 : cfg.offset;
-        let scale = cfg.scale === undefined ? 1.0 : cfg.scale;
+        // let scale = cfg.scale === undefined ? 1.0 : cfg.scale;
 
         if (cfg.axis !== undefined) {
             let val = this.apply_axis_deadzone(axes[cfg.axis], cfg);
             val += offset;
-            val *= scale;
+            // val *= scale;
             return val;
         } else if (cfg.axis_positive !== undefined && cfg.axis_negative !== undefined) {
             let val = 0.0;
             let val_positive = this.apply_axis_deadzone(axes[cfg.axis_positive], cfg)
             if (val_positive > -1) {
-                val += (val_positive + offset) * scale;
+                val += (val_positive + offset);// * scale;
             }
             let val_negative = this.apply_axis_deadzone(axes[cfg.axis_negative], cfg)
             if (val_negative > -1) {
-                val -= (val_negative + offset) * scale; // (-.5,0)
+                val -= (val_negative + offset);// * scale; // (-.5,0)
             }
             return val;
         }
@@ -322,7 +322,7 @@ export class TwistMecanumDriver extends Driver {
         let by = cfg['abs_value'].split('.');
         let abs_val = Math.abs(msg[by[0]][[by[1]]]);
 
-        let min = cfg['min'] === undefined ? 1.0 : cfg.min;
+        let min = cfg['min'] === undefined ? 0.0 : cfg.min;
         let max = cfg['max'] === undefined ? 1.0 : cfg.max;
 
         return lerp(min, max, abs_val);
@@ -368,6 +368,16 @@ export class TwistMecanumDriver extends Driver {
                 if (!this.config[grp][axis] || !this.config[grp][axis]['multiply_lerp'])
                     return;
                 msg[grp][axis] = msg[grp][axis] * this.lerp_abs(this.config[grp][axis]['multiply_lerp'], msg);
+            });
+        });
+
+        Object.keys(msg).forEach ((grp) => {
+            if (!this.config[grp])
+                return;
+            Object.keys(msg[grp]).forEach((axis) => {
+                if (!this.config[grp][axis] || this.config[grp][axis]['scale'] === undefined)
+                    return;
+                msg[grp][axis] = msg[grp][axis] * this.config[grp][axis].scale;
             });
         });
 
