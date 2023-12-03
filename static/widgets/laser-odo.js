@@ -1,4 +1,4 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad } from "./lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
 import * as THREE from 'three';
 
 export class LaserOdometryWidget {
@@ -91,12 +91,21 @@ export class LaserOdometryWidget {
 
         let that = this;
 
+        this.topic_odo = '/odometry/filtered';
+        this.topic_scan = '/scan';
+
         //zoom menu control
         panel.widget_menu_cb = () => {
 
+            $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
+                + '<button class="val" title="Odometry source">'+this.topic_odo+'</button>'
+                + '<button class="val" title="Scan source">'+this.topic_scan+'</button>'
+                + '</div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
+
             $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'">'
                 + '<span class="minus">-</span>'
-                + '<button class="val" title="Rezet zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
+                + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
                 + '<span class="plus">+</span>'
                 + '</div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());
@@ -204,10 +213,9 @@ export class LaserOdometryWidget {
             that.dragging = false;
         });
 
-    
         // this.last_odo = null;
-        panel.ui.client.on('/odometry/filtered', this.on_odometry_data);
-        panel.ui.client.on('/scan', this.on_scan_data);
+        panel.ui.client.on(this.topic_odo, this.on_odometry_data);
+        panel.ui.client.on(this.topic_scan, this.on_scan_data);
        
         this.rendering_loop();
     }
@@ -475,7 +483,7 @@ export class LaserOdometryWidget {
 
             let x = this.pose_graph[this.pose_graph.length-1][1] * this.render_scale;
             let y = this.pose_graph[this.pose_graph.length-1][2] * this.render_scale;
-            let a = -1.0 * this.pose_graph[this.pose_graph.length-1][3];
+            let a = -1.0 * this.pose_graph[this.pose_graph.length-1][3] + Math.PI;
 
             this.img.css({
                 left: (x-10)+'px',

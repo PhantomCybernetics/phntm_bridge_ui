@@ -1,4 +1,11 @@
-import { BatteryStateWidget, LogWidget, ImuWidget, LaserScanWidget, RangeWidget, VideoWidget } from './panel-widgets.js'
+import { BatteryStateWidget } from '/static/widgets/battery.js';
+import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
+import { VideoWidget } from '/static/widgets/video.js';
+import { RangeWidget } from '/static/widgets/range.js';
+import { LaserScanWidget } from '/static/widgets/laser-scan.js';
+import { ImuWidget } from '/static/widgets/imu.js';
+import { LogWidget } from '/static/widgets/log.js';
+
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 
 import { lerpColor, linkifyURLs, escapeHtml } from "./lib.js";
@@ -128,12 +135,12 @@ class Panel {
             if (this.ui.topic_widgets[this.id_source] != undefined) {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.ui.topic_widgets[this.id_source].widget(this, null) //no data yet
+                    this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
                 }
             } else if (this.ui.type_widgets[this.msg_type] != undefined) {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.ui.type_widgets[this.msg_type].widget(this, null) //no data yet
+                    this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
                 }
             } else if (!this.ui.widgets[msg_type]) {  //no widget, show source
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
@@ -332,12 +339,12 @@ class Panel {
         // }
 
         // auto scale THREE renderer & set camera aspect
-        if (this.renderer) {
+        if (this.display_widget && this.display_widget.renderer) {
 
-            this.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
-            this.camera.updateProjectionMatrix();
+            this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
+            this.display_widget.camera.updateProjectionMatrix();
 
-            this.renderer.setSize( this.widget_width, this.widget_height );
+            this.display_widget.renderer.setSize( this.widget_width, this.widget_height );
             // console.log('resize', this.widget_width, this.widget_height)
         }
 
@@ -399,10 +406,10 @@ class Panel {
             datahr = JSON.stringify(msg, null, 2);
         }
 
-        if (this.ui.topic_widgets[this.id_source] && this.ui.topic_widgets[this.id_source].widget)
-            this.ui.topic_widgets[this.id_source].widget(this, msg);
-        else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
-            this.ui.type_widgets[this.msg_type].widget(this, msg);
+        // if (this.ui.topic_widgets[this.id_source] && this.ui.topic_widgets[this.id_source].widget)
+        //     this.ui.topic_widgets[this.id_source].widget(this, msg);
+        // else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
+        //     this.ui.type_widgets[this.msg_type].widget(this, msg);
 
         $('#panel_source_'+this.n).html(
             'Received: '+ev.timeStamp + '<br>' + // this is local stamp
@@ -485,6 +492,7 @@ export class PanelUI {
         'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },
         'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
         'video' : { widget: VideoWidget, w:5, h:4 },
+        'nav_msgs/msg/OccupancyGrid' : { widget: OccupancyGrid, w:7, h:4 },
     };
     widgets = {}; // custom and/or compound
 

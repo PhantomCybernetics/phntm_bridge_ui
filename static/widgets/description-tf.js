@@ -1,4 +1,4 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad } from "./lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
 import * as THREE from 'three';
 import { OrbitControls } from 'orbit-controls';
 import { LoadingManager } from 'three';
@@ -178,12 +178,23 @@ export class DescriptionTFWidget {
         this.apply_tf = true;
         this.fix_base = false;
 
+        this.topic_tf_static = '/tf_static';
+        this.topic_tf = '/tf';
+        this.topic_desc = '/robot_description';
+
         // this.last_odo = null;
-        panel.ui.client.on('/tf_static', this.on_tf_data);
-        panel.ui.client.on('/tf', this.on_tf_data);
-        panel.ui.client.on('/robot_description', this.on_description_data);
+        panel.ui.client.on(this.topic_tf_static, this.on_tf_data);
+        panel.ui.client.on(this.topic_tf, this.on_tf_data);
+        panel.ui.client.on(this.topic_desc, this.on_description_data);
 
         panel.widget_menu_cb = () => {
+
+            $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
+                + '<button class="val" title="Static TF source">'+this.topic_tf_static+'</button>'
+                + '<button class="val" title="TF source">'+this.topic_tf+'</button>'
+                + '<button class="val" title="Description source">'+this.topic_desc+'</button>'
+                + '</div>')
+                .insertBefore($('#close_panel_link_'+panel.n).parent());
 
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'"><input type="checkbox" '+(that.follow_target?'checked':'')+' id="follow_target_'+panel.n+'" title="Follow target"> Follow target</label></div>')
                 .insertBefore($('#close_panel_link_'+panel.n).parent());

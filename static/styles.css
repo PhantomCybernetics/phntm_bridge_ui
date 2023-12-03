@@ -669,11 +669,15 @@ BUTTON#trigger_wifi_scan.working {
     padding-bottom: 10px;
 }
 
-.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
+.menu_line.src_ctrl {
+    padding-bottom: 8px;
+}
+
+.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover, .menu_line.src_ctrl:hover {
     background-color: #139a80 !important;
 }
 
-.grid_panel .msg_types {
+.grid_panel .msg_types, .menu_line.src_ctrl BUTTON {
     border: 1px dashed white;
     padding: 6px 10px;
     border-radius: 5px;
@@ -681,15 +685,19 @@ BUTTON#trigger_wifi_scan.working {
     margin: 0px 3px;
 }
 
-.grid_panel .msg_types.err {
+.menu_line.src_ctrl BUTTON {
+    margin-bottom: 2px;
+}
+
+.grid_panel .msg_types.err, .menu_line.src_ctrl BUTTON.err {
     background: red;
 }
 
-.grid_panel  .msg_types:hover {
+.grid_panel  .msg_types:hover, .menu_line.src_ctrl BUTTON:hover  {
     background: #558ec3;
 }
 
-.grid_panel .msg_types.err:hover {
+.grid_panel .msg_types.err:hover, .menu_line.src_ctrl BUTTON.err:hover {
     background: #c20000;
 }
 
