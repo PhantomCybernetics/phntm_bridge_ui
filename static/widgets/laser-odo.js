@@ -1,45 +1,17 @@
 import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
 import * as THREE from 'three';
+import { Zoomable2DTiles } from './inc/zoomable-2d-tiles.js'
 
-export class LaserOdometryWidget {
+export class LaserOdometryWidget extends Zoomable2DTiles {
     static label = 'Laser Scan + Odometry Map (2D)';
-    static default_width = 5;
-    static default_height = 4;
-
     constructor(panel) {
-        this.panel = panel;
-        this.panel.default_zoom = 1.0;
-        if (this.panel.zoom === undefined || this.panel.zoom === null) {
-            this.panel.zoom = this.panel.default_zoom;
-        }
+        super(panel);
 
         let w = panel.ui.widgets[panel.id_source];
 
-        this.tile_size = 500; //px x px one tile
-        this.render_scale = 100;
-        this.tiles = {}; // [x,y] => [ scan_canvas, overlay_canvas ]
-
         panel.max_trace_length = 5;
-        $('#panel_widget_'+panel.n).addClass('enabled laser_scan');
+       
         $('#panel_title_'+panel.n).html(w.label);
-
-        $('#panel_widget_'+panel.n).html(
-            '<div class="canvas_container" id="canvas_container_'+panel.n+'">' +
-                // '<canvas id="panel_overlay_canvas_'+panel.n+'" class="big_canvas canvas_overlay" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
-                // '<canvas id="panel_canvas_'+panel.n+'" class="big_canvas" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
-                '<img id="panel_arrow_'+panel.n+'" title="Follow target" class="arrow" src="/static/arrow.png">' +
-            '</div>');
-        // this.canvas = canvases[0]
-        // this.canvas_overlay = canvases[1];
-        $('#panel_widget_'+panel.n).addClass('scrollable');
-
-        this.canvas_container = $('#canvas_container_'+panel.n);
-        [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize();
-        this.canvas_container.css({
-            left: panel.widget_width/2.0,
-            top: panel.widget_height/2.0,
-            scale: panel.zoom
-        });
 
         this.img = $('#panel_arrow_'+panel.n);
         $(this.img).click((ev)=>{
@@ -64,30 +36,18 @@ export class LaserOdometryWidget {
     
         // this.px = this.ctx.createImageData(1,1);
  
-        this.base_offset = null;
-
         this.pose_graph = [];
         this.scan_graph = [];
         this.scans_to_process = {};
 
         this.last_pose_rendered = -1;
         this.last_scan_rendered = -1;
-        this.render_dirty = false;
+        
         this.clear_pose = true;
         this.clear_scan = true;
-        this.do_clear = false;
-
-        this.drag_mouse_offset = []
-        this.drag_frame_offset = []
-        this.dragging = false;
-        
-        this.rendering = true; // loop runnig
 
         this._rot = new THREE.Quaternion();
         this._euler = new THREE.Euler();
-
-        this.update = true; // disables new data processing
-        this.follow_target = true;
 
         let that = this;
 
@@ -153,7 +113,7 @@ export class LaserOdometryWidget {
                 // else
                 //     $('#panel_widget_'+panel.n).addClass('scrollable');
             });
-        }
+        } //widget menu end
 
         // window.addEventListener('resize', () => {
         //     ResizeWidget(panel);
@@ -163,113 +123,12 @@ export class LaserOdometryWidget {
         //     ResizeWidget(panel);
         //     RenderScan(panel);
         // });
-        
-        panel.resize_event_handler = function () {
-            // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
-            // that.render(true);
-        };
-        
-        $('#panel_widget_'+panel.n).on('mousedown touchstart', (ev) => {
-            // console.log(ev);
-            if (ev.button === 0) {
-                ev.preventDefault();
-        
-                that.drag_mouse_offset = [ ev.originalEvent.pageX, ev.originalEvent.pageY ];
-                let cont_pos = $('#canvas_container_'+panel.n).position();
-                that.drag_frame_offset = [ cont_pos.left, cont_pos.top ];
-                that.dragging = true;
-            }
-        });
-
-        $('#panel_widget_'+panel.n).on('wheel', (ev) => {
-            ev.preventDefault();
-            let d = ev.originalEvent.deltaY;
-            this.setZoom(this.panel.zoom - d*0.005);
-            // console.log('wheel', );
-        });
-
-        $(window.document).on('mousemove touchmove', function(ev) {
-            if(that.dragging) {
-                ev.preventDefault();
-
-                if (that.follow_target) {
-                    that.follow_target = false;
-                    $('#follow_target_'+panel.n).prop('checked', false);
-                }
-
-                $('#canvas_container_'+panel.n).css({
-                    left: that.drag_frame_offset[0] + (ev.originalEvent.pageX - that.drag_mouse_offset[0]),
-                    top: that.drag_frame_offset[1] + (ev.originalEvent.pageY - that.drag_mouse_offset[1])
-                });
-                // panel.display_offset = [
-                //     that.drag_frame_offset[0] + (ev.originalEvent.pageX - that.drag_mouse_offset[0]),
-                //     that.drag_frame_offset[1] + (ev.originalEvent.pageY - that.drag_mouse_offset[1])
-                // ]
-                // that.render(true); //erase
-            }
-        });
-
-        $(window.document).on('mouseup touchend', function(ev) {
-            that.dragging = false;
-        });
-
+    
         // this.last_odo = null;
         panel.ui.client.on(this.topic_odo, this.on_odometry_data);
         panel.ui.client.on(this.topic_scan, this.on_scan_data);
        
         this.rendering_loop();
-    }
-
-    get_tile(x, y, layer) {
-
-        let t_half = this.tile_size/2.0;
-        let cx = Math.floor((x+t_half) / this.tile_size);
-        let cy = Math.floor((y+t_half) / this.tile_size);
-
-        if (!this.tiles[cx])
-            this.tiles[cx] = {};
-        if (!this.tiles[cx][cy])
-            this.tiles[cx][cy] = {}
-
-        if (!this.tiles[cx][cy][layer]) {
-            console.log('Adding canvas tile ['+cx+';'+cy+'] L='+layer, x, y)
-            this.tiles[cx][cy][layer] = {}
-            let base = [
-                cx * this.tile_size - t_half,
-                cy * this.tile_size - t_half,
-            ]
-            let canvas = $(this.canvas_container).append(
-                '<canvas class="canvas_tile" id="canvas_tile_'+cx+'x'+cy+'_'+layer+'" width="'+ this.tile_size +'" height="'+ this.tile_size +'" style="left: '+base[0]+'px; top: '+base[1]+'px; z-index: '+layer+'"></canvas>'
-            ).find('#canvas_tile_'+cx+'x'+cy+'_'+layer)[0];
-            // console.log(canvas);
-            this.tiles[cx][cy][layer].canvas = canvas;
-            this.tiles[cx][cy][layer].ctx = canvas.getContext('2d');
-            this.tiles[cx][cy][layer].x = base[0];
-            this.tiles[cx][cy][layer].y = base[1];
-        }
-        
-        return this.tiles[cx][cy][layer];
-    }
-
-    setZoom(zoom) {
-        let panel = this.panel;
-        if (zoom < 0.1) {
-            zoom = 0.1;
-        } else if (zoom > 5.0) {
-            zoom = 5.0;
-        }
-        panel.zoom = zoom;
-        $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        panel.ui.update_url_hash();
-        let oldPos = $(this.img).offset();
-        $(this.canvas_container).css({scale: panel.zoom});
-        let newPos = $(this.img).offset();
-        let pos = $(this.canvas_container).position();
-        $(this.canvas_container).css({
-            left: pos.left-(newPos.left-oldPos.left),
-            top: pos.top-(newPos.top-oldPos.top),
-        });
-        this.render(true, false); // redraw pose
     }
 
     on_odometry_data = (odo) => {
@@ -425,29 +284,10 @@ export class LaserOdometryWidget {
         
         let that = this;
         if (this.clear_scan || this.clear_pose) {
-            // console.log('tiles x:', Object.keys(this.tiles));
-            Object.keys(that.tiles).forEach((x)=>{
-                // console.log('tiles y['+x+']:', Object.keys(this.tiles[x]));
-                Object.keys(that.tiles[x]).forEach((y)=>{
-
-                    if (that.clear_scan && that.tiles[x][y][0]) {
-                        that.tiles[x][y][0].ctx.clearRect(0, 0, this.tile_size, this.tile_size);
-                        if (clear_tiles) {
-                            $('#canvas_tile_'+x+'x'+y+'_0').remove();
-                            delete that.tiles[x][y][0];
-                        }
-                    }
-                        
-                    if (that.clear_pose && that.tiles[x][y][1]) {
-                        that.tiles[x][y][1].ctx.clearRect(0, 0, that.tile_size, that.tile_size);
-                        if (clear_tiles) {
-                            $('#canvas_tile_'+x+'x'+y+'_1').remove();
-                            delete that.tiles[x][y][1];
-                        }
-                    }
-                        
-                });
-            });
+            let layers = [];
+            if (this.clear_scan) layers.push(0)
+            if (this.clear_pose) layers.push(1)
+            this.clearTiles(layers);
         }
 
         if (this.clear_scan) {
@@ -525,8 +365,8 @@ export class LaserOdometryWidget {
                     this.pose_graph[i][2] * this.render_scale,
                 ]
 
-                tile0 = this.get_tile(p0[0], p0[1], 1);
-                tile1 = this.get_tile(p1[0], p1[1], 1);
+                tile0 = this.get_tile(p0[0], p0[1], 1, this.tiles);
+                tile1 = this.get_tile(p1[0], p1[1], 1, this.tiles);
 
                 if (tile0 != tile1 && tile_dirty) {
 
@@ -589,7 +429,7 @@ export class LaserOdometryWidget {
             // this.ctx_overlay.stroke();
         }
 
-        if (this.pose_graph.length > 0 && this.scan_graph.length-1 > this.last_scan_rendered) {
+        if (this.scan_graph.length > 0 && this.scan_graph.length-1 > this.last_scan_rendered) {
 
             if (this.last_scan_rendered < 0)
                 this.last_scan_rendered = 0;
@@ -626,10 +466,10 @@ export class LaserOdometryWidget {
                     let x = this.scan_graph[i][j][0] * this.render_scale;
                     let y = this.scan_graph[i][j][1] * this.render_scale;
 
-                    let tile = this.get_tile(x, y, 0);
+                    let tile = this.get_tile(x, y, 0, this.tiles);
 
                     tile.ctx.fillStyle = c + a;
-
+                    
                     tile.ctx.fillRect(x-tile.x, y-tile.y, 1, 1 );
 
                     // if (t != last_tile) {
@@ -690,10 +530,6 @@ export class LaserOdometryWidget {
 
     }
 
-    clear() {
-        console.log('clearing widget!');
-        this.do_clear = true;
-    }
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);
 

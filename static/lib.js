@@ -94,6 +94,13 @@ export function lerpColor(a, b, amount) {
     return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
 }
 
+export function randColor() {
+    let r = Math.round((Math.random() * 255)).toString(16).padStart(2, '0');
+    let g = Math.round((Math.random() * 255)).toString(16).padStart(2, '0');
+    let b = Math.round((Math.random() * 255)).toString(16).padStart(2, '0');
+    return '#'+r+g+b;
+}
+
 export function lerp(a, b, alpha) {
     return (1.0-alpha) * a + alpha * (b)
 }

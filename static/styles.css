@@ -970,11 +970,17 @@ SPAN.error {
 
 .panel_widget canvas.canvas_tile {
     position: absolute;
-    /* background-color: rgba(0, 0, 0, 0.1); */
+    background-color: rgba(0, 0, 0, 0.1);
     border-radius: 0px;
 }
 
-
+.panel_widget .map_info {
+    position: absolute;
+    color: #fff;
+    left: 9px;
+    top: 5px;
+    font-size: 10px;
+}
 
 .cleaner {
     clear: both;

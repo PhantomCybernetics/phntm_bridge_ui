@@ -18,7 +18,7 @@ export class KeyboardController {
         this.driver_to_select = this.load_driver();
         this.pressed_keys = {};
 
-        this.enabled = this.load_keyboard_enabled();
+        this.enabled = false; //this.load_keyboard_enabled();
         $('#keyboard_enabled').prop('checked', this.enabled);
         if (this.enabled) {
             $('#keyboard').addClass('enabled');
@@ -59,7 +59,7 @@ export class KeyboardController {
         $('#keyboard_enabled').change(function(ev) {
             let was_enabled = that.enabled;
             that.enabled = this.checked;
-            that.save_keyboard_enabled(that.enabled)
+            //that.save_keyboard_enabled(that.enabled)
             if (that.enabled) {
                 $('#keyboard').addClass('enabled');
                 if (!was_enabled) {
@@ -468,19 +468,19 @@ export class KeyboardController {
         }
     }
 
-    save_keyboard_enabled(state) {
-        localStorage.setItem('kb-enabled:' + this.client.id_robot, state);
-        // console.log('Saved keyboard enabled for robot '+this.client.id_robot+':', state);
-    }
+    // save_keyboard_enabled(state) {
+    //     localStorage.setItem('kb-enabled:' + this.client.id_robot, state);
+    //     // console.log('Saved keyboard enabled for robot '+this.client.id_robot+':', state);
+    // }
 
-    load_keyboard_enabled() {
-        let state = localStorage.getItem('kb-enabled:' + this.client.id_robot);
+    // load_keyboard_enabled() {
+    //     let state = localStorage.getItem('kb-enabled:' + this.client.id_robot);
 
-        state = state === 'true';
-        if (state)
-            console.log('Loaded keyboard enabled for robot '+this.client.id_robot+':', state);
-        return state;
-    }
+    //     state = state === 'true';
+    //     if (state)
+    //         console.log('Loaded keyboard enabled for robot '+this.client.id_robot+':', state);
+    //     return state;
+    // }
 
     save_driver_config() {
         localStorage.setItem('kb-driver-cfg:' + this.client.id_robot + ':' + this.current_driver.id,

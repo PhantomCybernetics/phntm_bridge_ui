@@ -102,6 +102,8 @@ class Panel {
     // might get called with null gefore we receive the message type
     init(msg_type=null) {
 
+        let fallback_show_src = true;
+
         if (msg_type && !this.initiated) {
 
             if (this.ui.widgets[msg_type]) {
@@ -109,6 +111,7 @@ class Panel {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
+                    fallback_show_src = false;
                 }
 
             } else {
@@ -136,13 +139,21 @@ class Panel {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
+                    fallback_show_src = false;
                 }
             } else if (this.ui.type_widgets[this.msg_type] != undefined) {
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
+                    fallback_show_src = false;
                 }
-            } else if (!this.ui.widgets[msg_type]) {  //no widget, show source
+            }
+            
+            if (fallback_show_src) {
+                this.src_visible = true;
+            }
+
+            if (this.src_visible) {  //no widget, show source
                 //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
                 $('#panel_source_'+this.n).addClass('enabled');
             }
@@ -402,7 +413,7 @@ class Panel {
             
             //console.log(window.xmlFormatter)
 
-        } else if (msg) {
+        } else if (msg && this.src_visible) {
             datahr = JSON.stringify(msg, null, 2);
         }
 
@@ -411,18 +422,20 @@ class Panel {
         // else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
         //     this.ui.type_widgets[this.msg_type].widget(this, msg);
 
-        $('#panel_source_'+this.n).html(
-            'Received: '+ev.timeStamp + '<br>' + // this is local stamp
-            '&lt;'+raw_type+'&gt; '+raw_len+' '+(raw_type!='String'?'B':'chars')+'<br>' +
-            '<br>' +
-            datahr
-        );
-
-        let newh = $('#panel_source_'+this.n).height();
-        //console.log('max_height='+this.max_height+' newh='+newh);
-
-        if (newh > this.max_height) {
-            this.max_height = newh;
+        if (this.src_visible) {
+            $('#panel_source_'+this.n).html(
+                'Received: '+ev.timeStamp + '<br>' + // this is local stamp
+                '&lt;'+raw_type+'&gt; '+raw_len+' '+(raw_type!='String'?'B':'chars')+'<br>' +
+                '<br>' +
+                datahr
+            );
+    
+            let newh = $('#panel_source_'+this.n).height();
+            //console.log('max_height='+this.max_height+' newh='+newh);
+    
+            if (newh > this.max_height) {
+                this.max_height = newh;
+            }
         }
     }
 
@@ -1067,104 +1080,140 @@ export class PanelUI {
         $('#service_list').empty();
         let num_services = 0;
 
-        let nodes_with_handled_ui = [];
-        let unhandled_nodes = [];
+        // let nodes_with_handled_ui = [];
+        // let unhandled_nodes = [];
 
         Object.values(nodes).forEach((node) => {
             if (!node.services || !Object.keys(node.services).length)
                 return;
 
+            let node_content = $('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
+            let service_contents = [];
             let service_ids = Object.keys(node.services);
-            let some_ui_handled = false;
+            // let some_ui_handled = false;
             for (let i = 0; i < service_ids.length; i++) {
-                let msg_type = node.services[service_ids[i]].msg_types[0];
-                let ui_handled = this.input_widgets[msg_type] != undefined
-                node.services[service_ids[i]].ui_handled = ui_handled;
-                if (ui_handled)
-                    some_ui_handled = true;
-            }
-            if (some_ui_handled) {
-                nodes_with_handled_ui.push(node)
-            } else {
-                unhandled_nodes.push(node)
-            }
-        });
 
-        let i = 0;
+                let id_service = service_ids[i];
+                let service = node.services[id_service];
+                let msg_type = node.services[id_service].msg_types[0];
 
-        [ nodes_with_handled_ui, unhandled_nodes].forEach((node_list) => {
+                if (['rcl_interfaces/srv/DescribeParameters',
+                     'rcl_interfaces/srv/GetParameterTypes',
+                     'rcl_interfaces/srv/GetParameters',
+                      'rcl_interfaces/srv/ListParameters',
+                      'rcl_interfaces/srv/SetParameters',
+                      'rcl_interfaces/srv/SetParametersAtomically'
+                    ].includes(msg_type))
+                    continue; // not rendering internals
+                
+                num_services++; // activates menu
 
-            let some_services_handled = node_list == nodes_with_handled_ui;
+                service.ui_handled = this.input_widgets[msg_type] != undefined;
 
-            node_list.sort((a, b) => {
-                if (a.node < b.node) return -1;
-                if (a.node > b.node) return 1;
-                return 0;
-            });
+                let service_content = $('<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
+                                        + '<div '
+                                        + 'class="service_heading" '
+                                        + 'title="'+service.service+'\n'+msg_type+'"'
+                                        + '>'
+                                        + service.service
+                                        + '</div>'
+                                        + '<div class="service_input_type" id="service_input_type_'+i+'">' + msg_type + '</div>'
+                                        + '</div>');
+                service_contents.push(service_content);
+                // node_content.append(service_content);
+                
+                let service_input = $('<div class="service_input" id="service_input_'+i+'"></div>');
+                
 
-            node_list.forEach((node) => {
-
-                let services_sorted = Object.values(node.services);
-                services_sorted.sort((a, b) => {
-                    if (!a.ui_handled && b.ui_handled) return 1;
-                    if (!b.ui_handled && a.ui_handled) return -1;
-                    if (a.service < b.service) return -1;
-                    if (a.service > b.service) return 1;
-                    return 0;
-                });
-
-                $('#service_list').append('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
-                let unhandled_block_html = [];
-                services_sorted.forEach((service)=>{
-
-                    num_services++;
-
-                    let html = '<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
-                             + '<div '
-                             + 'class="service_heading" '
-                             + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
-                             + '>'
-                             + service.service
-                             + '</div>'
-                             + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
-                             + '<div class="service_input" id="service_input_'+i+'"></div>'
-                             + '</div>';
-
-                    if (service.ui_handled || !some_services_handled)
-                        $('#service_list').append(html);
-                    else
-                        unhandled_block_html.push(html);
-
-                    service.n = i;
-                    i++;
-
-                });
-                if (unhandled_block_html.length) {
-                    $('#service_list').append('<div class="expandable collapsed">'+unhandled_block_html.join('')+'<button>show more</button></div>');
+                if (service.ui_handled) {
+                    this.input_widgets[msg_type](service_input, service, this.client);
                 }
 
-                services_sorted.forEach((service)=>{
-                    if (service.ui_handled) {
-                        this.input_widgets[service.msg_types[0]]($('#service_input_'+service.n), service, this.client);
-                    }
-                })
+                service_content.append(service_input);
+            }
 
-            });
-
-
-        });
-
-        $('#service_list .expandable').click((ev)=>{
-            console.warn('CLICK', ev.target);
-            let collapsed = $(ev.target).parent().hasClass('collapsed')
-            if (collapsed) {
-                $(ev.target).parent().removeClass('collapsed');
-                $(ev.target).html('show less')
-            } else {
-                $(ev.target).parent().addClass('collapsed');
-                $(ev.target).html('show more')
+            if (service_contents.length) {
+                $('#service_list').append(node_content);
+                for (let i = 0; i < service_contents.length; i++)
+                    $('#service_list').append(service_contents[i]);
             }
         });
+
+        // let i = 0;
+
+        // [ nodes_with_handled_ui, unhandled_nodes].forEach((node_list) => {
+
+        //     let some_services_handled = node_list == nodes_with_handled_ui;
+
+        //     node_list.sort((a, b) => {
+        //         if (a.node < b.node) return -1;
+        //         if (a.node > b.node) return 1;
+        //         return 0;
+        //     });
+
+        //     node_list.forEach((node) => {
+
+        //         let services_sorted = Object.values(node.services);
+        //         services_sorted.sort((a, b) => {
+        //             if (!a.ui_handled && b.ui_handled) return 1;
+        //             if (!b.ui_handled && a.ui_handled) return -1;
+        //             if (a.service < b.service) return -1;
+        //             if (a.service > b.service) return 1;
+        //             return 0;
+        //         });
+
+        //         $('#service_list').append('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
+        //         let unhandled_block_html = [];
+        //         services_sorted.forEach((service)=>{
+
+        //             num_services++;
+
+        //             let html = '<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
+        //                      + '<div '
+        //                      + 'class="service_heading" '
+        //                      + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
+        //                      + '>'
+        //                      + service.service
+        //                      + '</div>'
+        //                      + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
+        //                      + '<div class="service_input" id="service_input_'+i+'"></div>'
+        //                      + '</div>';
+
+        //             if (service.ui_handled || !some_services_handled)
+        //                 $('#service_list').append(html);
+        //             else
+        //                 unhandled_block_html.push(html);
+
+        //             service.n = i;
+        //             i++;
+
+        //         });
+        //         if (unhandled_block_html.length) {
+        //             $('#service_list').append('<div class="expandable collapsed">'+unhandled_block_html.join('')+'<button>show more</button></div>');
+        //         }
+
+        //         services_sorted.forEach((service)=>{
+        //             if (service.ui_handled) {
+        //                 this.input_widgets[service.msg_types[0]]($('#service_input_'+service.n), service, this.client);
+        //             }
+        //         })
+
+        //     });
+
+
+        // });
+
+        // $('#service_list .expandable').click((ev)=>{
+        //     console.warn('CLICK', ev.target);
+        //     let collapsed = $(ev.target).parent().hasClass('collapsed')
+        //     if (collapsed) {
+        //         $(ev.target).parent().removeClass('collapsed');
+        //         $(ev.target).html('show less')
+        //     } else {
+        //         $(ev.target).parent().addClass('collapsed');
+        //         $(ev.target).html('show more')
+        //     }
+        // });
 
         if (num_services > 0) {
             $('#service_controls').addClass('active');
