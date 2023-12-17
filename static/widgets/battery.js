@@ -173,16 +173,17 @@ export class BatteryStateWidget {
     }
 
     onResize() {
-        console.log('resized');
         this.chart.render();
     }
 
     onClose() {
-        console.warn('Closing battery widget')
         this.panel.ui.client.off(this.topic, this.onData);
     }
 
     onData = (decoded) => {
+
+        if (!this.chart)
+            return;
 
         let c = '#2696FB';
         let range2 = (this.maxVoltage-this.minVoltage)/2.0;
@@ -214,12 +215,6 @@ export class BatteryStateWidget {
             this.data_trace.shift();
         }
 
-        if (this.chart) {
-            this.chart.render();
-            // return window.requestAnimationFrame((step)=>{
-            // this.chart.updateSeries([ { data: this.data_trace } ], false); //don't animate
-            // });
-            
-        }
+        this.chart.render();
     }
 }
