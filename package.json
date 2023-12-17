@@ -35,6 +35,7 @@
   },
   "homepage": "https://github.com/PhantomCybernetics/bridge_ui#readme",
   "dependencies": {
+    "@canvasjs/charts": "^3.7.31",
     "@foxglove/message-definition": "^0.3.0",
     "@foxglove/rosmsg": "^4.2.2",
     "@foxglove/rosmsg2-serialization": "^2.0.2",

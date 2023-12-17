@@ -952,8 +952,16 @@ SPAN.error {
     position: relative;
 }
 
+.canvasjs-chart-credit {
+    display: none !important; /* TODO OpenSource license? */
+}
+
+.panel_widget.battery {
+    height: 100%;
+}
+
 /* .panel_widget.range,
-.panel_widget.battery,
+
 .panel_widget.laser_scan,
 .panel_widget.imu
 {

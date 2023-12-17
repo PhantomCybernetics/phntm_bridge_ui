@@ -78,6 +78,8 @@ webExpressApp.use('/static/three/', express.static('node_modules/three/build/'))
 webExpressApp.use('/static/three/examaples/', express.static('node_modules/three/examples/'));
 webExpressApp.use('/static/urdf-loader/', express.static('node_modules/urdf-loader/src/'));
 
+webExpressApp.use('/static/canvasjs-charts/', express.static('node_modules/@canvasjs/charts'));
+
 // temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
 
 webExpressApp.get('/', async function(req:express.Request, res:express.Response) {
