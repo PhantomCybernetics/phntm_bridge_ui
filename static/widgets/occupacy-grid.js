@@ -53,7 +53,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
                 + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
                 + '<span class="plus">+</span>'
                 + '</div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
                 that.setZoom(panel.zoom + panel.zoom/2.0);
@@ -67,45 +67,33 @@ export class OccupancyGrid extends Zoomable2DTiles {
                 that.setZoom(1.0);
             });
 
-            $('<div class="menu_line"><label for="update_panel_'+panel.n+'" class="update_panel_label" id="update_panel_label_'+panel.n+'"><input type="checkbox" id="update_panel_'+panel.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
-
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_papause_panel_menu_nel_'+panel.n));
             
             $('#clear_panel_link_'+panel.n).click((ev)=>{
                 ev.preventDefault(); //stop from moving the panel
                 that.clear();
             });
 
-            $('#update_panel_'+panel.n).change(function(ev) {
-                that.update = $(this).prop('checked');
-            });
-
             $('#follow_target_'+panel.n).change(function(ev) {
                 that.follow_target = $(this).prop('checked');
             });
         }
-        
-        panel.ui.client.on(this.topic_map, this.on_map_data);
        
         this.rendering_loop();
     }
     
-    on_map_data = (map_msg, ns_stamp=null, k = -1) => {
+    onData = (map_msg, ns_stamp=null, k = -1) => {
 
-        if (!this.update) {
-            return;
-        }
         this.map_width = map_msg.info.width;
         this.map_height = map_msg.info.height;
         this.resolution = map_msg.info.resolution;
@@ -327,6 +315,6 @@ export class OccupancyGrid extends Zoomable2DTiles {
     onClose() {
         console.warn('Closing map widget')
         this.rendering = false; //kills the loop
-        this.panel.ui.client.off(this.topic_map, this.on_map_data);
+        // this.panel.ui.client.off(this.topic_map, this.on_map_data);
     }
 }

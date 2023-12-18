@@ -825,13 +825,13 @@ SPAN.error {
 
 }
 
-.update_panel_label {
+.pause_panel_label {
     display: block;
     cursor: pointer;
 }
 
 .panel_widget {
-    background: white;
+    background: black;
     min-height: 40px;
     clear: right;
     border-radius: 5px;
@@ -960,7 +960,32 @@ SPAN.error {
     height: 100%;
 }
 
-/* .panel_widget.range,
+.panel_widget.range {
+    height: 100%;
+    background-color: #fff;
+    container-type: inline-size;
+}
+
+.panel_widget.range .label {
+    color: #fff;
+    font-size: 20cqw;
+    top: 50%;
+    position: absolute;
+    text-align: center;
+    width: 100%;
+    vertical-align: bottom;
+    display: inline-block;
+    line-height: 1em;
+    margin-top: -.5em;
+}
+
+.panel_widget.range .label SPAN {
+    position: absolute;
+    line-height: 1em;
+    width: 100%;
+    text-align: center;
+    left: 0px;
+}
 
 .panel_widget.laser_scan,
 .panel_widget.imu

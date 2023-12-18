@@ -47,6 +47,7 @@ class Panel {
 
         this.id_source = id_source;
         this.src_visible = src_visible;
+        this.paused = false;
         this.zoom = zoom;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
@@ -55,7 +56,7 @@ class Panel {
 
         let html =
             '<div class="grid_panel" data-source="'+id_source+'">' +
-                '<h3 class="panel-title" id="panel_title_'+this.n+'">'+id_source+'</h3>' +
+                '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
                 '<div class="monitor_menu">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
@@ -195,70 +196,82 @@ class Panel {
     setMenu() {
 
         let els = []
+        let that = this;
         if (this.msg_type != null && this.msg_type != 'video') {
-            els.push('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition">'+this.msg_type+'</a></div>');
-            els.push('<div class="menu_line"><label for="update_panel_'+this.n+'" class="update_panel_label" id="update_panel_label_'+this.n+'"><input type="checkbox" id="update_panel_'+this.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>');
 
-            if (this.display_widget)
-                els.push('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
+            // message type info dialog
+            let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="Toggle message type definition">'+this.msg_type+'</a></div>');
+            msgTypesEl.click(function(ev) {
+
+                // $('#msg_type-dialog').attr('title', );
+                $('#msg_type-dialog').html((that.msg_type_class ? JSON.stringify(that.msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>'));
+                $( "#msg_type-dialog" ).dialog({
+                    resizable: true,
+                    height: 700,
+                    width: 500,
+                    modal: true,
+                    title: that.msg_type,
+                    buttons: {
+                        Okay: function() {
+                            $(this).dialog( "close" );
+                        },
+                    }
+                });
+    
+                ev.cancelBubble = true;
+                ev.preventDefault();
+            });
+            els.push(msgTypesEl);
+
+            // display source for widgets
+            if (this.display_widget) {
+                let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
+                let source_el = $('#panel_source_'+this.n);
+                let widget_el = $('#panel_widget_'+this.n);
+                let showSourceCB = showSourceEl.find('.panel_display_source');
+                showSourceCB.change(function(ev) {
+                    if ($(this).prop('checked')) {
+                        
+                        source_el.addClass('enabled');
+                        widget_el.addClass('source_visible');
+                        that.src_visible = true;
+        
+                        let w = parseInt($(that.grid_widget).attr('gs-w'));
+                        if (w < 5) {
+                            w *= 2;
+                            that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
+                        } else {
+                            that.onResize();
+                            that.ui.update_url_hash();
+                        }
+        
+                    } else {
+        
+                        source_el.removeClass('enabled');
+                        widget_el.removeClass('source_visible');
+                        let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
+                        that.src_visible = false;
+                        that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
+        
+                    }
+                });
+                els.push(showSourceEl);
+            }
         }
 
-        els.push('<div class="menu_line"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>')
-
-        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div><div class="menu_lines">'+els.join('\n')+'</div>');
-
-        let that = this;
-        $('#panel_msg_types_'+this.n).click(function(ev) {
-
-            // $('#msg_type-dialog').attr('title', );
-            $('#msg_type-dialog').html((that.msg_type_class ? JSON.stringify(that.msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>'));
-            $( "#msg_type-dialog" ).dialog({
-                resizable: true,
-                height: 700,
-                width: 500,
-                modal: true,
-                title: that.msg_type,
-                buttons: {
-                    Okay: function() {
-                        $(this).dialog( "close" );
-                    },
-                }
+        // pause panel updates
+        if (this.msg_type != 'video') {
+            let pauseEl = $('<div class="menu_line" id="pause_panel_menu_'+this.n+'"><label for="pause_panel_'+this.n+'" class="pause_panel_label" id="pause_panel_label_'+this.n+'"><input type="checkbox" id="pause_panel_'+this.n+'" class="pause_panel"'+(this.paused?' checked':'')+' title="Pause updates"/> Pause</label></div>');
+            let pauseElCB = pauseEl.find('.pause_panel');
+            pauseElCB.click(function(ev) {
+                that.paused = $(this).prop('checked');
+                console.log('Panel updates paused '+that.paused);
             });
+            els.push(pauseEl);
+        }
 
-            ev.cancelBubble = true;
-            ev.preventDefault();
-        });
-
-        let source_el = $('#panel_source_'+this.n);
-        let widget_el = $('#panel_widget_'+this.n);
-        $('#display_panel_source_'+this.n).change(function(ev) {
-            if ($(this).prop('checked')) {
-                
-                source_el.addClass('enabled');
-                widget_el.addClass('source_visible');
-                that.src_visible = true;
-
-                let w = parseInt($(that.grid_widget).attr('gs-w'));
-                if (w < 5) {
-                    w *= 2;
-                    that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
-                } else {
-                    that.onResize();
-                    that.ui.update_url_hash();
-                }
-
-            } else {
-
-                source_el.removeClass('enabled');
-                widget_el.removeClass('source_visible');
-                let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
-                that.src_visible = false;
-                that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
-
-            }
-        });
-
-        $('#close_panel_link_'+this.n).click(function(ev) {
+        let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
+        closeEl.click(function(ev) {
             console.log('click '+that.n)
 
             /*let el = $('#panel_msg_type_'+that.n);
@@ -278,6 +291,13 @@ class Panel {
             ev.cancelBubble = true;
             ev.preventDefault();
         });
+        els.push(closeEl);
+
+        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
+        let linesCont = $('<div class="menu_lines"></div>');
+        for (let i = 0; i < els.length; i++) {
+            $('#monitor_menu_content_'+this.n).append(els[i]);
+        }
 
         if (this.widget_menu_cb != null) {
             this.widget_menu_cb(this);
@@ -375,6 +395,9 @@ class Panel {
     on_data(msg, ev) {
         // console.log('Got data for '+this.id_source+': ', msg)
 
+        if (this.paused)
+            return;
+
         let raw_len = 0;
         let raw_type = "";
         if (ev.data instanceof ArrayBuffer) {
@@ -421,6 +444,10 @@ class Panel {
         //     this.ui.topic_widgets[this.id_source].widget(this, msg);
         // else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
         //     this.ui.type_widgets[this.msg_type].widget(this, msg);
+
+        if (this.display_widget) {
+            this.display_widget.onData(msg);
+        }
 
         if (this.src_visible) {
             $('#panel_source_'+this.n).html(

@@ -46,7 +46,6 @@ export class Zoomable2DTiles {
         this.rendering = true; // loop runnig
         this.do_clear = false;
         
-        this.update = true; // disables new data processing
         this.follow_target = true;
 
         let that = this;

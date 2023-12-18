@@ -37,18 +37,17 @@ export class DescriptionTFWidget {
         // let q = decoded.orientation;
         [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
 
-        panel.scene = new THREE.Scene();
+        this.scene = new THREE.Scene();
         
-        panel.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
+        this.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
 
-        panel.renderer = new THREE.WebGLRenderer({
+        this.renderer = new THREE.WebGLRenderer({
             antialias : false,
-            
         });
-        panel.renderer.shadowMap.enabled = true;
-        panel.renderer.setSize(panel.widget_width, panel.widget_height);
-        panel.renderer.setPixelRatio(window.devicePixelRatio);
-        document.getElementById('panel_widget_'+panel.n).appendChild(panel.renderer.domElement);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.setSize(panel.widget_width, panel.widget_height);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('panel_widget_'+panel.n).appendChild(this.renderer.domElement);
 
         this.labelRenderer = new CSS2DRenderer();
         this.labelRenderer.setSize(panel.widget_width, panel.widget_height);
@@ -58,55 +57,55 @@ export class DescriptionTFWidget {
 
         // const geometry = new THREE.BoxGeometry( .1, .1, .1 );
         // const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
-        panel.model = new THREE.Object3D()
-        panel.scene.add(panel.model);
-        panel.model.position.y = .5
+        this.model = new THREE.Object3D()
+        this.scene.add(this.model);
+        this.model.position.y = .5
 
-        panel.model.add(panel.camera)
-        panel.camera.position.z = 2;
-        panel.camera.position.x = 0;
-        panel.camera.position.y = 1;
-        panel.scene.add(panel.camera)
-        this.camera_target_pos = new THREE.Vector3().copy(panel.model.position);
-        panel.camera.lookAt(this.camera_target_pos);
+        this.model.add(this.camera)
+        this.camera.position.z = 2;
+        this.camera.position.x = 0;
+        this.camera.position.y = 1;
+        this.scene.add(this.camera)
+        this.camera_target_pos = new THREE.Vector3().copy(this.model.position);
+        this.camera.lookAt(this.camera_target_pos);
 
-        panel.controls = new OrbitControls( panel.camera, this.labelRenderer.domElement );
-        panel.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
+        this.controls = new OrbitControls( this.camera, this.labelRenderer.domElement );
+        this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
             ev.preventDefault(); //stop from moving the panel
         } );
-        panel.controls.target = this.camera_target_pos;
-        panel.controls.update();
+        this.controls.target = this.camera_target_pos;
+        this.controls.update();
 
         this.world = new THREE.Object3D();
         this.world.rotation.set(-Math.PI/2.0, 0.0, 0.0); //+z up
-        panel.scene.add(this.world);
+        this.scene.add(this.world);
 
 
         // const light = new THREE.AmbientLight( 0x404040 ); // soft white light
-        // panel.scene.add( light );
+        // this.scene.add( light );
 
         const light = new THREE.SpotLight( 0xffffff, 2.0 );
         light.castShadow = true; // default false
-        panel.scene.add( light );
+        this.scene.add( light );
         light.position.set( 1, 2, 1 );
-        light.lookAt(panel.model.position);
+        light.lookAt(this.model.position);
         light.shadow.mapSize.width = 2048; // default
         light.shadow.mapSize.height = 2048; // default
-        panel.renderer.shadowMapType = THREE.PCFShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
+        this.renderer.shadowMapType = THREE.PCFShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
         this.light = light;
 
         const ambience = new THREE.AmbientLight( 0x404040 ); // soft white light
-        panel.scene.add( ambience );
+        this.scene.add( ambience );
 
-        panel.camera.layers.enableAll();
+        this.camera.layers.enableAll();
         if (!this.render_collisions)
-            panel.camera.layers.disable(2); //colliders off by default
+            this.camera.layers.disable(2); //colliders off by default
         if (!this.render_joints)
-            panel.camera.layers.disable(3); //joints off by default
+            this.camera.layers.disable(3); //joints off by default
         if (!this.render_labels)
-            panel.camera.layers.disable(4); //joint labels off by default
+            this.camera.layers.disable(4); //joint labels off by default
         if (!this.render_labels)
-            panel.camera.layers.disable(6); //link labels off by default
+            this.camera.layers.disable(6); //link labels off by default
 
         this.collider_mat = new THREE.MeshStandardMaterial({
             color: 0xffff00,
@@ -116,17 +115,17 @@ export class DescriptionTFWidget {
         });
 
         // const axesHelper = new THREE.AxesHelper( 5 );
-        // panel.scene.add( axesHelper );
+        // this.scene.add( axesHelper );
 
         // const axesHelperCube = new THREE.AxesHelper( 5 );
         // axesHelperCube.scale.set(1, 1, 1); //show z forward like in ROS
-        // panel.model.add( axesHelperCube );
+        // this.model.add( axesHelperCube );
 
         // const gridHelper = new THREE.GridHelper( 10, 10 );
         // const plane = new THREE.Plane( new THREE.Vector3( 0, 1, 0 ), 0);
         // const planeHelper = new THREE.PlaneHelper( plane, 10, 0xffff00 );
-        // panel.scene.add( gridHelper );
-        // panel.scene.add( planeHelper );
+        // this.scene.add( gridHelper );
+        // this.scene.add( planeHelper );
 
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
         const plane_material = new THREE.MeshPhongMaterial( {color: 0x429000, side: THREE.BackSide } );
@@ -141,16 +140,16 @@ export class DescriptionTFWidget {
         plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
         plane.position.set(0,0,0);
         plane.receiveShadow = true;
-        panel.scene.add(plane);
+        this.scene.add(plane);
 
         // const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 ); 
         // const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} ); 
         // const cube = new THREE.Mesh( boxGeometry, boxMaterial ); 
-        // panel.scene.add( cube );
+        // this.scene.add( cube );
         // cube.castShadow = true;
         // cube.position.set(1,1,1);
 
-        panel.display_widget = panel.renderer;
+        // panel.display_widget = this.renderer;
 
         // panel.animate();
 
@@ -175,7 +174,6 @@ export class DescriptionTFWidget {
 
         this.transforms_queue = [];
         this.last_tf_stamps = {};
-        this.apply_tf = true;
         this.fix_base = false;
 
         this.topic_tf_static = '/tf_static';
@@ -194,10 +192,10 @@ export class DescriptionTFWidget {
                 + '<button class="val" title="TF source">'+this.topic_tf+'</button>'
                 + '<button class="val" title="Description source">'+this.topic_desc+'</button>'
                 + '</div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'"><input type="checkbox" '+(that.follow_target?'checked':'')+' id="follow_target_'+panel.n+'" title="Follow target"> Follow target</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#follow_target_'+panel.n).change(function(ev) {
                 that.follow_target = $(this).prop('checked');
                 if (that.follow_target) {
@@ -208,76 +206,70 @@ export class DescriptionTFWidget {
             });
 
             $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" '+(that.render_joints?'checked':'')+' id="render_joints_'+panel.n+'" title="Render joints"> Render joints</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_joints_'+panel.n).change(function(ev) {
                 that.render_joints = $(this).prop('checked');
                 if (that.render_joints) {
-                    panel.camera.layers.enable(3);
+                    this.camera.layers.enable(3);
                     if ($('#render_labels_'+panel.n).prop('checked'))
-                        panel.camera.layers.enable(4); //labels
+                        this.camera.layers.enable(4); //labels
                 } else {
-                    panel.camera.layers.disable(3);
-                    panel.camera.layers.disable(4); //labels
+                    this.camera.layers.disable(3);
+                    this.camera.layers.disable(4); //labels
                 }                    
             });
 
             $('<div class="menu_line"><label for="render_links_'+panel.n+'"><input type="checkbox" '+(that.render_links?'checked':'')+' id="render_links_'+panel.n+'" title="Render links"> Render links</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_links_'+panel.n).change(function(ev) {
                 that.render_links = $(this).prop('checked');
                 if (that.render_links) {
-                    panel.camera.layers.enable(5);
+                    this.camera.layers.enable(5);
                     if ($('#render_labels_'+panel.n).prop('checked'))
-                        panel.camera.layers.enable(6); //labels
+                        this.camera.layers.enable(6); //labels
                 } else {
-                    panel.camera.layers.disable(5);
-                    panel.camera.layers.disable(6); //labels
+                    this.camera.layers.disable(5);
+                    this.camera.layers.disable(6); //labels
                 }
             });
 
             $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" '+(that.render_labels?'checked':'')+' id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_labels_'+panel.n).change(function(ev) {
                 that.render_labels = $(this).prop('checked');
                 if (that.render_labels) {
                     if ($('#render_joints_'+panel.n).prop('checked'))
-                        panel.camera.layers.enable(4);
+                        that.camera.layers.enable(4);
                     if ($('#render_links_'+panel.n).prop('checked'))
-                        panel.camera.layers.enable(6);
+                        that.camera.layers.enable(6);
                 } else {
-                    panel.camera.layers.disable(4);
-                    panel.camera.layers.disable(6);
+                    that.camera.layers.disable(4);
+                    that.camera.layers.disable(6);
                 }
             });
 
             $('<div class="menu_line"><label for="render_visuals_'+panel.n+'""><input type="checkbox" '+(that.render_visuals?'checked':'')+' id="render_visuals_'+panel.n+'" title="Render visuals"> Show visuals</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_visuals_'+panel.n).change(function(ev) {
                 that.render_visuals = $(this).prop('checked');
                 if (that.render_visuals)
-                    panel.camera.layers.enable(1);
+                    this.camera.layers.enable(1);
                 else
-                    panel.camera.layers.disable(1);
+                    this.camera.layers.disable(1);
             });
 
             $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" '+(that.render_collisions?'checked':'')+' id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_collisions_'+panel.n).change(function(ev) {
                 that.render_collisions = $(this).prop('checked');
                 if (that.render_collisions)
-                    panel.camera.layers.enable(2);
+                    this.camera.layers.enable(2);
                 else
-                    panel.camera.layers.disable(2);
-            });
-
-            $('<div class="menu_line"><label for="apply_tf_'+panel.n+'""><input type="checkbox" '+(that.apply_tf?'checked':'')+' id="apply_tf_'+panel.n+'" title="Apply transforms"> Apply transforms</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
-            $('#apply_tf_'+panel.n).change(function(ev) {
-                that.apply_tf = $(this).prop('checked');
+                    this.camera.layers.disable(2);
             });
 
             $('<div class="menu_line"><label for="fix_base_'+panel.n+'""><input type="checkbox" '+(that.fix_base?'checked':'')+' id="fix_base_'+panel.n+'" title="Fix robot base"> Fix base</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#fix_base_'+panel.n).change(function(ev) {
                 that.fix_base = $(this).prop('checked');
             });
@@ -294,14 +286,18 @@ export class DescriptionTFWidget {
 
 
     on_tf_data = (tf) => {
-        if (!this.apply_tf)
-            return; //ignore
+        if (this.panel.paused)
+            return;
 
         for (let i = 0; i < tf.transforms.length; i++)
             this.transforms_queue.push(tf.transforms[i]); //processed in rendering_loop()
     }
 
     on_description_data = (desc) => {
+
+        if (this.panel.paused)
+            return;
+
         // console.log('got desc: ', desc.data);
 
         if (this.robot) {
@@ -425,15 +421,15 @@ export class DescriptionTFWidget {
                         
                     if (!this.fix_base) {
                         if (this.follow_target)
-                            ch.attach(this.panel.camera);
+                            ch.attach(this.camera);
 
                         ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
                         if (this.follow_target) {
-                            this.panel.scene.attach(this.panel.camera);
+                            this.scene.attach(this.camera);
                             ch.getWorldPosition(this.camera_target_pos);
                             //console.log('looking at: ', this.camera_target_pos);
-                            // this.panel.camera.lookAt(ch.position);
-                            //this.panel.camera.updateProjectionMatrix();
+                            // this.camera.lookAt(ch.position);
+                            //this.camera.updateProjectionMatrix();
                         }
                             
                     }
@@ -459,9 +455,9 @@ export class DescriptionTFWidget {
             this.transforms_queue = [];
         }
     
-        this.panel.controls.update();
-        this.panel.renderer.render(this.panel.scene, this.panel.camera);
-        this.labelRenderer.render(this.panel.scene, this.panel.camera);
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+        this.labelRenderer.render(this.scene, this.camera);
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()
         });

@@ -57,14 +57,9 @@ export class LaserScanWidget {
             // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
             that.render();
         };
-
-        panel.ui.client.on(this.topic, this.onData);
-
     }
 
     onClose() {
-        console.warn('Closing laset scan widget')
-        this.panel.ui.client.off(this.topic, this.onData);
     }
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);

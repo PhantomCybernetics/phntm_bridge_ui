@@ -24,7 +24,7 @@ export class VideoWidget {
             //fps menu toggle
             $('<div class="menu_line"><label for="video_fps_cb_'+panel.n+'" class="video_fps_cb_label" id="video_fps_cb_label_'+panel.n+'">'
                 +'<input type="checkbox" id="video_fps_cb_'+panel.n+'" checked class="video_fps_cb" title="Display video FPS"> FPS</label></div>'
-                ).insertBefore($('#close_panel_link_'+panel.n).parent());
+                ).insertBefore($('#close_panel_menu_'+panel.n));
 
             $('#video_fps_cb_'+panel.n).change(function(ev) {
                 if ($(this).prop('checked')) {
@@ -39,7 +39,7 @@ export class VideoWidget {
             //stats menu toggle
             $('<div class="menu_line"><label for="video_stats_cb_'+panel.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+panel.n+'">'
                 +'<input type="checkbox" id="video_stats_cb_'+panel.n+'" class="video_stats_cb" title="Display video stats"> Stats for nerds</label></div>'
-                ).insertBefore($('#close_panel_link_'+panel.n).parent());
+                ).insertBefore($('#close_panel_menu_'+panel.n));
 
             $('#video_stats_cb_'+panel.n).change(function(ev) {
                 if ($(this).prop('checked')) {

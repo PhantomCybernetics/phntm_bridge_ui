@@ -69,13 +69,9 @@ export class ImuWidget {
             // ResizeWidget(panel);
             that.render();
         };
-
-        panel.ui.client.on(this.topic, this.onData);
     }
 
     onClose() {
-        console.warn('Closing battery widget')
-        this.panel.ui.client.off(this.topic, this.onData);
     }
 
     onData = (decoded) => {

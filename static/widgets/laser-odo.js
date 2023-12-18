@@ -61,14 +61,14 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
                 + '<button class="val" title="Odometry source">'+this.topic_odo+'</button>'
                 + '<button class="val" title="Scan source">'+this.topic_scan+'</button>'
                 + '</div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'">'
                 + '<span class="minus">-</span>'
                 + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
                 + '<span class="plus">+</span>'
                 + '</div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
                 that.setZoom(panel.zoom + panel.zoom/2.0);
@@ -82,28 +82,21 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
                 that.setZoom(1.0);
             });
 
-            $('<div class="menu_line"><label for="update_panel_'+panel.n+'" class="update_panel_label" id="update_panel_label_'+panel.n+'"><input type="checkbox" id="update_panel_'+panel.n+'" class="panel_update" checked title="Update"/> Update panel</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
-
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
-                .insertBefore($('#close_panel_link_'+panel.n).parent());
+                .insertBefore($('#pause_panel_menu_'+panel.n));
             
             $('#clear_panel_link_'+panel.n).click((ev)=>{
                 ev.preventDefault(); //stop from moving the panel
                 that.clear();
-            });
-
-            $('#update_panel_'+panel.n).change(function(ev) {
-                that.update = $(this).prop('checked');
             });
 
             $('#follow_target_'+panel.n).change(function(ev) {
@@ -133,9 +126,8 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
     on_odometry_data = (odo) => {
 
-        if (!this.update) {
+        if (this.panel.paused)
             return;
-        }
 
         if (!this.base_offset)
             this.base_offset = [ odo.pose.pose.position.y, odo.pose.pose.position.x ]
@@ -178,9 +170,8 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
     on_scan_data = (scan, ns_stamp=null, k = -1) => {
 
-        if (!this.update) {
+        if (this.panel.paused)
             return;
-        }
 
         if (!this.pose_graph.length)
             return; //ignore

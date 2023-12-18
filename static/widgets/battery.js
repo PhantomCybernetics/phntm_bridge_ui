@@ -120,6 +120,7 @@ export class BatteryStateWidget {
                     return '';  
                 },
                 lineThickness: 0,
+                tickThickness: 0,
             },
             axisY: {
                 minimum: this.minVoltage-1.0,
@@ -168,7 +169,6 @@ export class BatteryStateWidget {
         //Render Chart
         this.chart.render();
 
-        panel.ui.client.on(this.topic, this.onData);
         panel.resize_event_handler = () => { this.onResize() } ; //no need here
     }
 
@@ -177,7 +177,6 @@ export class BatteryStateWidget {
     }
 
     onClose() {
-        this.panel.ui.client.off(this.topic, this.onData);
     }
 
     onData = (decoded) => {

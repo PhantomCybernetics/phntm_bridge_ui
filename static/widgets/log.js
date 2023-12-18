@@ -23,13 +23,9 @@ export class LogWidget {
             $('#panel_widget_'+panel.n).addClass('autoscroll');
             // console.log('AUTOSCROLL START')
         });
-
-        panel.ui.client.on(this.topic, this.onData);
     }
 
     onClose() {
-        console.warn('Closing log widget')
-        this.panel.ui.client.off(this.topic, this.onData);
     }
 
 
