@@ -526,7 +526,7 @@ export class PanelUI {
     };
     type_widgets = {
         'sensor_msgs/msg/BatteryState' : { widget: BatteryStateWidget, w:4, h:2 } ,
-        'sensor_msgs/msg/Range' : { widget: RangeWidget, w:2, h:2 },
+        'sensor_msgs/msg/Range' : { widget: RangeWidget, w:1, h:1 },
         'sensor_msgs/msg/LaserScan' : { widget: LaserScanWidget, w:7, h:4 },
         'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
         'rcl_interfaces/msg/Log' : { widget: LogWidget, w:8, h:2 },

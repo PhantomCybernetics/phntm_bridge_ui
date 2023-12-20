@@ -43,6 +43,7 @@ export class DescriptionTFWidget {
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
+            precision : 'lowp'
         });
         this.renderer.shadowMap.enabled = true;
         this.renderer.setSize(panel.widget_width, panel.widget_height);
@@ -73,6 +74,8 @@ export class DescriptionTFWidget {
         this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
             ev.preventDefault(); //stop from moving the panel
         } );
+        this.controls.addEventListener('change', this.controls_changed);
+        this.controls_dirty = false;
         this.controls.target = this.camera_target_pos;
         this.controls.update();
 
@@ -388,13 +391,19 @@ export class DescriptionTFWidget {
         label.layers.set(layer_labels);
     }
 
+    controls_changed() {
+        this.controls_dirty = true;
+    }
+
     rendering_loop() {
 
         if (!this.rendering)
             return;
 
+        let scene_changed = false;
         if (this.robot && this.robot.links) {
             for (let i = 0; i < this.transforms_queue.length; i++) {
+                scene_changed = true;
                 let id_parent = this.transforms_queue[i].header.frame_id;
                 let id_child = this.transforms_queue[i].child_frame_id;
                 let t = this.transforms_queue[i].transform;
@@ -456,7 +465,11 @@ export class DescriptionTFWidget {
         }
     
         this.controls.update();
-        this.renderer.render(this.scene, this.camera);
+        if (scene_changed || this.controls_dirty) {
+            this.renderer.render(this.scene, this.camera);
+            this.controls_dirty = false;
+        }
+            
         this.labelRenderer.render(this.scene, this.camera);
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()

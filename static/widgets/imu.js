@@ -19,6 +19,7 @@ export class ImuWidget {
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
+            precision : 'lowp'
         });
         this.renderer.setSize( panel.widget_width, panel.widget_height );
         document.getElementById('panel_widget_'+panel.n).appendChild( this.renderer.domElement );
