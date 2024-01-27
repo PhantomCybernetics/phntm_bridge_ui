@@ -99,7 +99,7 @@
         // }
 
         // handlePermission();
-
+        console.error(window.location.search);
         let robot = new PhntmBridgeClient({
             socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
@@ -115,7 +115,8 @@
                 ],
                 username: 'app',
                 credential: 'pass'
-            }]
+            }],
+            force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected

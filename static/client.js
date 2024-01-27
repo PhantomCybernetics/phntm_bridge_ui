@@ -109,6 +109,7 @@ export class PhntmBridgeClient extends EventTarget {
         this.ice_servers_config = opts.ice_servers ? opts.ice_servers : [{urls:[
             "stun:stun.l.google.com:19302",
         ]}];
+        this.force_turn = opts.force_turn; 
 
         this.init_complete = false;
         this.msg_writers = {}; //msg_type => writer
@@ -968,9 +969,13 @@ export class PhntmBridgeClient extends EventTarget {
         let config = {
             sdpSemantics: 'unified-plan',
             iceServers: this.ice_servers_config,
-            // iceTransportPolicy: 'relay' //force TURN
             // bundlePolicy: 'max-compat'
         };
+
+        if (this.force_turn) {
+            console.warn("Forcing TURN connection...")
+            config['iceTransportPolicy'] = 'relay' //force TURN
+        }
 
         let pc = new RTCPeerConnection(config);
         let that = this;
