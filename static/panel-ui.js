@@ -1503,7 +1503,8 @@ export class PanelUI {
                     '<span style="color:'+brc+'">BitRate: '+(msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + ' Mb/s</span> ' +
                     '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
                     'Level: '+ msg.level + ' ' +
-                    '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> '
+                    '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> ' +
+                    '<span class="connected_peers">Peers: ' + msg.num_peers + '</span> '
                     ;
 
         $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
@@ -1543,11 +1544,11 @@ export class PanelUI {
             if (min_rtt > 0) {
                 let rtt_ms = min_rtt * 1000; //ms
                 let rttc = ''
-                if (rtt_ms > 50)
+                if (rtt_ms > 100)
                     rttc = 'red'
-                else if (rtt_ms > 30)
+                else if (rtt_ms > 50)
                     rttc = 'orange'
-                else if (rtt_ms > 15)
+                else if (rtt_ms > 30)
                     rttc = 'yellow'
                 else
                     rttc = 'lime'

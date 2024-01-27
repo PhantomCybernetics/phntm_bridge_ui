@@ -12,3 +12,4 @@ uint8 quality_max
 int16 level
 int16 noise
 bool supports_scanning
+uint8 num_peers		 # number of connected phntm peers

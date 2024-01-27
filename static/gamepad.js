@@ -403,7 +403,7 @@ export class GamepadController {
 
     run_loop() {
 
-        if (this.gamepad == null) {
+        if (this.gamepad === null) {
             console.log('Gamepad loop stopped')
             return;
         }

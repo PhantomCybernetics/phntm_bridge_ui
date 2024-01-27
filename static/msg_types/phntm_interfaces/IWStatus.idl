@@ -42,6 +42,10 @@ module phntm_interfaces {
       int16 noise;
 
       boolean supports_scanning;
+
+      @verbatim (language="comment", text=
+        "number of connected phntm peers")
+      uint8 num_peers;
     };
   };
 };

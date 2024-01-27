@@ -396,6 +396,13 @@ export class PhntmBridgeClient extends EventTarget {
             this.emit('docker', this.discovered_docker_containers);
         });
 
+        window.addEventListener("beforeunload", function(e){
+            if (that.pc) {
+                console.warn('Unloading window, disconnecting pc...');
+                that.pc.close();
+                that.pc = null;
+            }
+        });
         // pc = InitPeerConnection(id_robot);
     }
 
@@ -642,13 +649,14 @@ export class PhntmBridgeClient extends EventTarget {
                 let topic = topic_data[0];
                 let dc_id = topic_data[1];
                 let msg_type = topic_data[2];
-                if (dc_id && msg_type) {
-                    this._make_read_data_channel(topic, dc_id, msg_type)
-                } else if (topic && this.topic_dcs[topic]) {
-                    console.log('Topic '+topic+' closed by the client')
-                    this.topic_dcs[topic].close();
-                    delete this.topic_dcs[topic];
-                }
+                let reliable = topic_data[3];
+                // if (dc_id && msg_type) {
+                //     this._make_read_data_channel(topic, dc_id, msg_type, reliable)
+                // } else if (topic && this.topic_dcs[topic]) {
+                //     console.log('Topic '+topic+' closed by the client')
+                //     this.topic_dcs[topic].close();
+                //     delete this.topic_dcs[topic];
+                // }
             });
         }
 
@@ -803,7 +811,7 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    _make_read_data_channel(topic, dc_id, msg_type) {
+    _make_read_data_channel(topic, dc_id, msg_type, reliable) {
 
         if (this.topic_dcs[topic]) {
             console.log('DC already exists for '+topic);
@@ -816,7 +824,7 @@ export class PhntmBridgeClient extends EventTarget {
             // }
         }
 
-        console.log('Creating DC for '+topic);
+        console.log('Creating DC for '+topic+'; reliable='+reliable);
 
         if (this.pc.signalingState == 'closed') {
             return console.err('Cannot create read DC for '+topic+'; pc.signalingState=closed');
@@ -824,16 +832,16 @@ export class PhntmBridgeClient extends EventTarget {
 
         let dc = this.pc.createDataChannel(topic, {
             negotiated: true,
-            ordered: false,
-            maxRetransmits: 0,
-            id:dc_id
+            ordered: reliable ? true : false,
+            maxRetransmits: reliable ? null : 0,
+            id: dc_id
         });
 
         let Reader = window.Serialization.MessageReader;
-        console.warn('reader=', Reader);
+        // console.warn('reader=', Reader);
         let msg_type_class = this.find_message_type(msg_type, this.supported_msg_types)
         let msg_reader = new Reader( [ msg_type_class ].concat(this.supported_msg_types) );
-        console.warn('reader inst=', msg_reader);
+        // console.warn('reader inst=', msg_reader);
         this.topic_dcs[topic] = dc;
 
         let that = this;
@@ -849,6 +857,7 @@ export class PhntmBridgeClient extends EventTarget {
             console.error('DC '+topic+' error', ev)
             delete that.topic_dcs[topic]
         });
+        let dc_incomming_logged = false;
         dc.addEventListener('message', (ev)=> {
 
             // if (topic == '/tf_static' || topic == '/robot_description') {
@@ -859,6 +868,11 @@ export class PhntmBridgeClient extends EventTarget {
             let decoded = null;
             let raw_len = 0;
             let raw_type = ""
+
+            if (!dc_incomming_logged) {
+                console.info('Incoming data for '+topic);
+                dc_incomming_logged = true;
+            }
 
             if (rawData instanceof ArrayBuffer ) {
                 raw_len = rawData.byteLength;
@@ -954,6 +968,7 @@ export class PhntmBridgeClient extends EventTarget {
         let config = {
             sdpSemantics: 'unified-plan',
             iceServers: this.ice_servers_config,
+            // iceTransportPolicy: 'relay' //force TURN
             // bundlePolicy: 'max-compat'
         };
 
@@ -1059,22 +1074,81 @@ export class PhntmBridgeClient extends EventTarget {
         pc.addEventListener('datachannel', (evt) => {
 
             let receiveChannel = evt.channel;
+            let topic = receiveChannel.label;
+            let channelLogged = false;
+
+            let Reader = window.Serialization.MessageReader;
+            let msg_type = receiveChannel.protocol;
+            let msg_type_class = that.find_message_type(msg_type, that.supported_msg_types)
+            let msg_reader = new Reader([ msg_type_class ].concat(that.supported_msg_types));
+
             receiveChannel.addEventListener("open", (open_evt) => {
-                console.log('receiveChannel.open', open_evt)
+                console.log('receiveChannel.open '+open_evt.target.label, open_evt)
             });
             receiveChannel.addEventListener("error", (err_evt) => {
-                console.log('receiveChannel.error', err_evt)
+                console.log('receiveChannel.error '+err_evt.target.label, err_evt)
             });
             receiveChannel.addEventListener("bufferedamountlow", (event) => {
-                console.log('receiveChannel.bufferedamountlow', event)
+                console.log('receiveChannel.bufferedamountlow '+event.target.label, event)
             });
 
             receiveChannel.addEventListener("close", (close_evt) => { console.log('receiveChannel.close', close_evt) });
+            
             receiveChannel.addEventListener("message", (msg_evt) => {
-                console.log(receiveChannel.label, msg_evt.data)
+                
+                let rawData = msg_evt.data; //arraybuffer
+                let decoded = null;
+                let raw_len = 0;
+                let raw_type = "";
+
+                if (rawData instanceof ArrayBuffer ) {
+                    raw_len = rawData.byteLength;
+                    raw_type = 'ArrayBuffer';
+                    if (msg_reader != null) {                    
+                        let v = new DataView(rawData)
+                        decoded = msg_reader.readMessage(v);
+                    } else {
+                        decoded = buf2hex(rawData)
+                    }
+                } else if (rawData instanceof Blob) { //firefox
+                    raw_len = rawData.size;
+                    raw_type = 'Blob';
+                    if (msg_reader != null) {                    
+                    
+                        new Response(rawData).arrayBuffer()
+                        .then((buff)=>{
+                            let v = new DataView(buff)
+                            decoded = msg_reader.readMessage(v);
+                            that.emit(topic, decoded, ev)
+                            that.latest[topic] = {
+                                msg: decoded,
+                                ev: ev
+                            };
+                        });
+                        return; //async
+    
+                    } else {
+                        decoded = buf2hex(rawData)
+                    }
+                    
+                } else { // fail => string
+                    decoded = rawData; 
+                }
+
+                if (!channelLogged) {
+                    channelLogged = true;
+                    console.log('Incoming data for '+topic+' ('+msg_type+')', decoded);
+                }
+
+                that.emit(topic, decoded, msg_evt)
+                that.latest[topic] = {
+                    msg: decoded,
+                    ev: msg_evt
+                };
+                
             });
 
-            console.log('New data channel added!', receiveChannel);
+            console.log('New data channel added '+receiveChannel.label, receiveChannel);
 
             // if (evt.track.kind == 'video') {
             //     document.getElementById('video').srcObject = evt.streams[0];

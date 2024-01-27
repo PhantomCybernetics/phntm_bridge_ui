@@ -1540,6 +1540,11 @@
         "type": "bool",
         "isComplex": false,
         "name": "supports_scanning"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "num_peers"
       }
     ]
   },
