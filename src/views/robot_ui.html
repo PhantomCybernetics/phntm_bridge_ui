@@ -15,6 +15,11 @@
 
 <div id="menubar">
 
+    <div id="graph_controls">
+        <h3 id="graph_controls_heading" title="Graph view"></h3>
+        <div id="graph_display"></div>
+    </div>
+
     <div id="topic_controls">
         <h3 id="topics_heading">Topics</h3>
         <select id="msg_type_filter">
@@ -99,7 +104,6 @@
         // }
 
         // handlePermission();
-        console.error(window.location.search);
         let robot = new PhntmBridgeClient({
             socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
