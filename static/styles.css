@@ -720,7 +720,7 @@ BUTTON#trigger_wifi_scan.working {
     height: 20px;
     right: 0px;
     top: 1px;
-    z-index: 14;
+    z-index: 114;
     background-image: url('/static/icon-menu.png');
     background-size: 39px 25px;
     background-repeat: no-repeat;
@@ -876,6 +876,14 @@ BUTTON#trigger_wifi_scan.working {
 .grid-stack>.grid-stack-item>.grid-stack-item-content {
     overflow-x: visible !important;
     overflow-y: visible !important;
+}
+
+.grid-stack>.grid-stack-item {
+    z-index: 1;
+}
+
+.grid-stack>.grid-stack-item:hover {
+    z-index: 15;
 }
 
 SPAN.error {
