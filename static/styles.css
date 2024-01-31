@@ -60,31 +60,7 @@ h3 {
     z-index: 35;
 }
 
-#graph_controls {
-    margin-top: 0px;
-    background: white;
-    padding: 10px;
-    border-radius: 5px;
-    position: relative;
-    float: left;
-    margin: 0px 10px 10px 0px;
-    z-index: 1;
-    white-space: nowrap;
-    height: 20px;
-    width: 20px;
-    background-image: url(/static/graph.png);
-    background-position: center 7px;
-    background-repeat: no-repeat;
-    background-size: 25px 25px;
-}
 
-#graph_controls_heading{
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    width: 100%;
-    height: 100%;
-}
 
 #graph_display {
     width: 800px;
@@ -192,11 +168,12 @@ h3 {
     cursor: pointer;
 }
 
-#graph_controls:hover #graph_display,
-#graph_controls.hover_waiting #graph_display {
+#graph_controls.active:hover #graph_display,
+#graph_controls.active.hover_waiting #graph_display {
     display: block;
 }
 
+#graph_controls,
 #topic_controls,
 #widget_controls,
 #service_controls,
@@ -221,6 +198,15 @@ h3 {
 #camera_controls:hover,
 #docker_controls:hover {
     z-index: 2;
+}
+
+#graph_controls {
+    background: white;
+    background-image: url(/static/graph.png);
+    background-position: center 7px;
+    background-repeat: no-repeat;
+    background-size: 25px 25px;
+    width: 210px;
 }
 
 #topic_controls {
@@ -311,6 +297,7 @@ h3 {
 
 }
 
+#graph_controls H3,
 #service_controls H3,
 #camera_controls H3,
 #docker_controls H3,
@@ -319,6 +306,26 @@ h3 {
     color: #fff;
     cursor: default;
     line-height: 21px;
+}
+
+#graph_controls H3 {
+    color: #000;
+    /* margin-left: 25px */
+    position: relative;
+    display: block;
+    height: 19px;
+}
+
+#graph_controls #graph_nodes_label {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
+
+#graph_controls #graph_topics_label {
+    position: absolute;
+    left: 126px;
+    top: 0px;
 }
 
 #graph_controls,
@@ -332,8 +339,8 @@ h3 {
     margin-bottom: 5px;
 }
 
-#graph_controls:hover,
-#graph_controls.hover_waiting {
+#graph_controls.active:hover,
+#graph_controls.active.hover_waiting {
     border-top: 2px solid white;
     border-bottom: 5px solid white;
     height: 21px;
@@ -365,8 +372,8 @@ h3 {
     border-bottom: 5px solid #b311a3;
 }
 
-#graph_controls:hover,
-#graph_controls.hover_waiting,
+#graph_controls.active:hover,
+#graph_controls.active.hover_waiting,
 #service_controls.active:hover,
 #camera_controls.active:hover,
 #docker_controls.active:hover,

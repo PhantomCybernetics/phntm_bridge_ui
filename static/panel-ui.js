@@ -5,6 +5,7 @@ import { RangeWidget } from '/static/widgets/range.js';
 import { LaserScanWidget } from '/static/widgets/laser-scan.js';
 import { ImuWidget } from '/static/widgets/imu.js';
 import { LogWidget } from '/static/widgets/log.js';
+import { GraphMenu } from '/static/graph-menu.js';
 
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 
@@ -27,6 +28,8 @@ class Panel {
     display_widget = null;
     data_trace = [];
     widget_menu_cb = null;
+
+    graph_menu = null;
 
     max_trace_length = 100;
     zoom = null;
@@ -106,6 +109,8 @@ class Panel {
         let fallback_show_src = true;
 
         if (msg_type && !this.initiated) {
+
+            console.log('Initiating panel '+this.id_source+' for '+msg_type)
 
             if (this.ui.widgets[msg_type]) {
 
@@ -459,14 +464,13 @@ class Panel {
 
     close() {
 
-        if ($('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').length > 0) {
+        if (this.ui.graph_menu.topics[this.id_source]) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
-            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
-            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
-            $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
-
-
-
+            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
+            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
+            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
+            this.ui.graph_menu.uncheck_topic(this.id_source);
+    
             // SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
         } // else { //topics not loaded
             // Panel.TogglePanel(that.id_source, null, false);
@@ -594,77 +598,16 @@ export class PanelUI {
 
         client.on('/iw_status', (msg) => that.update_wifi_status(msg));
 
-
+        client.on('topics', (topics)=>{
+            that.init_panels(topics);
+        });
 
         client.on('nodes', (nodes)=>{
-            that.topics_menu_from_nodes(nodes);
+            // that.topics_menu_from_nodes(nodes);
+            
             that.services_menu_from_nodes(nodes);
             that.graph_from_nodes(nodes);
         });
-
-        // client.on('services', (services)=>{
-        //     $('#service_list').empty();
-        //     //$('#service_list').css('display', 'block');
-        //     let num_services = Object.keys(services).length;
-        //     if (num_services > 0) {
-        //         $('#service_controls').addClass('active');
-        //     } else {
-        //         $('#service_controls').removeClass('active');
-        //     }
-        //     $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
-
-        //     let ui_handled_services = [];
-        //     let other_services = [];
-
-        //     Object.values(services).forEach((service) => {
-        //         let ui_handled = that.input_widgets[service.msg_type] != undefined
-        //         if (ui_handled)
-        //             ui_handled_services.push(service);
-        //         else
-        //             other_services.push(service);
-        //     });
-
-        //     let i = 0;
-        //     [ ui_handled_services, other_services ].forEach((services_list)=>{
-
-        //         let ui_handled = services_list == ui_handled_services;
-
-        //         services_list.sort((a, b) => {
-        //             if (a.service < b.service) {
-        //                 return -1;
-        //             }
-        //             if (a.service > b.service) {
-        //                 return 1;
-        //             }
-        //             return 0;
-        //         });
-
-        //         services_list.forEach((service)=>{
-
-        //             $('#service_list').append('<div class="service '+(ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_type+'">'
-        //                 + '<div '
-        //                 + 'class="service_heading" '
-        //                 + 'title="'+service.service+'\n'+service.msg_type+'"'
-        //                 + '>'
-        //                 + service.service
-        //                 + '</div>'
-        //                 + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_type + '</div>'
-        //                 + '<div class="service_input" id="service_input_'+i+'"></div>'
-        //                 + '</div>'
-        //             );
-
-        //             if (ui_handled) {
-        //                 that.input_widgets[service.msg_type]($('#service_input_'+i), service, '<%= id_robot %>', client.socket, client.supported_msg_types);
-        //             }
-
-        //             i++;
-
-        //         });
-        //     });
-
-        //     if (that.gamepad)
-        //         that.gamepad.MarkMappedServiceButtons();
-        // });
 
         client.on('cameras', (cameras)=>{
             $('#cameras_list').empty();
@@ -897,463 +840,35 @@ export class PanelUI {
             that.trigger_wifi_scan();
         });
 
-        $('#graph_controls').click(() => {
-            if (!$('#graph_controls').hasClass('active')) {
-                $('#graph_controls').addClass('active');
-            } else {
-                $('#graph_controls').removeClass('active');
-            }
-        });
-
         $('#graph_controls').on('mouseenter', (e) => {
             if ($('#graph_controls').hasClass('hover_waiting'))
                 $('#graph_controls').removeClass('hover_waiting');
         });
     }
 
-    graph_from_nodes(nodes) {
-        let node_ids = Object.keys(nodes);
-        node_ids.sort();
-        
-        console.log('Graphing ', nodes);
-
-        $('#graph_display').empty();
-
-        let node_container = $('<div id="graph_nodes"></div>');
-        let topic_container = $('<div id="graph_topics"></div>');
-
+    init_panels(topics) {
         let that = this;
-        
-        $('#graph_display')
-            .append(node_container)
-            .append(topic_container)
-
-        // set the dimensions and margins of the graph
-        var margin = {top: 0, right: 0, bottom: 0, left: 0},
-        width = 200 - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom;
-
-        // append the svg object to the body of the page
-        var svg = d3.select("#graph_display")
-            .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        svg.append('defs')
-            .append("marker")
-                .attr("id","head-magenta")
-                .attr("orient", 'auto-start-reverse')
-                .attr("viewBox", '0 0 5 5')
-                .attr("markerWidth", 4)
-                .attr("markerHeight", 4)
-                .attr("refX",2.5)
-                .attr("refY",2.5)
-                .append('polygon')
-                    .attr('points', '0,5 1.6666666666666667,2.5 0,0 5,2.5')
-                    .style("fill", "magenta");
-
-        svg.append('defs')
-            .append("marker")
-                .attr("id","head-green")
-                .attr("orient", 'auto')
-                .attr("viewBox", '0 0 5 5')
-                .attr("markerWidth", 4)
-                .attr("markerHeight", 4)
-                .attr("refX",2.5)
-                .attr("refY",2.5)
-                .append('polygon')
-                    .attr('points', '0,5 1.6666666666666667,2.5 0,0 5,2.5')
-                    .style("fill", "green");
-
-        // let data = {
-        //     nodes: [],
-        //     links: [],
-        // };
-        // let i = 0;
-        let topics_list = {};
-        let nodes_list = {};
-        let focused_id_node = null;
-        let focused_topic = null;
-        let hovered_id_node = null;
-        let hovered_topic = null;
-        let links = [];
-        let node_offset = 0;
-        node_ids.forEach((id_node) => {
-            // node
-            // let i_node = i++;
-
-            if (nodes_list[id_node] !== undefined)
+        let topic_ids = Object.keys(topics);
+        topic_ids.forEach((id_topic) => {
+            if (!that.panels[id_topic] || that.panels[id_topic].initiated)
                 return;
-
-            nodes_list[id_node] = {
-                connections: 0,
-                connections_drawn: [],
-                offset: node_offset,
-                focused: false,
-                focused_connection: false,
-            };
-
-            let node_links = [];
-            if (nodes[id_node].publishers) {
-                let topic_ids = Object.keys(nodes[id_node].publishers);
-                topic_ids.forEach((id_topic)=>{
-                    if (topics_list[id_topic] === undefined) {
-                        topics_list[id_topic] = {
-                            connections: 1,
-                            msg_type: nodes[id_node].publishers[id_topic].msg_types[0]
-                        };
-                    } else {
-                        topics_list[id_topic]['connections']++;
-                    }
-                    nodes_list[id_node]['connections']++;
-                    node_links.push({
-                        node: id_node,
-                        topic: id_topic,
-                        group: 1,
-                    });
-                });
-            }
-
-            if (nodes[id_node].subscribers) {
-                let topic_ids = Object.keys(nodes[id_node].subscribers);
-                topic_ids.forEach((id_topic)=>{
-                    if (topics_list[id_topic] === undefined) {
-                        topics_list[id_topic] = {
-                            connections: 1,
-                            msg_type: nodes[id_node].subscribers[id_topic].msg_types[0]
-                        };
-                    } else {
-                        topics_list[id_topic]['connections']++;
-                    }
-                    nodes_list[id_node]['connections']++;
-                    node_links.push({
-                        node: id_node,
-                        topic: id_topic,
-                        group: 2,
-                    });
-                });
-            }
-
-            //sort node connectinos by topic asc (connections will go top to bottom without crossing)
-            node_links.sort((a, b) => {
-                if (a.topic < b.topic) return -1;
-                if (a.topic > b.topic) return 1;
-                return 0;
-            });
-            node_links.forEach((new_link)=>{
-                links.push(new_link)
-            });
-
-            let h = 20+5*(nodes_list[id_node]['connections']-1);
-            node_offset += h + 2 + 16;
-            let node_el = $('<div class="graph_node"></div>');
-            let box_el = $('<div class="box" style="height:'+h+'px;">'+id_node+'</div>')
-            node_el.prepend(box_el);
-            nodes_list[id_node].el = box_el;
-            node_container.append(node_el);
-
-            node_el.on('mouseenter', (e) => {
-                hover_node(id_node, true); 
-            });
-            node_el.on('mouseleave', (e) => {
-                hover_node(id_node, false); 
-            });
-            node_el.on('click', (e) => {
-                node_focus_toggle(id_node); 
-            });
+            console.log(topics[id_topic]);
+            let msg_type = topics[id_topic].msg_types[0];
+            that.panels[id_topic].init(msg_type); //init w message type
         });
-    
+    }
 
+    graph_from_nodes(nodes) {
 
-        let topic_ids = Object.keys(topics_list);
-        topic_ids.sort();
-        let topic_offset = 0;
-        topic_ids.forEach((topic) => {
-            topics_list[topic].connections_drawn = [];
-            topics_list[topic].focused = false;
-            topics_list[topic].focused_connection = false;
-            topics_list[topic].offset = topic_offset;
-            let h = 40+5*(topics_list[topic]['connections']-1);
-            topic_offset += h + 2 + 16;
-            let topic_el = $('<div class="graph_topic"></div>');
-            let box_el = $('<div class="box" style="height:'+h+'px;">'
-                        + topic + '<br>'
-                        + '<a href="#" class="msg_type">'+topics_list[topic].msg_type+'</a>'
-                        + '</div>');
-            let chb = $('<input type="checkbox"/>');
-            box_el.prepend(chb);
-            topic_el.prepend(box_el);
+        if (!this.graph_menu) {
+            this.graph_menu = new GraphMenu(this);
+        } 
 
-            topics_list[topic].el = box_el;
-            topic_container.append(topic_el);
-            // console.log(el.offset());
+        this.graph_menu.update(nodes);        
 
-            topic_el.on('mouseenter', (e) => {
-                hover_topic(topic, true); 
-            });
- 
-            topic_el.on('mouseleave', (e) => {
-                hover_topic(topic, false); 
-            });
-            topic_el.on('click', (e) => {
-                topic_focus_toggle(topic); 
-            });
-
-            chb.on('click', (e) => {
-                e.stopPropagation();
-            });
-
-            chb.on('change', (e) => {
-                let checked = chb.prop('checked');
-                console.log('CB '+topic+': '+checked)
-                // e.stopPropagation();
-            });
-
-            box_el.find('.msg_type').on('click', (e)=>{
-                
-                e.cancelBubble = true;
-                e.stopPropagation();
-
-                $('#graph_controls').addClass('hover_waiting'); //this will keep menu open 
-
-                that.message_type_dialog(topics_list[topic].msg_type, ()=>{
-                    //on close
-                    // $('#graph_controls').removeClass('open');
-                });
-
-                return false;
-            });
-
-        });
-
-        // let i = 0;
-        links.forEach((link) => {
-
-            // i++;
-            // if (i > 1)
-            //     return;
-
-            let n = nodes_list[link.node];
-            let t = topics_list[link.topic];
-            
-            link.focused_connection = false;
-            link.node_conn_no = n.connections_drawn.length;
-            link.topic_conn_no = t.connections_drawn.length;
-            n.connections_drawn.push(link);
-            t.connections_drawn.push(link);
-
-            link.path = svg
-                .append("path")
-                .attr("d", get_link_path(link))
-                .style("stroke", link.group == 1 ? 'green' : 'magenta')
-                .style('fill', 'none')
-                .style('stroke-width', 2)
-                ;
-
-            if (link.group == 1) {
-                link.path.attr('marker-end', 'url(#head-green)')
-            } else {
-                link.path.attr('marker-start', 'url(#head-magenta)')
-            }
-            
-        });
-
-        topic_container.on('scroll', (e) => {
-            // console.log('topics scrolled', topic_container.scrollTop());
-            redraw_links();
-        });
-        node_container.on('scroll', (e) => {
-            // console.log('nodes scrolled', node_container.scrollTop());
-            redraw_links();
-        });
-
-        function redraw_links() {
-            links.forEach((link) => {
-                link.path.attr("d", get_link_path(link))
-            });
-        }
-
-        function get_link_path(link) {
-            let n = nodes_list[link.node];
-            let t = topics_list[link.topic];
-
-            let pos_node = -node_container.scrollTop() + 18 + n.offset + link.node_conn_no*5;
-            let pos_topic = -topic_container.scrollTop() + 18 + t.offset + link.topic_conn_no*5;
-
-            let offset_node  = link.group == 1 ? 2 : 5; // 1 >, 2 <
-            let offset_topic = link.group == 1 ? 195 : 198;
-
-            return 'M '+offset_node+' '+pos_node+' C 100 '+pos_node+', 100 '+pos_topic+', '+offset_topic+' '+pos_topic;
-        }
-
-        function node_focus_toggle(id_node) {
-
-            let focused = !nodes_list[id_node].focused
-
-            if (focused && focused_id_node && focused_id_node != id_node) {
-                node_focus_toggle(focused_id_node);
-            }
-            if (focused && focused_topic) {
-                topic_focus_toggle(focused_topic);
-            }
-            if (focused)
-                focused_id_node = id_node;
-            else if (focused_id_node == id_node)
-                focused_id_node = null;
-                
-            console.log('Node '+id_node+' focused: '+focused);
-            nodes_list[id_node].focused = focused;
-
-            let connected_topics = [];
-            links.forEach((link) => {
-                if (link.node == id_node) {
-                    connected_topics.push(link.topic);
-                    link.focused_connection = focused;
-                }
-            });
-            connected_topics.forEach((topic) => {
-                topics_list[topic].focused_connection = focused;
-            });
-
-            update_highlights();
-        }
-
-        function topic_focus_toggle(topic) {
-
-            let focused = !topics_list[topic].focused;
-
-            if (focused && focused_id_node) {
-                node_focus_toggle(focused_id_node);
-            }
-            if (focused && focused_topic && focused_topic != topic) {
-                topic_focus_toggle(focused_topic);
-            }
-            if (focused)
-                focused_topic = topic;
-            else if (focused_topic == topic)
-                focused_topic = null;
-
-            console.log('Topic '+topic+' focused: '+focused);
-            topics_list[topic].focused = focused;
-
-            let connected_nodes = [];
-            links.forEach((link) => {
-                if (link.topic == topic) {
-                    connected_nodes.push(link.node);
-                    link.focused_connection = focused;
-                }
-            });
-            connected_nodes.forEach((node) => {
-                nodes_list[node].focused_connection = focused;
-            });
-
-            update_highlights();
-        }
-
-        function hover_node(id_node, state) {
-
-            // if (state && ((focused_id_node && focused_id_node != id_node) || focused_topic))
-            //     return;
-
-            nodes_list[id_node].highlighted = state;
-
-            if (state)
-                hovered_id_node = id_node;
-            else if (!state && hovered_id_node == id_node)
-                hovered_id_node = null;
-
-            let connected_topics = [];
-            links.forEach((link) => {
-                if (link.node == id_node) {
-                    connected_topics.push(link.topic);
-                    link.highlighted_connection = state;
-                }
-            });
-
-            connected_topics.forEach((topic) => {
-                topics_list[topic].highlighted_connection = state;
-            });
-
-            update_highlights();
-        }
-
-        function hover_topic(topic, state) {
-
-            // if (state && (focused_id_node || (focused_topic && focused_topic != topic)))
-            //     return;
-
-            topics_list[topic].highlighted = state;
-
-            if (state)
-                hovered_topic = topic;
-            else if (!state && hovered_topic == topic)
-                hovered_topic = null;
-
-            let connected_nodes = [];
-            links.forEach((link) => {
-                if (link.topic == topic) {
-                    connected_nodes.push(link.node);
-                    link.highlighted_connection = state;
-                }
-            });
-
-            connected_nodes.forEach((id_node) => {
-                nodes_list[id_node].highlighted_connection = state;
-            });
-
-            update_highlights();
-        }
-
-        function update_highlights() {
-
-            let something_focused = focused_topic || focused_id_node;
-
-            node_ids.forEach((id_node) => {
-                let n = nodes_list[id_node];
-                if ((!something_focused && (n.highlighted || n.highlighted_connection)) || (something_focused && (n.focused || n.focused_connection))) {
-                    n.el.removeClass('dimmed');
-                } else if (something_focused || hovered_id_node || hovered_topic) {
-                    n.el.addClass('dimmed');
-                } else {
-                    n.el.removeClass('dimmed');
-                }
-                if (n.focused) {
-                    n.el.addClass('focused');
-                } else {
-                    n.el.removeClass('focused');
-                }
-            });
-
-            links.forEach((link) => {
-                if ((!something_focused && link.highlighted_connection) || (something_focused && link.focused_connection)) {
-                    link.path.attr('class', '');
-                } else if (something_focused || hovered_id_node || hovered_topic) {
-                    link.path.attr('class', 'dimmed');
-                } else {
-                    link.path.attr('class', '');
-                }
-            });
-
-            topic_ids.forEach((topic) => {
-                let t = topics_list[topic];
-                if ((something_focused && (t.focused || t.focused_connection)) || (!something_focused && (t.highlighted || t.highlighted_connection))) {
-                    t.el.removeClass('dimmed');
-                } else if (something_focused || hovered_id_node || hovered_topic) {
-                    t.el.addClass('dimmed');
-                } else {
-                    t.el.removeClass('dimmed');
-                }
-                if (t.focused) {
-                    t.el.addClass('focused');
-                } else {
-                    t.el.removeClass('focused');
-                }
-            });
-        }
-       
-
+        $('#graph_nodes_label').html(this.graph_menu.node_ids.length+' Nodes')
+        $('#graph_topics_label').html(this.graph_menu.topic_ids.length+' Topics')
+        $('#graph_controls').addClass('active');
         // var nodes = svg
         //     .selectAll("circle")
         //     .data(data.nodes)
@@ -1483,7 +998,7 @@ export class PanelUI {
         });
     }
 
-    topics_menu_from_nodes(nodes) {
+    /*topics_menu_from_nodes(nodes) {
 
         $('#topic_list').empty();
 
@@ -1596,8 +1111,7 @@ export class PanelUI {
         } else {
             $('#topic_controls').removeClass('active');
         }
-
-    }
+    }*/
 
     add_widget(widget_class, conf) {
         this.widgets[widget_class.name] = {
