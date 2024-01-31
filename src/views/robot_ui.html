@@ -75,6 +75,8 @@
     import { PanelUI  } from '/static/panel-ui.js';
     import { LaserOdometryWidget } from '/static/widgets/laser-odo.js';
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
+    import { NavigationWidget } from '/static/widgets/navigation.js';
+    import { Everything3DWidget } from '/static/widgets/everything.js';
     import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
 
     $(document).ready(function() {
@@ -137,8 +139,10 @@
         kb.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
 
         let panel_ui = new PanelUI(robot, 119, gamepad);
-        panel_ui.add_widget(LaserOdometryWidget);
+        panel_ui.add_widget(Everything3DWidget);
+        panel_ui.add_widget(NavigationWidget);
         panel_ui.add_widget(DescriptionTFWidget);
+        panel_ui.add_widget(LaserOdometryWidget);
 
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets

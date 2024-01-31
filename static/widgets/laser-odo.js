@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Zoomable2DTiles } from './inc/zoomable-2d-tiles.js'
 
 export class LaserOdometryWidget extends Zoomable2DTiles {
-    static label = 'Laser Scan + Odometry Map (2D)';
+    static label = 'Laser scan + Odometry (2D)';
     constructor(panel) {
         super(panel);
 

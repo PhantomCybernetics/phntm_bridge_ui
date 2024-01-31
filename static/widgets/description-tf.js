@@ -6,7 +6,7 @@ import URDFLoader from 'urdf-loader';
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 
 export class DescriptionTFWidget {
-    static label = 'Robot Description + TF';
+    static label = 'Robot description (URFD) + Transforms';
     static default_width = 5;
     static default_height = 4;
 
