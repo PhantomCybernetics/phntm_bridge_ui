@@ -40,6 +40,7 @@ const UI_HOST:string = CONFIG['WEB_UI'].host;
 const UI_URL:string = CONFIG['WEB_UI'].url;
 
 const BRIDGE_SOCKET_URL:string = CONFIG['WEB_UI'].bridgeSocketUrl;
+const BRIDGE_FILES_URL:string = CONFIG['WEB_UI'].bridgeFilesUrl;
 const APP_ID:string = CONFIG['WEB_UI'].appId;
 const APP_KEY:string = CONFIG['WEB_UI'].appKey;
 const ANALYTICS_CODE:string[] = CONFIG['WEB_UI'].analyticsCode;
@@ -102,6 +103,7 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
         //models: modelItems
         id_robot: req.params.ID,
         bridge_socket_url: BRIDGE_SOCKET_URL,
+        bridge_files_url: BRIDGE_FILES_URL,
         app_id: APP_ID,
         app_key: APP_KEY,
         analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : ''

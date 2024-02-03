@@ -106,6 +106,9 @@ export class PhntmBridgeClient extends EventTarget {
         this.socket_path = opts.socket_path !== undefined ? opts.socket_path : '/app/socket.io/';
         this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
 
+        this.bridge_files_url = opts.bridge_files_url;
+        this.bridge_files_secret = null;
+
         this.ice_servers_config = opts.ice_servers ? opts.ice_servers : [{urls:[
             "stun:stun.l.google.com:19302",
         ]}];
@@ -594,6 +597,14 @@ export class PhntmBridgeClient extends EventTarget {
         this.socket.connect();
     }
 
+    get_bridge_file_url(url) {
+        let res = this.bridge_files_url
+                    .replace('%ROBOT_ID%', this.id_robot)
+                    .replace('%SECRET%', this.bridge_files_secret)
+                    .replace('%URL%', encodeURIComponent(url));
+        return res;
+    }
+
     _process_robot_data(robot_data, answer_callback) {
 
         console.warn('Recieved robot state data: ', this.id_robot, robot_data);
@@ -628,7 +639,12 @@ export class PhntmBridgeClient extends EventTarget {
         this.online = robot_data['ip'] ? true : false;
         this.ip = robot_data['ip'];
         let prev_introspection = this.introspection;
-        this.introspection = robot_data['introspection']
+        this.introspection = robot_data['introspection'];
+        if (robot_data['files_fw_secret']) {
+            console.warn('files_fw_secret', robot_data['files_fw_secret'])
+            this.bridge_files_secret = robot_data['files_fw_secret'];
+        }
+            
 
         if (this.online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn('Creating new webrtc peer');

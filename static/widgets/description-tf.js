@@ -14,6 +14,13 @@ export class DescriptionTFWidget {
         this.panel = panel;
 
         this.manager = new THREE.LoadingManager();
+        this.manager.setURLModifier((url)=>{
+            if (url.indexOf('file:/') !== 0)
+                return url;
+            let url_fw = panel.ui.client.get_bridge_file_url(url);
+            console.log('URDF Loader requesting '+url+' > '+url_fw);
+            return url_fw;
+        });
         this.tex_loader = new THREE.TextureLoader(this.manager)
         this.loader = new URDFLoader(this.manager);
         this.loader.parseCollision = true;

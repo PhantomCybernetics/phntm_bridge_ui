@@ -123,7 +123,7 @@ See Input and Controls for details.
 TODO
 
 # Customizing this UI
-The UI is meant to be customized and extended. src/robot_ui.html is the best place to start. It uses PhntmBridgeClient (static/client.js) to facilitate the connection to both Robot and Cloud Bridge.
+The UI is meant to be customized and extended. src/robot_ui.html is the best place to start. It uses PhntmBridgeClient (static/browser-client.js) to facilitate the connection to both Robot and Cloud Bridge.
 
 See Customizing the UI
 

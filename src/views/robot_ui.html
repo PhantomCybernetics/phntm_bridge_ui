@@ -69,7 +69,7 @@
 
 <script type="module">
 
-    import { PhntmBridgeClient } from '/static/client.js';
+    import { PhntmBridgeClient } from '/static/browser-client.js';
     import { GamepadController } from '/static/gamepad.js';
     import { KeyboardController } from '/static/keyboard.js';
     import { PanelUI  } from '/static/panel-ui.js';
@@ -113,6 +113,7 @@
             socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
             socket_auto_connect: false,
+            bridge_files_url: '<%= bridge_files_url %>',
             app_id: '<%= app_id %>',
             app_key: '<%= app_key%>',
             id_robot: '<%= id_robot %>',
