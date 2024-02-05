@@ -1,5 +1,7 @@
 import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
 import * as THREE from 'three';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { OrbitControls } from 'orbit-controls';
 import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
@@ -15,18 +17,23 @@ export class DescriptionTFWidget {
 
         this.manager = new THREE.LoadingManager();
         this.manager.setURLModifier((url)=>{
+            // if (url.indexOf('wheel') !== -1)
+            //     return url;
             if (url.indexOf('file:/') !== 0)
                 return url;
+            url = url.replace('file://', '');
+            url = url.replace('file:/', '');
+            if (url[0] != '/')
+                url = '/'+url;
             let url_fw = panel.ui.client.get_bridge_file_url(url);
             console.log('URDF Loader requesting '+url+' > '+url_fw);
             return url_fw;
         });
         this.tex_loader = new THREE.TextureLoader(this.manager)
-        this.loader = new URDFLoader(this.manager);
-        this.loader.parseCollision = true;
+        this.urdf_loader = new URDFLoader(this.manager);
+        this.urdf_loader.parseCollision = true;
+        this.urdf_loader.loadMeshCb = this.load_mesh_cb;
         this.robot = null;
-
-        // this.loader = 
 
         this.render_collisions = true;
         this.render_visuals = true;
@@ -46,7 +53,7 @@ export class DescriptionTFWidget {
 
         this.scene = new THREE.Scene();
         
-        this.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.1, 1000 );
+        this.camera = new THREE.PerspectiveCamera( 75, panel.widget_width / panel.widget_height, 0.01, 1000 );
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
@@ -90,11 +97,7 @@ export class DescriptionTFWidget {
         this.world.rotation.set(-Math.PI/2.0, 0.0, 0.0); //+z up
         this.scene.add(this.world);
 
-
-        // const light = new THREE.AmbientLight( 0x404040 ); // soft white light
-        // this.scene.add( light );
-
-        const light = new THREE.SpotLight( 0xffffff, 2.0 );
+        const light = new THREE.SpotLight( 0xffffff, 5.0 );
         light.castShadow = true; // default false
         this.scene.add( light );
         light.position.set( 1, 2, 1 );
@@ -220,12 +223,12 @@ export class DescriptionTFWidget {
             $('#render_joints_'+panel.n).change(function(ev) {
                 that.render_joints = $(this).prop('checked');
                 if (that.render_joints) {
-                    this.camera.layers.enable(3);
+                    that.camera.layers.enable(3);
                     if ($('#render_labels_'+panel.n).prop('checked'))
-                        this.camera.layers.enable(4); //labels
+                        that.camera.layers.enable(4); //labels
                 } else {
-                    this.camera.layers.disable(3);
-                    this.camera.layers.disable(4); //labels
+                    that.camera.layers.disable(3);
+                    that.camera.layers.disable(4); //labels
                 }                    
             });
 
@@ -234,12 +237,12 @@ export class DescriptionTFWidget {
             $('#render_links_'+panel.n).change(function(ev) {
                 that.render_links = $(this).prop('checked');
                 if (that.render_links) {
-                    this.camera.layers.enable(5);
+                    that.camera.layers.enable(5);
                     if ($('#render_labels_'+panel.n).prop('checked'))
-                        this.camera.layers.enable(6); //labels
+                        that.camera.layers.enable(6); //labels
                 } else {
-                    this.camera.layers.disable(5);
-                    this.camera.layers.disable(6); //labels
+                    that.camera.layers.disable(5);
+                    that.camera.layers.disable(6); //labels
                 }
             });
 
@@ -262,10 +265,11 @@ export class DescriptionTFWidget {
                 .insertBefore($('#pause_panel_menu_'+panel.n));
             $('#render_visuals_'+panel.n).change(function(ev) {
                 that.render_visuals = $(this).prop('checked');
+                console.log('Visuals '+that.render_visuals);
                 if (that.render_visuals)
-                    this.camera.layers.enable(1);
+                    that.camera.layers.enable(1);
                 else
-                    this.camera.layers.disable(1);
+                    that.camera.layers.disable(1);
             });
 
             $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" '+(that.render_collisions?'checked':'')+' id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
@@ -273,9 +277,9 @@ export class DescriptionTFWidget {
             $('#render_collisions_'+panel.n).change(function(ev) {
                 that.render_collisions = $(this).prop('checked');
                 if (that.render_collisions)
-                    this.camera.layers.enable(2);
+                    that.camera.layers.enable(2);
                 else
-                    this.camera.layers.disable(2);
+                    that.camera.layers.disable(2);
             });
 
             $('<div class="menu_line"><label for="fix_base_'+panel.n+'""><input type="checkbox" '+(that.fix_base?'checked':'')+' id="fix_base_'+panel.n+'" title="Fix robot base"> Fix base</label></div>')
@@ -303,12 +307,82 @@ export class DescriptionTFWidget {
             this.transforms_queue.push(tf.transforms[i]); //processed in rendering_loop()
     }
 
+    clear_model = (obj) => {
+
+        // console.warn('clear_model:', obj);
+
+        if (obj.isLight) {
+            // console.error(obj+' isLight: ', obj);
+            return false;
+        }
+
+        if (obj.isScene) {
+            // console.error(obj+' isScene: ', obj);
+            return false;
+        }
+
+        if (obj.isCamera) {
+            // console.error(obj+' isCamera: ', obj);
+            return false;
+        }
+
+        obj.renderOrder = -1;
+        obj.layers.set(1);
+        obj.castShadow = true;
+
+        if (!obj.children || !obj.children.length)
+            return true;
+        
+        let that = this;
+
+        for (let i = 0; i < obj.children.length; i++) {
+            let ch = obj.children[i];
+            let res = that.clear_model(ch); // recursion
+            if (!res) {
+                obj.remove(ch);
+                i--;
+            }
+        }
+
+        return true;
+    }
+
+    load_mesh_cb = (path, manager, done) => {
+
+        let that = this;
+
+        if (/\.stl$/i.test(path)) {
+
+            const loader = new STLLoader(manager);
+            loader.load(path, geom => {
+                const mesh = new THREE.Mesh(geom, new THREE.MeshPhongMaterial());
+                that.clear_model(mesh);
+                done(mesh);
+            });
+
+        } else if (/\.dae$/i.test(path)) {
+
+            const loader = new ColladaLoader(manager);
+            loader.load(path, dae => {
+                // console.warn('Dae loading done', dae.scene)
+                that.clear_model(dae.scene);
+                // dae.library.lights = {};
+                console.log('cleared: ', dae.scene);
+                done(dae.scene);
+            });
+
+        } else {
+
+            console.warn(`URDFLoader: Could not load model at ${ path }.\nNo loader available`);
+
+        }
+
+    }
+
     on_description_data = (desc) => {
 
         if (this.panel.paused)
             return;
-
-        // console.log('got desc: ', desc.data);
 
         if (this.robot) {
             this.world.remove(this.robot);
@@ -318,8 +392,10 @@ export class DescriptionTFWidget {
             }
         }
 
-        this.robot = this.loader.parse(desc.data);
+        this.robot = this.urdf_loader.parse(desc.data);
+        this.clear_model(this.robot);
         this.robot.castShadow = true;
+
         console.log('parsed urdf robot', this.robot);
         this.world.clear();
         this.world.add(this.robot);
@@ -371,6 +447,10 @@ export class DescriptionTFWidget {
             // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
         });
 
+
+        // console.log('got desc: ', desc.data);
+
+        
     }
 
     make_mark(target, label_text, layer_axes, layer_labels) {
