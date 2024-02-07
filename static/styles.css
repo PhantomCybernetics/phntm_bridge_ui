@@ -785,11 +785,12 @@ BUTTON#trigger_wifi_scan.working {
     clear: both;
 }
 
-.grid_panel .menu_line A, .grid_panel .menu_line Label {
+.grid_panel .menu_line A, .grid_panel .menu_line LABEL, .grid_panel .menu_line .label {
     text-decoration: none;
     display: block;
     padding: 5px 5px 5px 8px;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 .grid_panel .menu_line:last-child A {
@@ -819,18 +820,49 @@ BUTTON#trigger_wifi_scan.working {
 }
 
 .panel_msg_types_line {
-    padding-bottom: 10px;
+    padding-bottom: 4px;
+    border-radius: 5px 0px 0px 0px;
+    padding-top: 4px;
 }
 
 .menu_line.src_ctrl {
-    padding-bottom: 8px;
+    border-radius: 5px 0px 0px 0px;
+    padding-top: 4px;
+    position: relative;
+    background-image: url(/static/menu-arrow.png);
+    background-repeat: no-repeat;
+    background-size: 6px;
+    background-position: 7px 12px;
 }
 
-.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover, .menu_line.src_ctrl:hover {
+.menu_line.src_ctrl .label {
+    padding-left: 17px;
+}
+
+.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
     background-color: #139a80 !important;
 }
 
-.grid_panel .msg_types, .menu_line.src_ctrl BUTTON {
+.menu_line.src_ctrl:hover {
+    border-radius: 0px;
+}
+
+.src_ctrl_menu {
+    position: absolute;
+    right: 100%;
+    display: none;
+    background: #001649;
+    top: 0px;
+    border-radius: 5px 0px 5px 5px;
+    padding: 5px;
+}
+
+.menu_line.src_ctrl:hover .src_ctrl_menu {
+    display: block;
+   
+}
+
+.grid_panel .msg_types, .src_ctrl_menu BUTTON {
     border: 1px dashed white;
     padding: 6px 10px;
     border-radius: 5px;
@@ -838,19 +870,68 @@ BUTTON#trigger_wifi_scan.working {
     margin: 0px 3px;
 }
 
-.menu_line.src_ctrl BUTTON {
+.src_ctrl_menu BUTTON {
     margin-bottom: 2px;
+    padding: 6px 10px 6px 10px;
+    position: relative;
+    min-width: 50px;
+    text-align: left;
 }
 
-.grid_panel .msg_types.err, .menu_line.src_ctrl BUTTON.err {
+.src_ctrl_menu BUTTON .remove {
+    position: absolute;
+    display: none;
+    width: 20px;
+    height: 100%;
+    right: 3px;
+    top: 0px;
+    background-color: #558ec3;
+}
+
+.src_ctrl_menu BUTTON .remove .icon {
+    background: url(/static/remove.png);
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: 15px;
+    opacity: 0.5;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.src_ctrl_menu BUTTON:hover .remove {
+    display: block;
+}
+
+.src_ctrl_menu BUTTON.notset {
+    border: 1px dashed white;
+    background: transparent;
+    padding-right: 10px;
+}
+
+.src_ctrl_menu BUTTON.notset:hover {
+    background-color: #ff8c00;
+}
+
+.src_ctrl_menu BUTTON.warn:hover,
+.src_ctrl_menu BUTTON.warn .remove {
+    background-color: red;
+}
+
+.src_ctrl_menu BUTTON.warn .icon {
+    opacity: 1.0;
+}
+
+.grid_panel .msg_types.err, .src_ctrl_menu BUTTON.err {
     background: red;
 }
 
-.grid_panel  .msg_types:hover, .menu_line.src_ctrl BUTTON:hover  {
+.grid_panel  .msg_types:hover, .src_ctrl_menu BUTTON:hover  {
     background: #558ec3;
 }
 
-.grid_panel .msg_types.err:hover, .menu_line.src_ctrl BUTTON.err:hover {
+.grid_panel .msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
     background: #c20000;
 }
 

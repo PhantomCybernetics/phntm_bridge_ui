@@ -6,6 +6,7 @@ import { OrbitControls } from 'orbit-controls';
 import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
+import { MultiTopicSource } from "./inc/multitopic.js";
 
 export class DescriptionTFWidget {
     static label = 'Robot description (URFD) + Transforms';
@@ -13,6 +14,7 @@ export class DescriptionTFWidget {
     static default_height = 4;
 
     constructor(panel) {
+
         this.panel = panel;
 
         this.manager = new THREE.LoadingManager();
@@ -107,7 +109,7 @@ export class DescriptionTFWidget {
         this.renderer.shadowMapType = THREE.PCFShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
         this.light = light;
 
-        const ambience = new THREE.AmbientLight( 0x404040 ); // soft white light
+        const ambience = new THREE.AmbientLight( 0x606060 ); // soft white light
         this.scene.add( ambience );
 
         this.camera.layers.enableAll();
@@ -141,7 +143,7 @@ export class DescriptionTFWidget {
         // this.scene.add( planeHelper );
 
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
-        const plane_material = new THREE.MeshPhongMaterial( {color: 0x429000, side: THREE.BackSide } );
+        const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
         const plane_tex = this.tex_loader.load('/static/tiles.png');
         plane_tex.wrapS = THREE.RepeatWrapping;
         plane_tex.wrapT = THREE.RepeatWrapping;
@@ -198,96 +200,98 @@ export class DescriptionTFWidget {
         panel.ui.client.on(this.topic_tf, this.on_tf_data);
         panel.ui.client.on(this.topic_desc, this.on_description_data);
 
+        this.sources = new MultiTopicSource(this);
+
         panel.widget_menu_cb = () => {
-
-            $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
-                + '<button class="val" title="Static TF source">'+this.topic_tf_static+'</button>'
-                + '<button class="val" title="TF source">'+this.topic_tf+'</button>'
-                + '<button class="val" title="Description source">'+this.topic_desc+'</button>'
-                + '</div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><label for="follow_target_'+panel.n+'"><input type="checkbox" '+(that.follow_target?'checked':'')+' id="follow_target_'+panel.n+'" title="Follow target"> Follow target</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#follow_target_'+panel.n).change(function(ev) {
-                that.follow_target = $(this).prop('checked');
-                if (that.follow_target) {
-                    
-                } else {
-                    
-                }                    
-            });
-
-            $('<div class="menu_line"><label for="render_joints_'+panel.n+'"><input type="checkbox" '+(that.render_joints?'checked':'')+' id="render_joints_'+panel.n+'" title="Render joints"> Render joints</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#render_joints_'+panel.n).change(function(ev) {
-                that.render_joints = $(this).prop('checked');
-                if (that.render_joints) {
-                    that.camera.layers.enable(3);
-                    if ($('#render_labels_'+panel.n).prop('checked'))
-                        that.camera.layers.enable(4); //labels
-                } else {
-                    that.camera.layers.disable(3);
-                    that.camera.layers.disable(4); //labels
-                }                    
-            });
-
-            $('<div class="menu_line"><label for="render_links_'+panel.n+'"><input type="checkbox" '+(that.render_links?'checked':'')+' id="render_links_'+panel.n+'" title="Render links"> Render links</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#render_links_'+panel.n).change(function(ev) {
-                that.render_links = $(this).prop('checked');
-                if (that.render_links) {
-                    that.camera.layers.enable(5);
-                    if ($('#render_labels_'+panel.n).prop('checked'))
-                        that.camera.layers.enable(6); //labels
-                } else {
-                    that.camera.layers.disable(5);
-                    that.camera.layers.disable(6); //labels
-                }
-            });
-
-            $('<div class="menu_line"><label for="render_labels_'+panel.n+'""><input type="checkbox" '+(that.render_labels?'checked':'')+' id="render_labels_'+panel.n+'" title="Render labels"> Show labels</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#render_labels_'+panel.n).change(function(ev) {
-                that.render_labels = $(this).prop('checked');
-                if (that.render_labels) {
-                    if ($('#render_joints_'+panel.n).prop('checked'))
-                        that.camera.layers.enable(4);
-                    if ($('#render_links_'+panel.n).prop('checked'))
-                        that.camera.layers.enable(6);
-                } else {
-                    that.camera.layers.disable(4);
-                    that.camera.layers.disable(6);
-                }
-            });
-
-            $('<div class="menu_line"><label for="render_visuals_'+panel.n+'""><input type="checkbox" '+(that.render_visuals?'checked':'')+' id="render_visuals_'+panel.n+'" title="Render visuals"> Show visuals</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#render_visuals_'+panel.n).change(function(ev) {
-                that.render_visuals = $(this).prop('checked');
-                console.log('Visuals '+that.render_visuals);
-                if (that.render_visuals)
-                    that.camera.layers.enable(1);
-                else
-                    that.camera.layers.disable(1);
-            });
-
-            $('<div class="menu_line"><label for="render_collisions_'+panel.n+'""><input type="checkbox" '+(that.render_collisions?'checked':'')+' id="render_collisions_'+panel.n+'" title="Render collisions"> Show collisions</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#render_collisions_'+panel.n).change(function(ev) {
-                that.render_collisions = $(this).prop('checked');
-                if (that.render_collisions)
-                    that.camera.layers.enable(2);
-                else
-                    that.camera.layers.disable(2);
-            });
-
-            $('<div class="menu_line"><label for="fix_base_'+panel.n+'""><input type="checkbox" '+(that.fix_base?'checked':'')+' id="fix_base_'+panel.n+'" title="Fix robot base"> Fix base</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            $('#fix_base_'+panel.n).change(function(ev) {
-                that.fix_base = $(this).prop('checked');
-            });
+            that.setupMenu();
         }
+    }
+
+    setupMenu () {
+       
+        this.sources.initMenu();
+
+        this.sources.makeTopicButton('Static TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf_static);
+        this.sources.makeTopicButton('TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf);
+        this.sources.makeTopicButton('Description source', 'std_msgs/msg/String', this.topic_desc);
+
+        let that = this;
+
+        $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'"><input type="checkbox" '+(this.follow_target?'checked':'')+' id="follow_target_'+this.panel.n+'" title="Follow target"> Follow target</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#follow_target_'+this.panel.n).change(function(ev) {
+            that.follow_target = $(this).prop('checked');                 
+        });
+
+        $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#render_joints_'+this.panel.n).change(function(ev) {
+            that.render_joints = $(this).prop('checked');
+            if (that.render_joints) {
+                that.camera.layers.enable(3);
+                if ($('#render_labels_'+that.panel.n).prop('checked'))
+                    that.camera.layers.enable(4); //labels
+            } else {
+                that.camera.layers.disable(3);
+                that.camera.layers.disable(4); //labels
+            }                    
+        });
+
+        $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#render_links_'+this.panel.n).change(function(ev) {
+            that.render_links = $(this).prop('checked');
+            if (that.render_links) {
+                that.camera.layers.enable(5);
+                if ($('#render_labels_'+that.panel.n).prop('checked'))
+                    that.camera.layers.enable(6); //labels
+            } else {
+                that.camera.layers.disable(5);
+                that.camera.layers.disable(6); //labels
+            }
+        });
+
+        $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#render_labels_'+this.panel.n).change(function(ev) {
+            that.render_labels = $(this).prop('checked');
+            if (that.render_labels) {
+                if ($('#render_joints_'+that.panel.n).prop('checked'))
+                    that.camera.layers.enable(4);
+                if ($('#render_links_'+that.panel.n).prop('checked'))
+                    that.camera.layers.enable(6);
+            } else {
+                that.camera.layers.disable(4);
+                that.camera.layers.disable(6);
+            }
+        });
+
+        $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#render_visuals_'+this.panel.n).change(function(ev) {
+            that.render_visuals = $(this).prop('checked');
+            console.log('Visuals '+that.render_visuals);
+            if (that.render_visuals)
+                that.camera.layers.enable(1);
+            else
+                that.camera.layers.disable(1);
+        });
+
+        $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#render_collisions_'+this.panel.n).change(function(ev) {
+            that.render_collisions = $(this).prop('checked');
+            if (that.render_collisions)
+                that.camera.layers.enable(2);
+            else
+                that.camera.layers.disable(2);
+        });
+
+        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix base</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        $('#fix_base_'+this.panel.n).change(function(ev) {
+            that.fix_base = $(this).prop('checked');
+        });
     }
 
     onClose() {

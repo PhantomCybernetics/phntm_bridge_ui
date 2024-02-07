@@ -28,6 +28,14 @@ export class Zoomable2DTiles {
             // this.canvas_overlay = canvases[1];
             $('#panel_widget_'+panel.n).addClass('scrollable');
 
+        this.img = $('#panel_arrow_'+panel.n);
+
+        $(this.img).click((ev)=>{
+            ev.preventDefault(); //stop from moving the panel
+            $('#follow_target_'+panel.n).prop('checked', true);
+            that.follow_target = true;
+        });
+
         this.canvas_container = $('#canvas_container_'+panel.n);
         [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize();
         this.canvas_container.css({
@@ -70,7 +78,7 @@ export class Zoomable2DTiles {
         $('#panel_widget_'+panel.n).on('wheel', (ev) => {
             ev.preventDefault();
             let d = ev.originalEvent.deltaY;
-            this.setZoom(this.panel.zoom - d*0.005);
+            that.setZoom(that.panel.zoom - d*0.005);
             // console.log('wheel', );
         });
 
@@ -80,10 +88,10 @@ export class Zoomable2DTiles {
 
                 if (that.follow_target) {
                     that.follow_target = false;
-                    $('#follow_target_'+panel.n).prop('checked', false);
+                    $('#follow_target_'+that.panel.n).prop('checked', false);
                 }
 
-                $('#canvas_container_'+panel.n).css({
+                $('#canvas_container_'+that.panel.n).css({
                     left: that.drag_frame_offset[0] + (ev.originalEvent.pageX - that.drag_mouse_offset[0]),
                     top: that.drag_frame_offset[1] + (ev.originalEvent.pageY - that.drag_mouse_offset[1])
                 });
@@ -99,6 +107,9 @@ export class Zoomable2DTiles {
             that.dragging = false;
         });
     }
+
+
+
 
     get_tile(x, y, layer) {
 
@@ -141,17 +152,57 @@ export class Zoomable2DTiles {
             zoom = 5.0;
         }
         panel.zoom = zoom;
-        $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        $('#zoom_ctrl_'+panel.n+' .val')
+            .html('Zoom: '+panel.zoom.toFixed(1)+'x');
         panel.ui.update_url_hash();
         let oldPos = $(this.img).offset();
+        
         $(this.canvas_container).css({scale: panel.zoom});
         let newPos = $(this.img).offset();
         let pos = $(this.canvas_container).position();
+        // console.log('setZoom: this.img=', this.img);
         $(this.canvas_container).css({
             left: pos.left-(newPos.left-oldPos.left),
             top: pos.top-(newPos.top-oldPos.top),
         });
-        this.render(true, false); // redraw pose
+        this.render_dirty = true;
+    }
+
+    setupMenu() {
+
+        let zoom = this.panel.zoom === null || this.panel.zoom === undefined ? '?' : this.panel.zoom.toFixed(1);
+
+        $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+this.panel.n+'">'
+            + '<span class="minus">-</span>'
+            + '<button class="val" title="Reset zoom">Zoom: '+zoom+'x</button>'
+            + '<span class="plus">+</span>'
+            + '</div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+
+        let that = this;
+        $('#zoom_ctrl_'+this.panel.n+' .plus').click(function(ev) {
+            that.setZoom(that.panel.zoom + that.panel.zoom/2.0);
+        });
+
+        $('#zoom_ctrl_'+this.panel.n+' .minus').click(function(ev) {
+            that.setZoom(that.panel.zoom - that.panel.zoom/2.0);
+        });
+
+        $('#zoom_ctrl_'+this.panel.n+' .val').click(function(ev) {
+            that.setZoom(1.0);
+        });
+
+        $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'" class="follow_target_label" id="follow_target_label_'+this.panel.n+'"><input type="checkbox" id="follow_target_'+this.panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+
+        $('#follow_target_'+this.panel.n).change(function(ev) {
+            that.follow_target = $(this).prop('checked');
+            // if (that.follow_target) 
+            //     $('#panel_widget_'+panel.n).removeClass('scrollable');
+            // else
+            //     $('#panel_widget_'+panel.n).addClass('scrollable');
+        });
+
     }
 
     clearTiles(layers, destroy=true) {

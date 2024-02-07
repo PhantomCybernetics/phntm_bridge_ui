@@ -17,6 +17,8 @@ export class LaserScanWidget {
         const canvas = $('#panel_widget_'+panel.n).html('<canvas id="panel_canvas_'+panel.n+'" width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
         this.ctx = canvas.getContext("2d");
 
+        let that = this;
+
         //const div = d3.selectAll();
         //console.log('d3 div', div)
         //panel.display_widget = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
@@ -28,19 +30,23 @@ export class LaserScanWidget {
         panel.widget_menu_cb = () => {
 
             let zoom = panel.zoom === null || panel.zoom === undefined ? '?' : panel.zoom.toFixed(1);
-            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'"><span class="minus">-</span><span class="val">Zoom: '+zoom+'x</span><span class="plus">+</span></div>').insertAfter($('#panel_msg_types_'+panel.n).parent());
+
+            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + panel.n + '">' +
+              '<span class="minus">-</span>' +
+              '<button class="val" title="Reset zoom">Zoom: ' + zoom + 'x</button>' +
+              '<span class="plus">+</span>' +
+              '</div>')
+              .insertAfter($('#panel_msg_types_'+panel.n).parent());
+            
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
-                panel.zoom +=1.0;
-                $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                panel.ui.update_url_hash();
+                that.setZoom(that.panel.zoom + that.panel.zoom/2.0);
             });
             $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
-                if (panel.zoom - 1.0 <= 0) {
-                    return;
-                }
-                panel.zoom -= 1.0;
-                $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-                panel.ui.update_url_hash();
+                that.setZoom(that.panel.zoom - that.panel.zoom/2.0);
+            });
+
+            $('#zoom_ctrl_'+this.panel.n+' .val').click(function(ev) {
+                that.setZoom(1.0);
             });
         }
 
@@ -52,11 +58,37 @@ export class LaserScanWidget {
         //     ResizeWidget(panel);
         //     RenderScan(panel);
         // });
-        let that = this;
         panel.resize_event_handler = function () {
             // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
             that.render();
         };
+
+        $('#panel_widget_'+panel.n).on('wheel', (ev) => {
+            ev.preventDefault();
+            let d = ev.originalEvent.deltaY;
+            that.setZoom(that.panel.zoom - d*0.005);
+            // console.log('wheel', );
+        });
+    }
+
+    setZoom(zoom) {
+
+        // panel.zoom +=1.0;
+        // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        // panel.ui.update_url_hash();
+
+        let panel = this.panel;
+        if (zoom < 0.1) {
+            zoom = 0.1;
+        } else if (zoom > 30.0) {
+            zoom = 30.0;
+        }
+        panel.zoom = zoom;
+        $('#zoom_ctrl_'+panel.n+' .val')
+            .html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        panel.ui.update_url_hash();
+        
+        this.render_dirty = true;
     }
 
     onClose() {

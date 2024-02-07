@@ -6,4 +6,5 @@ export class NavigationWidget extends Zoomable2DTiles {
 
     static label = 'Lidar SLAM + Navigation (2D)';
 
+    
 }

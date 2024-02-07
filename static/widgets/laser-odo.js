@@ -1,6 +1,7 @@
 import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
 import * as THREE from 'three';
 import { Zoomable2DTiles } from './inc/zoomable-2d-tiles.js'
+import { MultiTopicSource } from './inc/multitopic.js'
 
 export class LaserOdometryWidget extends Zoomable2DTiles {
     static label = 'Laser scan + Odometry (2D)';
@@ -12,13 +13,6 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         panel.max_trace_length = 5;
        
         $('#panel_title_'+panel.n).html(w.label);
-
-        this.img = $('#panel_arrow_'+panel.n);
-        $(this.img).click((ev)=>{
-            ev.preventDefault(); //stop from moving the panel
-            $('#follow_target_'+panel.n).prop('checked', true);
-            that.follow_target = true;
-        });
 
         // $(this.canvas).css({
         //     left: -this.canvas_size[0]/2.0,
@@ -54,59 +48,12 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         this.topic_odo = '/odometry/filtered';
         this.topic_scan = '/scan';
 
+        this.sources = new MultiTopicSource(this);
+
         //zoom menu control
         panel.widget_menu_cb = () => {
-
-            $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
-                + '<button class="val" title="Odometry source">'+this.topic_odo+'</button>'
-                + '<button class="val" title="Scan source">'+this.topic_scan+'</button>'
-                + '</div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'">'
-                + '<span class="minus">-</span>'
-                + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
-                + '<span class="plus">+</span>'
-                + '</div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
-                that.setZoom(panel.zoom + panel.zoom/2.0);
-            });
-
-            $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
-                that.setZoom(panel.zoom - panel.zoom/2.0);
-            });
-
-            $('#zoom_ctrl_'+panel.n+' .val').click(function(ev) {
-                that.setZoom(1.0);
-            });
-
-            $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
-            
-            $('#clear_panel_link_'+panel.n).click((ev)=>{
-                ev.preventDefault(); //stop from moving the panel
-                that.clear();
-            });
-
-            $('#follow_target_'+panel.n).change(function(ev) {
-                that.follow_target = $(this).prop('checked');
-                // if (that.follow_target) 
-                //     $('#panel_widget_'+panel.n).removeClass('scrollable');
-                // else
-                //     $('#panel_widget_'+panel.n).addClass('scrollable');
-            });
-        } //widget menu end
+            that.setupMenu();
+        }
 
         // window.addEventListener('resize', () => {
         //     ResizeWidget(panel);
@@ -123,6 +70,32 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
        
         this.rendering_loop();
     }
+
+    setupMenu () {
+
+        this.sources.initMenu();
+
+        super.setupMenu();  //zoom + follow
+
+        this.sources.makeTopicButton('Odometry source', 'nav_msgs/msg/Odometry', this.topic_odo);
+        this.sources.makeTopicButton('Scan source', 'sensor_msgs/msg/LaserScan', this.topic_scan);
+
+        // $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
+        //     + '<button class="val" title="">'+this.+'</button>'
+        //     + '<button class="val" title="">'+this.+'</button>'
+        //     + '</div>')
+        //     .insertBefore($('#pause_panel_menu_'+panel.n));
+
+        let that = this;
+
+        $('<div class="menu_line"><a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a></div>')
+            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+        
+        $('#clear_panel_link_'+this.panel.n).click((ev)=>{
+            ev.preventDefault(); //stop from moving the panel
+            that.clear();
+        });
+    } //widget menu end
 
     on_odometry_data = (odo) => {
 
