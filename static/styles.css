@@ -828,6 +828,7 @@ BUTTON#trigger_wifi_scan.working {
 .menu_line.src_ctrl {
     border-radius: 5px 0px 0px 0px;
     padding-top: 4px;
+    padding-bottom: 4px;
     position: relative;
     background-image: url(/static/menu-arrow.png);
     background-repeat: no-repeat;
@@ -1050,6 +1051,41 @@ SPAN.error {
     background: rgb(215 3 35);
     font-weight: bold;
     display: block !important;
+}
+
+#topic-selector-dialog {
+    background: #fff;
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre;
+    padding: 0px;
+    color: #00fff9;
+    display: none;
+    overflow: scroll;
+    height: -webkit-fill-available;
+}
+
+#topic-selector-dialog A.topic-option,
+#topic-selector-dialog .empty {
+    display: block;
+    font-size: 14px;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 15px 10px 15px 10px;
+    color: #000;
+    margin-bottom: 1px;
+    background-color: lightgrey;
+    border-radius: 5px;
+}
+
+#topic-selector-dialog .empty {
+    background-color: white;
+}
+
+#topic-selector-dialog A.topic-option:hover {
+    background-color: #ff8c00;
+    color: #fff;
 }
 
 .display_panel_source_label {

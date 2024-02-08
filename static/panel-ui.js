@@ -998,6 +998,60 @@ export class PanelUI {
         });
     }
 
+    topic_selector_dialog(label, msg_type, exclude_topics, onselect) {
+
+        let d = $('#topic-selector-dialog');
+        let that = this;
+
+        const render_list = (discovered_topics) => {
+            d.empty();
+            
+            let all_topics = Object.keys(discovered_topics);
+            let some_match = false;
+            all_topics.forEach((topic) => {
+
+                if (exclude_topics && exclude_topics.length && exclude_topics.indexOf(topic) !== -1)
+                    return;
+
+                if (!that.client.discovered_topics[topic].msg_types || that.client.discovered_topics[topic].msg_types[0] != msg_type)
+                    return;
+
+                let l = $('<a href="#" class="topic-option">'+topic+'</a>');
+                l.on('click', (e) => {
+                    onselect(topic);
+                    e.cancelBubble = true;
+                    d.dialog("close");
+                    return false;
+                });
+                l.appendTo(d);
+                some_match = true;
+            });
+
+            if (!some_match) {
+                let l = $('<span class="empty">No matching topics foud</span>');
+                l.appendTo(d);
+            }
+        }
+        this.client.on('topics', render_list);
+        render_list(this.client.discovered_topics);
+
+        d.dialog({
+            resizable: true,
+            height: 700,
+            width: 500,
+            modal: true,
+            title: label,
+            buttons: {
+                Cancel: function() {
+                    $(this).dialog("close");
+                },
+            },
+            close: function( event, ui ) {
+                that.client.off('topics', render_list);
+            }
+        });
+    }
+
     /*topics_menu_from_nodes(nodes) {
 
         $('#topic_list').empty();

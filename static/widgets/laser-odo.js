@@ -45,10 +45,13 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
         let that = this;
 
-        this.topic_odo = '/odometry/filtered';
-        this.topic_scan = '/scan';
+        // this.topic_odo = '/odometry/filtered';
+        // this.topic_scan = '/scan';
 
         this.sources = new MultiTopicSource(this);
+
+        this.sources.add('nav_msgs/msg/Odometry', 'Odometry source', null, 1, this.on_odometry_data);
+        this.sources.add('sensor_msgs/msg/LaserScan', 'Scan source', null, 1, this.on_scan_data);
 
         //zoom menu control
         panel.widget_menu_cb = () => {
@@ -65,20 +68,17 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         // });
     
         // this.last_odo = null;
-        panel.ui.client.on(this.topic_odo, this.on_odometry_data);
-        panel.ui.client.on(this.topic_scan, this.on_scan_data);
+        // panel.ui.client.on(this.topic_odo, this.on_odometry_data);
+        // panel.ui.client.on(this.topic_scan, this.on_scan_data);
        
         this.rendering_loop();
     }
 
     setupMenu () {
 
-        this.sources.initMenu();
+        this.sources.setupMenu();
 
         super.setupMenu();  //zoom + follow
-
-        this.sources.makeTopicButton('Odometry source', 'nav_msgs/msg/Odometry', this.topic_odo);
-        this.sources.makeTopicButton('Scan source', 'sensor_msgs/msg/LaserScan', this.topic_scan);
 
         // $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
         //     + '<button class="val" title="">'+this.+'</button>'

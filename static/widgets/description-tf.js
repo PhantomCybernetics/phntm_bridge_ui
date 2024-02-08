@@ -191,16 +191,19 @@ export class DescriptionTFWidget {
         this.last_tf_stamps = {};
         this.fix_base = false;
 
-        this.topic_tf_static = '/tf_static';
-        this.topic_tf = '/tf';
-        this.topic_desc = '/robot_description';
+        // this.topic_tf_static = '/tf_static';
+        // this.topic_tf = '/tf';
+        // this.topic_desc = '/robot_description';
 
-        // this.last_odo = null;
-        panel.ui.client.on(this.topic_tf_static, this.on_tf_data);
-        panel.ui.client.on(this.topic_tf, this.on_tf_data);
-        panel.ui.client.on(this.topic_desc, this.on_description_data);
+        // // this.last_odo = null;
+        // panel.ui.client.on(this.topic_tf_static, this.on_tf_data);
+        // panel.ui.client.on(this.topic_tf, this.on_tf_data);
+        // panel.ui.client.on(this.topic_desc, this.on_description_data);
 
         this.sources = new MultiTopicSource(this);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
+        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
 
         panel.widget_menu_cb = () => {
             that.setupMenu();
@@ -209,11 +212,11 @@ export class DescriptionTFWidget {
 
     setupMenu () {
        
-        this.sources.initMenu();
+        this.sources.setupMenu();
 
-        this.sources.makeTopicButton('Static TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf_static);
-        this.sources.makeTopicButton('TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf);
-        this.sources.makeTopicButton('Description source', 'std_msgs/msg/String', this.topic_desc);
+        // this.sources.makeTopicButton('Static TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf_static);
+        // this.sources.makeTopicButton('TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf);
+        // this.sources.makeTopicButton('', '', this.topic_desc);
 
         let that = this;
 
