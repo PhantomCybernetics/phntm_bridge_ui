@@ -6,16 +6,17 @@ export class MultiTopicSource {
         this.sources = [];
         this.subscribed_topics = {};
 
-        this.widget.panel.ui.client.on('topics', (discovered_topics) => this.onTopics(discovered_topics));
+        this.widget.panel.ui.client.on('topics', this.onTopics);
     }
 
-    add(msg_type, label, selected_topic, num, cb) {
+    add(msg_type, label, selected_topic, num, cb, clear_cb) {
         let new_src = {
             msg_type: msg_type,
             label: label,
             selected_topic: selected_topic,
             num: num,
             cb: cb,
+            clear_cb: clear_cb,
             topic_slots: []
         }
         this.sources.push(new_src);
@@ -38,7 +39,8 @@ export class MultiTopicSource {
                 msg_type: src.msg_type,
                 label: src.label,
                 selected_topic: src.selected_topic,
-                cb: src.cb
+                // cb: src.cb,
+                clear_cb: src.clear_cb
             }
             src.topic_slots.push(new_topic_slot);
             all_slots_full = this.assignSlotTopic(new_topic_slot);
@@ -77,10 +79,13 @@ export class MultiTopicSource {
         this.subscribed_topics[topic.id] = slot;
         console.warn('Topic assigned: '+topic.id);
 
-        this.widget.panel.ui.client.on(topic.id, slot.cb);
+        slot.cb_wrapper = (data) => {
+            return slot.src.cb(topic.id, data);
+        }
+        this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
     }
 
-    onTopics(discovered_topics) { // client updated topics
+    onTopics = (discovered_topics) => { // client updated topics
 
         let changed = false;
         let that = this;
@@ -117,7 +122,7 @@ export class MultiTopicSource {
             '<span class="label">Edit input</span>' +
             '<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>' +
             '</div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
 
         this.src_ctrl_menu = $('#src_ctrl_'+this.panel.n);
 
@@ -144,7 +149,9 @@ export class MultiTopicSource {
             console.warn('Clearing topic: '+slot.topic);
 
             delete this.subscribed_topics[slot.topic];
-            this.widget.panel.ui.client.off(slot.topic, slot.cb);
+            this.widget.panel.ui.client.off(slot.topic, slot.cb_wrapper);
+            if (slot.clear_cb) 
+                slot.clear_cb(slot.topic);
 
             slot.topic = null;
         }
@@ -162,6 +169,21 @@ export class MultiTopicSource {
         }
 
         this.updateMenuContent();
+    }
+
+    //clear all subs
+    close() {
+        this.widget.panel.ui.client.off('topics', this.onTopics);
+        let topics = Object.keys(this.subscribed_topics);
+        topics.forEach((topic)=>{
+            let slot = this.subscribed_topics[topic];
+            if (slot.clear_cb)
+                slot.clear_cb(slot.topic);
+            slot.topic = null;
+            this.widget.panel.ui.client.off(topic, slot.cb_wrapper);
+        });
+        this.subscribed_topics = {};
+
     }
 
     makeTopicButton(slot) {

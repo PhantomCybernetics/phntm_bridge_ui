@@ -79,6 +79,10 @@ export class RangeWidget {
     onClose() {
     }
 
+    colorFromVal() {
+        
+    }
+
     onData(decoded) {
        
         let range = decoded.range ? decoded.range : decoded.max_range;

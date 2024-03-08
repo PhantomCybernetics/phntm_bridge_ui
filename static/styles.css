@@ -793,6 +793,12 @@ BUTTON#trigger_wifi_scan.working {
     cursor: pointer;
 }
 
+.panel_msg_types_line SPAN.msg_types {
+    display: block;
+    padding: 5px 5px 5px 8px;
+    white-space: nowrap;
+}
+
 .grid_panel .menu_line:last-child A {
     padding-bottom: 7px;
 }
@@ -834,6 +840,7 @@ BUTTON#trigger_wifi_scan.working {
     background-repeat: no-repeat;
     background-size: 6px;
     background-position: 7px 12px;
+    border-top: 5px solid #139a80;
 }
 
 .menu_line.src_ctrl .label {
@@ -845,7 +852,7 @@ BUTTON#trigger_wifi_scan.working {
 }
 
 .menu_line.src_ctrl:hover {
-    border-radius: 0px;
+    /* border-radius: 0px; */
 }
 
 .src_ctrl_menu {
@@ -928,11 +935,11 @@ BUTTON#trigger_wifi_scan.working {
     background: red;
 }
 
-.grid_panel  .msg_types:hover, .src_ctrl_menu BUTTON:hover  {
+.grid_panel A.msg_types:hover, .src_ctrl_menu BUTTON:hover  {
     background: #558ec3;
 }
 
-.grid_panel .msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
+.grid_panel A.msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
     background: #c20000;
 }
 
@@ -953,6 +960,10 @@ BUTTON#trigger_wifi_scan.working {
     padding-bottom: 10px;
     cursor: grab;
     white-space: nowrap;
+    padding-left: 25px; /* pause btn */
+}
+.panel-title.no-pause {
+    padding-left: 3px; /* no pause btn */
 }
 
 .grid-stack>.grid-stack-item>.grid-stack-item-content {
@@ -1103,9 +1114,33 @@ SPAN.error {
 
 }
 
-.pause_panel_label {
+.pause-panel-button {
     display: block;
     cursor: pointer;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 0px;
+    top: 2px;
+    z-index: 2;
+    background-image: url('/static/icon-play-pause.png');
+    background-repeat: no-repeat;
+    background-position: -20px 0px;
+    background-size: 40px;
+}
+
+.pause-panel-button:hover {
+    background-color: #139a80;
+    background-position: 0px 0px;
+}
+
+.pause-panel-button.paused {
+    /* background-color: red; */
+    background-position: 0px 0px;
+}
+
+.pause-panel-button.paused:hover {
+    background-position: -20px 0px;
 }
 
 .panel_widget {

@@ -7,13 +7,16 @@ import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 import { MultiTopicSource } from "./inc/multitopic.js";
+import { Vector3 } from "three";
+import { Quaternion } from "three";
 
-export class DescriptionTFWidget {
+export class DescriptionTFWidget extends EventTarget {
     static label = 'Robot description (URFD) + Transforms';
     static default_width = 5;
     static default_height = 4;
 
     constructor(panel) {
+        super();
 
         this.panel = panel;
 
@@ -44,8 +47,12 @@ export class DescriptionTFWidget {
         this.render_joints = true;
         this.follow_target = true;
 
+        this.pose_graph = [];
+        this.pose_graph_size = 100; // keeps this many nodes in pg
+        this.render_pose_graph = true; // TODO: UI
         this.pos_offset = null;
-        this.rot_offset = null;
+
+        this.parseUrlParts(this.panel.custom_url_vars);
 
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
@@ -221,13 +228,14 @@ export class DescriptionTFWidget {
         let that = this;
 
         $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'"><input type="checkbox" '+(this.follow_target?'checked':'')+' id="follow_target_'+this.panel.n+'" title="Follow target"> Follow target</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#follow_target_'+this.panel.n).change(function(ev) {
-            that.follow_target = $(this).prop('checked');                 
+            that.follow_target = $(this).prop('checked');         
+            that.panel.ui.update_url_hash();        
         });
 
         $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_joints_'+this.panel.n).change(function(ev) {
             that.render_joints = $(this).prop('checked');
             if (that.render_joints) {
@@ -237,11 +245,12 @@ export class DescriptionTFWidget {
             } else {
                 that.camera.layers.disable(3);
                 that.camera.layers.disable(4); //labels
-            }                    
+            }        
+            that.panel.ui.update_url_hash();            
         });
 
         $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_links_'+this.panel.n).change(function(ev) {
             that.render_links = $(this).prop('checked');
             if (that.render_links) {
@@ -252,10 +261,11 @@ export class DescriptionTFWidget {
                 that.camera.layers.disable(5);
                 that.camera.layers.disable(6); //labels
             }
+            that.panel.ui.update_url_hash();
         });
 
         $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_labels_'+this.panel.n).change(function(ev) {
             that.render_labels = $(this).prop('checked');
             if (that.render_labels) {
@@ -267,10 +277,11 @@ export class DescriptionTFWidget {
                 that.camera.layers.disable(4);
                 that.camera.layers.disable(6);
             }
+            that.panel.ui.update_url_hash();
         });
 
         $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_visuals_'+this.panel.n).change(function(ev) {
             that.render_visuals = $(this).prop('checked');
             console.log('Visuals '+that.render_visuals);
@@ -278,41 +289,146 @@ export class DescriptionTFWidget {
                 that.camera.layers.enable(1);
             else
                 that.camera.layers.disable(1);
+            that.panel.ui.update_url_hash();
         });
 
         $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_collisions_'+this.panel.n).change(function(ev) {
             that.render_collisions = $(this).prop('checked');
             if (that.render_collisions)
                 that.camera.layers.enable(2);
             else
                 that.camera.layers.disable(2);
+            that.panel.ui.update_url_hash();
         });
 
         $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix base</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#fix_base_'+this.panel.n).change(function(ev) {
             that.fix_base = $(this).prop('checked');
+            that.panel.ui.update_url_hash();
         });
     }
 
     onClose() {
         console.warn('Closing desc/tf widget')
         this.rendering = false; //kills the loop
-        this.panel.ui.client.off('/tf_static', this.on_tf_data);
-        this.panel.ui.client.off('/tf', this.on_tf_data);
-        this.panel.ui.client.off('/robot_description', this.on_description_data);
+        this.sources.close();
     }
 
+    getUrlHashParts = (out_parts) => {
+        out_parts.push('f='+(this.follow_target ? '1' : '0'));
+        out_parts.push('jnt='+(this.render_joints ? '1' : '0'));
+        out_parts.push('lnk='+(this.render_links ? '1' : '0'));        
+        out_parts.push('lbl='+(this.render_labels ? '1' : '0'));
+        out_parts.push('vis='+(this.render_visuals ? '1' : '0'));
+        out_parts.push('col='+(this.render_collisions ? '1' : '0'));
+        out_parts.push('fix='+(this.fix_base ? '1' : '0'));
+        let src_no = 0;
+        this.sources.sources.forEach((src)=>{
+            out_parts.push('src_'+src_no+'='+src.selected_topic);
+            src_no++;
+        });
+    }
 
-    on_tf_data = (tf) => {
+    parseUrlParts = (custom_url_vars) => {
+        custom_url_vars.forEach(([arg, val])=>{
+            console.warn('DRF got ' + arg +" > "+val);
+            switch (arg) {
+                case 'f':   this.follow_target = parseInt(val) == 1; break;
+                case 'jnt': this.render_joints = parseInt(val) == 1; break;
+                case 'lnk': this.render_links = parseInt(val) == 1; break;
+                case 'lbl': this.render_labels = parseInt(val) == 1; break;
+                case 'vis': this.render_visuals = parseInt(val) == 1; break;
+                case 'col': this.render_collisions = parseInt(val) == 1; break;
+                case 'col': this.render_collisions = parseInt(val) == 1; break;
+                case 'fix': this.fix_base = parseInt(val) == 1; break;
+            }
+        });
+    }
+
+    on_tf_data = (topic, tf) => {
         if (this.panel.paused)
             return;
 
-        for (let i = 0; i < tf.transforms.length; i++)
+        for (let i = 0; i < tf.transforms.length; i++) {
             this.transforms_queue.push(tf.transforms[i]); //processed in rendering_loop()
+
+            let t = tf.transforms[i].transform;
+            if (tf.transforms[i].child_frame_id == 'base_link') {
+
+                // console.log('Got base_link, all transforms are:', tf.transforms);
+
+                if (this.pos_offset == null) {
+                    this.pos_offset = new THREE.Vector3();
+                    this.pos_offset.copy(t.translation);
+                }
+
+                // trim pg
+                while (this.pose_graph.length > this.pose_graph_size) { 
+                    let rem = this.pose_graph.shift();
+                    if (rem.visual) {
+                        rem.visual.removeFromParent();
+                    }
+                }
+
+                let ns_stamp = tf.transforms[i].header.stamp.sec*1000000000 + tf.transforms[i].header.stamp.nanosec;
+                let pg_node = {
+                    pos: new THREE.Vector3().copy(t.translation).sub(this.pos_offset),
+                    rot: new THREE.Quaternion().copy(t.rotation),
+                    mat: new THREE.Matrix4(),
+                    ns_stamp: ns_stamp,
+                };
+                pg_node.mat.compose(pg_node.pos, pg_node.rot, new THREE.Vector3(1,1,1))
+
+                if (this.render_pose_graph) {
+                    pg_node.visual = new THREE.AxesHelper(.05);
+                    pg_node.visual.material.depthTest = false;
+                    pg_node.visual.position.copy(pg_node.pos);
+                    pg_node.visual.quaternion.copy(pg_node.rot);
+                    this.world.add(pg_node.visual); //+z up
+                }
+                
+                this.pose_graph.push(pg_node);
+                
+                let e = new CustomEvent('pg_updated', { detail: { topic: topic, pg_node:pg_node } } );
+                this.dispatchEvent(e);
+            }
+
+        }
     }
+
+    get_latest_pg_ns_stamp() {
+        if (!this.pose_graph || !this.pose_graph.length)
+            return NaN;
+
+        return this.pose_graph[this.pose_graph.length-1].ns_stamp;
+    }
+
+    // get_pg_offset (ns_stamp_search, pos_to_pg, rot_to_pg) {
+
+    //     if (this.pose_graph.length < 1) {
+    //         return false;
+    //     }
+
+    //     if (ns_stamp_search > this.pose_graph[this.pose_graph.length-1].ns_stamp) {
+    //         console.log('Laser ns-delta is in the future, using latest pos. d_sec=+'+((ns_stamp_search-this.pose_graph[this.pose_graph.length-1].ns_stamp)/1000000000))    
+    //         return false;
+    //     }
+
+    //     let lag = 0;
+    //     for (let i = this.pose_graph.length-1; i >= 0; i--) {
+    //         let d = ns_stamp_search - this.pose_graph[i].ns_stamp;
+    //         if (d <= 0) {
+    //             console.warn('Laser d_sec='+(d/1000000000)+'; rendering laser lag='+lag);
+    //             return true; 
+    //         }
+    //         lag++;
+    //     }
+
+    //     return false;
+    // }
 
     clear_model = (obj) => {
 
@@ -386,7 +502,7 @@ export class DescriptionTFWidget {
 
     }
 
-    on_description_data = (desc) => {
+    on_description_data = (topic, desc) => {
 
         if (this.panel.paused)
             return;
@@ -471,21 +587,23 @@ export class DescriptionTFWidget {
         target.add(axesHelper);
         axesHelper.layers.set(layer_axes);
 
-        const el = document.createElement('div');
-        el.className = 'label';
-        el.textContent = label_text;
-        el.style.backgroundColor = 'transparent';
-        el.style.color = '#ffffff';
-        el.style.fontSize = '12px';
+        if (label_text) {
+            const el = document.createElement('div');
+            el.className = 'label';
+            el.textContent = label_text;
+            el.style.backgroundColor = 'transparent';
+            el.style.color = '#ffffff';
+            el.style.fontSize = '12px';
 
-        const label = new CSS2DObject(el);
-        target.add(label);
-        label.center.set(layer_labels == 4 ? 1.1 : -0.1, 0); // joints left, links right
-        label.position.set(0, 0, .02);
-        label.layers.set(layer_labels);
+            const label = new CSS2DObject(el);
+            target.add(label);
+            label.center.set(layer_labels == 4 ? 1.1 : -0.1, 0); // joints left, links right
+            label.position.set(0, 0, .02);
+            label.layers.set(layer_labels);
+        }
     }
 
-    controls_changed() {
+    controls_changed = () => {
         this.controls_dirty = true;
     }
 
@@ -503,6 +621,7 @@ export class DescriptionTFWidget {
                 let t = this.transforms_queue[i].transform;
                 let s = this.transforms_queue[i].header.stamp;
                 let t_sec = (s.sec * 1000000000.0 + s.nanosec) / 1000000000.0;
+
                 let tf_id = id_parent+'>'+id_child;
                 if (this.last_tf_stamps[tf_id] && this.last_tf_stamps[tf_id] > t_sec) 
                     continue;
@@ -512,15 +631,6 @@ export class DescriptionTFWidget {
                 let ch = this.robot.links[id_child];
     
                 if (id_child == 'base_link') {
-                    
-                    if (this.pos_offset == null) {
-                        this.pos_offset = new THREE.Vector3();
-                        this.pos_offset.copy(t.translation);
-                    }
-                    if (this.rot_offset == null) {
-                        this.rot_offset = new THREE.Quaternion();
-                        this.rot_offset.copy(t.rotation);
-                    }
                         
                     if (!this.fix_base) {
                         if (this.follow_target)
@@ -534,7 +644,6 @@ export class DescriptionTFWidget {
                             // this.camera.lookAt(ch.position);
                             //this.camera.updateProjectionMatrix();
                         }
-                            
                     }
                         
                     ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
@@ -559,6 +668,7 @@ export class DescriptionTFWidget {
         }
     
         this.controls.update();
+
         if (scene_changed || this.controls_dirty) {
             this.renderer.render(this.scene, this.camera);
             this.controls_dirty = false;

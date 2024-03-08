@@ -1,5 +1,7 @@
 export class VideoWidget {
 
+    is_video = true;
+
     constructor (panel, id_source)  {
 
         this.panel = panel;

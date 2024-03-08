@@ -43,7 +43,7 @@ class Panel {
     src_visible = false;
     //const event = new Event("build");
 
-    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom) {
+    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, custom_url_vars) {
         this.ui = ui;
         let panels = ui.panels;
         let grid = ui.grid;
@@ -52,6 +52,7 @@ class Panel {
         this.src_visible = src_visible;
         this.paused = false;
         this.zoom = zoom;
+        this.custom_url_vars = custom_url_vars;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
         this.n = Panel.PANEL_NO++;
@@ -61,7 +62,7 @@ class Panel {
             '<div class="grid_panel" data-source="'+id_source+'">' +
                 '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
-                '<div class="monitor_menu">' +
+                '<div class="monitor_menu" id="monitor_menu_'+this.n+'">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
                 '<div class="panel_content_space">' +
@@ -177,6 +178,36 @@ class Panel {
             //     this._on_data_context_wrapper(latest.msg, latest.ev)
             // }
 
+            let that = this;
+
+            // pause panel updates
+            //if (this.msg_type != 'video') {
+            let pauseEl = $('<a href="#" id="pause_panel_'+this.n+'" class="pause-panel-button" title="Pause"></a>');
+            if (that.paused) {
+                pauseEl.addClass('paused');
+                pauseEl.attr('title', 'Unpause');
+            }
+            pauseEl.click(function(e) {
+                that.paused = !that.paused;
+                console.log('Panel updates paused '+that.paused);
+                if (that.paused) {
+                    pauseEl.addClass('paused');
+                    pauseEl.attr('title', 'Unpause');
+                } else {
+                    pauseEl.removeClass('paused');
+                    pauseEl.attr('title', 'Pause');
+                }
+                if (that.display_widget && that.display_widget.is_video) {
+                    that.display_widget.el.trigger(that.paused ? 'pause' : 'play');    
+                }
+                e.cancelBubble = true;
+                return false;
+            });
+            pauseEl.insertBefore('#monitor_menu_'+that.n);
+            // } else {
+            //     $('#panel_title_'+this.n).addClass('no-pause');
+            // }
+
         }
 
         this.setMenu()
@@ -216,7 +247,7 @@ class Panel {
             els.push(msgTypesEl);
 
             // display source for widgets
-            if (this.display_widget) {
+            if (this.display_widget && this.msg_type != 'sensor_msgs/msg/Image') {
                 let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
                 let source_el = $('#panel_source_'+this.n);
                 let widget_el = $('#panel_widget_'+this.n);
@@ -249,17 +280,10 @@ class Panel {
                 });
                 els.push(showSourceEl);
             }
-        }
-
-        // pause panel updates
-        if (this.msg_type != 'video') {
-            let pauseEl = $('<div class="menu_line" id="pause_panel_menu_'+this.n+'"><label for="pause_panel_'+this.n+'" class="pause_panel_label" id="pause_panel_label_'+this.n+'"><input type="checkbox" id="pause_panel_'+this.n+'" class="pause_panel"'+(this.paused?' checked':'')+' title="Pause updates"/> Pause</label></div>');
-            let pauseElCB = pauseEl.find('.pause_panel');
-            pauseElCB.click(function(ev) {
-                that.paused = $(this).prop('checked');
-                console.log('Panel updates paused '+that.paused);
-            });
-            els.push(pauseEl);
+        } else {
+            // message type info dialog
+            let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
+            els.push(msgTypesEl);
         }
 
         let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
@@ -1417,12 +1441,12 @@ export class PanelUI {
         }
     }
 
-    make_panel(id_source, w, h, x=null, y=null, src_visible=false, zoom) {
+    make_panel(id_source, w, h, x=null, y=null, src_visible=false, zoom, custom_url_vars) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
         //msg type unknown here
-        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
+        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, custom_url_vars);
 
         //panel.init(msg_type);
 
@@ -1493,6 +1517,9 @@ export class PanelUI {
                     let z = Math.round(that.panels[id_source].zoom * 100) / 100;
                     parts.push('z='+z);
                 }
+            if (that.panels[id_source].display_widget && that.panels[id_source].display_widget.getUrlHashParts !== undefined) {
+                that.panels[id_source].display_widget.getUrlHashParts(parts);
+            }
 
             hash.push(parts.join(':'));
         });
@@ -1534,19 +1561,22 @@ export class PanelUI {
             //opional vars follow
             let src_on = false;
             let zoom = null;
-            for (let j = 2; j < src_vars.length; j++) {
+            let custom_vars = [];
+            for (let j = 3; j < src_vars.length; j++) {
                 if (src_vars[j] == 'src') {
                     src_on = true;
                 }
                 else if (src_vars[j].indexOf('z=') === 0) {
                     zoom = parseFloat(src_vars[j].substr(2));
                     console.log('Found zoom for '+id_source+': '+src_vars[j] + ' => ', zoom);
+                } else {
+                    custom_vars.push(src_vars[j].split('='));
                 }
             }
 
             //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
-            this.make_panel(id_source, w, h, x, y, src_on, zoom)
+            this.make_panel(id_source, w, h, x, y, src_on, zoom, custom_vars)
             if (this.widgets[id_source]) {
                 this.panels[id_source].init(id_source);
             }

@@ -8,11 +8,9 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
     constructor(panel) {
         super(panel);
 
-        let w = panel.ui.widgets[panel.id_source];
-
         panel.max_trace_length = 5;
        
-        $('#panel_title_'+panel.n).html(w.label);
+        // s$('#panel_title_'+panel.n).html(panel.ui.widgets[panel.id_source]);
 
         // $(this.canvas).css({
         //     left: -this.canvas_size[0]/2.0,
@@ -84,12 +82,12 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         //     + '<button class="val" title="">'+this.+'</button>'
         //     + '<button class="val" title="">'+this.+'</button>'
         //     + '</div>')
-        //     .insertBefore($('#pause_panel_menu_'+panel.n));
+        //     .insertBefore($('#close_panel_menu_'+panel.n));
 
         let that = this;
 
         $('<div class="menu_line"><a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
         
         $('#clear_panel_link_'+this.panel.n).click((ev)=>{
             ev.preventDefault(); //stop from moving the panel
@@ -97,13 +95,16 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         });
     } //widget menu end
 
-    on_odometry_data = (odo) => {
+    on_odometry_data = (topic, odo) => {
 
         if (this.panel.paused)
             return;
 
-        if (!this.base_offset)
-            this.base_offset = [ odo.pose.pose.position.y, odo.pose.pose.position.x ]
+        let x = -odo.pose.pose.position.x;
+        let y = odo.pose.pose.position.y;
+
+        if (this.base_offset_pos == null)
+            this.base_offset_pos = [ x, y ]
 
         this._rot.set(
             odo.pose.pose.orientation.x,
@@ -112,9 +113,12 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             odo.pose.pose.orientation.w
         )
         this._euler.setFromQuaternion(this._rot);
+
         let angleInRadians = this._euler.z;
+        // console.log('Got odo rot: ', angleInRadians);
+
         let ns_stamp = odo.header.stamp.sec*1000000000 + odo.header.stamp.nanosec;
-        
+
         let angularSpeed = 0;
         if (this.pose_graph.length) {
             let ns_d = ns_stamp - this.pose_graph[this.pose_graph.length-1][0];
@@ -124,9 +128,9 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
         this.pose_graph.push( [
             ns_stamp, //ns
-            odo.pose.pose.position.y - this.base_offset[0],
-            odo.pose.pose.position.x - this.base_offset[1],
-            angleInRadians, //from imu
+            x - this.base_offset_pos[0],
+            y - this.base_offset_pos[1],
+            angleInRadians,
             angularSpeed
         ]);
 
@@ -141,7 +145,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         this.render();
     }
 
-    on_scan_data = (scan, ns_stamp=null, k = -1) => {
+    on_scan_data = (topic, scan, ns_stamp=null, k = -1) => {
 
         if (this.panel.paused)
             return;
@@ -174,7 +178,8 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             
         // } 
 
-        k = this.pose_graph.length-1;
+        if (k < 0)
+            k = this.pose_graph.length-1;
         let pose = this.pose_graph[k];
         // if (Math.abs(pose[4]) > 0.01) {
         //     console.warn('pose['+k+'] ang_speed=', pose[4]);
@@ -193,7 +198,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         let x = pose[1];
         let y = pose[2];
         let a = pose[3];
-        let anglePerRange = 360.0 / scan.ranges.length;
+        // let anglePerRange = 360.0 / scan.ranges.length;
 
         let scan_data = [
             ns_stamp,
@@ -202,6 +207,8 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             // vec2 points follow
         ]
 
+        let rot = a + scan.angle_min;
+
         for (let j = 0; j < scan.ranges.length; j++) {
             let val = scan.ranges[j];
             if (val === null || val > scan.range_max || val < scan.range_min)
@@ -209,13 +216,18 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             
             let fw = [ 0, val ]
 
-            let arad = deg2rad(anglePerRange * j);
-            arad = -1.0*a + (Math.PI - arad);
-            
+            // let arad = deg2rad(anglePerRange * j);
+            // arad = -1.0*a + (Math.PI - arad);
+            //  + ;
+        
             scan_data.push([
-                x + Math.cos(arad)*fw[0] - Math.sin(arad)*fw[1],
-                y + Math.sin(arad)*fw[0] + Math.cos(arad)*fw[1]
+                x, 
+                y,
+                Math.cos(rot)*fw[0] - Math.sin(rot)*fw[1],
+                Math.sin(rot)*fw[0] + Math.cos(rot)*fw[1]
             ]);
+
+            rot += scan.angle_increment;
         }
 
         this.scan_graph.push(scan_data);
@@ -234,6 +246,9 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
     }
      
     rendering_loop() {
+
+        if (!this.rendering)
+            return; // loop killed
 
         let clear_tiles = false;
         if (this.do_clear) {
@@ -263,46 +278,34 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             this.clear_pose = false;
             this.last_pose_rendered = -1;
         }
-
-        if (!this.rendering)
-            return; // loop end
-
-        if (!this.render_dirty) {
-            return window.requestAnimationFrame((step)=>{
-                that.rendering_loop();
-            });
-        }
-
-        let panel = this.panel;
-
-        // let frame = [
-        //     this.canvas_size[0]/2.0,
-        //     this.canvas_size[1]/2.0
-        // ];
-    
-        // let range = 8.0; //panel.range_max;
         
         // move arrow to position
         if (this.pose_graph.length && this.img) {
 
             let x = this.pose_graph[this.pose_graph.length-1][1] * this.render_scale;
             let y = this.pose_graph[this.pose_graph.length-1][2] * this.render_scale;
-            let a = -1.0 * this.pose_graph[this.pose_graph.length-1][3] + Math.PI;
+            let a = this.pose_graph[this.pose_graph.length-1][3];
 
             this.img.css({
                 left: (x-10)+'px',
                 top: (y-10)+'px',
-                transform: 'rotate('+a+'rad)',
+                transform: 'rotate('+(-a-Math.PI/2)+'rad)',
                 scale: 1.0/this.panel.zoom,
                 display: 'block'
             });
 
             if (this.follow_target) {
                 $(this.canvas_container).css({
-                    left: panel.widget_width/2.0 - x * panel.zoom,
-                    top: panel.widget_height/2.0 - y * panel.zoom
+                    left: that.panel.widget_width/2.0 - x * that.panel.zoom,
+                    top: that.panel.widget_height/2.0 - y * that.panel.zoom
                 });
             }
+        }
+
+        if (!this.render_dirty) {
+            return window.requestAnimationFrame((step)=>{
+                that.rendering_loop();
+            });
         }
 
         //panel.display_widget.fillStyle = "#fff";
@@ -400,15 +403,15 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
             for (let i = this.last_scan_rendered; i < this.scan_graph.length; i++) {
 
-                let pos = this.scan_graph[i][1];
-                let range = this.scan_graph[i][2];
+                // let pos = this.scan_graph[i][1];
+                // let range = this.scan_graph[i][2];
 
-                let ang_speed = Math.abs(this.scan_graph[i][3]);
-                //let amount = 
-                let amount = Math.min(Math.max(ang_speed / 2.0, 0.0), 1.0);
-                let c = lerpColor('#FF0000', '#000000', amount);
-                let alpha = parseInt(lerp(255, 50, amount));
-                let a = alpha.toString(16).padStart(2, '0');
+                // let ang_speed = Math.abs(this.scan_graph[i][3]);
+                // //let amount = 
+                // let amount = Math.min(Math.max(ang_speed / 2.0, 0.0), 1.0);
+                // let c = lerpColor('#FF0000', '#000000', amount);
+                // let alpha = parseInt(lerp(255, 50, amount));
+                // let a = alpha.toString(16).padStart(2, '0');
 
                 // this.ctx.fillStyle = c + a;
                 // if (amount)
@@ -427,12 +430,12 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
                 // let last_tile = null;
                 for (let j = 4; j < this.scan_graph[i].length; j++) {
 
-                    let x = this.scan_graph[i][j][0] * this.render_scale;
-                    let y = this.scan_graph[i][j][1] * this.render_scale;
+                    let x = this.scan_graph[i][j][0] + (this.scan_graph[i][j][2] * this.render_scale);
+                    let y = this.scan_graph[i][j][1] + (this.scan_graph[i][j][3] * this.render_scale);
 
                     let tile = this.get_tile(x, y, 0, this.tiles);
 
-                    tile.ctx.fillStyle = c + a;
+                    tile.ctx.fillStyle = '#FF0000';
                     
                     tile.ctx.fillRect(x-tile.x, y-tile.y, 1, 1 );
 
@@ -489,9 +492,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
     onClose() {
         console.warn('Closing odoscan widget')
         this.rendering = false; //kills the loop
-        this.panel.ui.client.off('/odometry/filtered', this.on_odometry_data);
-        this.panel.ui.client.off('/scan', this.on_scan_data);
-
+        this.sources.close();
     }
 
 

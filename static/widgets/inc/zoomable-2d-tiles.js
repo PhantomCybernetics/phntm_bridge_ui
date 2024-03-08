@@ -44,7 +44,8 @@ export class Zoomable2DTiles {
             scale: panel.zoom
         });
 
-        this.base_offset = null;
+        this.base_offset_pos = null;
+        this.base_offset_rot = null;
         this.render_dirty = false;
 
         this.drag_mouse_offset = []
@@ -177,7 +178,7 @@ export class Zoomable2DTiles {
             + '<button class="val" title="Reset zoom">Zoom: '+zoom+'x</button>'
             + '<span class="plus">+</span>'
             + '</div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
 
         let that = this;
         $('#zoom_ctrl_'+this.panel.n+' .plus').click(function(ev) {
@@ -193,7 +194,7 @@ export class Zoomable2DTiles {
         });
 
         $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'" class="follow_target_label" id="follow_target_label_'+this.panel.n+'"><input type="checkbox" id="follow_target_'+this.panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-            .insertBefore($('#pause_panel_menu_'+this.panel.n));
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
 
         $('#follow_target_'+this.panel.n).change(function(ev) {
             that.follow_target = $(this).prop('checked');

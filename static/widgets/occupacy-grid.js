@@ -53,7 +53,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
                 + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
                 + '<span class="plus">+</span>'
                 + '</div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
+                .insertBefore($('#close_panel_menu_'+panel.n));
 
             $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
                 that.setZoom(panel.zoom + panel.zoom/2.0);
@@ -68,16 +68,16 @@ export class OccupancyGrid extends Zoomable2DTiles {
             });
 
             $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
+                .insertBefore($('#close_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
+                .insertBefore($('#close_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
-                .insertBefore($('#pause_panel_menu_'+panel.n));
+                .insertBefore($('#close_panel_menu_'+panel.n));
 
             $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
-                .insertBefore($('#pause_papause_panel_menu_nel_'+panel.n));
+                .insertBefore($('#close_panel_menu_'+panel.n));
             
             $('#clear_panel_link_'+panel.n).click((ev)=>{
                 ev.preventDefault(); //stop from moving the panel
