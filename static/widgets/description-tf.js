@@ -329,7 +329,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.panel.ui.update_url_hash();
         });
 
-        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose graph"> Render pose graph</label></div>')
+        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_pg_'+this.panel.n).change(function(ev) {
             that.render_pose_graph = $(this).prop('checked');
