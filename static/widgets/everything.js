@@ -24,6 +24,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1, this.on_range_data, this.clear_range);
         this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, this.on_costmap_data);
 
+        this.parseUrlParts(this.panel.custom_url_vars);
+        
         // this.sources = new MultiTopicSource(this);
 
         this.range_visuals = {};

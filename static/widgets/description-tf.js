@@ -41,6 +41,14 @@ export class DescriptionTFWidget extends EventTarget {
         this.pos_offset = null;
         this.fix_base = false;
 
+        this.transforms_queue = [];
+        this.last_tf_stamps = {};
+
+        this.sources = new MultiTopicSource(this);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
+        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
+
         this.parseUrlParts(this.panel.custom_url_vars);
 
         this.manager = new THREE.LoadingManager();
@@ -211,11 +219,7 @@ export class DescriptionTFWidget extends EventTarget {
         };
 
         this.rendering = true;
-        this.rendering_loop();
-
-        this.transforms_queue = [];
-        this.last_tf_stamps = {};
-        
+        this.rendering_loop();        
 
         // this.topic_tf_static = '/tf_static';
         // this.topic_tf = '/tf';
@@ -226,11 +230,7 @@ export class DescriptionTFWidget extends EventTarget {
         // panel.ui.client.on(this.topic_tf, this.on_tf_data);
         // panel.ui.client.on(this.topic_desc, this.on_description_data);
 
-        this.sources = new MultiTopicSource(this);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
-        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
-
+     
         panel.widget_menu_cb = () => {
             that.setupMenu();
         }
@@ -356,11 +356,7 @@ export class DescriptionTFWidget extends EventTarget {
         out_parts.push('col='+(this.render_collisions ? '1' : '0'));
         out_parts.push('fix='+(this.fix_base ? '1' : '0'));
         out_parts.push('pg='+(this.render_pose_graph ? '1' : '0'));
-        let src_no = 0;
-        this.sources.sources.forEach((src)=>{
-            out_parts.push('src_'+src_no+'='+src.selected_topic);
-            src_no++;
-        });
+        this.sources.getUrlHashParts(out_parts);
     }
 
     parseUrlParts (custom_url_vars) {
@@ -381,6 +377,7 @@ export class DescriptionTFWidget extends EventTarget {
                 case 'pg': this.render_pose_graph = parseInt(val) == 1; break;
             }
         });
+        this.sources.parseUrlParts(custom_url_vars);
         // console.warn('DRF attrs after parse:', {
         //     follow_target: this.follow_target,
         //     render_joints: this.render_joints,
