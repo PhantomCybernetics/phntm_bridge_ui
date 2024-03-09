@@ -280,7 +280,7 @@ class Panel {
                 });
                 els.push(showSourceEl);
             }
-        } else {
+        } else if (this.msg_type == 'video') {
             // message type info dialog
             let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
             els.push(msgTypesEl);
@@ -1517,7 +1517,7 @@ export class PanelUI {
                     let z = Math.round(that.panels[id_source].zoom * 100) / 100;
                     parts.push('z='+z);
                 }
-            if (that.panels[id_source].display_widget && that.panels[id_source].display_widget.getUrlHashParts !== undefined) {
+            if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== undefined) {
                 that.panels[id_source].display_widget.getUrlHashParts(parts);
             }
 

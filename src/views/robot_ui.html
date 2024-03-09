@@ -149,6 +149,7 @@
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets
         panel_ui.panels_from_url_hash(window.location.hash);
+        panel_ui.update_url_hash();
 
         robot.on('error', (err, msg)=>{
             // $('#robot_info').html('<span class="error">'+msg+'</spam>');

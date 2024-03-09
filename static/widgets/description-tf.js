@@ -15,10 +15,33 @@ export class DescriptionTFWidget extends EventTarget {
     static default_width = 5;
     static default_height = 4;
 
+    static L_VISUALS      = 1;
+    static L_COLLIDERS    = 2;
+    static L_JOINTS       = 3;
+    static L_JOINT_LABELS = 4;
+    static L_LINKS        = 5;
+    static L_LINK_LABELS  = 6;
+    static L_POSE_GRAPH   = 7;
+
     constructor(panel) {
         super();
 
         this.panel = panel;
+
+        this.render_collisions = true;
+        this.render_visuals = true;
+        this.render_labels = false;
+        this.render_links = true;
+        this.render_joints = true;
+        this.follow_target = true;
+
+        this.pose_graph = [];
+        this.pose_graph_size = 100; // keeps this many nodes in pg
+        this.render_pose_graph = false;
+        this.pos_offset = null;
+        this.fix_base = false;
+
+        this.parseUrlParts(this.panel.custom_url_vars);
 
         this.manager = new THREE.LoadingManager();
         this.manager.setURLModifier((url)=>{
@@ -39,20 +62,6 @@ export class DescriptionTFWidget extends EventTarget {
         this.urdf_loader.parseCollision = true;
         this.urdf_loader.loadMeshCb = this.load_mesh_cb;
         this.robot = null;
-
-        this.render_collisions = true;
-        this.render_visuals = true;
-        this.render_labels = false;
-        this.render_links = true;
-        this.render_joints = true;
-        this.follow_target = true;
-
-        this.pose_graph = [];
-        this.pose_graph_size = 100; // keeps this many nodes in pg
-        this.render_pose_graph = true; // TODO: UI
-        this.pos_offset = null;
-
-        this.parseUrlParts(this.panel.custom_url_vars);
 
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
@@ -83,7 +92,7 @@ export class DescriptionTFWidget extends EventTarget {
         // const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
         this.model = new THREE.Object3D()
         this.scene.add(this.model);
-        this.model.position.y = .5
+        this.model.position.y = 0
 
         this.model.add(this.camera)
         this.camera.position.z = 2;
@@ -120,14 +129,24 @@ export class DescriptionTFWidget extends EventTarget {
         this.scene.add( ambience );
 
         this.camera.layers.enableAll();
-        if (!this.render_collisions)
-            this.camera.layers.disable(2); //colliders off by default
-        if (!this.render_joints)
-            this.camera.layers.disable(3); //joints off by default
-        if (!this.render_labels)
-            this.camera.layers.disable(4); //joint labels off by default
-        if (!this.render_labels)
-            this.camera.layers.disable(6); //link labels off by default
+        if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
+        if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
+        if (!this.render_joints)  {
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); //joints 
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //joint labels
+        }
+        if (!this.render_links) {
+            this.camera.layers.disable(DescriptionTFWidget.L_LINKS); //links
+            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //link labels
+
+        }
+        if (!this.render_labels) {
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
+            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
+        }
+        if (!this.render_pose_graph) {
+            this.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
+        }
 
         this.collider_mat = new THREE.MeshStandardMaterial({
             color: 0xffff00,
@@ -196,7 +215,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.transforms_queue = [];
         this.last_tf_stamps = {};
-        this.fix_base = false;
+        
 
         // this.topic_tf_static = '/tf_static';
         // this.topic_tf = '/tf';
@@ -239,12 +258,12 @@ export class DescriptionTFWidget extends EventTarget {
         $('#render_joints_'+this.panel.n).change(function(ev) {
             that.render_joints = $(this).prop('checked');
             if (that.render_joints) {
-                that.camera.layers.enable(3);
+                that.camera.layers.enable(DescriptionTFWidget.L_JOINTS);
                 if ($('#render_labels_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(4); //labels
+                    that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS); //labels
             } else {
-                that.camera.layers.disable(3);
-                that.camera.layers.disable(4); //labels
+                that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
+                that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //labels
             }        
             that.panel.ui.update_url_hash();            
         });
@@ -254,12 +273,12 @@ export class DescriptionTFWidget extends EventTarget {
         $('#render_links_'+this.panel.n).change(function(ev) {
             that.render_links = $(this).prop('checked');
             if (that.render_links) {
-                that.camera.layers.enable(5);
+                that.camera.layers.enable(DescriptionTFWidget.L_LINKS);
                 if ($('#render_labels_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(6); //labels
+                    that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS); //labels
             } else {
-                that.camera.layers.disable(5);
-                that.camera.layers.disable(6); //labels
+                that.camera.layers.disable(DescriptionTFWidget.L_LINKS);
+                that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //labels
             }
             that.panel.ui.update_url_hash();
         });
@@ -270,12 +289,12 @@ export class DescriptionTFWidget extends EventTarget {
             that.render_labels = $(this).prop('checked');
             if (that.render_labels) {
                 if ($('#render_joints_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(4);
+                    that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS);
                 if ($('#render_links_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(6);
+                    that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS);
             } else {
-                that.camera.layers.disable(4);
-                that.camera.layers.disable(6);
+                that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
+                that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
             }
             that.panel.ui.update_url_hash();
         });
@@ -286,9 +305,9 @@ export class DescriptionTFWidget extends EventTarget {
             that.render_visuals = $(this).prop('checked');
             console.log('Visuals '+that.render_visuals);
             if (that.render_visuals)
-                that.camera.layers.enable(1);
+                that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
             else
-                that.camera.layers.disable(1);
+                that.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
             that.panel.ui.update_url_hash();
         });
 
@@ -297,9 +316,9 @@ export class DescriptionTFWidget extends EventTarget {
         $('#render_collisions_'+this.panel.n).change(function(ev) {
             that.render_collisions = $(this).prop('checked');
             if (that.render_collisions)
-                that.camera.layers.enable(2);
+                that.camera.layers.enable(DescriptionTFWidget.L_COLLIDERS);
             else
-                that.camera.layers.disable(2);
+                that.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS);
             that.panel.ui.update_url_hash();
         });
 
@@ -307,6 +326,17 @@ export class DescriptionTFWidget extends EventTarget {
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#fix_base_'+this.panel.n).change(function(ev) {
             that.fix_base = $(this).prop('checked');
+            that.panel.ui.update_url_hash();
+        });
+
+        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose graph"> Render pose graph</label></div>')
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
+        $('#render_pg_'+this.panel.n).change(function(ev) {
+            that.render_pose_graph = $(this).prop('checked');
+            if (that.render_pose_graph)
+                that.camera.layers.enable(DescriptionTFWidget.L_POSE_GRAPH);
+            else
+                that.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
             that.panel.ui.update_url_hash();
         });
     }
@@ -317,7 +347,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.sources.close();
     }
 
-    getUrlHashParts = (out_parts) => {
+    getUrlHashParts (out_parts) {
         out_parts.push('f='+(this.follow_target ? '1' : '0'));
         out_parts.push('jnt='+(this.render_joints ? '1' : '0'));
         out_parts.push('lnk='+(this.render_links ? '1' : '0'));        
@@ -325,6 +355,7 @@ export class DescriptionTFWidget extends EventTarget {
         out_parts.push('vis='+(this.render_visuals ? '1' : '0'));
         out_parts.push('col='+(this.render_collisions ? '1' : '0'));
         out_parts.push('fix='+(this.fix_base ? '1' : '0'));
+        out_parts.push('pg='+(this.render_pose_graph ? '1' : '0'));
         let src_no = 0;
         this.sources.sources.forEach((src)=>{
             out_parts.push('src_'+src_no+'='+src.selected_topic);
@@ -332,9 +363,13 @@ export class DescriptionTFWidget extends EventTarget {
         });
     }
 
-    parseUrlParts = (custom_url_vars) => {
-        custom_url_vars.forEach(([arg, val])=>{
-            console.warn('DRF got ' + arg +" > "+val);
+    parseUrlParts (custom_url_vars) {
+        if (!custom_url_vars)
+            return;
+        custom_url_vars.forEach((kvp)=>{
+            let arg = kvp[0];
+            let val = kvp[1];
+            // console.warn('DRF got ' + arg +" > "+val);
             switch (arg) {
                 case 'f':   this.follow_target = parseInt(val) == 1; break;
                 case 'jnt': this.render_joints = parseInt(val) == 1; break;
@@ -342,10 +377,19 @@ export class DescriptionTFWidget extends EventTarget {
                 case 'lbl': this.render_labels = parseInt(val) == 1; break;
                 case 'vis': this.render_visuals = parseInt(val) == 1; break;
                 case 'col': this.render_collisions = parseInt(val) == 1; break;
-                case 'col': this.render_collisions = parseInt(val) == 1; break;
                 case 'fix': this.fix_base = parseInt(val) == 1; break;
+                case 'pg': this.render_pose_graph = parseInt(val) == 1; break;
             }
         });
+        // console.warn('DRF attrs after parse:', {
+        //     follow_target: this.follow_target,
+        //     render_joints: this.render_joints,
+        //     render_links: this.render_links,
+        //     render_labels: this.render_labels,
+        //     render_visuals: this.render_visuals,
+        //     render_collisions: this.render_collisions,
+        //     fix_base: this.fix_base,
+        // });
     }
 
     on_tf_data = (topic, tf) => {
@@ -387,6 +431,7 @@ export class DescriptionTFWidget extends EventTarget {
                     pg_node.visual.material.depthTest = false;
                     pg_node.visual.position.copy(pg_node.pos);
                     pg_node.visual.quaternion.copy(pg_node.rot);
+                    pg_node.visual.layers.set(DescriptionTFWidget.L_POSE_GRAPH);
                     this.world.add(pg_node.visual); //+z up
                 }
                 
@@ -450,7 +495,7 @@ export class DescriptionTFWidget extends EventTarget {
         }
 
         obj.renderOrder = -1;
-        obj.layers.set(1);
+        obj.layers.set(DescriptionTFWidget.L_VISUALS);
         obj.castShadow = true;
 
         if (!obj.children || !obj.children.length)
@@ -527,11 +572,11 @@ export class DescriptionTFWidget extends EventTarget {
         let that = this;
 
         Object.keys(this.robot.joints).forEach((key)=>{
-            that.make_mark(that.robot.joints[key], key, 3, 4);
+            that.make_mark(that.robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
         });
 
         Object.keys(this.robot.links).forEach((key)=>{
-            that.make_mark(that.robot.links[key], key, 5, 6);
+            that.make_mark(that.robot.links[key], key, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS);
         });
 
         if (this.robot.links['base_footprint']) {
@@ -548,14 +593,14 @@ export class DescriptionTFWidget extends EventTarget {
                         if (ch.isURDFVisual) {
                             if (ch.children && ch.children.length > 0) {
                                 if (ch.children[0].layers)
-                                    ch.children[0].layers.set(1);
+                                    ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
                                 ch.children[0].castShadow = true;
                                 // ch.children[0].renderOrder = 2;
                             }
                         } else if (ch.isURDFCollider) {
                             if (ch.children && ch.children.length > 0) { 
                                 if (ch.children[0].layers)
-                                    ch.children[0].layers.set(2);
+                                    ch.children[0].layers.set(DescriptionTFWidget.L_COLLIDERS);
                                 ch.children[0].material = this.collider_mat;
                                 ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
                             }
