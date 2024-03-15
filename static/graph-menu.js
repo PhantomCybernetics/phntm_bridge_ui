@@ -182,6 +182,7 @@ export class GraphMenu {
         this.topic_ids.sort();
 
         let topic_offset = 0;
+        let n = 0;
         this.topic_ids.forEach((topic) => {
             this.topics[topic].connections_drawn = [];
             this.topics[topic].focused = false;
@@ -191,15 +192,17 @@ export class GraphMenu {
             topic_offset += h + 2 + 16;
             let topic_el = $('<div class="graph_topic"></div>');
             let box_el = $('<div class="box" style="height:'+h+'px;">'
-                        + topic + '<br>'
+                        + '<label for="topic_'+n+'" title="'+topic+'" class="prevent-select">' + topic + '</label><br>'
                         + '<a href="#" class="msg_type">'+this.topics[topic].msg_type+'</a>'
                         + '</div>');
-            let chb = $('<input type="checkbox"/>');
+            let chb = $('<input type="checkbox" id="topic_'+n+'"/>');
             if (this.ui.panels[topic])
                 chb.attr('checked', true);
             box_el.prepend(chb);
             topic_el.prepend(box_el);
+            let lbl = box_el.find('label');
 
+            n++;
             this.topics[topic].el = box_el;
             this.topics[topic].chb = chb;
             this.topic_container_el.append(topic_el);
@@ -217,6 +220,10 @@ export class GraphMenu {
             });
 
             chb.on('click', (e) => {
+                e.stopPropagation();
+            });
+
+            lbl.on('click', (e) => {
                 e.stopPropagation();
             });
 

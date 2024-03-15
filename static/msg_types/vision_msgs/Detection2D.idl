@@ -1,0 +1,35 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from vision_msgs/msg/Detection2D.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+#include "vision_msgs/msg/BoundingBox2D.idl"
+#include "vision_msgs/msg/ObjectHypothesisWithPose.idl"
+
+module vision_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Defines a 2D detection result." "\n"
+      "" "\n"
+      "This is similar to a 2D classification, but includes position information," "\n"
+      "  allowing a classification result for a specific crop or image point to" "\n"
+      "  to be located in the larger image.")
+    struct Detection2D {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Class probabilities")
+      sequence<vision_msgs::msg::ObjectHypothesisWithPose> results;
+
+      @verbatim (language="comment", text=
+        "2D bounding box surrounding the object.")
+      vision_msgs::msg::BoundingBox2D bbox;
+
+      @verbatim (language="comment", text=
+        "ID used for consistency across multiple detection messages. Detections" "\n"
+        "of the same object in different detection messages should have the same id." "\n"
+        "This field may be empty.")
+      string id;
+    };
+  };
+};

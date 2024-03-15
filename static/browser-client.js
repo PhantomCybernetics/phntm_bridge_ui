@@ -1107,10 +1107,10 @@ export class PhntmBridgeClient extends EventTarget {
                 console.log('receiveChannel.open '+open_evt.target.label, open_evt)
             });
             receiveChannel.addEventListener("error", (err_evt) => {
-                console.log('receiveChannel.error '+err_evt.target.label, err_evt)
+                console.error('receiveChannel.error '+err_evt.target.label, err_evt)
             });
             receiveChannel.addEventListener("bufferedamountlow", (event) => {
-                console.log('receiveChannel.bufferedamountlow '+event.target.label, event)
+                console.warn('receiveChannel.bufferedamountlow '+event.target.label, event)
             });
 
             receiveChannel.addEventListener("close", (close_evt) => { console.log('receiveChannel.close', close_evt) });

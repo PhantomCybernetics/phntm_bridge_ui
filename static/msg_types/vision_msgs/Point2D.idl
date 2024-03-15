@@ -1,0 +1,17 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from vision_msgs/msg/Point2D.msg
+// generated code does not contain a copyright notice
+
+
+module vision_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Represents a 2D point in pixel coordinates." "\n"
+      "XY matches the sensor_msgs/Image convention: X is positive right and Y is positive down.")
+    struct Point2D {
+      double x;
+
+      double y;
+    };
+  };
+};

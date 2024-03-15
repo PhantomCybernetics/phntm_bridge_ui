@@ -6,10 +6,11 @@ import { LaserScanWidget } from '/static/widgets/laser-scan.js';
 import { ImuWidget } from '/static/widgets/imu.js';
 import { LogWidget } from '/static/widgets/log.js';
 import { GraphMenu } from '/static/graph-menu.js';
-
+import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 
-import { lerpColor, linkifyURLs, escapeHtml } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject } from "./lib.js";
+
 
 class Panel {
 
@@ -453,7 +454,21 @@ class Panel {
             //console.log(window.xmlFormatter)
 
         } else if (msg && this.src_visible) {
-            datahr = JSON.stringify(msg, null, 2);
+            
+            if (raw_len < 10000) {
+                datahr = JSON.stringify(msg, null, 2);
+            } else {
+                datahr = '';
+                let trimmed = {};
+                if (msg.header)
+                    trimmed.header = msg.header;
+                if (msg.format)
+                    trimmed.format = msg.format;
+                
+                datahr += JSON.stringify(trimmed, null, 2)+'\n\n';
+                datahr += '-- trimmed --'
+            }
+            
         }
 
         // if (this.ui.topic_widgets[this.id_source] && this.ui.topic_widgets[this.id_source].widget)
@@ -546,6 +561,7 @@ export class PanelUI {
         'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
         'rcl_interfaces/msg/Log' : { widget: LogWidget, w:10, h:2 },
         'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
+        'sensor_msgs/msg/PointCloud2' : { widget: PointCloudWidget, w:4, h:4 },
         'video' : { widget: VideoWidget, w:5, h:4 },
         'nav_msgs/msg/OccupancyGrid' : { widget: OccupancyGrid, w:7, h:4 },
     };

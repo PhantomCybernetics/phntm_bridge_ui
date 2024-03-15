@@ -1,0 +1,26 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from vision_msgs/msg/ObjectHypothesis.msg
+// generated code does not contain a copyright notice
+
+
+module vision_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "An object hypothesis that contains no pose information." "\n"
+      "If you would like to define an array of ObjectHypothesis messages," "\n"
+      "  please see the Classification message type.")
+    struct ObjectHypothesis {
+      @verbatim (language="comment", text=
+        "The unique ID of the object class. To get additional information about" "\n"
+        "  this ID, such as its human-readable class name, listeners should perform a" "\n"
+        "  lookup in a metadata database. See vision_msgs/VisionInfo.msg for more detail.")
+      string class_id;
+
+      @verbatim (language="comment", text=
+        "The probability or confidence value of the detected object. By convention," "\n"
+        "  this value should lie in the range.")
+      @unit (value="0-1")
+      double score;
+    };
+  };
+};

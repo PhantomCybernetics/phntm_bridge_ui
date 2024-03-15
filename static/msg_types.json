@@ -326,6 +326,281 @@
     ]
   },
   {
+    "name": "depthai_ros_msgs/msg/AutoFocusCtrl_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "AF_MODE_AUTO",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "AF_MODE_MACRO",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "AF_MODE_CONTINUOUS_VIDEO",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "AF_MODE_CONTINUOUS_PICTURE",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "AF_MODE_EDOF",
+        "valueText": "4",
+        "value": 4,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/AutoFocusCtrl",
+    "definitions": [
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "auto_focus_mode"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "trigger_auto_focus"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/HandLandmark",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "label"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "lm_score"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose2D",
+        "isComplex": true,
+        "isArray": true,
+        "name": "landmark"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "name": "position"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "is_spatial"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/HandLandmarkArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "depthai_ros_msgs/msg/HandLandmark",
+        "isComplex": true,
+        "isArray": true,
+        "name": "landmarks"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/ImuWithMagneticField",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "sensor_msgs/msg/Imu",
+        "isComplex": true,
+        "name": "imu"
+      },
+      {
+        "type": "sensor_msgs/msg/MagneticField",
+        "isComplex": true,
+        "name": "field"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/SpatialDetection",
+    "definitions": [
+      {
+        "type": "vision_msgs/msg/ObjectHypothesis",
+        "isComplex": true,
+        "isArray": true,
+        "name": "results"
+      },
+      {
+        "type": "vision_msgs/msg/BoundingBox2D",
+        "isComplex": true,
+        "name": "bbox"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "name": "position"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "is_tracking"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "tracking_id"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/SpatialDetectionArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "depthai_ros_msgs/msg/SpatialDetection",
+        "isComplex": true,
+        "isArray": true,
+        "name": "detections"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/TrackedFeature",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "name": "position"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "id"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "age"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "harris_score"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "tracking_error"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/msg/TrackedFeatures",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "depthai_ros_msgs/msg/TrackedFeature",
+        "isComplex": true,
+        "isArray": true,
+        "name": "features"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/srv/NormalizedImageCrop_Request",
+    "definitions": [
+      {
+        "type": "geometry_msgs/msg/Pose2D",
+        "isComplex": true,
+        "name": "top_left"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose2D",
+        "isComplex": true,
+        "name": "bottom_right"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/srv/NormalizedImageCrop_Response",
+    "definitions": [
+      {
+        "type": "int64",
+        "isComplex": false,
+        "name": "status"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/srv/TriggerNamed_Request",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      }
+    ]
+  },
+  {
+    "name": "depthai_ros_msgs/srv/TriggerNamed_Response",
+    "definitions": [
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "success"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "message"
+      }
+    ]
+  },
+  {
     "name": "diagnostic_msgs/msg/DiagnosticArray",
     "definitions": [
       {
@@ -3803,6 +4078,1164 @@
         "isComplex": true,
         "isArray": true,
         "name": "transforms"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/BoundingBox2D",
+    "definitions": [
+      {
+        "type": "vision_msgs/msg/Pose2D",
+        "isComplex": true,
+        "name": "center"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "size_x"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "size_y"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/BoundingBox2DArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/BoundingBox2D",
+        "isComplex": true,
+        "isArray": true,
+        "name": "boxes"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/BoundingBox3D",
+    "definitions": [
+      {
+        "type": "geometry_msgs/msg/Pose",
+        "isComplex": true,
+        "name": "center"
+      },
+      {
+        "type": "geometry_msgs/msg/Vector3",
+        "isComplex": true,
+        "name": "size"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/BoundingBox3DArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/BoundingBox3D",
+        "isComplex": true,
+        "isArray": true,
+        "name": "boxes"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Classification",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/ObjectHypothesis",
+        "isComplex": true,
+        "isArray": true,
+        "name": "results"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Detection2D",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/ObjectHypothesisWithPose",
+        "isComplex": true,
+        "isArray": true,
+        "name": "results"
+      },
+      {
+        "type": "vision_msgs/msg/BoundingBox2D",
+        "isComplex": true,
+        "name": "bbox"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "id"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Detection2DArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/Detection2D",
+        "isComplex": true,
+        "isArray": true,
+        "name": "detections"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Detection3D",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/ObjectHypothesisWithPose",
+        "isComplex": true,
+        "isArray": true,
+        "name": "results"
+      },
+      {
+        "type": "vision_msgs/msg/BoundingBox3D",
+        "isComplex": true,
+        "name": "bbox"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "id"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Detection3DArray",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/Detection3D",
+        "isComplex": true,
+        "isArray": true,
+        "name": "detections"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/LabelInfo",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "vision_msgs/msg/VisionClass",
+        "isComplex": true,
+        "isArray": true,
+        "name": "class_map"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "threshold"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/ObjectHypothesis",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "class_id"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "score"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/ObjectHypothesisWithPose",
+    "definitions": [
+      {
+        "type": "vision_msgs/msg/ObjectHypothesis",
+        "isComplex": true,
+        "name": "hypothesis"
+      },
+      {
+        "type": "geometry_msgs/msg/PoseWithCovariance",
+        "isComplex": true,
+        "name": "pose"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Point2D",
+    "definitions": [
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "x"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "y"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/Pose2D",
+    "definitions": [
+      {
+        "type": "vision_msgs/msg/Point2D",
+        "isComplex": true,
+        "name": "position"
+      },
+      {
+        "type": "float64",
+        "isComplex": false,
+        "name": "theta"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/VisionClass",
+    "definitions": [
+      {
+        "type": "uint16",
+        "isComplex": false,
+        "name": "class_id"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "class_name"
+      }
+    ]
+  },
+  {
+    "name": "vision_msgs/msg/VisionInfo",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "method"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "database_location"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "database_version"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/ImageMarker_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "CIRCLE",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "LINE_STRIP",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "LINE_LIST",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "POLYGON",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "POINTS",
+        "valueText": "4",
+        "value": 4,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "ADD",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "REMOVE",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/ImageMarker",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "ns"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "id"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "type"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "action"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "name": "position"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "scale"
+      },
+      {
+        "type": "std_msgs/msg/ColorRGBA",
+        "isComplex": true,
+        "name": "outline_color"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "filled"
+      },
+      {
+        "type": "std_msgs/msg/ColorRGBA",
+        "isComplex": true,
+        "name": "fill_color"
+      },
+      {
+        "type": "builtin_interfaces/msg/Duration",
+        "isComplex": true,
+        "name": "lifetime"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "isArray": true,
+        "name": "points"
+      },
+      {
+        "type": "std_msgs/msg/ColorRGBA",
+        "isComplex": true,
+        "isArray": true,
+        "name": "outline_colors"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarker",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose",
+        "isComplex": true,
+        "name": "pose"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "description"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "scale"
+      },
+      {
+        "type": "visualization_msgs/msg/MenuEntry",
+        "isComplex": true,
+        "isArray": true,
+        "name": "menu_entries"
+      },
+      {
+        "type": "visualization_msgs/msg/InteractiveMarkerControl",
+        "isComplex": true,
+        "isArray": true,
+        "name": "controls"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerControl_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "INHERIT",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "FIXED",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "VIEW_FACING",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "NONE",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MENU",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "BUTTON",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOVE_AXIS",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOVE_PLANE",
+        "valueText": "4",
+        "value": 4,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "ROTATE_AXIS",
+        "valueText": "5",
+        "value": 5,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOVE_ROTATE",
+        "valueText": "6",
+        "value": 6,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOVE_3D",
+        "valueText": "7",
+        "value": 7,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "ROTATE_3D",
+        "valueText": "8",
+        "value": 8,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOVE_ROTATE_3D",
+        "valueText": "9",
+        "value": 9,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerControl",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      },
+      {
+        "type": "geometry_msgs/msg/Quaternion",
+        "isComplex": true,
+        "name": "orientation"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "orientation_mode"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "interaction_mode"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "always_visible"
+      },
+      {
+        "type": "visualization_msgs/msg/Marker",
+        "isComplex": true,
+        "isArray": true,
+        "name": "markers"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "independent_marker_orientation"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "description"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerFeedback_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "KEEP_ALIVE",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "POSE_UPDATE",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MENU_SELECT",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "BUTTON_CLICK",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOUSE_DOWN",
+        "valueText": "4",
+        "value": 4,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "MOUSE_UP",
+        "valueText": "5",
+        "value": 5,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerFeedback",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "client_id"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "marker_name"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "control_name"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "event_type"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose",
+        "isComplex": true,
+        "name": "pose"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "menu_entry_id"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "name": "mouse_point"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "mouse_point_valid"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerInit",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "server_id"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "seq_num"
+      },
+      {
+        "type": "visualization_msgs/msg/InteractiveMarker",
+        "isComplex": true,
+        "isArray": true,
+        "name": "markers"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerPose",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose",
+        "isComplex": true,
+        "name": "pose"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerUpdate_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "KEEP_ALIVE",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "UPDATE",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/InteractiveMarkerUpdate",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "server_id"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "seq_num"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "type"
+      },
+      {
+        "type": "visualization_msgs/msg/InteractiveMarker",
+        "isComplex": true,
+        "isArray": true,
+        "name": "markers"
+      },
+      {
+        "type": "visualization_msgs/msg/InteractiveMarkerPose",
+        "isComplex": true,
+        "isArray": true,
+        "name": "poses"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "isArray": true,
+        "name": "erases"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/Marker_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "ARROW",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "CUBE",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "SPHERE",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "CYLINDER",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "LINE_STRIP",
+        "valueText": "4",
+        "value": 4,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "LINE_LIST",
+        "valueText": "5",
+        "value": 5,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "CUBE_LIST",
+        "valueText": "6",
+        "value": 6,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "SPHERE_LIST",
+        "valueText": "7",
+        "value": 7,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "POINTS",
+        "valueText": "8",
+        "value": 8,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "TEXT_VIEW_FACING",
+        "valueText": "9",
+        "value": 9,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "MESH_RESOURCE",
+        "valueText": "10",
+        "value": 10,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "TRIANGLE_LIST",
+        "valueText": "11",
+        "value": 11,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "ADD",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "MODIFY",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "DELETE",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "int32",
+        "name": "DELETEALL",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/Marker",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "ns"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "id"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "type"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "action"
+      },
+      {
+        "type": "geometry_msgs/msg/Pose",
+        "isComplex": true,
+        "name": "pose"
+      },
+      {
+        "type": "geometry_msgs/msg/Vector3",
+        "isComplex": true,
+        "name": "scale"
+      },
+      {
+        "type": "std_msgs/msg/ColorRGBA",
+        "isComplex": true,
+        "name": "color"
+      },
+      {
+        "type": "builtin_interfaces/msg/Duration",
+        "isComplex": true,
+        "name": "lifetime"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "frame_locked"
+      },
+      {
+        "type": "geometry_msgs/msg/Point",
+        "isComplex": true,
+        "isArray": true,
+        "name": "points"
+      },
+      {
+        "type": "std_msgs/msg/ColorRGBA",
+        "isComplex": true,
+        "isArray": true,
+        "name": "colors"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "texture_resource"
+      },
+      {
+        "type": "sensor_msgs/msg/CompressedImage",
+        "isComplex": true,
+        "name": "texture"
+      },
+      {
+        "type": "visualization_msgs/msg/UVCoordinate",
+        "isComplex": true,
+        "isArray": true,
+        "name": "uv_coordinates"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "text"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "mesh_resource"
+      },
+      {
+        "type": "visualization_msgs/msg/MeshFile",
+        "isComplex": true,
+        "name": "mesh_file"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "mesh_use_embedded_materials"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/MarkerArray",
+    "definitions": [
+      {
+        "type": "visualization_msgs/msg/Marker",
+        "isComplex": true,
+        "isArray": true,
+        "name": "markers"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/MenuEntry_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "FEEDBACK",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "ROSRUN",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "ROSLAUNCH",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/MenuEntry",
+    "definitions": [
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "id"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "parent_id"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "title"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "command"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "command_type"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/MeshFile",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "filename"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "isArray": true,
+        "name": "data"
+      }
+    ]
+  },
+  {
+    "name": "visualization_msgs/msg/UVCoordinate",
+    "definitions": [
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "u"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "v"
       }
     ]
   }

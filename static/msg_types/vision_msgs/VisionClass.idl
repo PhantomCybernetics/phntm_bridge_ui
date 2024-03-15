@@ -1,0 +1,25 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from vision_msgs/msg/VisionClass.msg
+// generated code does not contain a copyright notice
+
+
+module vision_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "A key value pair that maps an integer class_id to a string class label" "\n"
+      "  in computer vision systems.")
+    struct VisionClass {
+      @verbatim (language="comment", text=
+        "The int value that identifies the class." "\n"
+        "Elements identified with 65535, the maximum uint16 value are assumed" "\n"
+        "  to belong to the \"UNLABELED\" class. For vision pipelines using less" "\n"
+        "  than 255 classes the \"UNLABELED\" is the maximum value in the uint8" "\n"
+        "  range.")
+      uint16 class_id;
+
+      @verbatim (language="comment", text=
+        "The name of the class represented by the class_id")
+      string class_name;
+    };
+  };
+};

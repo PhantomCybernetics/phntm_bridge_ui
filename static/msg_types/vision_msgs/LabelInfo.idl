@@ -1,0 +1,41 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from vision_msgs/msg/LabelInfo.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+#include "vision_msgs/msg/VisionClass.idl"
+
+module vision_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Provides meta-information about a visual pipeline." "\n"
+      "" "\n"
+      "This message serves a similar purpose to sensor_msgs/CameraInfo, but instead" "\n"
+      "  of being tied to hardware, it represents information about a specific" "\n"
+      "  computer vision pipeline. This information stays constant (or relatively" "\n"
+      "  constant) over time, and so it is wasteful to send it with each individual" "\n"
+      "  result. By listening to these messages, subscribers will receive" "\n"
+      "  the context in which published vision messages are to be interpreted." "\n"
+      "Each vision pipeline should publish its LabelInfo messages to its own topic," "\n"
+      "  in a manner similar to CameraInfo." "\n"
+      "This message is meant to allow converting data from vision pipelines that" "\n"
+      "  return id based classifications back to human readable string class names.")
+    struct LabelInfo {
+      @verbatim (language="comment", text=
+        "Used for sequencing")
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "An array of uint16 keys and string values containing the association" "\n"
+        "  between class identifiers and their names. According to the amount" "\n"
+        "  of classes and the datatype used to store their ids internally, the" "\n"
+        "  maxiumum class id allowed (65535 for uint16 and 255 for uint8) belongs to" "\n"
+        "  the \"UNLABELED\" class.")
+      sequence<vision_msgs::msg::VisionClass> class_map;
+
+      @verbatim (language="comment", text=
+        "The value between 0-1 used as confidence threshold for the inference.")
+      float threshold;
+    };
+  };
+};
