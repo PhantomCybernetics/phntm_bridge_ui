@@ -8,6 +8,7 @@ import { LogWidget } from '/static/widgets/log.js';
 import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
+import { IsImageTopic} from '/static/browser-client.js';
 
 import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject } from "./lib.js";
 
@@ -222,7 +223,7 @@ class Panel {
             return;
         }
 
-        if (['video', 'sensor_msgs/msg/Image'].indexOf(this.msg_type) > -1) {
+        if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage'].indexOf(this.msg_type) > -1) {
             this.on_stream(stream);
         } else {
             this.on_data(msg, ev);
@@ -248,7 +249,7 @@ class Panel {
             els.push(msgTypesEl);
 
             // display source for widgets
-            if (this.display_widget && this.msg_type != 'sensor_msgs/msg/Image') {
+            if (this.display_widget && !IsImageTopic(this.msg_type)) {
                 let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
                 let source_el = $('#panel_source_'+this.n);
                 let widget_el = $('#panel_widget_'+this.n);
@@ -289,7 +290,7 @@ class Panel {
 
         let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
         closeEl.click(function(ev) {
-            console.log('click '+that.n)
+            // console.log('click '+that.n)
 
             /*let el = $('#panel_msg_type_'+that.n);
             if (el.css('display') != 'block')
@@ -561,6 +562,7 @@ export class PanelUI {
         'sensor_msgs/msg/Imu' : { widget: ImuWidget, w:2, h:2 },
         'rcl_interfaces/msg/Log' : { widget: LogWidget, w:10, h:2 },
         'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
+        'sensor_msgs/msg/CompressedImage' : { widget: VideoWidget, w:5, h:4 },
         'sensor_msgs/msg/PointCloud2' : { widget: PointCloudWidget, w:4, h:4 },
         'video' : { widget: VideoWidget, w:5, h:4 },
         'nav_msgs/msg/OccupancyGrid' : { widget: OccupancyGrid, w:7, h:4 },

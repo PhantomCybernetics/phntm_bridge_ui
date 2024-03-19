@@ -1,4 +1,5 @@
 
+import { IsImageTopic} from '/static/browser-client.js';
 
 export class GraphMenu {
 
@@ -184,6 +185,7 @@ export class GraphMenu {
         let topic_offset = 0;
         let n = 0;
         this.topic_ids.forEach((topic) => {
+
             this.topics[topic].connections_drawn = [];
             this.topics[topic].focused = false;
             this.topics[topic].focused_connection = false;
@@ -191,9 +193,21 @@ export class GraphMenu {
             let h = 40+5*(this.topics[topic]['connections']-1);
             topic_offset += h + 2 + 16;
             let topic_el = $('<div class="graph_topic"></div>');
+            let msg_type_classes = [ 'msg_type' ];
+            let title = this.topics[topic].msg_type;
+            if (IsImageTopic(this.topics[topic].msg_type)) {
+                msg_type_classes.push('video');
+                title += ' transported as H.264 video';
+            }
+            if (!this.ui.client.find_message_type(this.topics[topic].msg_type)) {
+                msg_type_classes.push('err');
+                title += ' unsupported message type';
+            }
+            
             let box_el = $('<div class="box" style="height:'+h+'px;">'
                         + '<label for="topic_'+n+'" title="'+topic+'" class="prevent-select">' + topic + '</label><br>'
-                        + '<a href="#" class="msg_type">'+this.topics[topic].msg_type+'</a>'
+                        + '<a href="#" class="'+msg_type_classes.join(' ')+'" '
+                            + 'title="'+title+'">'+this.topics[topic].msg_type+'</a>'
                         + '</div>');
             let chb = $('<input type="checkbox" id="topic_'+n+'"/>');
             if (this.ui.panels[topic])

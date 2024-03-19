@@ -48,8 +48,11 @@ class Subscriber {
 
         this.latest = null;
     }
+}
 
-
+export function IsImageTopic(t) {
+    return t == 'sensor_msgs/msg/Image' ||
+           t == 'sensor_msgs/msg/CompressedImage';
 }
 
 export class PhntmBridgeClient extends EventTarget {
@@ -229,7 +232,7 @@ export class PhntmBridgeClient extends EventTarget {
                         let msg_types = nodes_data[this.id_robot][node]['publishers'][topic];
                         this.discovered_nodes[node].publishers[topic] = {
                             msg_types: msg_types,
-                            is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                            is_video: IsImageTopic(msg_types[0]),
                             msg_type_supported: this.find_message_type(msg_types[0]) != null,
                         }
                     })
@@ -240,7 +243,7 @@ export class PhntmBridgeClient extends EventTarget {
                         let msg_types = nodes_data[this.id_robot][node]['subscribers'][topic];
                         this.discovered_nodes[node].subscribers[topic] = {
                             msg_types: msg_types,
-                            is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                            is_video: IsImageTopic(msg_types[0]),
                             msg_type_supported: this.find_message_type(msg_types[0]) != null,
                         }
                     })
@@ -304,7 +307,7 @@ export class PhntmBridgeClient extends EventTarget {
                 this.discovered_topics[topic] = {
                     msg_types: msg_types,
                     id: topic,
-                    is_video: msg_types.indexOf('sensor_msgs/msg/Image') !== -1 ? true : false,
+                    is_video: IsImageTopic(msg_types[0]),
                     msg_type_supported: this.find_message_type(msg_types[0]) != null,
                 }
             });

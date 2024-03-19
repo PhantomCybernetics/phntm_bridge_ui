@@ -112,6 +112,19 @@ h3 {
     line-height: 10px;
 }
 
+#graph_topics .msg_type.video {
+    padding-right: 17px;
+    background-image: url(/static/icon-video.png);
+    background-position: center right;
+    background-repeat: no-repeat;
+    background-size: auto 12px;
+}
+
+#graph_topics .msg_type.err {
+    color: #cc0000b8;
+    text-decoration: line-through;
+}
+
 #graph_topics::-webkit-scrollbar,
 #graph_nodes::-webkit-scrollbar  {
     display: none;
@@ -165,6 +178,14 @@ h3 {
     height: 40px;
     cursor: pointer;
 }
+.graph_topic .box label {
+    cursor: pointer;
+}
+
+.graph_topic .box label {
+    cursor: pointer;
+}
+
 
 #graph_controls.active:hover #graph_display,
 #graph_controls.active.hover_waiting #graph_display {

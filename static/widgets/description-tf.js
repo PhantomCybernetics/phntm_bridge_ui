@@ -38,6 +38,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.pose_graph = [];
         this.pose_graph_size = 100; // keeps this many nodes in pg
         this.render_pose_graph = false;
+        this.render_ground_plane = true;
         this.pos_offset = null;
         this.fix_base = false;
 
@@ -53,14 +54,13 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.manager = new THREE.LoadingManager();
         this.manager.setURLModifier((url)=>{
-            // if (url.indexOf('wheel') !== -1)
-            //     return url;
-            if (url.indexOf('file:/') !== 0)
+
+            if (url.indexOf('http:/') === 0 || url.indexOf('https:/') === 0) 
                 return url;
-            url = url.replace('file://', '');
-            url = url.replace('file:/', '');
-            if (url[0] != '/')
-                url = '/'+url;
+
+            if (url.indexOf('package:/') !== 0 && url.indexOf('file:/') !== 0) 
+                return url;
+                
             let url_fw = panel.ui.client.get_bridge_file_url(url);
             console.log('URDF Loader requesting '+url+' > '+url_fw);
             return url_fw;
@@ -68,6 +68,9 @@ export class DescriptionTFWidget extends EventTarget {
         this.tex_loader = new THREE.TextureLoader(this.manager)
         this.urdf_loader = new URDFLoader(this.manager);
         this.urdf_loader.parseCollision = true;
+        this.urdf_loader.packages = (targetPkg) => {
+            return 'package://'+targetPkg+''; //puts back the url scheme removed by URDFLoader 
+        }
         this.urdf_loader.loadMeshCb = this.load_mesh_cb;
         this.robot = null;
 
@@ -177,6 +180,7 @@ export class DescriptionTFWidget extends EventTarget {
         // this.scene.add( planeHelper );
 
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
+
         const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
         const plane_tex = this.tex_loader.load('/static/tiles.png');
         plane_tex.wrapS = THREE.RepeatWrapping;
@@ -185,11 +189,12 @@ export class DescriptionTFWidget extends EventTarget {
         // plane_material.map = plane_tex;
         plane_material.map = plane_tex;
         // plane_material.needsUpdate = true;
-        const plane = new THREE.Mesh(plane_geometry, plane_material);
-        plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
-        plane.position.set(0,0,0);
-        plane.receiveShadow = true;
-        this.scene.add(plane);
+        this.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
+        this.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
+        this.ground_plane.position.set(0,0,0);
+        this.ground_plane.receiveShadow = true;
+        this.ground_plane.visible = this.render_ground_plane;
+        this.scene.add(this.ground_plane);
 
         // const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 ); 
         // const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} ); 
@@ -250,7 +255,8 @@ export class DescriptionTFWidget extends EventTarget {
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#follow_target_'+this.panel.n).change(function(ev) {
             that.follow_target = $(this).prop('checked');         
-            that.panel.ui.update_url_hash();        
+            that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
@@ -265,7 +271,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //labels
             }        
-            that.panel.ui.update_url_hash();            
+            that.panel.ui.update_url_hash(); 
+            that.render_dirty = true;           
         });
 
         $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
@@ -281,6 +288,7 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //labels
             }
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
@@ -297,6 +305,7 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
             }
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
@@ -309,6 +318,7 @@ export class DescriptionTFWidget extends EventTarget {
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
@@ -320,6 +330,7 @@ export class DescriptionTFWidget extends EventTarget {
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS);
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix base</label></div>')
@@ -327,6 +338,7 @@ export class DescriptionTFWidget extends EventTarget {
         $('#fix_base_'+this.panel.n).change(function(ev) {
             that.fix_base = $(this).prop('checked');
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
 
         $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
@@ -338,6 +350,16 @@ export class DescriptionTFWidget extends EventTarget {
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
             that.panel.ui.update_url_hash();
+            that.render_dirty = true;
+        });
+
+        $('<div class="menu_line"><label for="render_grnd_'+this.panel.n+'""><input type="checkbox" '+(this.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"> Ground plane</label></div>')
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
+        $('#render_grnd_'+this.panel.n).change(function(ev) {
+            that.render_ground_plane = $(this).prop('checked');
+            that.ground_plane.visible = that.render_ground_plane;
+            that.panel.ui.update_url_hash();
+            that.render_dirty = true;
         });
     }
 
@@ -356,6 +378,7 @@ export class DescriptionTFWidget extends EventTarget {
         out_parts.push('col='+(this.render_collisions ? '1' : '0'));
         out_parts.push('fix='+(this.fix_base ? '1' : '0'));
         out_parts.push('pg='+(this.render_pose_graph ? '1' : '0'));
+        out_parts.push('grnd='+(this.render_ground_plane ? '1' : '0'));
         this.sources.getUrlHashParts(out_parts);
     }
 
@@ -375,6 +398,7 @@ export class DescriptionTFWidget extends EventTarget {
                 case 'col': this.render_collisions = parseInt(val) == 1; break;
                 case 'fix': this.fix_base = parseInt(val) == 1; break;
                 case 'pg': this.render_pose_graph = parseInt(val) == 1; break;
+                case 'grnd': this.render_ground_plane = parseInt(val) == 1; break;
             }
         });
         this.sources.parseUrlParts(custom_url_vars);
@@ -520,9 +544,15 @@ export class DescriptionTFWidget extends EventTarget {
 
             const loader = new STLLoader(manager);
             loader.load(path, geom => {
-                const mesh = new THREE.Mesh(geom, new THREE.MeshPhongMaterial());
+
+                // geom.computeVertexNormals();
+                // geom.computeTangents();
+                // geom.normalizeNormals();
+                const mat = new THREE.MeshPhongMaterial( {color: 0xff0000, side: THREE.TwoPassDoubleSide } );
+                const mesh = new THREE.Mesh(geom, mat);
                 that.clear_model(mesh);
                 done(mesh);
+                that.render_dirty = true;
             });
 
         } else if (/\.dae$/i.test(path)) {
@@ -534,6 +564,7 @@ export class DescriptionTFWidget extends EventTarget {
                 // dae.library.lights = {};
                 console.log('cleared: ', dae.scene);
                 done(dae.scene);
+                that.render_dirty = true;
             });
 
         } else {
@@ -654,10 +685,9 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.rendering)
             return;
 
-        let scene_changed = false;
         if (this.robot && this.robot.links) {
             for (let i = 0; i < this.transforms_queue.length; i++) {
-                scene_changed = true;
+                this.render_dirty = true;
                 let id_parent = this.transforms_queue[i].header.frame_id;
                 let id_child = this.transforms_queue[i].child_frame_id;
                 let t = this.transforms_queue[i].transform;
@@ -671,6 +701,8 @@ export class DescriptionTFWidget extends EventTarget {
                 this.last_tf_stamps[tf_id] = t_sec;
                 let p = this.robot.links[id_parent];
                 let ch = this.robot.links[id_child];
+                if (!ch)
+                    continue;
     
                 if (id_child == 'base_link') {
                         
@@ -711,9 +743,10 @@ export class DescriptionTFWidget extends EventTarget {
     
         this.controls.update();
 
-        if (scene_changed || this.controls_dirty) {
+        if (this.controls_dirty || this.render_dirty) {
             this.renderer.render(this.scene, this.camera);
             this.controls_dirty = false;
+            this.render_dirty = false;
         }
             
         this.labelRenderer.render(this.scene, this.camera);
