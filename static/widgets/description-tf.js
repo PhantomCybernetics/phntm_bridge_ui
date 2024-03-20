@@ -69,8 +69,13 @@ export class DescriptionTFWidget extends EventTarget {
         this.urdf_loader = new URDFLoader(this.manager);
         this.urdf_loader.parseCollision = true;
         this.urdf_loader.packages = (targetPkg) => {
-            return 'package://'+targetPkg+''; //puts back the url scheme removed by URDFLoader 
+            return 'package://'+targetPkg+''; // puts back the url scheme removed by URDFLoader 
         }
+        this.stl_base_mat = new THREE.MeshPhongMaterial({
+             color: 0xff0000,
+             side: THREE.DoubleSide,
+             depthWrite: true,
+        } );
         this.urdf_loader.loadMeshCb = this.load_mesh_cb;
         this.robot = null;
 
@@ -312,7 +317,7 @@ export class DescriptionTFWidget extends EventTarget {
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_visuals_'+this.panel.n).change(function(ev) {
             that.render_visuals = $(this).prop('checked');
-            console.log('Visuals '+that.render_visuals);
+            // console.log('Visuals '+that.render_visuals);
             if (that.render_visuals)
                 that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
             else
@@ -515,6 +520,21 @@ export class DescriptionTFWidget extends EventTarget {
             return false;
         }
 
+        if (obj.isMesh) {
+            obj.material.depthWrite = true;
+            obj.material.side = THREE.DoubleSide;
+            // console.warn('clearing mesh', obj);
+        }
+
+        // if (obj.isMesh && obj.material) {
+        //     // obj.material = this.stl_base_mat;
+        //     const m = obj.material;
+            
+        //     obj.material.needsUpdate = true;
+        //     // obj.material.needsUpdate = true;
+        //     console.log('Mesh material ', m)
+        // }
+
         obj.renderOrder = -1;
         obj.layers.set(DescriptionTFWidget.L_VISUALS);
         obj.castShadow = true;
@@ -536,22 +556,26 @@ export class DescriptionTFWidget extends EventTarget {
         return true;
     }
 
-    load_mesh_cb = (path, manager, done) => {
+    load_mesh_cb = (path, manager, done_cb) => {
 
         let that = this;
 
         if (/\.stl$/i.test(path)) {
 
             const loader = new STLLoader(manager);
-            loader.load(path, geom => {
+            loader.load(path, (geom) => {
 
+                // let trans = new THREE.Matrix4().makeScale(-1,-1,1);
+                // geom.applyMatrix4(trans)
+                // geom.computeBoundingBox();
+                // geom.computeVertexNormals();
                 // geom.computeVertexNormals();
                 // geom.computeTangents();
                 // geom.normalizeNormals();
-                const mat = new THREE.MeshPhongMaterial( {color: 0xff0000, side: THREE.TwoPassDoubleSide } );
-                const mesh = new THREE.Mesh(geom, mat);
-                that.clear_model(mesh);
-                done(mesh);
+               
+                const mesh = new THREE.Mesh(geom, that.stl_base_mat);
+                done_cb(mesh);
+                that.clear_model(mesh); //clear after urdf loadet sets mats
                 that.render_dirty = true;
             });
 
@@ -560,10 +584,10 @@ export class DescriptionTFWidget extends EventTarget {
             const loader = new ColladaLoader(manager);
             loader.load(path, dae => {
                 // console.warn('Dae loading done', dae.scene)
-                that.clear_model(dae.scene);
                 // dae.library.lights = {};
-                console.log('cleared: ', dae.scene);
-                done(dae.scene);
+                // console.log('cleared: ', dae.scene);
+                done_cb(dae.scene);
+                that.clear_model(dae.scene); //clear after urdf loadet sets mats
                 that.render_dirty = true;
             });
 
@@ -623,6 +647,9 @@ export class DescriptionTFWidget extends EventTarget {
                                 if (ch.children[0].layers)
                                     ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
                                 ch.children[0].castShadow = true;
+                                ch.children[0].material.depthWrite = true;
+                                ch.children[0].material.needsUpdate = true;
+                                console.log('visual mat', ch.children[0].material);
                                 // ch.children[0].renderOrder = 2;
                             }
                         } else if (ch.isURDFCollider) {

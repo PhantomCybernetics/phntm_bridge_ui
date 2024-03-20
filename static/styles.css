@@ -110,6 +110,7 @@ h3 {
     color: #ffffff94;
     font-size: 10px;
     line-height: 10px;
+    cursor: help;
 }
 
 #graph_topics .msg_type.video {
