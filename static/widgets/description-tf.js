@@ -45,13 +45,6 @@ export class DescriptionTFWidget extends EventTarget {
         this.transforms_queue = [];
         this.last_tf_stamps = {};
 
-        this.sources = new MultiTopicSource(this);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
-        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
-
-        this.parseUrlParts(this.panel.custom_url_vars);
-
         this.manager = new THREE.LoadingManager();
         this.manager.setURLModifier((url)=>{
 
@@ -227,6 +220,13 @@ export class DescriptionTFWidget extends EventTarget {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
 
         };
+
+        this.sources = new MultiTopicSource(this);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
+        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
+
+        this.parseUrlParts(this.panel.custom_url_vars);
 
         this.rendering = true;
         this.rendering_loop();        
