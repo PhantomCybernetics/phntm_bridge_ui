@@ -8,7 +8,7 @@ import { LogWidget } from '/static/widgets/log.js';
 import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
-import { IsImageTopic} from '/static/browser-client.js';
+import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
 import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject } from "./lib.js";
 
@@ -151,6 +151,7 @@ class Panel {
                     fallback_show_src = false;
                 }
             } else if (this.ui.type_widgets[this.msg_type] != undefined) {
+                console.log('Initiating display widget '+this.id_source+' w '+this.msg_type, this.display_widget)
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
@@ -210,6 +211,7 @@ class Panel {
             //     $('#panel_title_'+this.n).addClass('no-pause');
             // }
 
+            this.ui.update_url_hash();
         }
 
         this.setMenu()
@@ -223,7 +225,7 @@ class Panel {
             return;
         }
 
-        if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage'].indexOf(this.msg_type) > -1) {
+        if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage', 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'].indexOf(this.msg_type) > -1) {
             this.on_stream(stream);
         } else {
             this.on_data(msg, ev);
@@ -563,8 +565,9 @@ export class PanelUI {
         'rcl_interfaces/msg/Log' : { widget: LogWidget, w:10, h:2 },
         'sensor_msgs/msg/Image' : { widget: VideoWidget, w:5, h:4 },
         'sensor_msgs/msg/CompressedImage' : { widget: VideoWidget, w:5, h:4 },
-        'sensor_msgs/msg/PointCloud2' : { widget: PointCloudWidget, w:4, h:4 },
+        'ffmpeg_image_transport_msgs/msg/FFMPEGPacket' : { widget: VideoWidget, w:5, h:4 },
         'video' : { widget: VideoWidget, w:5, h:4 },
+        'sensor_msgs/msg/PointCloud2' : { widget: PointCloudWidget, w:4, h:4 },
         'nav_msgs/msg/OccupancyGrid' : { widget: OccupancyGrid, w:7, h:4 },
     };
     widgets = {}; // custom and/or compound
@@ -583,6 +586,9 @@ export class PanelUI {
         this.panels = {}
         this.gamepad = gamepad;
         this.gamepad.ui = this;
+
+        this.latest_nodes = null;
+        this.latest_cameras = null;
 
         this.last_pc_stats = null;
 
@@ -645,78 +651,15 @@ export class PanelUI {
         });
 
         client.on('nodes', (nodes)=>{
-            // that.topics_menu_from_nodes(nodes);
-            
             that.services_menu_from_nodes(nodes);
             that.graph_from_nodes(nodes);
+            this.latest_nodes = nodes;
+            that.cameras_menu_from_nodes_and_devices();
         });
 
         client.on('cameras', (cameras)=>{
-            $('#cameras_list').empty();
-
-            let num_cameras = Object.keys(cameras).length;
-
-            if (num_cameras > 0) {
-                $('#camera_controls').addClass('active');
-            } else {
-                $('#camera_controls').removeClass('active');
-            }
-            $('#cameras_heading').html(num_cameras+' '+(num_cameras == 1 ? 'Camera' : 'Cameras'));
-
-            let i = 0;
-            // let subscribe_cameras = [];
-            Object.values(cameras).forEach((camera) => {
-
-                $('#cameras_list').append('<div class="camera" data-camera="'+camera.id+'">'
-                    + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
-                    //+ (!topic.robotTubscribed?' disabled':'')
-                    + (that.panels[camera.id] ? ' checked': '' )
-                    + '/> '
-                    + '<span '
-                    + 'class="camera" '
-                    + '>'
-                    + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera.id+'</label>'
-                    + '</span>'
-                    + '</div>'
-                );
-
-                // let subscribe = $('#cb_camera_'+i).is(':checked');
-
-                if (that.panels[camera.id]) {
-                    that.panels[camera.id].init('video');
-                    // subscribe = true;
-                }
-
-                //if (!old_topics[topic.topic]) {
-
-                // if (subscribe) {
-                //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                //     subscribe_cameras.push(camera_data.id);
-                // } else {
-                //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-                // }
-
-                //TogglePanel(topic.topic, true);
-                //}
-
-                i++;
-            });
-
-
-            // if (subscribe_cameras.length)
-            //     SetCameraSubscription(id_robot, subscribe_cameras, true);
-
-            $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
-                let id_cam = $(this).parent('DIV.camera').data('camera');
-                let state = this.checked;
-
-                let w = that.type_widgets['video'].w;
-                let h = that.type_widgets['video'].h;
-
-                that.toggle_panel(id_cam, 'video', state, w, h);
-                // client.SetCameraSubscription(id_robot, [ cam ], state);
-            });
-
+            this.latest_cameras = cameras;
+            that.cameras_menu_from_nodes_and_devices();
         });
 
         client.on('docker', (containers)=>{
@@ -898,6 +841,89 @@ export class PanelUI {
             let msg_type = topics[id_topic].msg_types[0];
             that.panels[id_topic].init(msg_type); //init w message type
         });
+    }
+
+    cameras_menu_from_nodes_and_devices() {
+
+        $('#cameras_list').empty();
+
+        let cameras = [];
+
+        //camera devices
+        if (this.latest_cameras) {
+            Object.values(cameras).forEach((cam) => {
+                cameras.push({
+                    src_id: cam.id,
+                    msg_type: 'video'
+                });
+            });
+        }
+        // all other h.264 encoded topics for convenience
+        if (this.latest_nodes) {
+            let node_ids = Object.keys(this.latest_nodes);
+            node_ids.forEach((id_node) => {
+                let node = this.latest_nodes[id_node];
+                if (node.publishers) {
+                    let topic_ids = Object.keys(node.publishers);
+                    topic_ids.forEach((id_topic)=>{
+                        let msg_type = node.publishers[id_topic].msg_types[0];
+                        if (IsFastVideoTopic(msg_type)) {
+                            cameras.push({
+                                src_id: id_topic,
+                                msg_type: msg_type
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        if (cameras.length > 0) {
+            $('#camera_controls').addClass('active');
+        } else {
+            $('#camera_controls').removeClass('active');
+        }
+        $('#cameras_heading').html(cameras.length+' '+(cameras.length == 1 ? 'Camera' : 'Cameras'));
+
+        for (let i = 0; i < cameras.length; i++) {
+            let camera = cameras[i];
+
+            $('#cameras_list').append('<div class="camera" data-src="'+camera.src_id+'">'
+                + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
+                //+ (!topic.robotTubscribed?' disabled':'')
+                + (this.panels[camera.src_id] ? ' checked': '' )
+                + '/> '
+                + '<span '
+                + 'class="camera" '
+                + '>'
+                + '<label for="cb_camera_'+i+'" class="prevent-select">'+camera.src_id+'</label>'
+                + '</span>'
+                + '</div>'
+            );
+
+            // let subscribe = $('#cb_camera_'+i).is(':checked');
+
+            if (this.panels[camera.src_id]) {
+                this.panels[camera.src_id].init(camera.msg_type);
+                // subscribe = true;
+            }
+        }
+
+        // if (subscribe_cameras.length)
+        //     SetCameraSubscription(id_robot, subscribe_cameras, true);
+
+        let that = this;
+        $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
+            let id_cam = $(this).parent('DIV.camera').data('src');
+            let state = this.checked;
+
+            let w = that.type_widgets['video'].w;
+            let h = that.type_widgets['video'].h;
+
+            that.toggle_panel(id_cam, 'video', state, w, h);
+            // client.SetCameraSubscription(id_robot, [ cam ], state);
+        });
+
     }
 
     graph_from_nodes(nodes) {
@@ -1534,7 +1560,8 @@ export class PanelUI {
                 && that.panels[id_source].zoom != that.panels[id_source].default_zoom) {
                     let z = Math.round(that.panels[id_source].zoom * 100) / 100;
                     parts.push('z='+z);
-                }
+            }
+            console.log('update_url_hash for '+id_source+': ', that.panels[id_source].display_widget);
             if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== 'undefined') {
                 that.panels[id_source].display_widget.getUrlHashParts(parts);
             }
@@ -1597,7 +1624,9 @@ export class PanelUI {
             this.make_panel(id_source, w, h, x, y, src_on, zoom, custom_vars)
             if (this.widgets[id_source]) {
                 this.panels[id_source].init(id_source);
-            }
+            } // else if (this.widgets[id_source]) {
+            //     this.panels[id_source].init(id_source);
+            // }
 
         }
 

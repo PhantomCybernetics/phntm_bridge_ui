@@ -52,7 +52,12 @@ class Subscriber {
 
 export function IsImageTopic(t) {
     return t == 'sensor_msgs/msg/Image' ||
-           t == 'sensor_msgs/msg/CompressedImage';
+           t == 'sensor_msgs/msg/CompressedImage' ||
+           t == 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket';
+}
+
+export function IsFastVideoTopic(t) {
+    return t == 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket';
 }
 
 export class PhntmBridgeClient extends EventTarget {
@@ -1104,6 +1109,11 @@ export class PhntmBridgeClient extends EventTarget {
             let Reader = window.Serialization.MessageReader;
             let msg_type = receiveChannel.protocol;
             let msg_type_class = that.find_message_type(msg_type, that.supported_msg_types)
+            if (!msg_type_class) {
+                console.error('Unsupported msg type: '+msg_type);
+                return;
+            }
+                
             let msg_reader = new Reader([ msg_type_class ].concat(that.supported_msg_types));
 
             receiveChannel.addEventListener("open", (open_evt) => {

@@ -167,10 +167,10 @@ export class MultiTopicSource {
     }
 
 
-    setupMenu () {
+    setupMenu (label="Edit input") {
 
         $('<div class="menu_line src_ctrl">' +
-            '<span class="label">Edit input</span>' +
+            '<span class="label">'+label+'</span>' +
             '<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>' +
             '</div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
@@ -244,13 +244,15 @@ export class MultiTopicSource {
         let that = this;
 
         let btn = $('<button class="val" title="'+slot.label+' - '+slot.msg_type+'">'+slot.topic+'</button>');
+        let rem_btn = $('<span class="remove" title="Remove"><span class="icon"></span></span>');
+        rem_btn.appendTo(btn);
+
         btn.on('click', (e) => {
             that.widget.panel.ui.message_type_dialog(slot.msg_type);
             e.cancelBubble = true;
             return false;
         });
 
-        let rem_btn = $('<span class="remove" title="Remove"><span class="icon"></span></span>');
         rem_btn.on('mouseenter', (e) => {
             btn.addClass('warn');
         });
@@ -263,7 +265,7 @@ export class MultiTopicSource {
             e.cancelBubble = true;
             return false;
         });
-        rem_btn.appendTo(btn);
+        
 
         btn.appendTo(this.src_ctrl_menu);
     }

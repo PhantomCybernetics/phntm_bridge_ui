@@ -700,6 +700,52 @@
     ]
   },
   {
+    "name": "ffmpeg_image_transport_msgs/msg/FFMPEGPacket",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "width"
+      },
+      {
+        "type": "int32",
+        "isComplex": false,
+        "name": "height"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "encoding"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "pts"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "flags"
+      },
+      {
+        "type": "bool",
+        "isComplex": false,
+        "name": "is_bigendian"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "isArray": true,
+        "name": "data"
+      }
+    ]
+  },
+  {
     "name": "geometry_msgs/msg/Accel",
     "definitions": [
       {

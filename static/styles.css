@@ -827,32 +827,40 @@ BUTTON#trigger_wifi_scan.working {
     background-color: #001649;
 }
 
-.grid_panel .menu_line:first-child {
+/* .monitor_menu_content .menu_line:first-of-type {
     padding-top: 5px;
     border-radius: 5px 0px 0px 0px;
-}
+} */
 
-.grid_panel .menu_line:last-child {
-    border-radius: 0px 0px 5px 5px;
-}
-
-.grid_panel .menu_line:first-child {
+.monitor_menu_content > .menu_line { 
     border-radius: 5px 0px 0px 0px;
-    padding-top: 4px;
 }
-
-.grid_panel .right .menu_line:first-child {
+.monitor_menu_content.right > .menu_line { 
     border-radius: 0px 5px 0px 0px;
 }
+.monitor_menu_content > .menu_line ~ .menu_line { 
+    border-radius: 0px 0px 0px 0px;
+}
+
+.monitor_menu_content .menu_line:last-of-type {
+    border-radius: 0px 0px 5px 5px !important;
+}
+
+/* .grid_panel .menu_line:first-child {
+    border-radius: 5px 0px 0px 0px;
+    padding-top: 4px;
+} */
 
 .panel_msg_types_line {
     padding-bottom: 4px;
-    border-radius: 5px 0px 0px 0px;
     padding-top: 4px;
 }
 
+.panel_msg_types_line.nospace {
+    padding-bottom: 0px;
+}
+
 .menu_line.src_ctrl {
-    border-radius: 5px 0px 0px 0px;
     padding-top: 4px;
     padding-bottom: 4px;
     position: relative;
@@ -882,7 +890,7 @@ BUTTON#trigger_wifi_scan.working {
     background: #001649;
     top: 0px;
     border-radius: 5px 0px 5px 5px;
-    padding: 5px;
+    padding: 5px 3px;
 }
 
 .menu_line.src_ctrl:hover .src_ctrl_menu {
@@ -1245,11 +1253,32 @@ SPAN.error {
     border-radius: 5px;
 }
 
+.video_overlay {
+    position: absolute;
+    z-index: 2;
+    left: 0px; top: 0px;
+    /* background: rgba(255, 0, 0, 0.315); */
+    width: 100%;
+    height: 100%;
+}
+
+.panel_widget .video_overlay svg {
+    position: absolute;
+    top: 50%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+    border-style: dashed;
+    border-color: rgb(162, 255, 0);
+    border-width: 3px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
 
 .video_stats, .video_fps {
     color: #ffffffa3;
     position: absolute;
-    z-index: 2;
+    z-index: 3;
     left: 10px;
     top: 10px;
     font-size: 11px;
