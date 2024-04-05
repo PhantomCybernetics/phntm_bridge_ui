@@ -165,11 +165,12 @@ export class VideoWidget {
             +'<input type="checkbox" id="video_fps_cb_'+this.panel.n+'" checked class="video_fps_cb" title="Display video FPS"> FPS</label></div>'
             ).insertBefore($('#close_panel_menu_'+this.panel.n));
 
+        let that = this;
         $('#video_fps_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
-                $('#video_fps_'+this.panel.n).addClass('enabled');
+                $('#video_fps_'+that.panel.n).addClass('enabled');
             } else {
-                $('#video_fps_'+this.panel.n).removeClass('enabled');
+                $('#video_fps_'+that.panel.n).removeClass('enabled');
             }
         });
 
@@ -182,9 +183,9 @@ export class VideoWidget {
 
         $('#video_stats_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
-                $('#video_stats_'+this.panel.n).addClass('enabled');
+                $('#video_stats_'+that.panel.n).addClass('enabled');
             } else {
-                $('#video_stats_'+this.panel.n).removeClass('enabled');
+                $('#video_stats_'+that.panel.n).removeClass('enabled');
             }
         });
 
