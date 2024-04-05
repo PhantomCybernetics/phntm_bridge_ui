@@ -849,7 +849,7 @@ export class PanelUI {
 
         let cameras = [];
 
-        //camera devices
+        // built in camera devices
         if (this.latest_cameras) {
             Object.values(cameras).forEach((cam) => {
                 cameras.push({
@@ -858,7 +858,7 @@ export class PanelUI {
                 });
             });
         }
-        // all other h.264 encoded topics for convenience
+        // all other forwarded fast h.264 encoded topics for convenience
         if (this.latest_nodes) {
             let node_ids = Object.keys(this.latest_nodes);
             node_ids.forEach((id_node) => {
@@ -888,9 +888,8 @@ export class PanelUI {
         for (let i = 0; i < cameras.length; i++) {
             let camera = cameras[i];
 
-            $('#cameras_list').append('<div class="camera" data-src="'+camera.src_id+'">'
+            $('#cameras_list').append('<div class="camera" data-src="'+camera.src_id+'" data-msg-type="'+camera.msg_type+'">'
                 + '<input type="checkbox" class="enabled" id="cb_camera_'+i+'"'
-                //+ (!topic.robotTubscribed?' disabled':'')
                 + (this.panels[camera.src_id] ? ' checked': '' )
                 + '/> '
                 + '<span '
@@ -901,27 +900,21 @@ export class PanelUI {
                 + '</div>'
             );
 
-            // let subscribe = $('#cb_camera_'+i).is(':checked');
-
             if (this.panels[camera.src_id]) {
                 this.panels[camera.src_id].init(camera.msg_type);
-                // subscribe = true;
             }
         }
-
-        // if (subscribe_cameras.length)
-        //     SetCameraSubscription(id_robot, subscribe_cameras, true);
 
         let that = this;
         $('#cameras_list INPUT.enabled:checkbox').change(function(event) {
             let id_cam = $(this).parent('DIV.camera').data('src');
+            let msg_type = $(this).parent('DIV.camera').data('msg-type');
             let state = this.checked;
 
-            let w = that.type_widgets['video'].w;
-            let h = that.type_widgets['video'].h;
+            let w = that.type_widgets[msg_type].w;
+            let h = that.type_widgets[msg_type].h;
 
-            that.toggle_panel(id_cam, 'video', state, w, h);
-            // client.SetCameraSubscription(id_robot, [ cam ], state);
+            that.toggle_panel(id_cam, msg_type, state, w, h);
         });
 
     }
