@@ -501,6 +501,8 @@ class Panel {
 
     close() {
 
+
+
         if (this.ui.graph_menu.topics[this.id_source]) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
             // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
@@ -516,11 +518,11 @@ class Panel {
         // this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
         this.ui.client.off(this.id_source, this._on_data_context_wrapper);
 
-        if ($('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').length > 0) {
+        if ($('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').length > 0) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
-            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
-            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
-            $('.camera[data-camera="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
+            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
+            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
+            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
         }
 
         if (this.display_widget && this.display_widget.onClose) {
@@ -846,7 +848,7 @@ export class PanelUI {
 
         // built in camera devices
         if (this.latest_cameras) {
-            Object.values(cameras).forEach((cam) => {
+            Object.values(this.latest_cameras).forEach((cam) => {
                 cameras.push({
                     src_id: cam.id,
                     msg_type: 'video'
