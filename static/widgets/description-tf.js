@@ -111,6 +111,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.scene.add(this.camera);
         this.camera_target_pos = new THREE.Vector3().copy(this.model.position);
         this.camera.lookAt(this.camera_target_pos);
+        this.camera_anchor_joint = null;
 
         this.controls = new OrbitControls( this.camera, this.labelRenderer.domElement );
         this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
@@ -600,7 +601,6 @@ export class DescriptionTFWidget extends EventTarget {
             console.warn(`URDFLoader: Could not load model at ${ path }.\nNo loader available`);
 
         }
-
     }
 
     on_description_data = (topic, desc) => {
@@ -629,12 +629,20 @@ export class DescriptionTFWidget extends EventTarget {
         let farthest_pt_dist = 0;
         
         let wp = new Vector3();
+        let ji = 0;
         Object.keys(this.robot.joints).forEach((key)=>{
             that.make_mark(that.robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
             that.robot.joints[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
+
+            if (ji == 0) {
+                console.log('Focusing cam on joint '+key);      
+                that.camera_anchor_joint = that.robot.joints[key];
+                that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
+            }
+            ji++;
         });
 
         Object.keys(this.robot.links).forEach((key)=>{
@@ -651,6 +659,7 @@ export class DescriptionTFWidget extends EventTarget {
             this.world.position.copy(v.negate());
         }
         
+        // let camera_target = null;
         Object.keys(this.robot.frames).forEach((key)=>{
 
             that.robot.frames[key].getWorldPosition(wp);
@@ -762,33 +771,30 @@ export class DescriptionTFWidget extends EventTarget {
                     continue;
 
                 this.last_tf_stamps[tf_id] = t_sec;
-                let p = this.robot.links[id_parent];
-                let ch = this.robot.links[id_child];
+                let p = this.robot.frames[id_parent];
+                let ch = this.robot.frames[id_child];
                 if (!ch)
                     continue;
     
-                if (id_child == 'base_link') {
+                if (id_child == this.robot.urdfName) {
                         
                     if (!this.fix_base) {
                         if (this.follow_target)
                             ch.attach(this.camera);
 
                         ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
-                        if (this.follow_target) {
+                        if (this.follow_target && this.camera_anchor_joint) {
                             this.scene.attach(this.camera);
-                            ch.getWorldPosition(this.camera_target_pos);
-                            //console.log('looking at: ', this.camera_target_pos);
-                            // this.camera.lookAt(ch.position);
-                            //this.camera.updateProjectionMatrix();
+                            this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
                         }
                     }
                         
                     ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
     
-                    this.light.target = this.robot.links['base_link'];
+                    this.light.target = ch;
                 }
                     
-                else if (this.robot && this.robot.links[id_parent] && this.robot.links[id_child]) {
+                else if (this.robot && p && ch) {
                 
                     let orig_p = ch.parent;
                     p.attach(ch);
@@ -819,20 +825,4 @@ export class DescriptionTFWidget extends EventTarget {
 
     }
 
-   
 }
-
-
-//IMU VISUALIZATION
-// export function URDFWidget (panel, decoded) {
-
-//     if (!panel.display_widget) {
-
-//     }
-
-//     if (panel.display_widget && decoded) {
-//         // LHS (ROS) => RHS (Three)
-//         // panel.cube.quaternion.set(-decoded.orientation.y, decoded.orientation.z, -decoded.orientation.x, decoded.orientation.w);
-//         URDFWidget_Render(panel)
-//     }
-// }
