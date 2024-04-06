@@ -68,6 +68,7 @@ export class DescriptionTFWidget extends EventTarget {
              color: 0xff0000,
              side: THREE.DoubleSide,
              depthWrite: true,
+             transparent: false
         } );
         this.urdf_loader.loadMeshCb = this.load_mesh_cb;
         this.robot = null;
@@ -103,11 +104,11 @@ export class DescriptionTFWidget extends EventTarget {
         this.scene.add(this.model);
         this.model.position.y = 0
 
-        this.model.add(this.camera)
-        this.camera.position.z = 2;
-        this.camera.position.x = 0;
-        this.camera.position.y = 1;
-        this.scene.add(this.camera)
+        this.initial_camera_pos = new THREE.Vector3(1,.5,1);
+        this.model.add(this.camera);
+        this.camera.position.copy(this.initial_camera_pos);
+    
+        this.scene.add(this.camera);
         this.camera_target_pos = new THREE.Vector3().copy(this.model.position);
         this.camera.lookAt(this.camera_target_pos);
 
@@ -137,32 +138,6 @@ export class DescriptionTFWidget extends EventTarget {
         const ambience = new THREE.AmbientLight( 0x606060 ); // soft white light
         this.scene.add( ambience );
 
-        this.camera.layers.enableAll();
-        if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
-        if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
-        if (!this.render_joints)  {
-            this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); //joints 
-            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //joint labels
-        }
-        if (!this.render_links) {
-            this.camera.layers.disable(DescriptionTFWidget.L_LINKS); //links
-            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //link labels
-
-        }
-        if (!this.render_labels) {
-            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
-            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
-        }
-        if (!this.render_pose_graph) {
-            this.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
-        }
-
-        this.collider_mat = new THREE.MeshStandardMaterial({
-            color: 0xffff00,
-            emissive: 0xffff00,
-            wireframe: true,
-            // depthFunc: THREE.LessEqualDepth
-        });
 
         // const axesHelper = new THREE.AxesHelper( 5 );
         // this.scene.add( axesHelper );
@@ -177,22 +152,7 @@ export class DescriptionTFWidget extends EventTarget {
         // this.scene.add( gridHelper );
         // this.scene.add( planeHelper );
 
-        const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
-
-        const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
-        const plane_tex = this.tex_loader.load('/static/tiles.png');
-        plane_tex.wrapS = THREE.RepeatWrapping;
-        plane_tex.wrapT = THREE.RepeatWrapping;
-        plane_tex.repeat.set(100, 100);
-        // plane_material.map = plane_tex;
-        plane_material.map = plane_tex;
-        // plane_material.needsUpdate = true;
-        this.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
-        this.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
-        this.ground_plane.position.set(0,0,0);
-        this.ground_plane.receiveShadow = true;
-        this.ground_plane.visible = this.render_ground_plane;
-        this.scene.add(this.ground_plane);
+    
 
         // const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 ); 
         // const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} ); 
@@ -228,6 +188,50 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.parseUrlParts(this.panel.custom_url_vars);
 
+        const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
+
+        //ground plane
+        const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
+        const plane_tex = this.tex_loader.load('/static/tiles.png');
+        plane_tex.wrapS = THREE.RepeatWrapping;
+        plane_tex.wrapT = THREE.RepeatWrapping;
+        plane_tex.repeat.set(100, 100);
+        plane_material.map = plane_tex;
+        this.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
+        this.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
+        this.ground_plane.position.set(0,0,0);
+        this.ground_plane.receiveShadow = true;
+        this.ground_plane.visible = this.render_ground_plane;
+        this.scene.add(this.ground_plane);
+
+        this.camera.layers.enableAll();
+        if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
+        if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
+        if (!this.render_joints)  {
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); //joints 
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //joint labels
+        }
+        if (!this.render_links) {
+            this.camera.layers.disable(DescriptionTFWidget.L_LINKS); //links
+            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //link labels
+
+        }
+        if (!this.render_labels) {
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
+            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
+        }
+        if (!this.render_pose_graph) {
+            this.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
+        }
+
+        this.collider_mat = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffff00,
+            wireframe: true,
+            // depthFunc: THREE.LessEqualDepth
+        });
+
+
         this.rendering = true;
         this.rendering_loop();        
 
@@ -241,14 +245,14 @@ export class DescriptionTFWidget extends EventTarget {
         // panel.ui.client.on(this.topic_desc, this.on_description_data);
 
      
-        panel.widget_menu_cb = () => {
-            that.setupMenu();
-        }
+        panel.widget_menu_cb = this.setupMenu;
     }
 
-    setupMenu () {
+    setupMenu = () => {
        
-        this.sources.setupMenu();
+        if (this.sources) {
+            this.sources.setupMenu();
+        }
 
         // this.sources.makeTopicButton('Static TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf_static);
         // this.sources.makeTopicButton('TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf);
@@ -622,13 +626,23 @@ export class DescriptionTFWidget extends EventTarget {
         this.world.position.set(0,0,0);
 
         let that = this;
-
+        let farthest_pt_dist = 0;
+        
+        let wp = new Vector3();
         Object.keys(this.robot.joints).forEach((key)=>{
             that.make_mark(that.robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
+            that.robot.joints[key].getWorldPosition(wp);
+            let wp_magnitude = wp.length();
+            if (wp_magnitude > farthest_pt_dist)
+                farthest_pt_dist = wp_magnitude;
         });
 
         Object.keys(this.robot.links).forEach((key)=>{
             that.make_mark(that.robot.links[key], key, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS);
+            that.robot.links[key].getWorldPosition(wp);
+            let wp_magnitude = wp.length();
+            if (wp_magnitude > farthest_pt_dist)
+                farthest_pt_dist = wp_magnitude;
         });
 
         if (this.robot.links['base_footprint']) {
@@ -638,6 +652,11 @@ export class DescriptionTFWidget extends EventTarget {
         }
         
         Object.keys(this.robot.frames).forEach((key)=>{
+
+            that.robot.frames[key].getWorldPosition(wp);
+            let wp_magnitude = wp.length();
+            if (wp_magnitude > farthest_pt_dist)
+                farthest_pt_dist = wp_magnitude;
 
             if (this.robot.frames[key].children) {
                 this.robot.frames[key].children.forEach((ch)=>{
@@ -670,7 +689,13 @@ export class DescriptionTFWidget extends EventTarget {
             // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
         });
 
-
+        // update initial cam pos
+        if (this.follow_target) {
+            let initial_dist = farthest_pt_dist * 3.0;
+            this.camera.position.copy(this.initial_camera_pos);
+            this.camera.position.normalize().multiplyScalar(initial_dist);
+        }
+        
         // console.log('got desc: ', desc.data);
 
         
@@ -678,14 +703,25 @@ export class DescriptionTFWidget extends EventTarget {
 
     make_mark(target, label_text, layer_axes, layer_labels) {
 
-        let axis_size = .05;
+        let axis_size = .02;
         if (label_text == 'base_link') {
             axis_size = .15;
         }
-        const axesHelper = new THREE.AxesHelper(axis_size);
+        // const mat = new THREE.LineBasicMaterial();
+       
+        // mat.depthWrite = true;
+        // mat.depthTest = false;
+        // mat.transparent = true;
+        // mat.blendDst = THREE.AddEquation;
+        const axesHelper = new THREE.AxesHelper(axis_size);       
+        axesHelper.material.transparent = true;
+        axesHelper.material.opacity = 0.9;
         axesHelper.material.depthTest = false;
+        axesHelper.material.depthWrite = false;
+
         target.add(axesHelper);
         axesHelper.layers.set(layer_axes);
+        // axesHelper.renderOrder = 1000;
 
         if (label_text) {
             const el = document.createElement('div');
