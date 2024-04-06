@@ -7,6 +7,21 @@ export class MultiTopicSource {
         this.subscribed_topics = {};
 
         this.widget.panel.ui.client.on('topics', this.onTopics);
+
+        this.onChange = null;
+    }
+
+    hasSources() {
+        for (let i = 0; i < this.sources.length; i++) {
+            if (!this.sources[i].topic_slots)
+                continue;
+            for (let j = 0; j < this.sources[i].topic_slots.length; j++) {    
+                if (this.sources[i].topic_slots[j].selected_topic) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     getUrlHashParts (out_parts) {
@@ -128,7 +143,7 @@ export class MultiTopicSource {
 
         slot.topic = topic.id;
         this.subscribed_topics[topic.id] = slot;
-        console.warn('Topic assigned: '+topic.id);
+        console.log('Topic assigned: '+topic.id);
 
         slot.cb_wrapper = (data) => {
             return slot.src.cb(topic.id, data);
@@ -141,7 +156,7 @@ export class MultiTopicSource {
         let changed = false;
         let that = this;
 
-        console.warn('Multisource got topics', discovered_topics)
+        console.log('Multisource got topics', discovered_topics)
 
         Object.values(discovered_topics).forEach((topic)=>{
 
@@ -162,6 +177,8 @@ export class MultiTopicSource {
 
         if (changed) {
             this.updateMenuContent();
+            if (this.onChange)
+                this.onChange();
         }
         
     }
@@ -200,7 +217,7 @@ export class MultiTopicSource {
     clearSlot(slot) {
         if (slot.topic) {
 
-            console.warn('Clearing topic: '+slot.topic);
+            console.log('Clearing topic: '+slot.topic);
 
             delete this.subscribed_topics[slot.topic];
             this.widget.panel.ui.client.off(slot.topic, slot.cb_wrapper);
@@ -223,6 +240,8 @@ export class MultiTopicSource {
         }
 
         this.updateMenuContent();
+        if (this.onChange)
+            this.onChange();
     }
 
     //clear all subs
@@ -285,6 +304,8 @@ export class MultiTopicSource {
                     that.updateSlots(slot.src);
                     that.updateMenuContent();
                     that.panel.ui.update_url_hash();
+                    if (that.onChange)
+                        that.onChange();
                 }
             );
             e.cancelBubble = true;

@@ -29,7 +29,6 @@ class Panel {
 
     display_widget = null;
     data_trace = [];
-    widget_menu_cb = null;
 
     graph_menu = null;
 
@@ -56,6 +55,8 @@ class Panel {
         this.zoom = zoom;
         this.custom_url_vars = custom_url_vars;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
+
+        this.widget_menu_cb = null;
 
         this.n = Panel.PANEL_NO++;
         //let display_source = false;
@@ -108,6 +109,8 @@ class Panel {
     // init with message type when it's known
     // might get called with null gefore we receive the message type
     init(msg_type=null) {
+
+        console.log('Panel init '+this.id_source+'; msg_type='+msg_type);
 
         let fallback_show_src = true;
 
@@ -212,9 +215,11 @@ class Panel {
             // }
 
             this.ui.update_url_hash();
+            this.setMenu()
+        } else if (!this.initiated) {
+            this.setMenu(); //draw menu placeholder fast without type
         }
-
-        this.setMenu()
+        
         this.onResize();
     }
 
@@ -233,7 +238,9 @@ class Panel {
 
     }
 
-    setMenu() {
+    setMenu = () => {
+
+        console.log('Setting up panel menu of ' + this.id_source)
 
         let els = []
         let that = this;
@@ -292,35 +299,23 @@ class Panel {
 
         let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
         closeEl.click(function(ev) {
-            // console.log('click '+that.n)
-
-            /*let el = $('#panel_msg_type_'+that.n);
-            if (el.css('display') != 'block')
-                el.css('display', 'block');
-            else if (!el.hasClass('err'))
-                el.css('display', 'none');
-                */
-
             that.close();
             if (that.ui.widgets[that.id_source])
                 that.ui.widgets_menu();
-
-            //that.Close();
-            //delete panels[that.topic];
-
             ev.cancelBubble = true;
             ev.preventDefault();
         });
         els.push(closeEl);
 
+        $('#monitor_menu_content_'+this.n).empty();
         $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
-        let linesCont = $('<div class="menu_lines"></div>');
+        // let linesCont = $('<div class="menu_lines"></div>');
         for (let i = 0; i < els.length; i++) {
             $('#monitor_menu_content_'+this.n).append(els[i]);
         }
 
         if (this.widget_menu_cb != null) {
-            this.widget_menu_cb(this);
+            this.widget_menu_cb();
         }
 
     }
@@ -1042,7 +1037,8 @@ export class PanelUI {
         $( "#msg_type-dialog" ).dialog({
             resizable: true,
             height: 700,
-            width: 500,
+            width: 700,
+            top: 180,
             modal: true,
             title: msg_type,
             buttons: {
@@ -1098,8 +1094,8 @@ export class PanelUI {
 
         d.dialog({
             resizable: true,
-            height: 700,
-            width: 500,
+            height: 300,
+            width: 700,
             modal: true,
             title: label,
             buttons: {

@@ -1267,13 +1267,16 @@ SPAN.error {
     top: 50%;
     -ms-transform: translateY(-50%);
     transform: translateY(-50%);
+}
+.panel_widget .video_overlay svg.display_crop {
     border-style: dashed;
     border-color: rgb(162, 255, 0);
-    border-width: 3px;
+    border-width: 2px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
-}
+} 
+
 
 .video_stats, .video_fps {
     color: #ffffffa3;
