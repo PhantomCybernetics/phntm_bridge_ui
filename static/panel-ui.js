@@ -114,6 +114,12 @@ class Panel {
 
         let fallback_show_src = true;
 
+        if (!this.pauseEl) {
+            // pause panel updates
+            this.pauseEl = $('<span id="pause_panel_'+this.n+'" class="pause-panel-button paused" title="Waiting for data..."></span>');
+            this.pauseEl.insertBefore('#monitor_menu_'+this.n);
+        }
+
         if (msg_type && !this.initiated) {
 
             console.log('Initiating panel '+this.id_source+' for '+msg_type)
@@ -184,24 +190,26 @@ class Panel {
             //     this._on_data_context_wrapper(latest.msg, latest.ev)
             // }
 
-            let that = this;
+            this.ui.update_url_hash();
+            this.setMenu()
 
-            // pause panel updates
-            //if (this.msg_type != 'video') {
-            let pauseEl = $('<a href="#" id="pause_panel_'+this.n+'" class="pause-panel-button" title="Pause"></a>');
-            if (that.paused) {
-                pauseEl.addClass('paused');
-                pauseEl.attr('title', 'Unpause');
+            if (this.paused) {
+                this.pauseEl.addClass('paused');
+                this.pauseEl.attr('title', 'Unpause');
+            } else {
+                this.pauseEl.removeClass('paused');
+                this.pauseEl.attr('title', 'Pause');
             }
-            pauseEl.click(function(e) {
+            let that = this;
+            this.pauseEl.click(function(e) {
                 that.paused = !that.paused;
                 console.log('Panel updates paused '+that.paused);
                 if (that.paused) {
-                    pauseEl.addClass('paused');
-                    pauseEl.attr('title', 'Unpause');
+                    that.pauseEl.addClass('paused');
+                    that.pauseEl.attr('title', 'Unpause');
                 } else {
-                    pauseEl.removeClass('paused');
-                    pauseEl.attr('title', 'Pause');
+                    that.pauseEl.removeClass('paused');
+                    that.pauseEl.attr('title', 'Pause');
                 }
                 if (that.display_widget && that.display_widget.is_video) {
                     that.display_widget.el.trigger(that.paused ? 'pause' : 'play');    
@@ -209,13 +217,7 @@ class Panel {
                 e.cancelBubble = true;
                 return false;
             });
-            pauseEl.insertBefore('#monitor_menu_'+that.n);
-            // } else {
-            //     $('#panel_title_'+this.n).addClass('no-pause');
-            // }
 
-            this.ui.update_url_hash();
-            this.setMenu()
         } else if (!this.initiated) {
             this.setMenu(); //draw menu placeholder fast without type
         }
@@ -305,6 +307,8 @@ class Panel {
             ev.cancelBubble = true;
             ev.preventDefault();
         });
+        if (els.length == 0)
+            closeEl.addClass('solo');
         els.push(closeEl);
 
         $('#monitor_menu_content_'+this.n).empty();
@@ -501,8 +505,6 @@ class Panel {
 
     close() {
 
-
-
         if (this.ui.graph_menu.topics[this.id_source]) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
             // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
@@ -574,13 +576,15 @@ export class PanelUI {
         'std_srvs/srv/SetBool' : ServiceCallInput_Bool
     }
 
-    constructor(client, grid_cell_height, gamepad) {
+    constructor(client, grid_cell_height, keyboard, gamepad) {
         this.client = client;
+        this.client.ui = this;
 
         let GridStack = window.exports.GridStack;
         this.grid = GridStack.init({ float: false, cellHeight: grid_cell_height, handle: '.panel-title' });
 
         this.panels = {}
+        this.keyboard = keyboard;
         this.gamepad = gamepad;
         this.gamepad.ui = this;
 
@@ -1482,8 +1486,7 @@ export class PanelUI {
 
         //msg type unknown here
         let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, custom_url_vars);
-
-        //panel.init(msg_type);
+        panel.init(null);
 
         // this.client.on(panel.id_source, panel._on_data_context_wrapper);
 

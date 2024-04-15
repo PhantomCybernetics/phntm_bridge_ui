@@ -78,7 +78,7 @@
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
     import { NavigationWidget } from '/static/widgets/navigation.js';
     import { Everything3DWidget } from '/static/widgets/everything.js';
-    import { JoyDriver, TwistMecanumDriver } from '/static/gamepad-drivers.js';
+    import { JoyInputDriver, TwistInputDriver, TwistStampedInputDriver } from '/static/input-drivers.js';
 
     $(document).ready(function() {
 
@@ -131,16 +131,16 @@
         });
 
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
-        gamepad.add_driver('Joy', 'sensor_msgs/msg/Joy (forward)', 'sensor_msgs/msg/Joy', JoyDriver);
-        gamepad.add_driver('Twist', 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
-        gamepad.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
+        gamepad.register_driver('Joy', JoyInputDriver);
+        gamepad.register_driver('Twist', TwistInputDriver);
+        gamepad.register_driver('TwistStamped', TwistStampedInputDriver);
 
-        let kb = new KeyboardController(robot); // creates write channels when enabled
-        kb.add_driver('Joy', 'sensor_msgs/msg/Joy', 'sensor_msgs/msg/Joy', JoyDriver);
-        kb.add_driver('Twist', 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/Twist', TwistMecanumDriver);
-        kb.add_driver('TwistStamped', 'geometry_msgs/msg/TwistStamped', 'geometry_msgs/msg/TwistStamped', TwistMecanumDriver);
+        let keyboard = new KeyboardController(robot); // creates write channels when enabled
+        keyboard.register_driver('Joy', JoyInputDriver);
+        keyboard.register_driver('Twist', TwistInputDriver);
+        keyboard.register_driver('TwistStamped', TwistStampedInputDriver);
 
-        let panel_ui = new PanelUI(robot, 119, gamepad);
+        let panel_ui = new PanelUI(robot, 119, keyboard, gamepad);
         panel_ui.add_widget(Everything3DWidget);
         panel_ui.add_widget(NavigationWidget);
         panel_ui.add_widget(DescriptionTFWidget);

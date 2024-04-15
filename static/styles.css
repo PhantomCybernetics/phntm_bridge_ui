@@ -838,12 +838,22 @@ BUTTON#trigger_wifi_scan.working {
 .monitor_menu_content.right > .menu_line { 
     border-radius: 0px 5px 0px 0px;
 }
+
 .monitor_menu_content > .menu_line ~ .menu_line { 
     border-radius: 0px 0px 0px 0px;
 }
 
 .monitor_menu_content .menu_line:last-of-type {
     border-radius: 0px 0px 5px 5px !important;
+}
+
+.monitor_menu_content .menu_line.solo {
+    padding-top: 3px;
+    border-radius: 5px 0px 5px 5px !important;
+}
+.monitor_menu_content.right .menu_line.solo {
+    padding-top: 3px;
+    border-radius: 0px 5px 5px 5px !important;
 }
 
 /* .grid_panel .menu_line:first-child {
@@ -1404,46 +1414,52 @@ SPAN.error {
     border-radius: 10px 10px 0px 0px;
 }
 
-#gamepad_status,
-#keyboard_status {
-    width: 50px;
-    height: 50px;
-    background: url(/static/gamepad.png);
-    background-size: 100px;
+
+#keyboard_status,
+#gamepad_status {
     background-repeat: no-repeat;
     cursor: pointer;
-    background-position: 0px 3px;
     filter: grayscale(1) opacity(.2);
 }
 
 #keyboard_status {
-    background: url(/static/keyboard.png);
+    background-size: 100px;
+    background-image: url(/static/keyboard.png);
+    background-position: 0px 3px;
     width: 50px;
     height: 27px;
-    background-size: 100px;
     margin-top: 10px;
     margin-left: 5px;
 }
 
+#gamepad_status {
+    width: 60px;
+    height: 45px;
+    background-image: url(/static/gamepad.png);
+    background-size: 130px;
+    background-position: 4px 3px;
+}
+
 #gamepad.connected #gamepad_status,
-#keyboard.on #keyboard_status,
+#keyboard.open #keyboard_status,
 #keyboard_status:hover,
+#gamepad_status:hover,
 #keyboard.enabled #keyboard_status {
     filter: grayscale(0);
 }
 
 #gamepad.connected.enabled #gamepad_status {
-    background-position: -50px 3px;
+    background-position: -61px 3px;
 }
 
 #keyboard.enabled #keyboard_status {
-    background-position: -50px 0px;
+    background-position: -50px 3px;
 }
 
-#gamepad.connected.on,
-#keyboard.on {
+#gamepad.open,
+#keyboard.open {
     background-color: #5d53b0e3;
-    border-radius: 10px 10px 0px 0px;
+    border-radius: 5px 5px 0px 0px;
 }
 
 #gamepad #gamepad_settings,
@@ -1452,15 +1468,41 @@ SPAN.error {
     background: #5d53b0e3;
     /* width: 800px; */
     overflow-x: hidden;
-    right: -10px;
+    right: 0px;
     font-size: 12px;
     color: white;
     font-weight: normal;
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 5px 0px 5px 5px;
     top: 45px;
     display: none;
     z-index: 2;
+}
+
+#gamepad_settings h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    width: 360px;
+    display: block;
+}
+
+#gamepad_settings h3 {
+    white-space: nowrap;
+    overflow: hidden;
+    width: 360px;
+    display: block;
+}
+
+#gamepad_settings h3.config {
+    width: 670px;
+}
+#gamepad_settings h3.shortcuts {
+    width: 490px;
+}
+
+#gamepad #gamepad_id {
+    font-size: 10px;
+    font-weight: normal;
 }
 
 #gamepad #gamepad_settings SElECT,
@@ -1498,7 +1540,35 @@ SPAN.error {
     border: 0px;
     padding: 2px 5px;
     border-radius: 3px;
+    position: relative;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
 }
+
+#keyboard_settings_controls button.close,
+#gamepad_settings_controls button.close {
+    background-color: #e200ff;
+}
+
+/* #keyboard_settings_controls button.close::before {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    top: 5px;
+    left: 2px;
+    background-image: url(/static/menu-arrow.png);
+    background-position: 3px center;
+    background-repeat: no-repeat;
+    background-size: auto 12px;
+    transform: rotate(-90deg);
+    display: block;
+}
+
+#keyboard_settings_controls button.close:hover::before {
+    background-image: url(/static/remove.png);
+} */
 
 #gamepad_config_controls button#gamepad_config_save,
 #gamepad_shortcuts_controls button#gamepad_shortcuts_save,
@@ -1603,8 +1673,8 @@ SPAN.error {
     margin-right: 0px;
 }
 
-#gamepad.connected.on #gamepad_settings,
-#keyboard.on #keyboard_settings {
+#gamepad.open #gamepad_settings,
+#keyboard.open #keyboard_settings {
    display: block;
 }
 

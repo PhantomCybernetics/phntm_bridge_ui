@@ -1,118 +1,113 @@
-
-// browser => joy remapping
-// const id_dead_man_switch_btn = 4; //will send this as true
-// const browser2joy_mapping = {
-//     //local btn => send as
-//     buttons: {
-//         9: 7, // fast mode
-//         7: 5  // slow mode
-//     },
-//     //local axis => [ send_as, scale_factor ]
-//     axes: {
-//         // linear x (fw/back)
-//         1 : [ 1, 1.0],
-
-//         // left right steer
-//         0 : [ 0, 1.0 ],
-
-//         // strife w mecanum wheels
-//         2 : [ 2, -1.0]
-//     }
-// }
+import { Handle_Shortcut } from '/static/input-drivers.js';
 
 export class GamepadController {
 
     constructor(client) {
 
         this.client = client;
-        // this.ui = null;
+
+        this.registered_drivers = {}; // id: class 
 
         this.drivers = {}; //id -> driver
         this.default_shortcuts_config = {};
         this.shortcuts_config = null;
         this.last_buttons = [];
         this.editor_listening = false;
-        // this.writers = {} // by topic
-        //this.msg_classes = {} // by msg type
-        //this.msg_writers = {} // by msg type
-
-        // this.msg_writers[this.twist_stamped_msg_type] = new Writer( [ this.twist_stamped_msg_class ].concat(supported_msg_types) );
-
-        this.loop_delay = 33.3; //ms, 30Hz updates
 
         this.gamepad = null;
         this.capturing_gamepad_input = false;
         this.captured_gamepad_input = [];
         this.gamepad_service_mapping = {}
+        this.last_gp_loaded = null;
+        this.loop_delay = 33.3; // ms, 30Hz updates
 
-        // this.axes_config = axes_config ? axes_config : {};
-
-        // this.load_gamepad_service_mapping(); // from cookie
+        this.initiated = false;
+        this.enabled = false; 
+        this.loop_running = false;
+        $('#gamepad_enabled').prop('checked', this.enabled);
 
         let that = this;
+
+        client.on('gp_config', (gp_drivers, gp_defaults)=>{
+            console.warn('GP GOT CONFIG driver=['+gp_drivers.join(', ')+'] defaults:', gp_defaults);
+
+            let default_driver = null;
+
+            // init drivers enabled by the robot
+            gp_drivers.forEach((id_driver)=>{
+                if (that.drivers[id_driver])
+                    return; //only once
+
+                if (default_driver === null)
+                    default_driver = id_driver; //first is default
+
+                console.warn('Setting up gp driver '+id_driver);
+
+                let instance_driver = id_driver;
+                let default_cfg = (gp_defaults && gp_defaults.drivers && gp_defaults.drivers[id_driver] ? gp_defaults.drivers[id_driver] : null);
+                if (default_cfg && default_cfg['driver']) // ignoring user's override
+                    instance_driver = default_cfg['driver'];
+                let driver_class = that.registered_drivers[instance_driver];
+                if (!driver_class) {
+                    console.error('Gp driver '+instance_driver+' not found (did you register it first?)');
+                    return;
+                }
+                let label = instance_driver;
+                if (default_cfg && default_cfg['label'])
+                    label = default_cfg['label'];
+                that.drivers[id_driver] = new driver_class(id_driver, label);
+                if (default_cfg) {
+                    that.drivers[id_driver].default_gamepad_config = default_cfg;
+                }
+                that.drivers[id_driver].config = that.drivers[id_driver].default_gamepad_config; // overriden by user's gp settings (loaded on GP connect)
+            });
+
+            if (gp_defaults.shortcuts) {
+                that.default_shortcuts_config = gp_defaults.shortcuts;
+            }
+            if (!that.initiated) {
+                that.shortcuts_config = that.default_shortcuts_config; // overriden by user's gp settings (loaded on GP connect)
+
+                console.log('Gamepad setting driver to default '+default_driver);
+                that.select_driver(default_driver);
+            }
+                
+            if (that.gamepad) {
+                that.init_gamepad();
+            } else { // init without loading gp config
+                that.shortcuts_to_editor();
+                that.update_ui();
+            }
+
+            that.initiated = true;
+        });
+
+        $('#gamepad_status').click(() => {
+            if (!that.initiated)
+                return; //wait 
+            $('#keyboard').removeClass('open');
+            if ($('#gamepad').hasClass('open')) {
+                $('#gamepad').removeClass('open');
+            } else {
+                $('#gamepad').addClass('open');
+            }
+        });
 
         window.addEventListener('gamepadconnected', (event) => {
             console.warn('Gamepad connected:', event.gamepad.id);
             that.gamepad = event.gamepad;
 
             $('#gamepad').addClass('connected');
-            $('#gamepad_id').html(that.gamepad.id);
+            $('#gamepad_id').html(' / ' + that.gamepad.id);
 
-            let enabled = that.load_gamepad_enabled(that.gamepad.id);
-            $('#gamepad_enabled').prop('checked', enabled);
-            if (enabled) {
-                $('#gamepad').addClass('enabled');
-            } else {
-                $('#gamepad').removeClass('enabled');
-            }
-
-            Object.keys(that.drivers).forEach((id_driver)=>{
-                if (that.drivers[id_driver].config !== null) {
-                    return; //only load once
-                }
-                let cfg = that.load_driver_config(that.gamepad.id, id_driver);
-                if (cfg)
-                    that.drivers[id_driver].config = cfg;
-                else
-                    that.drivers[id_driver].config = that.drivers[id_driver].default_config;
-            });
-
-            let dri = that.load_gamepad_driver(that.gamepad.id);
-            if (dri && that.drivers[dri]) {
-                that.select_driver(dri);
-            } else if (Object.keys(that.drivers).length > 0) {
-                dri = Object.keys(that.drivers)[0]
-                console.log('Gamepad defaulting to '+dri);
-                that.select_driver(dri);
-            }
-
-            if (that.shortcuts_config == null) {
-                let shortcuts = that.load_shortcuts(that.gamepad.id);
-                if (shortcuts)
-                    that.shortcuts_config = shortcuts;
-                else
-                    that.shortcuts_config = that.default_shortcuts_config;
-                this.shortcuts_to_editor();
-            }
-
-            that.update_ui();
-
-            if (that.client.supported_msg_types === null) {
-                //wait for message defs to load
-                console.log('Gamepad loop delayed')
-                that.client.once('message_types_loaded', () => {
-                    console.log('message_types_loaded');
-                    that.run_loop();
-                });
-            } else {
-                that.run_loop();
-            }
+            that.init_gamepad();
         });
 
         window.addEventListener('gamepaddisconnected', (event) => {
             if (that.gamepad.id == event.gamepad.id) {
                 that.gamepad = null; //kills the loop
                 console.warn('Gamepad disconnected:', event.gamepad);
+                $('#gamepad_id').html('');
                 $('#gamepad').removeClass('connected');
             }
         });
@@ -121,17 +116,20 @@ export class GamepadController {
             if ($('#gamepad_debug').hasClass('config')) {
                 //disable config edit
                 $('#gamepad_debug').removeClass('config');
-                $('#gamepad_config_toggle').text('Config');
-                // $('#gamepad_config_save').css('display', 'none');
-                // $('#gamepad_config_default').css('display', 'none');
-                $('#gamepad_shortcuts_toggle').css('display', 'inline');
+                $('#gamepad_config_toggle').removeClass('close');
+                $('#gamepad_settings h3').removeClass('config');
             } else {
                 //enable config edit
+                $('#gamepad_debug').removeClass('shortcuts');
                 $('#gamepad_debug').addClass('config');
-                $('#gamepad_config_toggle').text('Close editor');
-                // $('#gamepad_config_save').css('display', 'inline');
-                // $('#gamepad_config_default').css('display', 'inline');
-                $('#gamepad_shortcuts_toggle').css('display', 'none');
+
+                $('#gamepad_settings h3').removeClass('shortcuts');
+                $('#gamepad_settings h3').addClass('config');
+                
+                $('#gamepad_shortcuts_toggle').removeClass('close');
+                $('#gamepad_config_toggle').addClass('close');
+            
+                $('#gamepad_debug_output').css('display', 'block');
             }
         });
 
@@ -139,30 +137,27 @@ export class GamepadController {
             if ($('#gamepad_debug').hasClass('shortcuts')) {
                 //disable mapping edit
                 $('#gamepad_debug').removeClass('shortcuts');
-                $('#gamepad_shortcuts_toggle').text('Key mapping');
-                $('#gamepad_config_toggle').css('display', 'inline');
+                $('#gamepad_shortcuts_toggle').removeClass('close')
                 $('#gamepad_debug_output').css('display', 'block');
+                $('#gamepad_settings h3').removeClass('shortcuts');
             } else {
                 //enable mapping edit
+                $('#gamepad_debug').removeClass('config');
                 $('#gamepad_debug').addClass('shortcuts');
-                $('#gamepad_shortcuts_toggle').text('Close mapping');
-                $('#gamepad_config_toggle').css('display', 'none');
-                $('#gamepad_debug_output').css('display', 'none');
-            }
-        });
 
-        $('#gamepad_status').click(() => {
-            $('#keyboard').removeClass('on');
-            if ($('#gamepad').hasClass('on')) {
-                $('#gamepad').removeClass('on');
-            } else {
-                $('#gamepad').addClass('on');
+                $('#gamepad_settings h3').removeClass('config');
+                $('#gamepad_settings h3').addClass('shortcuts');
+                
+                $('#gamepad_config_toggle').removeClass('close');
+                $('#gamepad_shortcuts_toggle').addClass('close');
+
+                $('#gamepad_debug_output').css('display', 'none');
             }
         });
 
         $('#gamepad_driver').change((ev) => {
             if (that.select_driver($(ev.target).val())) {
-                that.save_gamepad_driver();
+                that.save_user_gamepad_driver();
             }
         });
 
@@ -180,15 +175,16 @@ export class GamepadController {
 
         $('#gamepad_config_save').click((ev) => {
             if (that.parse_driver_config()) {
-                that.save_driver_config();
+                that.save_user_driver_config();
             }
         });
 
         $('#gamepad_enabled').change(function(ev) {
-            let enabled = this.checked;
-            that.save_gamepad_enabled(enabled)
-            if (enabled) {
+            that.enabled = this.checked;
+            that.save_user_gamepad_enabled(that.enabled)            
+            if (that.enabled) {
                 $('#gamepad').addClass('enabled');
+                that.disable_kb_on_conflict();
             } else {
                 $('#gamepad').removeClass('enabled');
             }
@@ -219,28 +215,92 @@ export class GamepadController {
 
         $('#gamepad_shortcuts_save').click((ev) => {
             if (that.parse_shortcuts_config()) {
-                that.save_shortcuts();
+                that.save_user_shortcuts();
             }
         });
     }
 
-    add_driver(id, label, msg_type, driver_class) {
+    init_gamepad() {
 
-        this.drivers[id] = new driver_class(id, msg_type, label);
+        if (!this.gamepad)
+            return;
 
-        // let topic = this.drivers[id].config.topic;
-        // console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
-        // this.update_ui();
+        let was_enabled = this.enabled;
+
+        let enabled_drivers = Object.keys(this.drivers);
+        if (!enabled_drivers.length)
+            return;
+
+        if (this.last_gp_loaded != this.gamepad.id) { 
+            // only load once for a gp (so we don't overwrite user's config on reconnects)
+            this.last_gp_loaded = this.gamepad.id; 
+
+            enabled_drivers.forEach((id_driver)=>{
+                let user_driver_cfg = this.load_user_driver_config(this.gamepad.id, id_driver);
+                if (user_driver_cfg) {
+                    this.drivers[id_driver].config = user_driver_cfg;
+                    if (user_driver_cfg['label'])
+                        this.drivers[id_driver].label = user_driver_cfg['label'];
+                }
+            });
+    
+            let user_default_driver = this.load_user_gamepad_driver(this.gamepad.id);
+            if (user_default_driver && this.drivers[user_default_driver]) {
+                this.select_driver(user_default_driver);
+            }
+
+            let user_shortcuts = this.load_user_shortcuts(this.gamepad.id);
+            if (user_shortcuts)
+                this.shortcuts_config = user_shortcuts;
+            
+            this.enabled = this.load_user_gamepad_enabled(this.gamepad.id);
+        }
+        
+        this.shortcuts_to_editor();
+        this.update_ui();
+
+        $('#gamepad_enabled').prop('checked', this.enabled);
+        if (this.enabled) {
+            $('#gamepad').addClass('enabled');
+        } else {
+            $('#gamepad').removeClass('enabled');
+        }
+
+        let that = this;
+        if (!this.loop_running) {
+            this.loop_running = true;
+            this.client.when_message_types_loaded(()=>{
+                that.run_loop();
+            });
+        }
+    }
+
+    disable_kb_on_conflict() {
+
+        if (!this.enabled)
+            return;
+
+        let kb = this.client.ui.keyboard;
+        if (kb && kb.enabled && kb.current_driver.id == this.current_driver.id) {
+            $('#keyboard_enabled').click(); // avoid same driver coflicts
+        }
+    }
+
+    register_driver(id_driver, driver_class) {
+        if (this.registered_drivers[id_driver])
+            return;
+
+        this.registered_drivers[id_driver] = driver_class;
     }
 
     update_ui() {
         let opts = [];
-        Object.keys(this.drivers).forEach((id) => {
-            let label = this.drivers[id].label;
-            let selected = this.current_driver == this.drivers[id];
+        Object.keys(this.drivers).forEach((id_driver) => {
+            let label = this.drivers[id_driver].label;
+            let selected = this.current_driver == this.drivers[id_driver];
             opts.push(
-                '<option value="'+id+'"'+(selected ? ' selected="selected"' : '')+'>' +
-                this.drivers[id].label +
+                '<option value="'+id_driver+'"'+(selected ? ' selected="selected"' : '')+'>' +
+                this.drivers[id_driver].label +
                 '</option>')
         })
         $('#gamepad_driver').html(opts.join("\n"));
@@ -257,6 +317,8 @@ export class GamepadController {
         this.current_driver = this.drivers[id_driver];
 
         this.config_to_editor();
+
+        this.disable_kb_on_conflict();
 
         return true;
     }
@@ -311,14 +373,17 @@ export class GamepadController {
 
     }
 
-    save_gamepad_enabled(state) {
+    save_user_gamepad_enabled(state) {
+        if (!this.gamepad)
+            return; // saving per gp
+
         localStorage.setItem('gamepad-enabled:' + this.client.id_robot
                             + ':' + this.gamepad.id,
                             state);
         console.log('Saved gamepad enabled for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'":', state);
     }
 
-    load_gamepad_enabled(id_gamepad) {
+    load_user_gamepad_enabled(id_gamepad) {
         let state = localStorage.getItem('gamepad-enabled:' + this.client.id_robot
                                         + ':' + id_gamepad);
 
@@ -327,21 +392,24 @@ export class GamepadController {
         return state;
     }
 
-    save_gamepad_driver() {
+    save_user_gamepad_driver() {
+        if (!this.gamepad)
+            return; // saving per gp
+
         localStorage.setItem('gamepad-dri:' + this.client.id_robot
                             + ':' + this.gamepad.id,
                             this.current_driver.id);
         console.log('Saved gamepad driver for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'":', this.current_driver.id);
     }
 
-    load_gamepad_driver(id_gamepad) {
+    load_user_gamepad_driver(id_gamepad) {
         let dri = localStorage.getItem('gamepad-dri:' + this.client.id_robot
                                         + ':' + id_gamepad);
         console.log('Loaded gamepad driver for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'":', dri);
         return dri;
     }
 
-    save_driver_config() {
+    save_user_driver_config() {
         localStorage.setItem('gamepad-cfg:' + this.client.id_robot
                                 + ':' + this.gamepad.id
                                 + ':' + this.current_driver.id,
@@ -349,7 +417,7 @@ export class GamepadController {
         console.log('Saved gamepad config for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'", driver '+this.current_driver.id+':', this.current_driver.config);
     }
 
-    load_driver_config(id_gamepad, id_driver) {
+    load_user_driver_config(id_gamepad, id_driver) {
         let cfg = localStorage.getItem('gamepad-cfg:' + this.client.id_robot
                                 + ':' + id_gamepad
                                 + ':' + id_driver);
@@ -363,12 +431,12 @@ export class GamepadController {
             }
         }
 
-        console.log('Loaded gamepad config for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'", driver '+id_driver+':', cfg);
+        console.log('Loaded gamepad user config for robot '+this.client.id_robot+', gamepad "'+id_gamepad+'", driver '+id_driver+':', cfg);
         return cfg;
     }
 
     set_default_config() {
-        this.current_driver.config = this.current_driver.default_config;
+        this.current_driver.config = this.current_driver.default_gamepad_config;
         $('#gamepad_config_input').removeClass('err');
         this.config_to_editor();
     }
@@ -379,14 +447,14 @@ export class GamepadController {
         this.shortcuts_to_editor();
     }
 
-    save_shortcuts() {
+    save_user_shortcuts() {
         localStorage.setItem('gamepad-keys:' + this.client.id_robot
                                 + ':' + this.gamepad.id,
                             JSON.stringify(this.shortcuts_config));
         console.log('Saved gamepad shortcuts keys for robot '+this.client.id_robot+', gamepad "'+this.gamepad.id+'":', this.shortcuts_config);
     }
 
-    load_shortcuts(id_gamepad) {
+    load_user_shortcuts(id_gamepad) {
         let cfg = localStorage.getItem('gamepad-keys:' + this.client.id_robot
                                         + ':' + id_gamepad);
         if (cfg) {
@@ -404,11 +472,15 @@ export class GamepadController {
     run_loop() {
 
         if (this.gamepad === null) {
+            this.loop_running = false;
+        }
+
+        if (!this.loop_running) {
             console.log('Gamepad loop stopped')
             return;
         }
 
-        let transmitting = $('#gamepad_enabled').is(':checked');
+        // let transmitting = $('#gamepad_enabled').is(':checked');
 
         if (!this.current_driver || !this.current_driver.config) {
             // wait for init
@@ -441,16 +513,13 @@ export class GamepadController {
                                        '<b>Raw Buttons:</b><br><div class="p">' + this.unquote(JSON.stringify(buttons_debug, null, 4)) + '</div>'
                                        );
 
-        // if (this.capturing_gamepad_input) {
-            // this.capture_gamepad_input(buttons, axes);
-        // } else
-        if (transmitting) {
+        if (this.enabled) {
             let msg = this.current_driver.read(axes, buttons);
 
             if (this.client.topic_writers[topic].send(msg)) { // true when ready and written
                 this.display_output(msg);
             }
-        } else if (!this.enabled && $('#gamepad').hasClass('on')) {
+        } else if (!this.enabled && $('#gamepad').hasClass('open')) {
             let msg = this.current_driver.read(axes, buttons);
             this.display_output(msg);
         }
@@ -477,91 +546,34 @@ export class GamepadController {
                     
                     document.getElementById('gamepad_shortcuts_input').setSelectionRange(new_pos, new_pos);
                     break;
-                    // let curr_val = $('#gamepad_shortcuts_input').val();
-                    // let pos_start = curr_val.indexOf('{');
-                    // let pos_end = curr_val.lastIndexOf('}');
-                    // let line = '    '+i+': "#ui_element_to_click"\n}';
-                    // let empty = pos_end-pos_start == 1;
-                    // curr_val = curr_val.substr(0, empty?pos_end:pos_end-1) + (empty?'':',') + '\n' + line
-                    //$('#gamepad_shortcuts_input').val(curr_val);
-
                 }
             }
 
-        } else if (transmitting) {
+        } 
 
-            for (let i = 0; i < buttons.length; i++) {
-                if (buttons[i] && buttons[i].pressed && (!this.last_buttons[i] || !this.last_buttons[i].pressed)) {
-                    if (this.shortcuts_config && this.shortcuts_config[i]) {
-                        this.handle_shortcut(this.shortcuts_config[i]);
-                    }
+        for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i] && buttons[i].pressed && !this.last_buttons[i]) {
+                if (this.shortcuts_config && this.shortcuts_config[i]) {
+                    this.handle_shortcut(this.shortcuts_config[i]);
                 }
             }
-
         }
         this.last_buttons = [];
         for (let i = 0; i < buttons.length; i++) {
             this.last_buttons.push(buttons[i].pressed);
         }
     
-
-        // if (this.gamepad_service_mapping) {
-        //     for (const [service_name, service_mapping] of Object.entries(this.gamepad_service_mapping)) {
-        //         //let  = gamepad_service_mapping[service_name];
-        //         for (const [btn_name, btns_config] of Object.entries(service_mapping)) {
-        //             //let  = gamepad_service_mapping[service_name][btn_name];
-        //             //console.log('btns_cond', btns_cond)
-        //             let btns_cond = btns_config.btns_cond;
-        //             let num_pressed = 0;
-        //             for (let i = 0; i < btns_cond.length; i++) {
-        //                 let b = btns_cond[i];
-        //                 if (buttons[b] && buttons[b].pressed)
-        //                     num_pressed++;
-        //             }
-        //             if (btns_cond.length && num_pressed == btns_cond.length) {
-        //                 if (!btns_config['needs_reset']) {
-
-        //                     let btn_el = $('.service_button[data-service="'+service_name+'"][data-name="'+btn_name+'"]');
-
-        //                     if (btn_el.length) {
-        //                         console.warn('Triggering '+service_name+' btn '+btn_name+' ('+num_pressed+' pressed)', btns_cond);
-        //                         btn_el.click();
-        //                     } else {
-        //                         console.log('Not triggering '+service_name+' btn '+btn_name+'; btn not found (service not discovered yet?)');
-        //                     }
-        //                     this.gamepad_service_mapping[service_name][btn_name]['needs_reset'] = true;
-
-        //                 }
-        //             } else if (btns_config['needs_reset']) {
-        //                 this.gamepad_service_mapping[service_name][btn_name]['needs_reset'] = false;
-        //             }
-        //         }
-        //         // if (buttons[service.btn_id].pressed) {
-        //         //     ServiceCall(window.gamepadController.id_robot, service_name, service.msg, window.gamepadController.socket);
-        //         // }
-        //     }
-        // }
-
         window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
     }
 
     display_output(msg) {
-        $('#gamepad_debug_output').html('<b>'+this.current_driver.msg_type+' -> '+this.current_driver.config.topic+'</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
+        $('#gamepad_debug_output_label').html(' into '+this.current_driver.config.topic);
+        $('#gamepad_debug_output').html('<b>'+this.current_driver.msg_type+':</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
     }
 
-    handle_shortcut(cfg) {
-        console.log('handling shortcut', cfg);
-        if (typeof cfg == 'string') {
-            if (cfg[0] == '#') {
-                //click UI element
-                console.log('Gamepad clicking '+cfg);
-                $(cfg).click()
-            }
-        } else if (cfg['service']) {
-            let data = cfg['value'] ? cfg['value'] : null;
-            console.log('Gamepad calling service '+cfg['service']+' with data: ', data);
-            this.client.service_call(cfg['service'], data);
-        }
+    handle_shortcut = (cfg) => {
+        console.log('handling gp shortcut', cfg);
+        Handle_Shortcut(cfg, this.client);
     }
 
     // init_writer (topic, msg_type) {

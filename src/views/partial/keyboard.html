@@ -4,21 +4,23 @@
     <div id="keyboard_settings">
         <h3>Keyboard Controls</h3>
         <div class="cleaner"></div>
-        <input type="checkbox" id="keyboard_enabled"/> <label for="keyboard_enabled" class="prevent-select">Enabled and generating </label>
+        <input type="checkbox" id="keyboard_enabled"/>
+        <label for="keyboard_enabled" class="prevent-select">Enabled and generating </label>
         <select id="keyboard_driver"></select>
+        <span id="keyboard_debug_output_label"></span>
 
         <div id="keyboard_settings_controls">
-            <button id="kb_shortcuts_toggle">Key mapping</button>
-            <button id="kb_config_toggle">Config</button>
+            <button id="kb_config_toggle">Driver config</button>
+            <button id="kb_shortcuts_toggle">Shortcuts</button>
         </div>
 
         <div id="keyboard_debug">
             <div class="col" id="keyboard_debug_input">
                 <b>Keyboard input:</b><br>
-                <div class="p">Initializing...</div>
+                <div class="p">{}</div>
             </div>
             <div class="col" id="keyboard_config">
-                <b>Driver Config:</b><br>
+                <b>Driver config:</b><br>
                 <textarea id="kb_config_input" spellcheck="false"></textarea>
                 <div id="keyboard_config_controls">
                     <button id="kb_config_listen">Listen</button>
@@ -29,7 +31,7 @@
                 </div>
             </div>
             <div class="col" id="keyboard_shortcuts">
-                <b>Shortcuts Config: </b> <span class="comment">(executed regardless of generating status)</span><br>
+                <b>Shortcuts config: </b> <span class="comment">(always on)</span><br>
                 <textarea id="kb_shortcuts_input" spellcheck="false"></textarea>
                 <div id="keyboard_shortcuts_controls">
                     <button id="kb_shortcuts_listen">Listen</button>
@@ -41,7 +43,7 @@
             </div>
             <div class="col" id="keyboard_debug_output">
                 <b>Output:</b><br>
-                <div class="p">Waiting for data...</div>
+                <div class="p">{}</div>
             </div>
         </div>
     </div>

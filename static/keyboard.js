@@ -1,46 +1,125 @@
+import { Handle_Shortcut } from '/static/input-drivers.js';
+
 export class KeyboardController {
 
     constructor(client) {
 
         this.client = client;
-        // this.ui = null;
 
-        this.drivers = {}; //id -> driver
+        this.registered_drivers = {}; // id: class 
+
+        this.drivers = {}; // id: driver
         this.default_shortcuts_config = {};
         this.shortcuts_config = null;
+        this.pressed_keys = {};
         this.last_pressed = [];
         this.editor_listening = false;
 
-        this.loop_delay = 33.3; //ms, 30Hz updates
+        this.loop_delay = 33.3; // ms, 30Hz updates
 
+        this.enabled = false; 
+        $('#keyboard_enabled').prop('checked', this.enabled);
+
+        this.initiated = false;
         let that = this;
 
-        this.driver_to_select = this.load_driver();
-        this.pressed_keys = {};
+        client.on('kb_config', (kb_drivers, kb_defaults)=>{
+            console.warn('KB GOT CONFIG driver=['+kb_drivers.join(', ')+'] defaults:', kb_defaults);
 
-        this.enabled = false; //this.load_keyboard_enabled();
-        $('#keyboard_enabled').prop('checked', this.enabled);
-        if (this.enabled) {
-            $('#keyboard').addClass('enabled');
-            this.run_loop();
-        } else
-            $('#keyboard').removeClass('enabled');
+            let default_driver = null;
 
-        $('#keyboard_status').click(() => {
-            $('#gamepad').removeClass('on');
-            if ($('#keyboard').hasClass('on')) {
-                $('#keyboard').removeClass('on');
-            } else {
-                $('#keyboard').addClass('on');
+            // init drivers enabled by the robot
+            kb_drivers.forEach((id_driver)=>{
+                if (that.drivers[id_driver])
+                    return; //only once
+
+                if (default_driver === null)
+                    default_driver = id_driver; // first is default
+
+                console.warn('Setting up kb driver '+id_driver);
+
+                // driver config
+                let cfg = that.load_user_driver_config(id_driver);
+                if (!cfg)
+                    cfg = kb_defaults.drivers[id_driver];
+
+                let instance_driver = id_driver;
+                if (kb_defaults && kb_defaults.drivers && kb_defaults.drivers[id_driver] && kb_defaults.drivers[id_driver]['driver']) // ignoring user's override
+                    instance_driver = kb_defaults.drivers[id_driver]['driver'];
+                let driver_class = that.registered_drivers[instance_driver];
+                if (!driver_class) {
+                    console.error('Kb driver '+instance_driver+' not found (did you register it first?)');
+                    return;
+                }
+                let label = instance_driver;
+                if (cfg['label'])
+                    label = cfg['label'];
+                that.drivers[id_driver] = new driver_class(id_driver, label);
+                if (kb_defaults.drivers[id_driver])
+                    that.drivers[id_driver].default_keyboard_config = kb_defaults.drivers[id_driver];
+                that.drivers[id_driver].config = cfg;
+
+            });
+
+            // select driver
+            if (!that.initiated) {
+                let user_default_driver = that.load_user_driver();
+                if (user_default_driver && that.drivers[user_default_driver])
+                    that.select_driver(user_default_driver);
+                else
+                    that.select_driver(default_driver);
             }
+
+            if (kb_defaults.shortcuts) {
+                that.default_shortcuts_config = kb_defaults.shortcuts;
+            }
+
+            if (!that.initiated) {
+                let user_shortcuts = that.load_user_shortcuts(); // cookies
+                if (user_shortcuts)
+                    that.shortcuts_config = user_shortcuts;
+                else
+                    that.shortcuts_config = that.default_shortcuts_config;
+
+                console.log('Setting kb shortcuts: ', that.shortcuts_config);
+            }
+
+            that.shortcuts_to_editor();
+            that.update_ui();
+
+            // if (kb_config) {
+            //     that.default_shortcuts_config = kb_config.mapping;
+            //     let default_driver = null;
+            //     if (kb_config.drivers) {
+            //         Object.keys(kb_config.drivers).forEach((id_driver) => {
+            //             if (default_driver === null)
+            //                 default_driver = id_driver;
+            //             let drv = kb_config.drivers[id_driver];
+            //             that.add_driver(id_driver)
+            //         });
+            //     }
+            // }
+
+            if (!that.enabled) {
+                $('#keyboard').removeClass('enabled');
+            } else if (!that.initiated) {
+                $('#keyboard').addClass('enabled');
+                that.run_loop();
+            }
+
+            that.initiated = true;
         });
 
-        let shortcuts = this.load_shortcuts();
-        if (shortcuts)
-            this.shortcuts_config = shortcuts;
-        else
-            this.shortcuts_config = this.default_shortcuts_config;
-        this.shortcuts_to_editor();
+        $('#keyboard_status').click(() => {
+            if (!that.initiated)
+                return; //wait 
+            $('#gamepad').removeClass('open');
+            if ($('#keyboard').hasClass('open')) {
+                $('#keyboard').removeClass('open');
+            } else {
+                $('#keyboard').addClass('open');
+            }
+        });
 
         document.addEventListener('keydown', (ev) => this._key_down_monitor(ev));
         document.addEventListener('keyup', (ev) => this._key_up_monitor(ev));
@@ -62,6 +141,7 @@ export class KeyboardController {
             //that.save_keyboard_enabled(that.enabled)
             if (that.enabled) {
                 $('#keyboard').addClass('enabled');
+                that.disable_gp_on_conflict();
                 if (!was_enabled) {
                     that.run_loop();
                 }
@@ -72,7 +152,7 @@ export class KeyboardController {
 
         $('#keyboard_driver').change((ev) => {
             if (that.select_driver($(ev.target).val())) {
-                that.save_driver();
+                that.save_user_driver();
             }
         });
 
@@ -80,13 +160,16 @@ export class KeyboardController {
             if ($('#keyboard_debug').hasClass('config')) {
                 //disable config edit
                 $('#keyboard_debug').removeClass('config');
-                $('#kb_config_toggle').text('Config');
-                $('#kb_shortcuts_toggle').css('display', 'inline');
+                $('#kb_config_toggle').removeClass('close')
             } else {
                 //enable config edit
+                $('#keyboard_debug').removeClass('shortcuts');
                 $('#keyboard_debug').addClass('config');
-                $('#kb_config_toggle').text('Close editor');
-                $('#kb_shortcuts_toggle').css('display', 'none')
+
+                $('#kb_shortcuts_toggle').removeClass('close');
+                $('#kb_config_toggle').addClass('close')
+                
+                $('#keyboard_debug_output').css('display', 'block');
             }
         });
 
@@ -94,14 +177,16 @@ export class KeyboardController {
             if ($('#keyboard_debug').hasClass('shortcuts')) {
                 //disable mapping edit
                 $('#keyboard_debug').removeClass('shortcuts');
-                $('#kb_shortcuts_toggle').text('Key mapping');
-                $('#kb_config_toggle').css('display', 'inline');
+                $('#kb_shortcuts_toggle').removeClass('close');
                 $('#keyboard_debug_output').css('display', 'block');
             } else {
                 //enable mapping edit
+                $('#keyboard_debug').removeClass('config');
                 $('#keyboard_debug').addClass('shortcuts');
-                $('#kb_shortcuts_toggle').text('Close mapping');
-                $('#kb_config_toggle').css('display', 'none');
+
+                $('#kb_config_toggle').removeClass('close')
+                $('#kb_shortcuts_toggle').addClass('close');
+                
                 $('#keyboard_debug_output').css('display', 'none');
             }
         });
@@ -144,7 +229,7 @@ export class KeyboardController {
 
         $('#kb_config_save').click((ev) => {
             if (that.parse_driver_config()) {
-                that.save_driver_config();
+                that.save_user_driver_config();
             }
         });
 
@@ -154,7 +239,7 @@ export class KeyboardController {
 
         $('#kb_shortcuts_save').click((ev) => {
             if (that.parse_shortcuts_config()) {
-                that.save_shortcuts();
+                that.save_user_shortcuts();
             }
         });
 
@@ -192,15 +277,6 @@ export class KeyboardController {
                 return;
             }
         }
-
-        // if (this.shortcuts_config[ev.code]) {
-        //     if (this.shortcuts_config[ev.code].mod) {
-        //         console.log('Mod expected', ev);
-        //     } else {
-        //         console.log('No mod', ev);
-        //     }
-        //     // this.handle_shortcut(this.shortcuts_config[shortcut]);
-        // }
 
         if (this.shortcuts_config && Object.keys(this.shortcuts_config).length > 0) {
             let shortcuts = Object.keys(this.shortcuts_config);
@@ -256,24 +332,7 @@ export class KeyboardController {
 
     }
 
-    handle_shortcut(cfg) {
-        console.log('handling shortcut', cfg);
-        if (typeof cfg == 'string') {
-            if (cfg[0] == '#') {
-                //click UI element
-                console.log('Kb clicking '+cfg);
-                $(cfg).click()
-            }
-        } else if (cfg['service']) {
-            let data = cfg['value'] ? cfg['value'] : null;
-            console.log('Kb calling service '+cfg['service']+' with data: ', data);
-            this.client.service_call(cfg['service'], data);
-        }
-    }
-
     _key_up_monitor(ev) {
-
-        // console.log('up', ev);
 
         if (this.pressed_keys[ev.code]) {
             delete this.pressed_keys[ev.code]
@@ -285,6 +344,13 @@ export class KeyboardController {
             }
         }
     }
+
+    handle_shortcut = (cfg) => {
+        console.log('handling kb shortcut', cfg);
+        Handle_Shortcut(cfg, this.client);
+    }
+
+    
 
     set_default_config() {
         this.current_driver.config = this.current_driver.default_keyboard_config;
@@ -301,12 +367,7 @@ export class KeyboardController {
     update_input_ui() {
         let keys_debug = {};
         Object.keys(this.pressed_keys).forEach((key)=>{
-            // if (this.enabled) {
-            //     let t = Date.now()- this.pressed_keys[key];
-            //     keys_debug[key] = t;
-            // } else {
             keys_debug[key] = true;
-            // }
         });
         $('#keyboard_debug_input .p').html(
            this.unquote(JSON.stringify(keys_debug, null, 4))
@@ -345,27 +406,11 @@ export class KeyboardController {
         window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
     }
 
-    add_driver(id_driver, label, msg_type, driver_class) {
+    register_driver(id_driver, driver_class) {
+        if (this.registered_drivers[id_driver])
+            return;
 
-        this.drivers[id_driver] = new driver_class(id_driver, msg_type, label);
-
-        let cfg = this.load_driver_config(id_driver);
-        if (cfg)
-            this.drivers[id_driver].config = cfg;
-        else
-            this.drivers[id_driver].config = this.drivers[id_driver].default_keyboard_config;
-
-        if (!this.driver_to_select)
-            this.driver_to_select = id_driver; //select first
-
-        if (this.driver_to_select == id_driver) {
-            this.select_driver(id_driver);
-        }
-
-        this.update_ui();
-        // let topic = this.drivers[id].config.topic;
-        // console.warn('Registered gamepad driver: '+label+' '+topic+' '+msg_type);
-        // this.update_ui();
+        this.registered_drivers[id_driver] = driver_class;
     }
 
     update_ui() {
@@ -386,30 +431,44 @@ export class KeyboardController {
     select_driver(id_driver) {
 
         if (!this.drivers[id_driver]) {
-            console.error('Gamepad driver not found: '+id_driver)
+            console.error('Kb driver not found: '+id_driver)
             return false;
         }
 
-        console.info('Setting keyboard driver to '+id_driver);
+        console.info('Setting kb driver to '+id_driver);
         this.current_driver = this.drivers[id_driver];
 
         this.config_to_editor();
 
         this.display_output(this.current_driver.read_keyboard(this.pressed_keys));
 
+        this.disable_gp_on_conflict();
+
         return true;
     }
 
-    display_output(msg) {
-        $('#keyboard_debug_output').html('<b>'+this.current_driver.msg_type+' -> '+this.current_driver.config.topic+'</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
+    disable_gp_on_conflict() {
+
+        if (!this.enabled)
+            return;
+
+        let gp = this.client.ui.gamepad;
+        if (gp && gp.enabled && gp.current_driver.id == this.current_driver.id) {
+            $('#gamepad_enabled').click(); // avoid same driver coflicts
+        }
     }
 
-    save_driver() {
+    display_output(msg) {
+        $('#keyboard_debug_output_label').html(' into '+this.current_driver.config.topic);
+        $('#keyboard_debug_output').html('<b>'+this.current_driver.msg_type+':</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
+    }
+
+    save_user_driver() {
         localStorage.setItem('kb-gamepad-dri:' + this.client.id_robot, this.current_driver.id);
         // console.log('Saved keyboard driver for robot '+this.client.id_robot+':', this.current_driver.id);
     }
 
-    load_driver() {
+    load_user_driver() {
         let dri = localStorage.getItem('kb-gamepad-dri:' + this.client.id_robot);
         // console.log('Loaded keyboard driver for robot '+this.client.id_robot+':', dri);
         return dri;
@@ -482,13 +541,13 @@ export class KeyboardController {
     //     return state;
     // }
 
-    save_driver_config() {
+    save_user_driver_config() {
         localStorage.setItem('kb-driver-cfg:' + this.client.id_robot + ':' + this.current_driver.id,
                             JSON.stringify(this.current_driver.config));
-        console.log('Saved keyboard driver config for robot '+this.client.id_robot+', driver '+this.current_driver.id+':', this.current_driver.config);
+        console.log('Saved user keyboard driver config for robot '+this.client.id_robot+', driver '+this.current_driver.id+':', this.current_driver.config);
     }
 
-    load_driver_config(id_driver) {
+    load_user_driver_config(id_driver) {
         let cfg = localStorage.getItem('kb-driver-cfg:' + this.client.id_robot
                                         + ':' + id_driver);
 
@@ -502,17 +561,17 @@ export class KeyboardController {
         }
 
         if (cfg)
-            console.log('Loaded keyboard driver config for robot '+this.client.id_robot+', driver '+id_driver+':', cfg);
+            console.log('Loaded user keyboard driver config for robot '+this.client.id_robot+', driver '+id_driver+':', cfg);
         return cfg;
     }
 
-    save_shortcuts() {
+    save_user_shortcuts() {
         localStorage.setItem('kb-keys:' + this.client.id_robot,
                             JSON.stringify(this.shortcuts_config));
-        console.log('Saved keyboard shortcuts keys for robot '+this.client.id_robot+':', this.shortcuts_config);
+        console.log('Saved user keyboard shortcuts keys for robot '+this.client.id_robot+':', this.shortcuts_config);
     }
 
-    load_shortcuts() {
+    load_user_shortcuts() {
         let cfg = localStorage.getItem('kb-keys:' + this.client.id_robot);
         if (cfg) {
             try {
@@ -523,7 +582,7 @@ export class KeyboardController {
             }
         }
         if (cfg)
-            console.log('Loaded keybaord shortcuts keys for robot '+this.client.id_robot+':', cfg);
+            console.log('Loaded user keybaord shortcuts keys for robot '+this.client.id_robot+':', cfg);
         return cfg;
     }
 

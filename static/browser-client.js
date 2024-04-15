@@ -3,7 +3,8 @@ class TopicWriter {
         this.client = client;
         this.topic = topic;
         this.msg_type = msg_type;
-
+        this.ui = null;
+        
         if (!client.msg_writers[msg_type]) {
             let Writer = window.Serialization.MessageWriter;
             let msg_class = client.find_message_type(msg_type);
@@ -594,6 +595,17 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
+    when_message_types_loaded(cb) {
+        if (this.supported_msg_types === null) {
+            this.once('message_types_loaded', () => {
+                console.log('message_types_loaded');
+                cb();
+            });
+        } else {
+            cb();
+        }
+    }
+
     connect() {
         if (this.supported_msg_types === null) {
             //wait for messages defs to load
@@ -649,7 +661,6 @@ export class PhntmBridgeClient extends EventTarget {
         let prev_introspection = this.introspection;
         this.introspection = robot_data['introspection'];
         if (robot_data['files_fw_secret']) {
-            console.warn('files_fw_secret', robot_data['files_fw_secret'])
             this.bridge_files_secret = robot_data['files_fw_secret'];
         }
             
@@ -668,6 +679,18 @@ export class PhntmBridgeClient extends EventTarget {
         // if (robot_online && (!pc || pc.connectionState != 'connected')) {
         //     WebRTC_Negotiate(robot_data['id_robot']);
         // }
+
+        if (robot_data['kb_drivers'] || robot_data['kb_defaults']) {
+            let drivers = robot_data['kb_drivers'];
+            let defaults = robot_data['kb_defaults'];
+            this.emit('kb_config', drivers, defaults);
+        }
+
+        if (robot_data['gp_drivers'] || robot_data['gp_defaults']) {
+            let drivers =  robot_data['gp_drivers'];
+            let defaults = robot_data['gp_defaults'];
+            this.emit('gp_config', drivers, defaults);
+        }
 
         if (robot_data['read_data_channels']) {
             robot_data['read_data_channels'].forEach((topic_data)=>{

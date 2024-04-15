@@ -1,18 +1,21 @@
 <div id="gamepad">
     <div id="gamepad_status" title="Gamepad Settings"></div>
+
     <div id="gamepad_settings">
-        <h3 id="gamepad_id"></h3>
+        <h3>Gamepad Controls <span id="gamepad_id"></span></h3>
         <div class="cleaner"></div>
         <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled" class="prevent-select">Enabled and generating </label>
         <select id="gamepad_driver"></select>
+        <span id="gamepad_debug_output_label"></span>
+
         <div id="gamepad_settings_controls">
-            <button id="gamepad_shortcuts_toggle">Key mapping</button>
-            <button id="gamepad_config_toggle">Config</button>
+            <button id="gamepad_config_toggle">Driver config</button>
+            <button id="gamepad_shortcuts_toggle">Shortcuts</button>
         </div>
         <div id="gamepad_debug">
             <div class="col" id="gamepad_debug_input">
                 <b>Input:</b><br>
-                <div class="p">Initializing...</div>
+                <div class="p">Waiting for gamepad...</div>
             </div>
             <div class="col" id="gamepad_config">
                 <b>Driver Config:</b><br>
@@ -25,7 +28,7 @@
                 </div>
             </div>
             <div class="col" id="gamepad_shortcuts">
-                <b>Shortcuts Config:</b> <span class="comment">(only executed when enabled and generating)</span><br>
+                <b>Shortcuts Config:</b> <span class="comment">(always on when gamepan connected)</span><br>
                 <textarea id="gamepad_shortcuts_input" spellcheck="false"></textarea>
                 <div id="gamepad_shortcuts_controls">
                     <button id="gamepad_shortcuts_listen">Listen</button>
@@ -37,7 +40,7 @@
             </div>
             <div class="col" id="gamepad_debug_output">
                 <b>Output:</b><br>
-                <div class="p">Waiting for data...</div>
+                <div class="p">{}</div>
             </div>
         </div>
     </div>
