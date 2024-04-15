@@ -40,7 +40,7 @@ export class KeyboardController {
 
                 // driver config
                 let cfg = that.load_user_driver_config(id_driver);
-                if (!cfg)
+                if (!cfg && kb_defaults && kb_defaults.drivers)
                     cfg = kb_defaults.drivers[id_driver];
 
                 let instance_driver = id_driver;
@@ -52,11 +52,13 @@ export class KeyboardController {
                     return;
                 }
                 let label = instance_driver;
-                if (cfg['label'])
+                if (cfg && cfg['label'])
                     label = cfg['label'];
                 that.drivers[id_driver] = new driver_class(id_driver, label);
-                if (kb_defaults.drivers[id_driver])
+                if (kb_defaults && kb_defaults.drivers && kb_defaults.drivers[id_driver])
                     that.drivers[id_driver].default_keyboard_config = kb_defaults.drivers[id_driver];
+                if (!cfg)
+                    cfg = that.drivers[id_driver].default_keyboard_config;
                 that.drivers[id_driver].config = cfg;
 
             });
@@ -70,7 +72,7 @@ export class KeyboardController {
                     that.select_driver(default_driver);
             }
 
-            if (kb_defaults.shortcuts) {
+            if (kb_defaults && kb_defaults.shortcuts) {
                 that.default_shortcuts_config = kb_defaults.shortcuts;
             }
 

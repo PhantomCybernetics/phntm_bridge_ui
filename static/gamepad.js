@@ -62,7 +62,7 @@ export class GamepadController {
                 that.drivers[id_driver].config = that.drivers[id_driver].default_gamepad_config; // overriden by user's gp settings (loaded on GP connect)
             });
 
-            if (gp_defaults.shortcuts) {
+            if (gp_defaults && gp_defaults.shortcuts) {
                 that.default_shortcuts_config = gp_defaults.shortcuts;
             }
             if (!that.initiated) {
@@ -317,6 +317,7 @@ export class GamepadController {
         this.current_driver = this.drivers[id_driver];
 
         this.config_to_editor();
+        this.update_output_info();
 
         this.disable_kb_on_conflict();
 
@@ -566,9 +567,14 @@ export class GamepadController {
         window.setTimeout(() => { this.run_loop(); }, this.loop_delay);
     }
 
-    display_output(msg) {
+    update_output_info() {
         $('#gamepad_debug_output_label').html(' into '+this.current_driver.config.topic);
-        $('#gamepad_debug_output').html('<b>'+this.current_driver.msg_type+':</b><br><div class="p">' + this.unquote(JSON.stringify(msg, null, 4))+'</div>');
+        $('#gamepad_debug_output B').html(this.current_driver.msg_type);
+    }
+
+    display_output(msg) {
+        // this.update_output_info();
+        $('#gamepad_debug_output .p').html(this.unquote(JSON.stringify(msg, null, 4)));
     }
 
     handle_shortcut = (cfg) => {
