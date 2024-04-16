@@ -29,10 +29,12 @@ h1 {
     margin: 0px;
     color: #9bc200;
     background: #013669;
-    display: inline-block;
+    display: block;
+    float: left;
     border-radius: 5px;
     padding: 3px 10px;
-    margin-bottom: 10px;
+    margin: 5px 5px 5px 10px;
+    position: relative;
 }
 
 h3 {
@@ -52,12 +54,25 @@ h3 {
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
-  }
+}
+
+#fixed-header {
+    position: fixed;
+    z-index: 16; /* above hovered grid panel (15) */
+    background: #000000d6;
+    width: 100%;
+    left: 0px;
+    top: 0px;
+    height: 55px;
+}
 
 #menubar {
-    width: 100%;
-    position: relative;
+    width: auto;
+    position: absolute;
     z-index: 35;
+    /* background: red; */
+    top: 0px;
+    right: 185px;
 }
 
 #graph_display {
@@ -202,10 +217,10 @@ h3 {
     margin-top: 0px;
     background: #6f98c4;
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 0px 0px 5px 5px;
     position: relative;
     float: left;
-    margin: 0px 10px 10px 0px;
+    margin: 0px 5px 5px 0px;
     z-index: 1;
     white-space: nowrap;
 }
@@ -275,9 +290,10 @@ h3 {
     max-height: 520px;
     overflow: scroll;
     position: absolute;
-    left: 1px;
+    right: 0px;
     top: 46px;
     background: #deeeff;
+    border-radius: 5px 0px 5px 5px;
 }
 
 #introspection_state {
@@ -348,7 +364,7 @@ h3 {
     top: 0px;
 }
 
-#graph_controls,
+/* #graph_controls,
 #service_controls,
 #camera_controls,
 #docker_controls,
@@ -357,38 +373,31 @@ h3 {
 #service_controls {
     margin-top: 2px;
     margin-bottom: 5px;
-}
+} */
 
 #graph_controls.active:hover,
 #graph_controls.active.hover_waiting {
-    border-top: 2px solid white;
-    border-bottom: 5px solid white;
-    height: 21px;
+    border-bottom: 7px solid white;
 }
 
 #topic_controls.active:hover {
-    border-top: 2px solid #6f98c4;
     border-bottom: 5px solid #6f98c4;
 }
 
 #widget_controls.active:hover {
-    border-top: 2px solid #112fb3;
     border-bottom: 5px solid #112fb3;
 }
 
 #camera_controls.active:hover {
-    border-top: 2px solid #82b727;
     border-bottom: 5px solid #82b727;
 }
 
 #docker_controls.active:hover {
-    border-top: 2px solid #de5a30;
     border-bottom: 5px solid #de5a30;
 }
 
 #service_controls.active:hover,
 #service_controls.active.setting_shortcuts {
-    border-top: 2px solid #b311a3;
     border-bottom: 5px solid #b311a3;
 }
 
@@ -400,7 +409,7 @@ h3 {
 #topic_controls.active:hover,
 #widget_controls.active:hover,
 #service_controls.active.setting_shortcuts {
-    border-radius: 5px 5px 0px 0px;
+    border-radius: 0px;
     margin-top: 0px;
     margin-bottom: 0px;
 }
@@ -411,12 +420,12 @@ h3 {
     overflow-x: hidden;
     overflow: scroll;
     background: #9ec65a;
-    left: 0px;
+    right: 0px;
     top: 46px;
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
-    border-radius: 0px 5px 5px 5px;
+    border-radius: 5px 0px 5px 5px;
 }
 
 #docker_list {
@@ -664,36 +673,160 @@ h3 {
     background: #ff8c00 !important;
 }
 
-#robot_info, #socketio_status {
-    color: #ffffff78;
+#network-info {
+    display: block;
     float: left;
+    width: 60px;
+    height: 50px;
+    /* background: red; */
+    position: relative;
+}
+
+#network-info #signal-monitor {
+    display: block;
+    /* background-color: blue; */
+    position: absolute;
+    left: 0px;
+    top: 9px;
+    width: 25px;
+    height: 25px;
+    background-image: url(/static/wifi.png);
+    background-size: 125px;
+    background-repeat: no-repeat;
+    background-position: 0px 0px;
+    opacity: 0.9;
+    cursor: help;
+}
+
+#network-info #signal-monitor.q25 {
+    background-position: -25px 0px;
+}
+
+#network-info #signal-monitor.q50 {
+    background-position: -50px 0px;
+}
+
+#network-info #signal-monitor.q75 {
+    background-position: -75px 0px;
+}
+
+#network-info #signal-monitor.q100 {
+    background-position: -100px 0px;
+}
+
+#network-info .network-info-dot {
+    display: block;
+    background-color: black;
+    position: absolute;
+    left: 0px;
+    top: 41px;
+    width: 5px;
+    height: 5px;
+    border-radius: 15px;
+    cursor: help;
+}
+
+#network-info .network-info-dot.red {
+    background-color: red;
+}
+
+#network-info .network-info-dot.yellow {
+    background-color: yellow;
+}
+
+#network-info .network-info-dot.orange {
+    background-color: orange;
+}
+
+#network-info .network-info-dot.green {
+    background-color: lime;;
+}
+
+#network-info-peers {
+    color: black;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    font-size: 11px;
+    background-color: white;
+    border-radius: 3px;
+    padding: 2px 4px;
+    white-space: nowrap;
+    font-weight: bold;
+    cursor: help;
+    display: none;
+}
+
+#network-info-rtt {
+    position: absolute;
+    color: #fff;
+    left: 30px;
+    font-size: 11px;
+    top: 34px;
+    padding: 2px 4px;
+    background: black;
+    border-radius: 5px;
+    cursor: help;
+}
+
+#network-info #dot-0 {
+    left: 0px;
+}
+
+#network-info #dot-1 {
+    left: 10px;
+}
+
+#network-info #dot-2 {
+    left: 20px;
+}
+
+#network-info #network-details {
+    position: absolute;
+    display: none;
+    left: 0px;
+    top: 50px;
+    background-color: #000000c6;
+    border-radius: 0px 5px 5px 5px;
+    color: #fff;
+    padding: 10px;
+    width: 350px;
+}
+
+#network-info:hover #network-details {
+    display: block;
+}
+
+#network-details .label {
+    color: #ffffff78;
     margin-right: 5px;
 }
 
+#network-details .section-label {
+    margin-bottom: 2px;
+    color: #ffffff78;
+    font-weight: bold;
+}
+
 #robot_wifi_info {
-    color: #00d5d2;
-    margin-left: 5px;
-    float: left;
-    font-size: 12px;
-    line-height: 12px;
-    height: 12px;
+    display: none;
 }
 
-#robot_wifi_info.narrow_screen {
-    clear:left; /* force nl*/
-}
-
-#robot_wifi_info.offline {
-    opacity: 0.3;
+#robot_wifi_info, #robot_info {
+   margin-top: 10px;
 }
 
 BUTTON#trigger_wifi_scan {
-    margin-left: 5px;
+    /* margin-left: 5px; */
     border: 0px;
     border-radius: 5px;
     color: #fff;
     background-color: #0051ff;
     display: none;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    padding: 5px 10px;
 }
 
 BUTTON#trigger_wifi_scan.working {
@@ -710,18 +843,6 @@ BUTTON#trigger_wifi_scan.working {
 
 #topic_list A.topic {
 
-}
-
-#robot_wifi_info .ap_id {
-
-}
-
-#robot_wifi_info .ap_id.new {
-    background-color: lime;
-    color: #000000;
-    border-radius: 2px;
-    padding: 2px 5px;
-    margin: -2px -5px;
 }
 
 .grid_panel {
@@ -991,6 +1112,7 @@ BUTTON#trigger_wifi_scan.working {
     overflow: hidden;
     text-overflow: ellipsis;
     /* background-color: red; */
+    color: #fff;
     position: relative;
     top: -7px;
     padding-top: 10px;
@@ -1054,7 +1176,8 @@ SPAN.error {
     white-space: pre;
     font-size: 12px;
     font-family: monospace;
-    background: #073831;
+    /* background: #073831; */
+    background: #222222;
     color: #fff;
     border-radius: 5px;
     overflow: scroll;
@@ -1323,7 +1446,7 @@ SPAN.error {
 .panel_content_space {
     height: -webkit-fill-available;
     padding-top: 10px;
-    padding-bottom: 22px;
+    padding-bottom: 12px;
     position: relative;
 }
 
@@ -1399,23 +1522,33 @@ SPAN.error {
 
 
 #gamepad,
+#touch_ui,
 #keyboard {
     position: absolute;
-    right: 0;
     top: 0;
     display: block;
     z-index: 35;
 }
 
+#gamepad {
+    right: 61px;
+}
+
 #keyboard {
-    right: 66px;
+    right: 122px;
     width: 60px;
     height: 45px;
     border-radius: 10px 10px 0px 0px;
 }
 
+#touch_ui {
+    right: 0px;
+    width: 60px;
+    height: 45px;
+}
 
 #keyboard_status,
+#touch_ui_status,
 #gamepad_status {
     background-repeat: no-repeat;
     cursor: pointer;
@@ -1440,10 +1573,19 @@ SPAN.error {
     background-position: 4px 3px;
 }
 
+#touch_ui_status {
+    width: 50px;
+    height: 45px;
+    background-image: url(/static/touch-input.png);
+    background-size: 100px;
+    background-position: 0px 5px;
+}
+
 #gamepad.connected #gamepad_status,
 #keyboard.open #keyboard_status,
 #keyboard_status:hover,
 #gamepad_status:hover,
+#touch_ui_status:hover,
 #keyboard.enabled #keyboard_status {
     filter: grayscale(0);
 }
@@ -1453,6 +1595,10 @@ SPAN.error {
 }
 
 #keyboard.enabled #keyboard_status {
+    background-position: -50px 3px;
+}
+
+#touch_ui.enabled #touch_ui_status {
     background-position: -50px 3px;
 }
 
@@ -1693,13 +1839,14 @@ SPAN.error {
 }
 
 .grid-stack {
-    margin-top: 0px;
+    margin-top: 60px;
     margin-left: -10px;
     margin-right: -10px;
 }
 
 .grid-stack-item-content {
-    background-color: #18bc9c;
+    /* background-color: #18bc9c; */
+    background: #525559;
     border-radius: 5px;
     padding: 9px 5px 5px 5px;
 }
@@ -1729,6 +1876,10 @@ SPAN.error {
   }
   .sidebar .grid-stack-item .grid-stack-item-content {
     background: none;
+  }
+
+ .grid-stack-item > .grid-stack-item-content {
+    inset: 5px !important;
   }
 
   /* make nested grid have slightly darker bg take almost all space (need some to tell them apart) so items inside can have similar to external size+margin */

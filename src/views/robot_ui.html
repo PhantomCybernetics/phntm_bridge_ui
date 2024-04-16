@@ -1,68 +1,87 @@
 <%- include('partial/header.html'); %>
 
-<div id="page_message"></div>
+<div id="fixed-header">
+    <div id="page_message"></div>
 
-<h1 id="robot_name">Waiting for Connection...</h1>
-<div class="cleaner"></div>
-<div id="robot_info">Contacting <%= id_robot %>...</div><div id="socketio_status"></div>
-<div id="robot_wifi_info" class="offline">
-    <span id="robot_wifi_stats"></span>
-    <button id="trigger_wifi_scan" title="#trigger_wifi_scan">scan</button>
-</div>
-<div class="cleaner"></div>
-<br>
-<!-- <div id="robot_stats" style="display:none"></div> -->
+    <div id="main-burger"></div>
+    <h1 id="robot_name">
+        <span class="label">Connecting...</span>
+        <span id="network-info-peers"></span>
+    </h1>
 
-<div id="menubar">
+    <div id="network-info">
+        <span id="signal-monitor"></span>
 
-    <div id="graph_controls">
-        <h3 id="graph_controls_heading" title="Graph view">
-            <span id="graph_nodes_label">Nodes</span>
-            <span id="graph_topics_label">Topics</span>
-        </h3>
-        <div id="graph_display"></div>
+        <span id="dot-0" class="network-info-dot"></span>
+        <span id="dot-1" class="network-info-dot"></span>
+        <span id="dot-2" class="network-info-dot"></span>
+
+        <!-- <span id="network-info-ip" title="Robot's IP address"></span> -->
+        <span id="network-info-rtt" title="RTT"></span>
+
+        <div id="network-details"> 
+            <div id="socketio_status"></div>
+            <div id="robot_info"></div>
+            <div id="robot_wifi_info"></div>
+            <button id="trigger_wifi_scan" title="#trigger_wifi_scan">Re-scan &amp; Roam</button>
+        </div>
     </div>
 
-    <!-- <div id="topic_controls">
-        <h3 id="topics_heading">Topics</h3>
-        <select id="msg_type_filter">
-            <option value="">-- All message types --</option>
-        </select>
-        <div id="topic_list"></div>
-    </div> -->
+    <!-- <div id="robot_stats" style="display:none"></div> -->
 
-    <div id="widget_controls">
-        <h3 id="widgets_heading">Widgets</h3>
-        <div id="widget_list"></div>
+    <div id="menubar">
+
+        <div id="introspection_state" class="inactive"></div>
+
+        <div id="graph_controls">
+            <h3 id="graph_controls_heading" title="Graph view">
+                <span id="graph_nodes_label">Nodes</span>
+                <span id="graph_topics_label">Topics</span>
+            </h3>
+            <div id="graph_display"></div>
+        </div>
+
+        <!-- <div id="topic_controls">
+            <h3 id="topics_heading">Topics</h3>
+            <select id="msg_type_filter">
+                <option value="">-- All message types --</option>
+            </select>
+            <div id="topic_list"></div>
+        </div> -->
+
+        <div id="service_controls">
+            <h3 id="services_heading">Services</h3>
+            <div id="service_list"></div>
+        </div>
+
+        <div id="camera_controls">
+            <h3 id="cameras_heading">Cameras</h3>
+            <div id="cameras_list"></div>
+        </div>
+
+        <div id="docker_controls">
+            <h3 id="docker_heading">Containers</h3>
+            <div id="docker_list"></div>
+        </div>
+
+        <div id="widget_controls">
+            <h3 id="widgets_heading">+</h3>
+            <div id="widget_list"></div>
+        </div>
+
+        <div class="cleaner"></div>
+
     </div>
 
-    <div id="service_controls">
-        <h3 id="services_heading">Services</h3>
-        <div id="service_list"></div>
-    </div>
-
-    <div id="camera_controls">
-        <h3 id="cameras_heading">Cameras</h3>
-        <div id="cameras_list"></div>
-    </div>
-
-    <div id="docker_controls">
-        <h3 id="docker_heading">Docker</h3>
-        <div id="docker_list"></div>
-    </div>
-
-    <div id="introspection_state" class="inactive"></div>
-
-    <div class="cleaner"></div>
+    <%- include('partial/touch-ui.html'); %>
+    <%- include('partial/keyboard.html'); %>
+    <%- include('partial/gamepad.html'); %>
 
 </div>
 
 <div class="grid-stack" id="grid-stack"></div>
 
 <!-- <div id="monitors" style="display:none"></div> -->
-
-<%- include('partial/keyboard.html'); %>
-<%- include('partial/gamepad.html'); %>
 
 <div id="mapping-confirmation"></div>
 <div id="msg_type-dialog"></div>

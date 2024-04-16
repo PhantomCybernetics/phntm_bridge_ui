@@ -347,7 +347,7 @@ class Panel {
         // console.log('Max h', h);
 
         w -= 30;
-        h -= 66;
+        h -= 56;
 
         return [w, h];
     }
@@ -617,17 +617,22 @@ export class PanelUI {
         client.on('update', ()=>{
 
             if (client.name) {
-                $('#robot_name').html(client.name);
+                $('#robot_name .label').html(client.name);
                 document.title = client.name + ' @ PHNTM bridge';
             }
 
-            $('#robot_info').html('ID: '+ client.id_robot
-                                + ' @ '
-                                + (client.online ? '<span class="online">'+client.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+' '
-                                + 'WebRTC: <span id="webrtc_status"></span> '
+            $('#robot_info').html('<span class="label">Robot ID:</span> '+ client.id_robot + '<br>'
+                                + '<span class="label">Robot IP:</span> ' + (client.online ? '<span class="online">'+client.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+'<br>'
+                                + '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> '
                                 );
 
-            that.set_webrtc_status_label()
+            that.set_dot_state(1, client.online ? 'green' : 'red', 'Robot ' + (client.online ? 'conected to' : 'disconnected from') +' Cloud Bridge (Socket.io)');
+            if (!client.online) {
+                that.update_wifi_signal(-1);
+                that.update_num_peers(-1);
+                that.update_rtt(-1);
+            }
+            that.update_webrtc_status()
         });
 
         client.on('media_stream', (id_src, stream)=>{
@@ -674,7 +679,7 @@ export class PanelUI {
             } else {
                 $('#docker_controls').removeClass('active');
             }
-            $('#docker_heading').html(num_containers+' Docker '+(num_containers == 1 ? 'container' : 'containers'));
+            $('#docker_heading').html('<b>'+num_containers+'</b> '+(num_containers == 1 ? 'Container' : 'Containers'));
 
             let i = 0;
             Object.values(containers).forEach((container) => {
@@ -745,20 +750,22 @@ export class PanelUI {
         // });
 
         client.on('peer_connected', () => {
-            that.set_webrtc_status_label();
+            that.update_webrtc_status();
         })
 
         client.on('peer_disconnected', () => {
-            that.set_webrtc_status_label();
+            that.update_webrtc_status();
         })
 
         // browsers Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect',  () => {
-            $('#socketio_status').html('Bridge: <span class="online">Connected</span>');
+            $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
+            that.set_dot_state(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
         });
 
         client.socket.on('disconnect',  () => {
-            $('#socketio_status').html('Bridge: <span class="offline">Disconnected</span>');
+            $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected (Socket.io)</span>');
+            that.set_dot_state(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
         });
 
         setInterval(() => {
@@ -884,7 +891,7 @@ export class PanelUI {
         } else {
             $('#camera_controls').removeClass('active');
         }
-        $('#cameras_heading').html(cameras.length+' '+(cameras.length == 1 ? 'Camera' : 'Cameras'));
+        $('#cameras_heading').html('<b>'+cameras.length+'</b> '+(cameras.length == 1 ? 'Camera' : 'Cameras'));
 
         for (let i = 0; i < cameras.length; i++) {
             let camera = cameras[i];
@@ -928,8 +935,8 @@ export class PanelUI {
 
         this.graph_menu.update(nodes);        
 
-        $('#graph_nodes_label').html(this.graph_menu.node_ids.length+' Nodes')
-        $('#graph_topics_label').html(this.graph_menu.topic_ids.length+' Topics')
+        $('#graph_nodes_label').html('<b>'+this.graph_menu.node_ids.length+'</b> Nodes')
+        $('#graph_topics_label').html('<b>'+this.graph_menu.topic_ids.length+'</b> Topics')
         $('#graph_controls').addClass('active');
         // var nodes = svg
         //     .selectAll("circle")
@@ -1247,7 +1254,7 @@ export class PanelUI {
          } else {
              $('#widget_controls').removeClass('active');
          }
-         $('#widgets_heading').html(num_widgets+' '+(num_widgets == 1 ? 'Widget' : 'Widgets'));
+        //  $('#widgets_heading').html('<b>'+num_widgets+'</b> '+(num_widgets == 1 ? 'Widget' : 'Widgets'));
 
          let that = this;
 
@@ -1335,7 +1342,7 @@ export class PanelUI {
                       'rcl_interfaces/srv/SetParameters',
                       'rcl_interfaces/srv/SetParametersAtomically'
                     ].includes(msg_type))
-                    continue; // not rendering internals
+                    continue; // not rendering internals (?!)
                 
                 num_services++; // activates menu
 
@@ -1370,88 +1377,12 @@ export class PanelUI {
             }
         });
 
-        // let i = 0;
-
-        // [ nodes_with_handled_ui, unhandled_nodes].forEach((node_list) => {
-
-        //     let some_services_handled = node_list == nodes_with_handled_ui;
-
-        //     node_list.sort((a, b) => {
-        //         if (a.node < b.node) return -1;
-        //         if (a.node > b.node) return 1;
-        //         return 0;
-        //     });
-
-        //     node_list.forEach((node) => {
-
-        //         let services_sorted = Object.values(node.services);
-        //         services_sorted.sort((a, b) => {
-        //             if (!a.ui_handled && b.ui_handled) return 1;
-        //             if (!b.ui_handled && a.ui_handled) return -1;
-        //             if (a.service < b.service) return -1;
-        //             if (a.service > b.service) return 1;
-        //             return 0;
-        //         });
-
-        //         $('#service_list').append('<div class="node" data-node="'+node.node+'">'+ node.node+ '</div>');
-        //         let unhandled_block_html = [];
-        //         services_sorted.forEach((service)=>{
-
-        //             num_services++;
-
-        //             let html = '<div class="service '+(service.ui_handled?'handled':'nonhandled')+'" data-service="'+service.service+'" data-msg_type="'+service.msg_types[0]+'">'
-        //                      + '<div '
-        //                      + 'class="service_heading" '
-        //                      + 'title="'+service.service+'\n'+service.msg_types[0]+'"'
-        //                      + '>'
-        //                      + service.service
-        //                      + '</div>'
-        //                      + '<div class="service_input_type" id="service_input_type'+i+'">' + service.msg_types[0] + '</div>'
-        //                      + '<div class="service_input" id="service_input_'+i+'"></div>'
-        //                      + '</div>';
-
-        //             if (service.ui_handled || !some_services_handled)
-        //                 $('#service_list').append(html);
-        //             else
-        //                 unhandled_block_html.push(html);
-
-        //             service.n = i;
-        //             i++;
-
-        //         });
-        //         if (unhandled_block_html.length) {
-        //             $('#service_list').append('<div class="expandable collapsed">'+unhandled_block_html.join('')+'<button>show more</button></div>');
-        //         }
-
-        //         services_sorted.forEach((service)=>{
-        //             if (service.ui_handled) {
-        //                 this.input_widgets[service.msg_types[0]]($('#service_input_'+service.n), service, this.client);
-        //             }
-        //         })
-
-        //     });
-
-
-        // });
-
-        // $('#service_list .expandable').click((ev)=>{
-        //     console.warn('CLICK', ev.target);
-        //     let collapsed = $(ev.target).parent().hasClass('collapsed')
-        //     if (collapsed) {
-        //         $(ev.target).parent().removeClass('collapsed');
-        //         $(ev.target).html('show less')
-        //     } else {
-        //         $(ev.target).parent().addClass('collapsed');
-        //         $(ev.target).html('show more')
-        //     }
-        // });
-
         if (num_services > 0) {
             $('#service_controls').addClass('active');
         } else {
             $('#service_controls').removeClass('active');
         }
-        $('#services_heading').html(num_services+' '+(num_services == 1 ? 'Service' : 'Services'));
+        $('#services_heading').html('<b>'+num_services+'</b> '+(num_services == 1 ? 'Service' : 'Services'));
 
         if (this.gamepad)
             this.gamepad.MarkMappedServiceButtons();
@@ -1628,7 +1559,7 @@ export class PanelUI {
         return this.panels;
     }
 
-    set_webrtc_status_label() {
+    update_webrtc_status() {
         let state = null;
         let via_turn = null;
         let pc = this.client.pc;
@@ -1653,26 +1584,113 @@ export class PanelUI {
         if (state == 'Connected') {
             $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
             $('#trigger_wifi_scan').removeClass('working')
+            if (via_turn)
+                this.set_dot_state(2, 'yellow', 'WebRTC connected to robot (TURN)');
+            else 
+                this.set_dot_state(2, 'green', 'WebRTC connected to robot (P2P)');
         } else if (state == 'Connecting') {
             $('#webrtc_status').html('<span class="connecting">'+state+'</span>');
-            $('#robot_wifi_info').addClass('offline')
+            // $('#robot_wifi_info').addClass('offline')
             $('#trigger_wifi_scan').removeClass('working')
+            this.set_dot_state(2, 'orange', 'WebRTC connecting...')
         } else {
             $('#webrtc_status').html('<span class="offline">'+state+'</span>');
-            $('#robot_wifi_info').addClass('offline')
+            // $('#robot_wifi_info').addClass('offline')
             $('#trigger_wifi_scan').removeClass('working')
+            this.set_dot_state(2, 'red', 'WebRTC '+state)
         }
 
+    }
+
+    set_dot_state(no, color, label) {
+        $('#dot-'+no)
+            .removeClass('green')
+            .removeClass('yellow')
+            .removeClass('orange')
+            .removeClass('red')
+            .addClass(color)
+            .attr('title', label);
+    }
+
+    update_wifi_signal(percent) {
+        let el = $('#network-info #signal-monitor');
+        if (percent < 0)
+            el.attr('title', 'Robot disconnected');
+        else
+            el.attr('title', 'Robot\'s wi-fi signal quality: '+Math.round(percent)+'%');
+
+        el.removeClass('q25')
+          .removeClass('q50')
+          .removeClass('q75')
+          .removeClass('q100');
+        if (percent < 5)
+            return;
+
+        if (percent < 25)
+            el.addClass('q25')
+        else if (percent < 50)
+            el.addClass('q50')
+        else if (percent < 75)
+            el.addClass('q75')
+        else 
+            el.addClass('q100');
+    }
+
+    update_num_peers(num) {
+        if (num > 1) { // only show on more peers
+            $('#network-info-peers')
+                .html(num)
+                .attr('title', 'Multiple peers are connected to the robot')
+                .css({
+                    'display': 'block',
+                    'background-color': (num == 1 ? 'white' : 'yellow')
+                });
+        } else {
+            $('#network-info-peers')
+                .empty()
+                .css('display', 'none')
+        }
+    }
+
+    update_rtt(rtt_sec) {
+
+        if (rtt_sec > 0) {
+            let rtt_ms = rtt_sec * 1000; //ms
+
+            // TODO: customize these in config maybe?
+            let rttc = '';
+            if (rtt_ms > 100)
+                rttc = 'red'
+            else if (rtt_ms > 50)
+                rttc = 'orange'
+            else if (rtt_ms > 30)
+                rttc = 'yellow'
+            else
+                rttc = 'lime'
+            
+            $('#network-info-rtt')
+                .html(rtt_ms+'ms')
+                .css({
+                    'color': rttc,
+                    'display': 'block'
+                });
+        } else {
+
+            $('#network-info-rtt')
+                .empty()
+                .css('display', 'none');
+        }
+        
     }
 
     //on resize
     update_layout_width() {
         let w = $('body').innerWidth();
         // console.info('body.width='+w+'px');
-        if (w < 1500)
-            $('#robot_wifi_info').addClass('narrow_screen')
-        else
-            $('#robot_wifi_info').removeClass('narrow_screen')
+        // if (w < 1500)
+        //     $('#robot_wifi_info').addClass('narrow_screen')
+        // else
+        //     $('#robot_wifi_info').removeClass('narrow_screen')
         
         Object.values(this.panels).forEach((panel)=>{
             panel.onResize();
@@ -1682,22 +1700,9 @@ export class PanelUI {
 
     update_wifi_status(msg) { // /iw_status in
         // console.warn('UpdateIWStatus', msg)
-        let qc = '#00ff00';
+        
         let qPercent = (msg.quality / msg.quality_max) * 100.0;
-        if (qPercent < 40)
-            qc = 'red';
-        else if (qPercent < 50)
-            qc = 'orange';
-        else if (qPercent < 70)
-            qc = 'yellow';
-
-        let nc = ''
-        if (msg.noise > 0)
-            nc = 'yellow'
-
-        let brc = ''
-        if (msg.bit_rate < 100)
-            brc = 'yellow'
+        this.update_wifi_signal(qPercent);
 
         let apclass = '';
         if (this.lastAP != msg.access_point) {
@@ -1711,16 +1716,23 @@ export class PanelUI {
             essidclass = 'new'
         }
 
-        let html = '// <span class="eeid '+essidclass+'">'+msg.essid+' <b class="ap_id '+apclass+'">'+msg.access_point+'</b> @ '+(msg.frequency ? msg.frequency.toFixed(3) : null)+' GHz, </span> ' +
-                    '<span style="color:'+brc+'">BitRate: '+(msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + ' Mb/s</span> ' +
-                    '<span class="quality" style="color:'+qc+'" title="'+msg.quality+'/'+msg.quality_max+'">Quality: '+(qPercent).toFixed(0)+'%</span> ' +
-                    'Level: '+ msg.level + ' ' +
-                    '<span style="color:'+nc+'">Noise: ' + msg.noise + '</span> ' +
-                    '<span class="connected_peers">Peers: ' + msg.num_peers + '</span> '
+        let html = '<div class="section-label">Connected to Wi-Fi</div>' +
+                    '<span class="label space">SSID:</span> '+msg.essid+'<br>'+
+                    '<span class="label">Access Point:</span> '+msg.access_point+'<br>'+
+                    '<span class="label">Frequency:</span> '+(msg.frequency ? msg.frequency.toFixed(3) : null)+' GHz<br>' +
+                    '<span class="label">BitRate:</span> '+(msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + ' Mb/s<br> ' +
+                    '<span class="label" title="'+msg.quality+'/'+msg.quality_max+'" style="cursor:help;">Quality:</span> '+(qPercent).toFixed(0)+'%<br> ' +
+                    '<span class="label">Level:</span> '+ msg.level + '<br> ' +
+                    '<span class="label">Noise:</span> ' + msg.noise + ' '
                     ;
 
+        // $('#network-info-rtt').html();
+        this.update_num_peers(msg.num_peers);
+       
+        // + ' ' + (msg.num_peers==1?'peer':'peers')
+
         $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
-        $('#robot_wifi_info').removeClass('offline');
+        // $('#robot_wifi_info').removeClass('offline');
 
         // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
         // console.log('Selected pair', selected_pair);
@@ -1754,21 +1766,13 @@ export class PanelUI {
             });
 
             if (min_rtt > 0) {
-                let rtt_ms = min_rtt * 1000; //ms
-                let rttc = ''
-                if (rtt_ms > 100)
-                    rttc = 'red'
-                else if (rtt_ms > 50)
-                    rttc = 'orange'
-                else if (rtt_ms > 30)
-                    rttc = 'yellow'
-                else
-                    rttc = 'lime'
-                html += '<span style="color:'+rttc+'">RTT: ' + rtt_ms+'ms</span> ';
+                this.update_rtt(min_rtt);
             }
         }
 
-        $('#robot_wifi_stats').html(html)
+        $('#robot_wifi_info')
+            .html(html)
+            .css('display', 'block');
     }
 
 
