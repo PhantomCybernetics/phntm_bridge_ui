@@ -73,7 +73,6 @@ webExpressApp.use('/static/', express.static('static/'));
 webExpressApp.use('/static/socket.io/', express.static('node_modules/socket.io-client/dist/'));
 
 webExpressApp.use('/static/gridstack/', express.static('node_modules/gridstack/dist/'));
-webExpressApp.use('/static/gridstack-forked/', express.static('node_modules/gridstack/dist/'));
 
 webExpressApp.use('/static/three/', express.static('node_modules/three/build/'));
 webExpressApp.use('/static/three/examaples/', express.static('node_modules/three/examples/'));

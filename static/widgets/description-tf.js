@@ -179,7 +179,7 @@ export class DescriptionTFWidget extends EventTarget {
             // ResizeWidget(panel);
             // URDFWidget_Render(panel);
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
-
+            that.render_dirty = true;
         };
 
         this.sources = new MultiTopicSource(this);

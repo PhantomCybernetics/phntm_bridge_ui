@@ -37,6 +37,31 @@ h1 {
     position: relative;
 }
 
+body.hamburger h1 {
+    padding-left: 45px;
+}
+
+h1 .label  {
+    display: block;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    height: 35px;
+    /* min-width: 200px; */
+}
+
+h1 .label.smaller {
+    
+    /* text-overflow: unset; */
+    /* white-space: unset; */
+    /*  clip; */
+    /* white-space: nowrap; */
+    
+    /* min-width: 200px; */
+    font-size: 17px;
+    line-height: 35px;
+}
+
 h3 {
     margin: 0px;
     padding: 0px;
@@ -66,14 +91,134 @@ h3 {
     height: 55px;
 }
 
+/* BODY.hamburger #fixed-header {
+    height: 95px;
+} */
+
+#fixed-left {
+    float: left;
+    /* background-color: red; */
+    height: 50px;
+    position: relative;
+    padding-right: 60px;
+    z-index: 36;
+    display: none;
+}
+
+#fixed-center {
+    /* background-color: green; */
+    position: relative;
+    height: 50px;
+
+    margin-right: 0px; /* set to fixed-right width on resize */
+    margin-left: 0px; /* set to fixed-left width on resize */
+}
+
+#fixed-right {
+    float: right;
+    /* background-color: blue; */
+
+    width: 190px; /* 3 buttons */
+    /* height: 50px; */
+}
+
 #menubar {
-    width: auto;
     position: absolute;
     z-index: 35;
-    /* background: red; */
+    /* background: cyan; */
     top: 0px;
-    right: 185px;
+    left: 50%;
+    width: 682px;
+    margin-left: -341px;
+    display: none;
 }
+
+BODY.initiated #menubar,
+BODY.initiated #fixed-left {
+    display: block;
+}
+
+BODY.hamburger #fixed-center {
+    position: static;
+}
+
+BODY.hamburger #menubar {
+    top: 11px;
+    left: 0px;
+    position: absolute;
+    margin-left: 0px;
+    z-index: 36;
+    width: 100%;
+}
+
+BODY.hamburger #menubar_content {
+    position: relative;
+    left: 16px;
+}
+
+BODY.hamburger #menubar_hamburger {
+    top: 0px;
+    left: 0px;
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    margin-left: 0px;
+    display: block;
+    background-image: url('/static/icon-menu.png');
+    background-size: 69px;
+    background-position: -36px 0px;
+    background-repeat: no-repeat;
+    /* background-color: red; */
+}
+
+BODY.hamburger #menubar_content:hover #menubar_hamburger {
+    background-position: -3px 0px;
+    background-color: white;
+    border-radius: 5px 5px 0px 0px;
+    height: 41px;
+}
+
+BODY.hamburger #menubar_items {
+    width: 245px;
+    background-color: white;
+    left: 0px;
+    top: 40px;
+    position: absolute;
+    padding: 5px;
+    display: none;
+    border-radius: 0px 5px 5px 5px;
+}
+
+BODY.hamburger #menubar_content:hover #menubar_items {
+    display: block;
+}
+
+
+
+BODY.narrow #menubar {
+    width: 542px;
+    margin-left: -271px;
+}
+
+BODY.narrower #menubar{
+    width: 502px;
+    margin-left: -251px;
+}
+
+.full-w { display: none; }
+.narrow-w { display: none; }
+.narrower-w { display: none; }
+.hamburger-w { display: none; }
+
+BODY.hamburger .full-w,
+BODY.hamburger .hamburger-w,
+BODY.full-width .full-w { display: inline; }
+
+BODY.narrow .full-w, BODY.narrow .narrower-w  { display: none; }
+BODY.narrow .narrow-w { display: inline; }
+BODY.narrow .narrow-w { display: inline; }
+BODY.narrower .full-w, BODY.narrower .narrow-w  { display: none; }
+BODY.narrower .narrower-w { display: inline; }
 
 #graph_display {
     width: 800px;
@@ -225,6 +370,20 @@ h3 {
     white-space: nowrap;
 }
 
+BODY.hamburger #graph_controls,
+BODY.hamburger #topic_controls,
+BODY.hamburger #widget_controls,
+BODY.hamburger #service_controls,
+BODY.hamburger #camera_controls,
+BODY.hamburger #docker_controls {
+    border-radius: 5px 5px 5px 5px;
+    font-size: 16px;
+    padding: 15px 10px;
+    clear: both;
+    float: none;
+    margin: 1px 0px 0px 0px;
+}
+
 #graph_controls:hover,
 #graph_controls.hover_waiting,
 #topic_controls:hover,
@@ -242,6 +401,14 @@ h3 {
     background-repeat: no-repeat;
     background-size: 25px 25px;
     width: 210px;
+}
+
+BODY.hamburger #graph_controls {
+    background-position: 102px 12px;
+}
+
+.narrower #graph_controls {
+    width: 170px;
 }
 
 #topic_controls {
@@ -315,6 +482,23 @@ h3 {
     cursor: pointer;
 }
 
+BODY.hamburger #introspection_state {
+    position: absolute;
+    right: 190px;
+    top: -15px;
+    left: auto;
+    float: none;
+    width: 50px;
+    height: 50px;
+    background-size: 37px;
+}
+
+@media screen and (orientation: portrait) {
+    BODY.hamburger #introspection_state {
+        right: 60px;
+    }
+}
+
 #introspection_state:hover,
 #introspection_state.active {
     /* background: #82b727; */
@@ -363,6 +547,12 @@ h3 {
     left: 126px;
     top: 0px;
 }
+
+BODY.narrower #graph_controls #graph_topics_label {
+    left: 101px;
+}
+
+
 
 /* #graph_controls,
 #service_controls,
@@ -679,7 +869,9 @@ h3 {
     width: 60px;
     height: 50px;
     /* background: red; */
-    position: relative;
+    position: absolute;
+    right: 0px;
+    top: 0px;
 }
 
 #network-info #signal-monitor {
@@ -716,7 +908,7 @@ h3 {
 
 #network-info .network-info-dot {
     display: block;
-    background-color: black;
+    background-color: red;
     position: absolute;
     left: 0px;
     top: 41px;
@@ -781,10 +973,11 @@ h3 {
     left: 20px;
 }
 
-#network-info #network-details {
+#network-info-wrapper #network-details {
     position: absolute;
     display: none;
-    left: 0px;
+    left: auto;
+    right: -300px;
     top: 50px;
     background-color: #000000c6;
     border-radius: 0px 5px 5px 5px;
@@ -793,7 +986,14 @@ h3 {
     width: 350px;
 }
 
-#network-info:hover #network-details {
+@media screen and (orientation: portrait) {
+    #network-info-wrapper #network-details {
+        left: 10px; /* move to left edge */
+        right: auto;
+    }
+}
+
+#network-info-wrapper:hover #network-details {
     display: block;
 }
 
@@ -865,6 +1065,19 @@ BUTTON#trigger_wifi_scan.working {
     background-image: url('/static/icon-menu.png');
     background-size: 39px 25px;
     background-repeat: no-repeat;
+    background-position: -19px 0px;
+    cursor: pointer;
+}
+
+BODY.touch-ui .monitor_menu{
+    width: 40px;
+    height: 40px;
+    right: 0px;
+    top: -8px;
+    /* background-color: blue; */
+    background-image: url(/static/icon-menu-thicker.png);
+    background-size: 80px;
+    background-position: -47px 13px;
 }
 
 .monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
@@ -878,9 +1091,21 @@ BUTTON#trigger_wifi_scan.working {
     z-index: -1;
 }
 
+BODY.touch-ui .monitor_menu .hover_keeper {
+    display: none;
+}
+
 .monitor_menu:hover {
     border-radius: 5px 5px 0px 0px;
-    background-color: #139a80;
+}
+
+.monitor_menu:hover,
+.grid_panel .menu_line {
+    background-color: #383838;
+}
+
+BODY.touch-ui .monitor_menu:hover {
+    height: 43px;   
 }
 
 .monitor_menu:hover .hover_keeper {
@@ -899,6 +1124,11 @@ BUTTON#trigger_wifi_scan.working {
     color: #fff;
     text-align: left;
     min-width: 150px;
+}
+
+BODY.touch-ui .monitor_menu_content {
+    top: 38px;
+    font-size: 16px;
 }
 
 .monitor_menu_content.right { /* used when panel is thin and on the very left of the screen */
@@ -922,16 +1152,23 @@ BUTTON#trigger_wifi_scan.working {
 }
 
 .grid_panel .menu_line {
-    background-color: #139a80;
     clear: both;
 }
 
-.grid_panel .menu_line A, .grid_panel .menu_line LABEL, .grid_panel .menu_line .label {
+.grid_panel .menu_line A,
+.grid_panel .menu_line LABEL,
+.grid_panel .menu_line .label {
     text-decoration: none;
     display: block;
     padding: 5px 5px 5px 8px;
     white-space: nowrap;
     cursor: pointer;
+}
+
+BODY.touch-ui .grid_panel .menu_line A,
+BODY.touch-ui .grid_panel .menu_line LABEL,
+BODY.touch-ui .grid_panel .menu_line .label {
+    padding: 8px 5px 8px 10px;
 }
 
 .panel_msg_types_line SPAN.msg_types {
@@ -999,7 +1236,7 @@ BUTTON#trigger_wifi_scan.working {
     background-repeat: no-repeat;
     background-size: 6px;
     background-position: 7px 12px;
-    border-top: 5px solid #139a80;
+    border-top: 5px solid #383838;
 }
 
 .menu_line.src_ctrl .label {
@@ -1007,7 +1244,7 @@ BUTTON#trigger_wifi_scan.working {
 }
 
 .panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
-    background-color: #139a80 !important;
+    background-color: #383838 !important;
 }
 
 .menu_line.src_ctrl:hover {
@@ -1122,6 +1359,13 @@ BUTTON#trigger_wifi_scan.working {
     white-space: nowrap;
     padding-left: 25px; /* pause btn */
 }
+
+BODY.touch-ui .panel-title {
+    cursor: default;
+    margin-right: 80px;
+    padding-left: 40px;
+}
+
 .panel-title.no-pause {
     padding-left: 3px; /* no pause btn */
 }
@@ -1275,7 +1519,8 @@ SPAN.error {
 
 }
 
-.pause-panel-button {
+.pause-panel-button,
+.pause-panel-button.paused:hover {
     display: block;
     cursor: pointer;
     position: absolute;
@@ -1286,23 +1531,61 @@ SPAN.error {
     z-index: 2;
     background-image: url('/static/icon-play-pause.png');
     background-repeat: no-repeat;
-    background-position: -20px 0px;
-    background-size: 40px;
+    background-position: -40px 0px;
+    background-size: 60px;
 }
 
-.pause-panel-button:hover {
-    background-color: #139a80;
-    background-position: 0px 0px;
-}
-
+.pause-panel-button:hover,
 .pause-panel-button.paused {
-    /* background-color: red; */
-    background-position: 0px 0px;
+    /* background-color: #139a80; */
+    background-position: 6px 0px;
 }
 
-.pause-panel-button.paused:hover {
-    background-position: -20px 0px;
+BODY.touch-ui .pause-panel-button,
+BODY.touch-ui .pause-panel-button:hover {
+    width: 40px;
+    height: 40px;
+    left: -4px;
+    top: -8px;
+    background-repeat: no-repeat;
+    background-position: -47px 7px;
+    background-size: 82px;
 }
+
+BODY.touch-ui .pause-panel-button.paused,
+BODY.touch-ui .pause-panel-button.paused:hover {
+    background-position: 13px 7px;
+}
+
+.edit-panel-button {
+    display: none;
+    cursor: pointer;
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    right: 40px;
+    top: -8px;
+    z-index: 2;
+    background-image: url(/static/icon-edit.png);
+    background-repeat: no-repeat;
+    background-position: -44px 8px;
+    background-size: 100px;
+    display: none;
+    /* background-color: red; */
+}
+
+BODY.touch-ui .edit-panel-button {
+    display: block;
+}
+
+BODY.touch-ui .editing .edit-panel-button {
+    background-color: #008700;
+}
+
+BODY.touch-ui .editing .grid-stack-item-content {
+    background-color: #005a00;
+}
+
 
 .panel_widget {
     background: black;
@@ -1528,6 +1811,19 @@ SPAN.error {
     top: 0;
     display: block;
     z-index: 35;
+}
+
+/* Portrait orientation */
+@media screen and (orientation: portrait) {
+    #fixed-right {
+        width: 120px;
+    }
+    #keyboard {
+        display: none;
+    }
+    #gamepad {
+        display: none;
+    }
 }
 
 #gamepad {
@@ -1843,6 +2139,10 @@ SPAN.error {
     margin-left: -10px;
     margin-right: -10px;
 }
+
+/* BODY.hamburger .grid-stack {
+    margin-top: 100px;
+} */
 
 .grid-stack-item-content {
     /* background-color: #18bc9c; */

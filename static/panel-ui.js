@@ -10,540 +10,8 @@ import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject } from "./lib.js";
-
-
-class Panel {
-
-    ui = null;
-
-    id_source = null;
-    id_stream = null;
-    msg_type = null; //str
-    msg_type_class = null;
-
-    static PANEL_NO = 0;
-
-    // msg_reader = null;
-    max_height = 0;
-
-    display_widget = null;
-    data_trace = [];
-
-    graph_menu = null;
-
-    max_trace_length = 100;
-    zoom = null;
-    default_zoom = 1;
-
-    grid_widget = null;
-
-    initiated = false;
-    init_data = null;
-    resize_event_handler = null;
-    src_visible = false;
-    //const event = new Event("build");
-
-    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, custom_url_vars) {
-        this.ui = ui;
-        let panels = ui.panels;
-        let grid = ui.grid;
-
-        this.id_source = id_source;
-        this.src_visible = src_visible;
-        this.paused = false;
-        this.zoom = zoom;
-        this.custom_url_vars = custom_url_vars;
-        console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
-
-        this.widget_menu_cb = null;
-
-        this.n = Panel.PANEL_NO++;
-        //let display_source = false;
-
-        let html =
-            '<div class="grid_panel" data-source="'+id_source+'">' +
-                '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
-                '<span class="notes"></span>' +
-                '<div class="monitor_menu" id="monitor_menu_'+this.n+'">' +
-                    '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
-                '</div>' +
-                '<div class="panel_content_space">' +
-                    '<div class="panel_widget'+(this.src_visible?' source_visible':'')+'" id="panel_widget_'+this.n+'"></div>' +
-                    '<div class="panel_source'+(this.src_visible?' enabled':'')+'" id="panel_source_'+this.n+'">Waiting for data...</div>' +
-                    '<div class="cleaner"></div>' +
-                '</div>' +
-                //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
-            '</div>'
-
-        let widget_opts = {w: w, h:h, content: html};
-        if (x != null && x != undefined) widget_opts.x = x;
-        if (y != null && y != undefined) widget_opts.y = y;
-
-        if (x == null && y == null) {
-            x = 0;
-            y = 0;
-            // let cols = $('#grid-stack').attr('gs-column');
-            // console.error('Cols='+cols)
-            for (let _x = 0; _x < 12-w; _x++) {
-                if (grid.isAreaEmpty(_x, y, w, h)) {
-                    x = _x;
-                    // console.log('Grid area empty at ['+x+'; '+y+'] for '+w+'x'+h+']');
-                    break;
-                }
-            }
-            widget_opts.x = x;
-            widget_opts.y = y;
-        }
-        panels[id_source] = this;
-
-        this.grid_widget = grid.addWidget(widget_opts);
-
-        this.ui.client.on(id_source, this._on_data_context_wrapper);
-
-        window.setTimeout(()=>{
-            panels[id_source].onResize()
-        }, 300); // resize at the end of the animation
-    }
-
-    // init with message type when it's known
-    // might get called with null gefore we receive the message type
-    init(msg_type=null) {
-
-        console.log('Panel init '+this.id_source+'; msg_type='+msg_type);
-
-        let fallback_show_src = true;
-
-        if (!this.pauseEl) {
-            // pause panel updates
-            this.pauseEl = $('<span id="pause_panel_'+this.n+'" class="pause-panel-button paused" title="Waiting for data..."></span>');
-            this.pauseEl.insertBefore('#monitor_menu_'+this.n);
-        }
-
-        if (msg_type && !this.initiated) {
-
-            console.log('Initiating panel '+this.id_source+' for '+msg_type)
-
-            if (this.ui.widgets[msg_type]) {
-
-                if (!this.display_widget) { //only once
-                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
-                    fallback_show_src = false;
-                }
-
-            } else {
-                this.msg_type = msg_type;
-                if (this.zoom === undefined || this.zoom === null) {
-                    this.zoom = this.default_zoom;
-                }
-                if (msg_type != 'video') {
-                    this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
-                    $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
-    
-                    if (this.msg_type_class == null && this.msg_type != null) {
-                        $('#panel_msg_types_'+this.n).addClass('err');
-                        $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
-                    }
-    
-                    // if (this.msg_type != null) {
-                    //     let Reader = window.Serialization.MessageReader;
-                    //     this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
-                    // }
-                }
-            }
-
-            if (this.ui.topic_widgets[this.id_source] != undefined) {
-                if (!this.display_widget) { //only once
-                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
-                    fallback_show_src = false;
-                }
-            } else if (this.ui.type_widgets[this.msg_type] != undefined) {
-                console.log('Initiating display widget '+this.id_source+' w '+this.msg_type, this.display_widget)
-                if (!this.display_widget) { //only once
-                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
-                    this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
-                    fallback_show_src = false;
-                }
-            }
-            
-            if (fallback_show_src) {
-                this.src_visible = true;
-            }
-
-            if (this.src_visible) {  //no widget, show source
-                //console.error('no widget for '+this.id_source+" msg_type="+this.msg_type)
-                $('#panel_source_'+this.n).addClass('enabled');
-            }
-
-            this.initiated = true;
-
-            if (this.init_data != null) {
-                this._on_data_context_wrapper(this.init_data[0], this.init_data[1]);
-                this.init_data = null;
-            }
-            //use latest msg
-
-            // let latest = this.ui.client.latest[this.id_source];
-            // if (latest) {
-            //     this._on_data_context_wrapper(latest.msg, latest.ev)
-            // }
-
-            this.ui.update_url_hash();
-            this.setMenu()
-
-            if (this.paused) {
-                this.pauseEl.addClass('paused');
-                this.pauseEl.attr('title', 'Unpause');
-            } else {
-                this.pauseEl.removeClass('paused');
-                this.pauseEl.attr('title', 'Pause');
-            }
-            let that = this;
-            this.pauseEl.click(function(e) {
-                that.paused = !that.paused;
-                console.log('Panel updates paused '+that.paused);
-                if (that.paused) {
-                    that.pauseEl.addClass('paused');
-                    that.pauseEl.attr('title', 'Unpause');
-                } else {
-                    that.pauseEl.removeClass('paused');
-                    that.pauseEl.attr('title', 'Pause');
-                }
-                if (that.display_widget && that.display_widget.is_video) {
-                    that.display_widget.el.trigger(that.paused ? 'pause' : 'play');    
-                }
-                e.cancelBubble = true;
-                return false;
-            });
-
-        } else if (!this.initiated) {
-            this.setMenu(); //draw menu placeholder fast without type
-        }
-        
-        this.onResize();
-    }
-
-    _on_data_context_wrapper = (msg, ev) => {
-
-        if (!this.initiated) {
-            this.init_data = [ msg, ev ]; //store for after init
-            return;
-        }
-
-        if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage', 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'].indexOf(this.msg_type) > -1) {
-            this.on_stream(stream);
-        } else {
-            this.on_data(msg, ev);
-        }
-
-    }
-
-    setMenu = () => {
-
-        console.log('Setting up panel menu of ' + this.id_source)
-
-        let els = []
-        let that = this;
-        if (this.msg_type != null && this.msg_type != 'video') {
-
-            // message type info dialog
-            let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="View message type definition">'+this.msg_type+'</a></div>');
-            msgTypesEl.click(function(ev) {
-
-                that.ui.message_type_dialog(that.msg_type)             
-    
-                ev.cancelBubble = true;
-                ev.preventDefault();
-            });
-            els.push(msgTypesEl);
-
-            // display source for widgets
-            if (this.display_widget && !IsImageTopic(this.msg_type)) {
-                let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_'+this.n+'"><label for="display_panel_source_'+this.n+'" class="display_panel_source_label" id="display_panel_source_label_'+this.n+'"><input type="checkbox" id="display_panel_source_'+this.n+'" class="panel_display_source"'+(this.src_visible?' checked':'')+' title="Display source data"> Show source data</label></div>');
-                let source_el = $('#panel_source_'+this.n);
-                let widget_el = $('#panel_widget_'+this.n);
-                let showSourceCB = showSourceEl.find('.panel_display_source');
-                showSourceCB.change(function(ev) {
-                    if ($(this).prop('checked')) {
-                        
-                        source_el.addClass('enabled');
-                        widget_el.addClass('source_visible');
-                        that.src_visible = true;
-        
-                        let w = parseInt($(that.grid_widget).attr('gs-w'));
-                        if (w < 5) {
-                            w *= 2;
-                            that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
-                        } else {
-                            that.onResize();
-                            that.ui.update_url_hash();
-                        }
-        
-                    } else {
-        
-                        source_el.removeClass('enabled');
-                        widget_el.removeClass('source_visible');
-                        let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
-                        that.src_visible = false;
-                        that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
-        
-                    }
-                });
-                els.push(showSourceEl);
-            }
-        } else if (this.msg_type == 'video') {
-            // message type info dialog
-            let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
-            els.push(msgTypesEl);
-        }
-
-        let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
-        closeEl.click(function(ev) {
-            that.close();
-            if (that.ui.widgets[that.id_source])
-                that.ui.widgets_menu();
-            ev.cancelBubble = true;
-            ev.preventDefault();
-        });
-        if (els.length == 0)
-            closeEl.addClass('solo');
-        els.push(closeEl);
-
-        $('#monitor_menu_content_'+this.n).empty();
-        $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
-        // let linesCont = $('<div class="menu_lines"></div>');
-        for (let i = 0; i < els.length; i++) {
-            $('#monitor_menu_content_'+this.n).append(els[i]);
-        }
-
-        if (this.widget_menu_cb != null) {
-            this.widget_menu_cb();
-        }
-
-    }
-
-    auto_menu_position() {
-        let menu_el = $('#monitor_menu_content_'+this.n);
-        if (!menu_el.length)
-            return;
-        let pos = menu_el.parent().offset();
-        // console.log(this.id_source+' menuburger pos ', pos);
-        if (pos.left < 150) {
-            menu_el.addClass('right')   
-        } else {
-            menu_el.removeClass('right')
-        }
-    }
-
-    getAvailableWidgetSize() {
-
-        let ref = this.grid_widget;
-
-        let w = $(ref).innerWidth();
-        let h = parseInt($(ref).css('height'));
-
-        // console.log('Max h', h);
-
-        w -= 30;
-        h -= 56;
-
-        return [w, h];
-    }
-
-    onResize() {
-
-        [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
-
-        // console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
-
-        $('#panel_widget_'+this.n).parent()
-            .css('height', this.widget_height)
-
-        $('#panel_source_'+this.n)
-            .css('height', this.widget_height-23)
-
-        this.widget_width = this.src_visible ? (this.widget_width/2.0) : this.widget_width;
-
-        let canvas = document.getElementById('panel_canvas_'+this.n);
-        if (canvas && !$(canvas).hasClass('big_canvas') && !$(canvas).hasClass('canvas_tile')) {
-            canvas.width = this.widget_width;
-            canvas.height = this.widget_height;
-            // let ctx = canvas.getContext('2d');
-
-            // Event handler to resize the canvas when the document view is changed
-           
-            // canvas.width = window.innerWidth + 'px';
-            // canvas.height = window.innerHeight;
-        }
-
-        //  auto scale canvas
-        // if ($('#panel_widget_'+this.n+' CANVAS').length > 0) {
-
-        //     $('#panel_widget_'+this.n+' CANVAS')
-        //         .attr({
-        //             'width': this.widget_width,
-        //             'height' : this.widget_height
-        //         });
-        // }
-
-        // auto scale THREE renderer & set camera aspect
-        if (this.display_widget && this.display_widget.renderer) {
-
-            this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
-            this.display_widget.camera.updateProjectionMatrix();
-
-            this.display_widget.renderer.setSize( this.widget_width, this.widget_height );
-            // console.log('resize', this.widget_width, this.widget_height)
-        }
-
-        // let h = $('#panel_content_'+this.n).parent().parent('.grid-stack-item-content').innerHeight();
-        // let t = $('#panel_content_'+this.n).position().top;
-        // let pt = parseInt($('#panel_content_'+this.n).css('padding-top'));
-        // let pb = parseInt($('#panel_content_'+this.n).css('padding-bottom'));
-        // let mt = parseInt($('#panel_content_'+this.n).css('margin-top'));
-        // let mb = parseInt($('#panel_content_'+this.n).css('margin-bottom'));
-        // console.log('resize ', h, t, pt, pb, mt, mb)
-        //$('#panel_content_'+this.n).css('height', h-t-pt-pb-mt-mb);
-
-       if (this.resize_event_handler != null)
-           this.resize_event_handler();
-    }
-
-    on_data(msg, ev) {
-        // console.log('Got data for '+this.id_source+': ', msg)
-
-        if (this.paused)
-            return;
-
-        let raw_len = 0;
-        let raw_type = "";
-        if (ev.data instanceof ArrayBuffer) {
-            raw_len = ev.data.byteLength;
-            raw_type = 'ArrayBuffer';
-        } else if (ev.data instanceof Blob) {
-            raw_len = ev.data.size;
-            raw_type = 'Blob';
-        } else {
-            raw_len = msg.length;
-            raw_type = 'String';
-        }
-
-        let datahr = 'N/A';
-        if ((this.msg_type == 'std_msgs/msg/String' && msg.data) || raw_type === 'String' ) {
-
-            let str_val = null;
-            if (this.msg_type == 'std_msgs/msg/String')
-                str_val = msg.data;
-            else
-                str_val = msg;
-
-            try{
-                if (str_val == null || str_val == undefined) 
-                    datahr = '';
-                else if ((typeof str_val === 'string' || str_val instanceof String) && str_val.indexOf('xml') !== -1)  {
-                    datahr = linkifyURLs(escapeHtml(window.xmlFormatter(str_val)), true);
-                } else {
-                    datahr = linkifyURLs(escapeHtml(str_val));
-                }    
-            } catch (e) {
-                console.error('Err parsing str_val, this.msg_type='+this.msg_type+'; raw_type='+raw_type+'; ev.data='+(typeof ev.data), e, str_val);
-                console.error('ev.data', ev.data);
-                console.error('decoded msg', msg);
-            }
-            
-            //console.log(window.xmlFormatter)
-
-        } else if (msg && this.src_visible) {
-            
-            if (raw_len < 10000) {
-                datahr = JSON.stringify(msg, null, 2);
-            } else {
-                datahr = '';
-                let trimmed = {};
-                if (msg.header)
-                    trimmed.header = msg.header;
-                if (msg.format)
-                    trimmed.format = msg.format;
-                
-                datahr += JSON.stringify(trimmed, null, 2)+'\n\n';
-                datahr += '-- trimmed --'
-            }
-            
-        }
-
-        // if (this.ui.topic_widgets[this.id_source] && this.ui.topic_widgets[this.id_source].widget)
-        //     this.ui.topic_widgets[this.id_source].widget(this, msg);
-        // else if (this.ui.type_widgets[this.msg_type] && this.ui.type_widgets[this.msg_type].widget)
-        //     this.ui.type_widgets[this.msg_type].widget(this, msg);
-
-        if (this.display_widget) {
-            this.display_widget.onData(msg);
-        }
-
-        if (this.src_visible) {
-            $('#panel_source_'+this.n).html(
-                'Received: '+ev.timeStamp + '<br>' + // this is local stamp
-                '&lt;'+raw_type+'&gt; '+raw_len+' '+(raw_type!='String'?'B':'chars')+'<br>' +
-                '<br>' +
-                datahr
-            );
-    
-            let newh = $('#panel_source_'+this.n).height();
-            //console.log('max_height='+this.max_height+' newh='+newh);
-    
-            if (newh > this.max_height) {
-                this.max_height = newh;
-            }
-        }
-    }
-
-    on_stream(stream) {
-        console.log('Got stream for '+this.id_source+': ', stream)
-    }
-
-    close() {
-
-        if (this.ui.graph_menu.topics[this.id_source]) {
-            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
-            this.ui.graph_menu.uncheck_topic(this.id_source);
-    
-            // SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
-        } // else { //topics not loaded
-            // Panel.TogglePanel(that.id_source, null, false);
-        // }
-
-        // this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
-        this.ui.client.off(this.id_source, this._on_data_context_wrapper);
-
-        if ($('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').length > 0) {
-            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
-            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
-            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
-            $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
-        }
-
-        if (this.display_widget && this.display_widget.onClose) {
-            this.display_widget.onClose();
-        }
-
-        // let x = parseInt($(this.grid_widget).attr('gs-x'));
-        // let y = parseInt($(this.grid_widget).attr('gs-y'));
-
-        this.ui.grid.removeWidget(this.grid_widget);
-
-        console.warn('Removing panel '+this.id_source, this.ui.panels[this.id_source]);
-        delete this.ui.panels[this.id_source];
-
-        $('.grid_panel[data-source="'+this.id_source+'"]').remove(); //updates url hash
-        console.log('Panel closed for '+this.id_source)
-    }
-
-}
+import { Panel } from "./panel.js";
+import { isTouchDevice } from "./lib.js";
 
 export class PanelUI {
 
@@ -581,7 +49,14 @@ export class PanelUI {
         this.client.ui = this;
 
         let GridStack = window.exports.GridStack;
-        this.grid = GridStack.init({ float: false, cellHeight: grid_cell_height, handle: '.panel-title' });
+        this.grid = GridStack.init({
+            float: false,
+            cellHeight: grid_cell_height,
+            handle: '.panel-title',
+            columnOpts: {
+                breakpoints: [{w:500, c:1}]
+            }
+        });
 
         this.panels = {}
         this.keyboard = keyboard;
@@ -609,16 +84,24 @@ export class PanelUI {
             $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
         });
 
+        let last_saved_name = this.load_last_robot_name();
+        if (last_saved_name) {
+            client.name = last_saved_name;
+            $('#robot_name .label').html(client.name);
+        }
+
+        this.update_layout_width();
+
         window.addEventListener("resize", (event) => {
             that.update_layout_width()
         });
-        this.update_layout_width();
-
-        client.on('update', ()=>{
+        
+        client.on('update', ()=>{ // from socket
 
             if (client.name) {
                 $('#robot_name .label').html(client.name);
                 document.title = client.name + ' @ PHNTM bridge';
+                that.save_last_robot_name();
             }
 
             $('#robot_info').html('<span class="label">Robot ID:</span> '+ client.id_robot + '<br>'
@@ -633,6 +116,7 @@ export class PanelUI {
                 that.update_rtt(-1);
             }
             that.update_webrtc_status()
+            that.update_layout_width(); // robot name length affects layout
         });
 
         client.on('media_stream', (id_src, stream)=>{
@@ -679,7 +163,9 @@ export class PanelUI {
             } else {
                 $('#docker_controls').removeClass('active');
             }
-            $('#docker_heading').html('<b>'+num_containers+'</b> '+(num_containers == 1 ? 'Container' : 'Containers'));
+
+            $('#docker_heading .full-w').html(num_containers == 1 ? 'Container' : 'Containers');
+            $('#docker_heading B').html(num_containers);
 
             let i = 0;
             Object.values(containers).forEach((container) => {
@@ -886,12 +372,14 @@ export class PanelUI {
             });
         }
 
+        $('#cameras_heading .full-w').html(cameras.length == 1 ? 'Camera' : 'Cameras');
+        $('#cameras_heading B').html(cameras.length);
+
         if (cameras.length > 0) {
             $('#camera_controls').addClass('active');
         } else {
             $('#camera_controls').removeClass('active');
         }
-        $('#cameras_heading').html('<b>'+cameras.length+'</b> '+(cameras.length == 1 ? 'Camera' : 'Cameras'));
 
         for (let i = 0; i < cameras.length; i++) {
             let camera = cameras[i];
@@ -935,110 +423,9 @@ export class PanelUI {
 
         this.graph_menu.update(nodes);        
 
-        $('#graph_nodes_label').html('<b>'+this.graph_menu.node_ids.length+'</b> Nodes')
-        $('#graph_topics_label').html('<b>'+this.graph_menu.topic_ids.length+'</b> Topics')
+        $('#graph_nodes_label B').html(this.graph_menu.node_ids.length)
+        $('#graph_topics_label B').html(this.graph_menu.topic_ids.length)
         $('#graph_controls').addClass('active');
-        // var nodes = svg
-        //     .selectAll("circle")
-        //     .data(data.nodes)
-        //     .enter()
-        //     .append("circle")
-        //     .attr("r", function(d){
-        //         if (d.group == 1)
-        //             return 20
-        //         else
-        //             return 10
-        //     })
-        //     .style("fill", function(d){
-        //         if (d.group == 1)
-        //             return 'red'
-        //         else
-        //             return 'blue'
-        //     });
-
-
-        // // Initialize the links
-        // var link = svg
-        //     .selectAll("line")
-        //     .data(data.links)
-        //     .enter()
-        //     .append("line")
-        //     .style("stroke", function(d){
-        //         if (d.group == 1)
-        //             return 'blue'
-        //         else
-        //             return 'green'
-        //     });
-
-        // // Initialize the nodes
-        // var node = svg
-        //     .selectAll("circle")
-        //     .data(data.nodes)
-        //     .enter()
-        //     .append("circle")
-        //     .attr("r", function(d){
-        //         if (d.group == 1)
-        //             return 20
-        //         else
-        //             return 10
-        //     })
-        //     .style("fill", function(d){
-        //         if (d.group == 1)
-        //             return 'red'
-        //         else
-        //             return 'blue'
-        //     });
-
-        // // Initialize the nodes
-        // var label = svg
-        //     .selectAll("text")
-        //     .data(data.nodes)
-        //     .enter()
-        //     .append("text")
-        //     .attr("text-anchor", 'middle')
-        //     .style("font-size", (d) => {
-        //         return d.group == 1 ? 15 : 12
-        //     })
-        //     .style("font-weight", (d) => {
-        //         return d.group == 1 ? 'bold' : 'normal'
-        //     })
-        //     .style("flood-color", (d) => {
-        //          return d.group == 1 ? 'red' : 'blue'
-        //     })
-        //     .text((d) => {return d.name})
-
-        // // Let's list the force we wanna apply on the network
-        // var simulation = d3.forceSimulation(data.nodes)                 // Force algorithm is applied to data.nodes
-        //     .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area  
-        //     .force("link", d3.forceLink()                               // This force provides links between nodes
-        //         .id(function(d) { return d.id; })                     // This provide  the id of a node
-        //         .links(data.links)                                    // and this the list of links
-        //     )
-        //     .force('collide', d3.forceCollide((d) => d.r))
-        //     .force("charge", d3.forceManyBody()
-        //                         .strength(function(d) { return d.charge; })
-        //                         .distanceMax(100)
-        //     )         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
-        //     .on("end", ticked);
-
-        // // This function is run at each iteration of the force algorithm, updating the nodes position.
-        // function ticked() {
-        //     link
-        //         .attr("x1", function(d) { return d.source.x; })
-        //         .attr("y1", function(d) { return d.source.y; })
-        //         .attr("x2", function(d) { return d.target.x; })
-        //         .attr("y2", function(d) { return d.target.y; });
-
-        //     node
-        //         .attr("cx", function (d) { return d.x; })
-        //         .attr("cy", function(d) { return d.y; });
-
-        //     label
-        //         .attr("x", function (d) { return d.x; })
-        //         .attr("y", function(d) { return d.group == 1 ? d.y : d.y-15; });
-        // }
-
-        // });
     }
 
     message_type_dialog(msg_type, onclose=null) {
@@ -1122,120 +509,6 @@ export class PanelUI {
         });
     }
 
-    /*topics_menu_from_nodes(nodes) {
-
-        $('#topic_list').empty();
-
-        let node_ids = Object.keys(nodes);
-        node_ids.sort();
-
-        let unique_topics = [];
-
-        let that = this;
-
-        let i = 0;
-        node_ids.forEach((node) => {
-
-            if (nodes[node].publishers) {
-                $('#topic_list').append('<div class="node" data-node="'+node+'">'+ node+ '</div>');
-
-                let topic_ids = Object.keys(nodes[node].publishers);
-                topic_ids.sort((a, b) => {
-                    let _a = a.indexOf('/_') === 0;
-                    let _b = b.indexOf('/_') === 0;
-                    if (!_a && _b) return -1;
-                    if (!_b && _a) return 1;
-                    if (a < b) return -1;
-                    if (a > b) return 1;
-                    return 0;
-                });
-
-                topic_ids.forEach((id_topic)=>{
-
-                    if (unique_topics.indexOf(id_topic) === -1)
-                        unique_topics.push(id_topic)
-
-                    let msg_type = nodes[node].publishers[id_topic].msg_types[0];
-
-                    $('#topic_list').append('<div class="topic" data-topic="'+id_topic+'" data-msg_types="'+nodes[node].publishers[id_topic].msg_types.join(',')+'">'
-                        + '<input type="checkbox" class="enabled" id="cb_topic_'+i+'"'
-                        //+ (!topic.robotTubscribed?' disabled':'')
-                        + (this.panels[id_topic] ? ' checked': '' )
-                        + '/> '
-                        + '<span '
-                        + 'class="topic'+(nodes[node].publishers[id_topic].is_video?' image':'')+(!nodes[node].publishers[id_topic].msg_type_supported?' unsupported_message_type':'')+'" '
-                        + 'title="'+(!nodes[node].publishers[id_topic].msg_type_supported?'Unsupported type: ':'')+nodes[node].publishers[id_topic].msg_types.join('; ')+'"'
-                        + '>'
-                        + '<label for="cb_topic_'+i+'" class="prevent-select">'+id_topic+'</label>'
-                        + '</span>'
-                        + '</div>'
-                    );
-
-                    // topic_data.msgTypes.forEach((msgType)=>{
-                    //     if (msg_type_filters.indexOf(msgType) == -1)
-                    //         msg_type_filters.push(msgType);
-                    // });
-
-                    // let subscribe = $('#cb_topic_'+i).is(':checked');
-
-                    if (this.panels[id_topic]) {
-                        this.panels[id_topic].init(msg_type); //init w message type
-                        // subscribe = true;
-                    }
-
-                    //if (!old_topics[topic.topic]) {
-
-                    // if (subscribe) {
-                    //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-                    //     subscribe_topics.push(topic_data.topic);
-                    // } else {
-                    //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-                    // }
-
-                    //TogglePanel(topic.topic, true);
-                    //}
-
-                    i++;
-                });
-            }
-        });
-
-        $('#topic_list INPUT.enabled:checkbox').change(function(event) {
-            let id_topic = $(this).parent('DIV.topic').data('topic');
-            let state = this.checked;
-
-            let w = 3; let h = 3; //defaults overridden by widgets
-            let msg_type = that.client.discovered_topics[id_topic]['msg_types'][0];
-
-            if (that.topic_widgets[id_topic]) {
-                w = that.topic_widgets[id_topic].w;
-                h = that.topic_widgets[id_topic].h;
-            } else if (that.type_widgets[msg_type]) {
-                w = that.type_widgets[msg_type].w;
-                h = that.type_widgets[msg_type].h;
-            }
-            let trigger_el = this;
-
-            // console.log('Clicker topic '+id_topic);
-
-            $('#topic_list .topic[data-topic="'+id_topic+'"] INPUT:checkbox').each(function(index){
-                if (this != trigger_el)
-                    $(this).prop('checked', state)
-                // console.log('Also '+id_topic, this);
-            });
-
-            that.toggle_panel(id_topic, msg_type, state, w, h);
-            // client.SetTopicsReadSubscription(id_robot, [ topic ], state);
-        });
-
-        let num_topics = unique_topics.length;
-        $('#topics_heading').html(num_topics+' '+(num_topics == 1 ? 'Topic' : 'Topics'));
-        if (num_topics > 0) {
-            $('#topic_controls').addClass('active');
-        } else {
-            $('#topic_controls').removeClass('active');
-        }
-    }*/
 
     add_widget(widget_class, conf) {
         this.widgets[widget_class.name] = {
@@ -1338,9 +611,9 @@ export class PanelUI {
                 if (['rcl_interfaces/srv/DescribeParameters',
                      'rcl_interfaces/srv/GetParameterTypes',
                      'rcl_interfaces/srv/GetParameters',
-                      'rcl_interfaces/srv/ListParameters',
-                      'rcl_interfaces/srv/SetParameters',
-                      'rcl_interfaces/srv/SetParametersAtomically'
+                     'rcl_interfaces/srv/ListParameters',
+                     'rcl_interfaces/srv/SetParameters',
+                     'rcl_interfaces/srv/SetParametersAtomically'
                     ].includes(msg_type))
                     continue; // not rendering internals (?!)
                 
@@ -1376,13 +649,15 @@ export class PanelUI {
                     $('#service_list').append(service_contents[i]);
             }
         });
+        
+        $('#services_heading .full-w').html(num_services == 1 ? 'Service' : 'Services');
+        $('#services_heading B').html(num_services);
 
         if (num_services > 0) {
             $('#service_controls').addClass('active');
         } else {
             $('#service_controls').removeClass('active');
         }
-        $('#services_heading').html('<b>'+num_services+'</b> '+(num_services == 1 ? 'Service' : 'Services'));
 
         if (this.gamepad)
             this.gamepad.MarkMappedServiceButtons();
@@ -1464,13 +739,34 @@ export class PanelUI {
 
         // console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
         let that = this;
+        // console.error('Grid nodes:', this.grid.engine.nodes);
 
-        $('#grid-stack').children('.grid-stack-item').each(function () {
-            let widget = this;
-            let x = $(widget).attr('gs-x');
-            let y = $(widget).attr('gs-y');
-            let w = $(widget).attr('gs-w');
-            let h = $(widget).attr('gs-h');
+        
+        this.grid.engine.nodes.forEach((node) => {
+            let widget = node.el;
+
+            let wl = null;
+            if (node.grid && node.grid.engine && node.grid.engine._layouts) {
+                let len = node.grid.engine._layouts.length;
+                if (len && node.grid.engine.column !== (len - 1)) {
+                    let layout = node.grid.engine._layouts[len - 1];
+                    wl = layout.find(l => l._id === node._id);
+                }
+            }
+
+            let x, y, w, h;
+            if (wl) { //use layout instead of node vals
+                x = wl.x;
+                y = wl.y;
+                w = wl.w;
+                h = node.h;
+            } else {
+                x = node.x;
+                y = node.y;
+                w = node.w;
+                h = node.h;
+            }
+            
             let id_source = $(widget).find('.grid_panel').attr('data-source');
 
             let parts = [
@@ -1507,6 +803,9 @@ export class PanelUI {
 
         hash = hash.substr(1);
         let hashArr = hash.split(';');
+        let panels_to_make_sorted = [];
+        let max_panel_x = 0;
+        let max_panel_y = 0;
         for (let i = 0; i < hashArr.length; i++) {
             let src_vars = hashArr[i].trim();
             if (!src_vars)
@@ -1546,14 +845,41 @@ export class PanelUI {
 
             //let msg_type = null; //unknown atm
             //console.info('Opening panel for '+topic+'; src_on='+src_on);
-            this.make_panel(id_source, w, h, x, y, src_on, zoom, custom_vars)
-            if (this.widgets[id_source]) {
-                this.panels[id_source].init(id_source);
-            } // else if (this.widgets[id_source]) {
-            //     this.panels[id_source].init(id_source);
-            // }
-
+            max_panel_x = Math.max(max_panel_x, x);
+            max_panel_y = Math.max(max_panel_y, y);
+            panels_to_make_sorted.push({
+                'id_source': id_source,
+                'w': w,
+                'h': h,
+                'x': x,
+                'y': y,
+                'src_on': src_on,
+                'zoom': zoom,
+                'custom_vars': custom_vars
+            });
         }
+
+        for (let y = 0; y <= max_panel_y; y++) {
+            for (let x = 0; x <= max_panel_x; x++) {
+                for (let j = 0; j < panels_to_make_sorted.length; j++) {
+                    let p = panels_to_make_sorted[j];
+                    if (p.x == x && p.y == y) {
+
+                        this.make_panel(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.custom_vars)
+                        if (this.widgets[p.id_source]) {
+                            this.panels[p.id_source].init(p.id_source);
+                        } // else if (this.widgets[id_source]) {
+                        //     this.panels[id_source].init(id_source);
+                        // }
+
+                        break;
+                    }
+                }
+            }
+        }
+        console.log('Sorting...')
+        this.grid.engine.sortNodes();
+        console.log('Sorted: ', this.grid.engine.nodes);
 
         this.widgets_menu();
         return this.panels;
@@ -1683,9 +1009,111 @@ export class PanelUI {
         
     }
 
-    //on resize
+    set_body_classes(enabled_classes) {
+
+        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'touch-ui'];
+        let inactive_classes = [];
+        
+        for (let i = 0; i < all_body_classes.length; i++) {
+            let c = all_body_classes[i];
+            if (enabled_classes.indexOf(c) === -1)
+                inactive_classes.push(c);
+        }
+
+        console.log('Body removing/setting ', inactive_classes, enabled_classes);
+
+        $('body')
+            .removeClass(inactive_classes)
+            .addClass(enabled_classes);
+    }
+    
+    save_last_robot_name() {
+        localStorage.setItem('last-robot-name:' + this.client.id_robot, this.client.name);
+    }
+
+    load_last_robot_name() {
+        let name = localStorage.getItem('last-robot-name:' + this.client.id_robot);
+        // console.log('Loaded keyboard driver for robot '+this.client.id_robot+':', dri);
+        return name;
+    }
+
+
+    //on resize, robot name update
     update_layout_width() {
-        let w = $('body').innerWidth();
+
+        const full_menubar_w = 682;
+        const narrow_menubar_w = 542;
+        const narrower_menubar_w = 502;
+
+        let w_body = $('body').innerWidth();
+        let w_right = $('#fixed-right').innerWidth();
+
+        let label_el = $('h1 .label');
+        label_el.removeClass('smaller'); 
+        let w_left = $('#fixed-left').innerWidth();
+
+        let w_netinfo = $('#network-info').innerWidth();
+        
+        let max_label_w = w_body-w_right-w_netinfo;
+        // w_left += w_netinfo;
+        
+        label_el.css({
+            'max-width': max_label_w+'px' 
+        });
+        // let w_left_is_2rows = label_el.hasClass('hamburger');
+        if (w_body < full_menubar_w+w_right+w_left) {
+            label_el.addClass('smaller');
+        }
+
+        w_left = $('#fixed-left').innerWidth();
+        
+        $('#fixed-center')
+            .css({
+                'margin-left': w_left+'px',
+                'margin-right': w_right+'px',
+        });
+
+        let available_w_center = $('#fixed-center').innerWidth();
+
+        let cls = [];
+        
+        if (available_w_center < narrower_menubar_w) { // .narrower menubar
+            cls.push('hamburger');
+            available_w_center = w_body; //uses full page width
+        } else if (available_w_center < narrow_menubar_w) { // .narrow menubar
+            cls.push('narrower');
+        }
+        else if (available_w_center < full_menubar_w) { // full menubar
+            cls.push('narrow');
+        } else {
+            cls.push('full-width');
+        }
+
+        let direct_editing_enabled = true;
+        if (isTouchDevice()) {
+            direct_editing_enabled = false;
+            cls.push('touch-ui');  //TEMP
+        }
+            
+
+        Object.values(this.panels).forEach((p)=>{
+            if (p.editing)
+                return;
+
+            if (direct_editing_enabled) 
+                $(p.grid_widget).addClass('editing');
+            else
+                $(p.grid_widget).removeClass('editing');
+            this.grid.resizable(p.grid_widget, direct_editing_enabled);
+            this.grid.movable(p.grid_widget, direct_editing_enabled);
+        });
+
+        this.set_body_classes(cls);
+
+        $('body').addClass('initiated');
+
+        console.log('Layout: body='+w_body+'; left='+w_left+'; right='+w_right+'; net='+w_netinfo+'; av center='+available_w_center);
+
         // console.info('body.width='+w+'px');
         // if (w < 1500)
         //     $('#robot_wifi_info').addClass('narrow_screen')

@@ -344,6 +344,7 @@ export class VideoWidget {
 
     getUrlHashParts (out_parts) {
         this.overlay_sources.getUrlHashParts(out_parts);
+        out_parts.push('crp='+(this.display_overlay_input_crop ? '1' : '0'));
         console.log('Video.getUrlHashParts', out_parts);
     }
 
@@ -351,6 +352,16 @@ export class VideoWidget {
         if (!custom_url_vars)
             return;
         this.overlay_sources.parseUrlParts(custom_url_vars);
+        custom_url_vars.forEach((kvp)=>{
+            let arg = kvp[0];
+            let val = kvp[1];
+            // console.warn('DRF got ' + arg +" > "+val);
+            switch (arg) {
+                case 'crp':
+                    this.display_overlay_input_crop = parseInt(val) == 1;
+                    break;
+            }
+        });
         console.log('Video.parseUrlParts', custom_url_vars);
     }
 
