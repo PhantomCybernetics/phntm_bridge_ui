@@ -144,3 +144,8 @@ export function roughSizeOfObject(object) {
       (navigator.maxTouchPoints > 0) ||
       (navigator.msMaxTouchPoints > 0));
   }
+
+  export function isPortraitMode() {
+    // return screen.availHeight > screen.availWidth;
+    return window.matchMedia("(orientation: portrait)").matches;
+  }

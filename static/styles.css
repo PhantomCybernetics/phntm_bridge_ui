@@ -168,32 +168,122 @@ BODY.hamburger #menubar_hamburger {
     background-size: 69px;
     background-position: -36px 0px;
     background-repeat: no-repeat;
+    cursor: pointer;
     /* background-color: red; */
 }
 
+/* BODY.hamburger.menu-overlay #menubar_content #menubar_hamburger, */
 BODY.hamburger #menubar_content:hover #menubar_hamburger {
-    background-position: -3px 0px;
-    background-color: white;
+    /* background-position: -3px 0px; */
+    /* background-color: white;
     border-radius: 5px 5px 0px 0px;
-    height: 41px;
+    height: 45px; */
+}
+
+BODY.hamburger #menubar_content.open #menubar_hamburger {
+    background-position: -3px -38px !important;
+    /* z-index: 2; */
+}
+
+#menubar_items #graph_display.narrow {
+    width: auto;
+    min-width: 300px;
+}
+
+#menubar_items #graph_display.narrow svg,
+#menubar_items #graph_display.narrow #graph_nodes {
+    display: none; /* no nodes or connections in narrow mode */
+}
+
+#menubar_items #graph_display.narrow #graph_topics {
+    width: auto;
+    padding-left: 0px;
+    float: none;
+}
+
+#menubar_items #graph_display.narrow #graph_topics .graph_topic:last-of-type{
+    padding-bottom: 50px;
+}
+
+#modal-underlay {
+    display: none;
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.457);
+    z-index: 35px;
+    cursor: pointer;
+}
+
+#hamburger_menu_label {
+    display: none;
+    position: absolute;
+    left: 50%;
+    /* background: red; */
+    top: 20px;
+    height: 10px;
+    color: #ffffff69;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+BODY.hamburger #graph_controls.active .hamburger_menu_label {
+    display: block;
+}
+
+/* BODY.hamburger.menu-overlay #graph_display {
+    border-radius: 0px 5px 5px 0px;
+} */
+
+/* BODY.hamburger.menu-overlay #graph_display .graph_node {
+    margin-right: 10px;
+} */
+
+BODY.hamburger #graph_display.hamburger-open {
+    display: block;
+    border-radius: 5px;
 }
 
 BODY.hamburger #menubar_items {
     width: 245px;
-    background-color: white;
-    left: 0px;
-    top: 40px;
+    background-color: #131317;
+    left: -16px;
+    top: -10px;
     position: absolute;
-    padding: 5px;
+    padding: 63px 20px 20px 20px;
     display: none;
-    border-radius: 0px 5px 5px 5px;
+    border-radius: 0px 5px 5px 0px;
+    overflow: hidden;
+    /* filter: drop-shadow(10px 0px 11px #000000); */
 }
 
-BODY.hamburger #menubar_content:hover #menubar_items {
+#menubar_hamburger_close {
+    display: none;
+}
+
+BODY.hamburger #menubar_hamburger_close {
+    display: block;
+    color: #fff;
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    cursor: pointer;
+    background-image: url(/static/menu-arrow.png);
+    background-repeat: no-repeat;
+    padding-left: 16px;
+    background-size: 9px;
+    background-position: 0px 2px;
+}
+
+BODY.hamburger #menubar_content.open #menubar_items {
     display: block;
 }
 
-
+BODY.hamburger.menu-overlay #menubar_content:hover #menubar_items {
+    display: none;
+}
 
 BODY.narrow #menubar {
     width: 542px;
@@ -222,6 +312,7 @@ BODY.narrower .narrower-w { display: inline; }
 
 #graph_display {
     width: 800px;
+    min-width: 800px;
     height: 600px;
     position: absolute;
     left: 0px;
@@ -348,8 +439,8 @@ BODY.narrower .narrower-w { display: inline; }
 }
 
 
-#graph_controls.active:hover #graph_display,
-#graph_controls.active.hover_waiting #graph_display {
+BODY.top-menu #graph_controls.active:hover #graph_display,
+BODY.top-menu #graph_controls.active.hover_waiting #graph_display {
     display: block;
 }
 
@@ -378,10 +469,20 @@ BODY.hamburger #camera_controls,
 BODY.hamburger #docker_controls {
     border-radius: 5px 5px 5px 5px;
     font-size: 16px;
-    padding: 15px 10px;
+    padding: 0px 0px;
     clear: both;
-    float: none;
+    width: 245px;
     margin: 1px 0px 0px 0px;
+}
+
+BODY.hamburger #graph_controls #graph_nodes_label {
+    left: 10px;
+    top: 10px;
+}
+
+BODY.hamburger #graph_controls #graph_topics_label {
+    left: 137px;
+    top: 10px;
 }
 
 #graph_controls:hover,
@@ -404,7 +505,7 @@ BODY.hamburger #docker_controls {
 }
 
 BODY.hamburger #graph_controls {
-    background-position: 102px 12px;
+    background-position: 100px 7px;
 }
 
 .narrower #graph_controls {
@@ -565,40 +666,40 @@ BODY.narrower #graph_controls #graph_topics_label {
     margin-bottom: 5px;
 } */
 
-#graph_controls.active:hover,
-#graph_controls.active.hover_waiting {
+BODY.top-menu #graph_controls.active:hover,
+BODY.top-menu #graph_controls.active.hover_waiting {
     border-bottom: 7px solid white;
 }
 
-#topic_controls.active:hover {
+BODY.top-menu #topic_controls.active:hover {
     border-bottom: 5px solid #6f98c4;
 }
 
-#widget_controls.active:hover {
+BODY.top-menu #widget_controls.active:hover {
     border-bottom: 5px solid #112fb3;
 }
 
-#camera_controls.active:hover {
+BODY.top-menu #camera_controls.active:hover {
     border-bottom: 5px solid #82b727;
 }
 
-#docker_controls.active:hover {
+BODY.top-menu #docker_controls.active:hover {
     border-bottom: 5px solid #de5a30;
 }
 
-#service_controls.active:hover,
-#service_controls.active.setting_shortcuts {
+BODY.top-menu #service_controls.active:hover,
+BODY.top-menu #service_controls.active.setting_shortcuts {
     border-bottom: 5px solid #b311a3;
 }
 
-#graph_controls.active:hover,
-#graph_controls.active.hover_waiting,
-#service_controls.active:hover,
-#camera_controls.active:hover,
-#docker_controls.active:hover,
-#topic_controls.active:hover,
-#widget_controls.active:hover,
-#service_controls.active.setting_shortcuts {
+BODY.top-menu #graph_controls.active:hover,
+BODY.top-menu #graph_controls.active.hover_waiting,
+BODY.top-menu #service_controls.active:hover,
+BODY.top-menu #camera_controls.active:hover,
+BODY.top-menu #docker_controls.active:hover,
+BODY.top-menu #topic_controls.active:hover,
+BODY.top-menu #widget_controls.active:hover,
+BODY.top-menu #service_controls.active.setting_shortcuts {
     border-radius: 0px;
     margin-top: 0px;
     margin-bottom: 0px;
@@ -720,13 +821,24 @@ BODY.narrower #graph_controls #graph_topics_label {
     margin-top: 3px;
 }
 
-#service_controls.active:hover #service_list,
-#topic_controls.active:hover #topic_list,
-#widget_controls.active:hover #widget_list,
-#camera_controls.active:hover #cameras_list,
-#docker_controls.active:hover #docker_list,
-#service_controls.active.setting_shortcuts #service_list {
+BODY.top-menu #service_controls.active:hover #service_list,
+BODY.top-menu #topic_controls.active:hover #topic_list,
+BODY.top-menu #widget_controls.active:hover #widget_list,
+BODY.top-menu #camera_controls.active:hover #cameras_list,
+BODY.top-menu #docker_controls.active:hover #docker_list,
+BODY.top-menu #service_controls.active.setting_shortcuts #service_list {
     display: block;
+}
+
+BODY.hamburger #graph_controls.active H3,
+BODY.hamburger #service_controls.active H3,
+BODY.hamburger #topic_controls.active H3,
+BODY.hamburger #widget_controls.active H3,
+BODY.hamburger #camera_controls.active H3,
+BODY.hamburger #docker_controls.active H3 {
+    cursor: pointer;
+    display: block;
+    padding: 10px 10px;
 }
 
 .expandable.collapsed .service {
@@ -986,12 +1098,12 @@ BODY.narrower #graph_controls #graph_topics_label {
     width: 350px;
 }
 
-@media screen and (orientation: portrait) {
-    #network-info-wrapper #network-details {
-        left: 10px; /* move to left edge */
-        right: auto;
-    }
+
+#network-info-wrapper #network-details.one-column {
+    left: 0px; /* move to left edge */
+    right: auto;
 }
+
 
 #network-info-wrapper:hover #network-details {
     display: block;
@@ -1063,9 +1175,9 @@ BUTTON#trigger_wifi_scan.working {
     top: 1px;
     z-index: 114;
     background-image: url('/static/icon-menu.png');
-    background-size: 39px 25px;
+    background-size: 39px;
     background-repeat: no-repeat;
-    background-position: -19px 0px;
+    background-position: -19px 1px;
     cursor: pointer;
 }
 

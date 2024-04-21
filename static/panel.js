@@ -67,7 +67,11 @@ export class Panel {
                 //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
 
-        let widget_opts = {w: w, h: h, content: html};
+        let widget_opts = {
+            w: w,
+            h: h,
+            content: html
+        };
         if (x != null && x != undefined) widget_opts.x = x;
         if (y != null && y != undefined) widget_opts.y = y;
 
@@ -345,8 +349,8 @@ export class Panel {
         if (!menu_el.length)
             return;
         let pos = menu_el.parent().offset();
-        // console.log(this.id_source+' menuburger pos ', pos);
-        if (pos.left < 150) {
+        console.log(this.id_source+' menuburger pos ', pos);
+        if (pos.left < 150 && !$('#grid-stack').hasClass('gs-1')) { //not in 1-col mode
             menu_el.addClass('right')   
         } else {
             menu_el.removeClass('right')

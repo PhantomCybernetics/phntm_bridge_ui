@@ -11,7 +11,7 @@ import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.j
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
 import { Panel } from "./panel.js";
-import { isTouchDevice } from "./lib.js";
+import { isPortraitMode, isTouchDevice } from "./lib.js";
 
 export class PanelUI {
 
@@ -51,6 +51,7 @@ export class PanelUI {
         let GridStack = window.exports.GridStack;
         this.grid = GridStack.init({
             float: false,
+            animate: true,
             cellHeight: grid_cell_height,
             handle: '.panel-title',
             columnOpts: {
@@ -69,7 +70,10 @@ export class PanelUI {
         this.last_pc_stats = null;
 
         let that = this;
-
+        this.small_menu_full_width = 255;
+        this.burger_menu_open_item = null;
+        this.burger_menu_open = false;
+        
         this.lastAP = null;
         this.lastESSID = null;
 
@@ -224,17 +228,6 @@ export class PanelUI {
 
         });
 
-        // client.on('media_stream', (stream) => {
-        //     for (let id_panel in Object.keys(that.panels)) {
-        //         let panel = that.panels[id_panel];
-        //         console.log('id_panel: '+id_panel+'; panel=', panel, that.panels)
-        //         if (panel.id_stream == stream.id) {
-        //             console.log('Found video panel for new media stream '+stream.id+' src='+id_panel);
-        //             document.getElementById('panel_video_'+panel.n).srcObject = stream;
-        //         }
-        //     }
-        // });
-
         client.on('peer_connected', () => {
             that.update_webrtc_status();
         })
@@ -243,7 +236,7 @@ export class PanelUI {
             that.update_webrtc_status();
         })
 
-        // browsers Socket.io connection to the Cloud Bridge's server
+        // browser's Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect',  () => {
             $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
             that.set_dot_state(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
@@ -264,19 +257,24 @@ export class PanelUI {
         }, 1000);
 
         this.grid.on('added removed change', function(e, items) {
+            console.log('grid changed', items);
             if (items) {
                 items.forEach(function(item) {
                     let id_src = $(item.el).find('.grid_panel').attr('data-source');
-                    if (that.panels[id_src])
+                    if (that.panels[id_src]) {
                         that.panels[id_src].auto_menu_position();
-                    // if (item.w < 3 && item.x == 0) {
-                    //     
+                        that.panels[id_src].onResize();
+                        window.setTimeout(() => {
+                            // console.warn('Delayed resize '+id_src);
+                            that.panels[id_src].onResize();
+                        }, 300); // animaiton duration
+                    }
                 });
             }
             that.update_url_hash();
         });
 
-        this.grid.on('resize resizestop', function(e, el) {
+        this.grid.on('resizestart resize resizestop', function(e, el) {
             let id_source = $(el).find('.grid_panel').attr('data-source');
             that.panels[id_source].onResize();
         });
@@ -293,8 +291,6 @@ export class PanelUI {
                 $('#introspection_state').addClass('active');
             }
 
-            // console.log('Starting discovery...');
-            // SetDiscoveryState(true);
             client.socket.emit('introspection', { id_robot: client.id_robot, state:!is_active }, (res) => {
                 if (!res || !res['success']) {
                     console.error('Introspection start err: ', res);
@@ -323,6 +319,275 @@ export class PanelUI {
             if ($('#graph_controls').hasClass('hover_waiting'))
                 $('#graph_controls').removeClass('hover_waiting');
         });
+
+        // hanburger menu handlers
+        $('#menubar_hamburger, #menubar_hamburger_close').click(()=>{
+            that.set_burger_menu_state(!that.burger_menu_open);
+        });
+        $('#graph_controls_heading').click(()=>{
+            that.burger_menu_action('#graph_display');
+        });
+        $('#services_heading').click(()=>{
+            that.burger_menu_action('#service_list');
+        });
+        $('#cameras_heading').click(()=>{
+            that.burger_menu_action('#cameras_list');
+        });
+        $('#docker_heading').click(()=>{
+            that.burger_menu_action('#docker_list');
+        });
+        $('#widgets_heading').click(()=>{
+            that.burger_menu_action('#widget_list');
+        });
+    }
+
+    set_burger_menu_state (open, animate=true) {
+
+        let small_menu_w_inner = this.small_menu_full_width; - 50;
+        let that = this;
+
+        if (open) {
+
+            if (!this.burger_menu_open) {
+                $('#menubar_hamburger_close').text('Close');
+                $('#modal-underlay')
+                    .css('display', 'block')
+                    .unbind()
+                    .on('click', (e) => {
+                        console.log('overlay clicked')
+                        that.set_burger_menu_state(false, false);
+                    });
+            }
+
+            let menu_w = this.set_min_burger_menu_width(small_menu_w_inner, false); // no animation
+            this.burger_menu_open = true;
+            $('#menubar_content')
+                .addClass('open');
+
+            // move in menu bg
+            $('#menubar_items')
+                .css({
+                    left: -this.small_menu_full_width+'px' //starting pos off screen
+                })
+                .stop().animate({
+                    left: '-16px' /* slide in from the left */
+                }, 200);
+
+        }
+        else { // back > close
+            
+            if (this.burger_menu_open_item) {
+
+                console.log('closing burger menu open item '+this.burger_menu_open_item);
+
+                $('#menubar_hamburger_close').text('Close');
+                $('#hamburger_menu_label')
+                    .text('')
+                    .removeClass('graph_controls')
+                    .css('display','none');
+
+                let open_el = $(this.burger_menu_open_item);
+                if (animate) {
+                     // move the opened item all the way out
+                    
+                    let menu_w = this.set_min_burger_menu_width(small_menu_w_inner); // animates
+                    open_el.stop().animate({
+                        left: menu_w+'px'
+                    }, 200, () => {
+                        // hide when done
+                        open_el.removeClass('hamburger-open') 
+                    });
+                    
+                    // bring menu items back
+                    $('#menubar_items > DIV').stop().animate({
+                        left: '0px'
+                    }, 200, () => {
+        
+                    });
+                    
+                    this.burger_menu_open_item = null; //next click closes
+                    return; 
+
+                } else {
+
+                    open_el.stop().css({
+                        left: '', //unset
+                        top: '',
+                        width: ''
+                    }).removeClass('hamburger-open') 
+                    $('#menubar_items > DIV').stop().css({
+                        left: '0px',
+                    });
+                    this.burger_menu_open_item = null;
+
+                }
+            }
+            
+            console.log('closing burger menu');
+
+            // close -> roll out to the left
+            this.burger_menu_open = false;
+            if (animate) {
+                $('#menubar_items')
+                .stop().animate({
+                    left:  -this.small_menu_full_width+'px' //back to hidde
+                }, 200, () => {
+                    $('#menubar_content').removeClass('open');
+                    $('#menubar_items').css({
+                        left: '' //unset 
+                    });
+                });    
+            } else {
+                $('#menubar_items')
+                    .stop().css({
+                        left: '', //unset 
+                        width: ''
+                    });
+                $('#menubar_content').removeClass('open');
+                $('#menubar_items > DIV').stop().css({
+                    left: '', //unset
+                });
+            }
+            
+            $('#modal-underlay').css('display', 'none');
+        }       
+    }
+
+    burger_menu_action(what) {
+
+        if (!$('BODY').hasClass('hamburger') || !this.burger_menu_open)
+            return;
+
+        let now_opening = this.burger_menu_open_item === null;
+        console.warn('Burger menu: '+what);
+        this.burger_menu_open_item = what;
+        // let small_menu_full_width = 255;
+
+        $('#menubar_hamburger_close').text('Back')
+
+        if (what == '#graph_display') {
+            let min_w = $('#graph_display').css('min-width'); //?? +20; //+margin
+            let menu_w = this.set_min_burger_menu_width(min_w);
+
+            let el_w = (menu_w-20);
+            let el = $(what);
+            if (now_opening) {
+                console.log('Now opening '+what);
+
+                // move menu items out to the left
+                $('#menubar_items > DIV').stop().animate({
+                    left: -(this.small_menu_full_width+20)+'px'
+                }, 200, () => {
+
+                });
+
+                $('#hamburger_menu_label')
+                    .text(this.graph_menu.node_ids.length + ' Nodes / ' + this.graph_menu.topic_ids.length + ' Topics')
+                    .addClass('graph_controls')
+                    .css('display','block');
+
+                el.css({
+                        width: el_w + 'px', //10 is padding
+                        left: (this.small_menu_full_width+20)+'px', // top right of the parent (moving) item
+                        top: '0px'
+                    })
+                    .addClass('hamburger-open')
+                    .stop();
+                    // .animate({
+                    //     left: this.small_menu_full_width + 'px', // compensate for moving parent menu item
+                    //     width: el_w +'px' //10 is padding
+                    // });
+            } else {
+                console.log('Now updating '+what);
+                el.css({
+                    width: el_w + 'px' //10 is padding
+                });
+            }
+            
+        } else {
+
+
+        }
+
+        // // $('BODY').addClass('menu-overlay');
+        // let w_body = screen.availWidth;
+        // if (w_body > 820) {
+        //     w_body = 820;
+        // }
+
+        // let h_body = screen.availHeight;
+        // let that = this;
+        // $('#menubar_items').animate({
+        //     left: '-16px', /* left screen edge */
+        //     width: (w_body-10)+'px',
+        //     height: (h_body-61)+'px',
+        //   }, 5100, function() {
+        //     console.log('yo menubar_items!');
+        //     // Animation complete.
+        //   });
+        // $('#menubar_items > DIV').animate({
+        //     left: '-'+(small_menu_full_width)+'px',
+        //   }, 5100, function() {
+        //     that.hamburger_menu_full_width = true;
+        //     console.log('yo menubar_items > DIV!');
+        //     // Animation complete.
+        //   });
+
+        // this.menu_overlay_el = $(what);
+        
+        // this.menu_overlay_el.css({
+        //     'width': (w_body-20)+'px',
+        //     'left': (w_body+small_menu_full_width)+'px',
+        //     'height': (h_body-76)+'px',
+        //     'top': '0px',
+        //     'display': 'block'
+        // }).animate({
+        //     left: (small_menu_full_width-5)+'px',
+        //   }, 5100, function() {
+        //     that.menu_overlay_el.addClass('menu-overlay');
+        //     console.log('yo !');
+        //     // Animation complete.
+        //   });
+    }
+
+    set_min_burger_menu_width(min_content_width, animate=true) {
+
+        min_content_width = parseInt(min_content_width);
+        let requisted_min_width = min_content_width;
+
+        if (min_content_width <= this.small_menu_full_width)
+            min_content_width = this.small_menu_full_width-10;
+        else {
+            min_content_width += 20;
+
+            let w_body = $('body').innerWidth(); 
+            if (min_content_width > w_body-200) {
+                min_content_width = w_body; //expand to full if too close
+            }
+        }
+            
+        let current_w = parseInt($('#menubar_items').css('width'));
+        // console.warn('set_min_burger_menu_width: '+min_width+'; current='+current_w);
+
+        if (current_w != min_content_width) {
+            if (animate) {
+                $('#menubar_items')
+                    .stop()
+                    .animate({
+                            width: min_content_width+'px'
+                        }, 200, () => {
+                    // console.warn('set_min_burger_menu_width DONE');
+                    });
+            } else {
+                $('#menubar_items')
+                    .stop()
+                    .css({
+                        width: min_content_width+'px'
+                    });
+            }
+        }
+
+        return min_content_width;
     }
 
     init_panels(topics) {
@@ -423,8 +688,9 @@ export class PanelUI {
 
         this.graph_menu.update(nodes);        
 
-        $('#graph_nodes_label B').html(this.graph_menu.node_ids.length)
-        $('#graph_topics_label B').html(this.graph_menu.topic_ids.length)
+        $('#graph_nodes_label B').html(this.graph_menu.node_ids.length);
+        $('#graph_topics_label B').html(this.graph_menu.topic_ids.length);
+        $('#hamburger_menu_label.graph_controls').html(this.graph_menu.node_ids.length + ' Nodes / ' + this.graph_menu.topic_ids.length + ' Topics'); //update when open
         $('#graph_controls').addClass('active');
     }
 
@@ -908,7 +1174,7 @@ export class PanelUI {
             state = 'n/a'
 
         if (state == 'Connected') {
-            $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [p2p]<//span>'));
+            $('#webrtc_status').html('<span class="online">'+state+'</span>'+(via_turn?' <span class="turn">[TURN]</span>':'<span class="online"> [P2P]<//span>'));
             $('#trigger_wifi_scan').removeClass('working')
             if (via_turn)
                 this.set_dot_state(2, 'yellow', 'WebRTC connected to robot (TURN)');
@@ -1011,7 +1277,7 @@ export class PanelUI {
 
     set_body_classes(enabled_classes) {
 
-        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'touch-ui'];
+        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui'];
         let inactive_classes = [];
         
         for (let i = 0; i < all_body_classes.length; i++) {
@@ -1020,7 +1286,7 @@ export class PanelUI {
                 inactive_classes.push(c);
         }
 
-        console.log('Body removing/setting ', inactive_classes, enabled_classes);
+        // console.log('Body removing/setting ', inactive_classes, enabled_classes);
 
         $('body')
             .removeClass(inactive_classes)
@@ -1076,18 +1342,98 @@ export class PanelUI {
         let available_w_center = $('#fixed-center').innerWidth();
 
         let cls = [];
-        
-        if (available_w_center < narrower_menubar_w) { // .narrower menubar
+        let hb = false;
+
+        if (isPortraitMode() || available_w_center < narrower_menubar_w) { // .narrower menubar
             cls.push('hamburger');
+            hb = true;
             available_w_center = w_body; //uses full page width
+            // if (this.menu_overlay_el) {
+    
+            // }
         } else if (available_w_center < narrow_menubar_w) { // .narrow menubar
             cls.push('narrower');
+            cls.push('top-menu');
         }
         else if (available_w_center < full_menubar_w) { // full menubar
             cls.push('narrow');
+            cls.push('top-menu');
         } else {
             cls.push('full-width');
+            cls.push('top-menu');
         }
+
+        if (hb) {
+            $('#menubar_items').css({
+                height: (screen.availHeight-60)+'px' // bg fills screenheight
+            });
+            let graph_w_full = 820;
+            //  let graph_w = $('#graph_display').innerWidth();
+            // console.log('HB is on, full_w='+graph_w_full+' w_body='+w_body);
+            if (graph_w_full > w_body) {
+                $('#graph_display').addClass('narrow');
+                // console.log('HB > narrow');
+            } else {
+                $('#graph_display').removeClass('narrow');
+                // console.log('HB > full');
+            }
+            if (this.burger_menu_open_item) {
+                this.burger_menu_action(this.burger_menu_open_item);
+            }
+        } else {
+            if (this.burger_menu_open) {
+                this.set_burger_menu_state(false, false); //no animations
+            }
+            $('#menubar_items').css({
+                height: '' //unset
+            });
+            $('#graph_display').removeClass('narrow');
+        };
+
+        //this.update_graph_menu_size();
+
+        // let w_graph_menu = w_body+20;
+        // let enough_room_for_graph = w_graph_menu > 800;
+
+        // if (hb && !enough_room_for_graph && this.menu_overlay_el) {
+        //     // let cnt = $('#menubar_content');
+        //     $('#menubar_items')
+        //         .addClass('narrow');
+        //     // $('#service_list').appendTo(cnt);
+        //     // $('#cameras_list').appendTo(cnt);
+        //     // $('#docker_list').appendTo(cnt);
+        //     // $('#widget_list').appendTo(cnt);
+        // } else {
+        //     $('#menubar_items')
+        //         .removeClass('narrow');
+        //     // $('#service_list').appendTo($('#service_controls'));
+        //     // $('#cameras_list').appendTo($('#camera_controls'));
+        //     // $('#docker_list').appendTo($('#docker_controls'));
+        //     // $('#widget_list').appendTo($('#widget_controls'));
+        // }
+
+        // if (enough_room_for_graph) {
+        //     w_graph_menu = 800;
+        // }
+
+        // if ($('#graph_display').hasClass('menu-overlay')) {
+        //     $('#graph_display').css({
+        //         'width': w_graph_menu+'px'
+        //     });
+        // } 
+        
+        // // if (this.hamburger_menu_full_width) {
+        // if ($('#menubar_items').hasClass('narrow')) {
+        //     $('#menubar_items').css({
+        //         'width': (w_body+30)+'px', 
+        //     });
+        // } else {
+        //     $('#menubar_items').css({
+        //         'width': '', 
+        //     });
+        // }
+        
+        //}
 
         let direct_editing_enabled = true;
         if (isTouchDevice()) {
@@ -1112,7 +1458,18 @@ export class PanelUI {
 
         $('body').addClass('initiated');
 
-        console.log('Layout: body='+w_body+'; left='+w_left+'; right='+w_right+'; net='+w_netinfo+'; av center='+available_w_center);
+        let net_el = $('#network-info-wrapper #network-details');
+        if (w_body < 600) {
+            net_el
+                .addClass('one-column')
+                .css('width', w_body+20); //+padding
+        } else {
+            net_el
+                .removeClass('one-column') 
+                .css('width', ''); // unset
+        }
+
+        // console.log('Layout: body='+w_body+'; left='+w_left+'; right='+w_right+'; net='+w_netinfo+'; av center='+available_w_center);
 
         // console.info('body.width='+w+'px');
         // if (w < 1500)
