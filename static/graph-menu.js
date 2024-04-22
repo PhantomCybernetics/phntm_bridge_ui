@@ -28,19 +28,26 @@ export class GraphMenu {
         this.hovered_id_node = null;
         this.hovered_topic = null;
 
-        let margin = {top: 0, right: 0, bottom: 0, left: 0};
-        let width = 200 - margin.left - margin.right;
-        let height = 600 - margin.top - margin.bottom;
+        this.margin = {top: 0, right: 0, bottom: 0, left: 0};
+        this.width = 0;
+        this.height = 0;
+        let available_w = 825; // top menu defauls
+        let available_h = 600; //
+        if ($('BODY').hasClass('hamburger')) {
+            available_w = window.innerWidth - 35;
+            available_h = window.innerHeight-110;
+        }
+        this.set_dimensions(available_w, available_h);
 
         let that = this;
 
         // append the svg object to the body of the page
         this.svg = d3.select("#graph_display")
             .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
+            .attr("width", this.width)
+            .attr("height", this.height)
             .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
         this.svg.append('defs')
             .append("marker")
@@ -75,6 +82,25 @@ export class GraphMenu {
             that.redraw_links();
         });
     }
+
+    set_dimensions(full_w, h) {
+        let w_svg = full_w - 300 - 300 - 25;
+        this.width = w_svg - this.margin.left - this.margin.right;
+        this.height = h - this.margin.top - this.margin.bottom;
+        this.topic_container_el.css('padding-left', w_svg);
+        if (this.svg) {
+            console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
+            $('#graph_display svg').attr({
+                "width": this.width,
+                "height": this.height
+            });
+            this.svg
+                .attr("width", this.width)
+                .attr("height", this.height);
+            this.redraw_links();
+        }
+        
+     }
 
     update(nodes) {
         
@@ -341,7 +367,7 @@ export class GraphMenu {
         let pos_topic = -this.topic_container_el.scrollTop() + 18 + t.offset + link.topic_conn_no*5;
 
         let offset_node  = link.group == 1 ? 2 : 5; // 1 >, 2 <
-        let offset_topic = link.group == 1 ? 195 : 198;
+        let offset_topic = link.group == 1 ? this.width-5 : this.width-2;
 
         return 'M '+offset_node+' '+pos_node+' C 100 '+pos_node+', 100 '+pos_topic+', '+offset_topic+' '+pos_topic;
     }

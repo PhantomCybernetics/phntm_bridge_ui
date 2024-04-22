@@ -1,9 +1,14 @@
 body {
     background-color: #0b141f;
     color: black;
-    margin: 20px;
-    padding-bottom: 100px; /* make some space for panel resizing  */
-  }
+    margin: 0px;
+    padding: 0px 0px 100px 0px; /* make some space for panel resizing  */
+}
+
+BODY.no-scroll {
+    overflow: hidden;
+    height: 100%;
+}
 
 .msgTypes {
     color: gray;
@@ -82,7 +87,7 @@ h3 {
 }
 
 #fixed-header {
-    position: fixed;
+    position: sticky;
     z-index: 16; /* above hovered grid panel (15) */
     background: #000000d6;
     width: 100%;
@@ -128,7 +133,7 @@ h3 {
     /* background: cyan; */
     top: 0px;
     left: 50%;
-    width: 682px;
+    width: 705px;
     margin-left: -341px;
     display: none;
 }
@@ -153,7 +158,7 @@ BODY.hamburger #menubar {
 
 BODY.hamburger #menubar_content {
     position: relative;
-    left: 16px;
+    margin-left: 16px;
 }
 
 BODY.hamburger #menubar_hamburger {
@@ -197,7 +202,7 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
 
 #menubar_items #graph_display.narrow #graph_topics {
     width: auto;
-    padding-left: 0px;
+    padding-left: 0px !important;
     float: none;
 }
 
@@ -220,13 +225,15 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
 #hamburger_menu_label {
     display: none;
     position: absolute;
-    left: 50%;
+    left: 0px;
     /* background: red; */
     top: 20px;
     height: 10px;
     color: #ffffff69;
     font-weight: bold;
     white-space: nowrap;
+    width: 100%;
+    text-align: center;
 }
 
 BODY.hamburger #graph_controls.active .hamburger_menu_label {
@@ -269,6 +276,7 @@ BODY.hamburger #menubar_hamburger_close {
     position: absolute;
     left: 20px;
     top: 20px;
+    z-index: 10;
     cursor: pointer;
     background-image: url(/static/menu-arrow.png);
     background-repeat: no-repeat;
@@ -286,13 +294,13 @@ BODY.hamburger.menu-overlay #menubar_content:hover #menubar_items {
 }
 
 BODY.narrow #menubar {
-    width: 542px;
-    margin-left: -271px;
+    width: 575px;
+    margin-left: -287px;
 }
 
 BODY.narrower #menubar{
-    width: 502px;
-    margin-left: -251px;
+    width: 535px;
+    margin-left: -267px;
 }
 
 .full-w { display: none; }
@@ -1169,15 +1177,15 @@ BUTTON#trigger_wifi_scan.working {
 .monitor_menu {
     position: absolute;
     display: block;
-    width: 20px;
+    width: 27px;
     height: 20px;
     right: 0px;
     top: 1px;
     z-index: 114;
-    background-image: url('/static/icon-menu.png');
-    background-size: 39px;
+    background-image: url(/static/icon-menu.png);
+    background-size: 59px;
     background-repeat: no-repeat;
-    background-position: -19px 1px;
+    background-position: -30px -2px;
     cursor: pointer;
 }
 
@@ -1573,6 +1581,79 @@ SPAN.error {
     display: none;
     overflow: scroll;
     height: -webkit-fill-available;
+}
+
+#touch-ui-dialog {
+    position: fixed;
+    left: 0px;
+    top: -10px;
+    width: 100%;
+    height: auto; /* content resizes */
+    z-index: 100;
+    padding: 60px 0px 0px 0px;
+    overflow: visible;
+    display: none;
+    background: #000000e0;
+}
+
+#touch-ui-dialog .title {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    font-size: 22px;
+    line-height: 40px;
+    white-space: nowrap;
+    /* background: #003aff; */
+    right: 20px;
+    overflow: hidden;
+    color: #fff;;
+}
+
+#touch-ui-dialog .content {
+    padding: 10px;
+    border-radius: 5px;
+    height: 710px;
+    margin: 10px 10px 80px 10px;
+    overflow: scroll;
+    margin-top: 10px;
+    font-size: 15px;
+    overscroll-behavior: none;
+}
+
+BODY.landscape #touch-ui-dialog .content {
+    margin-bottom: 10px;
+}
+
+#touch-ui-dialog.msg_type .content {
+    background-color: #210077;
+    font-family: monospace;
+    white-space: pre;
+    color: #00fff9;
+}
+
+
+#touch-ui-dialog button.close {
+    position: absolute;
+    display: block;
+    height: 60px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 5px;
+    background: #434343;
+    border: 0px;
+    color: #fff;
+    font-size: 26px;
+}
+
+/* right top */
+BODY.landscape #touch-ui-dialog button.close {
+    left: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    height: 40px;
+    top: 20px;
+    font-size: 20px;
 }
 
 #msg_type-dialog.err {
@@ -2246,10 +2327,13 @@ BODY.touch-ui .editing .grid-stack-item-content {
     border-radius: .25rem;
 }
 
+#grid-stack-container {
+    position: relative;
+    /* padding: 0px 10px; */
+}
+
 .grid-stack {
-    margin-top: 60px;
-    margin-left: -10px;
-    margin-right: -10px;
+    margin: 10px 5px 5px 5px;
 }
 
 /* BODY.hamburger .grid-stack {

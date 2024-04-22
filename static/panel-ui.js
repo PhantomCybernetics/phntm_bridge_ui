@@ -350,6 +350,7 @@ export class PanelUI {
 
             if (!this.burger_menu_open) {
                 $('#menubar_hamburger_close').text('Close');
+                $('BODY').addClass('no-scroll');
                 $('#modal-underlay')
                     .css('display', 'block')
                     .unbind()
@@ -449,6 +450,7 @@ export class PanelUI {
                 });
             }
             
+            $('BODY').removeClass('no-scroll');
             $('#modal-underlay').css('display', 'none');
         }       
     }
@@ -463,7 +465,7 @@ export class PanelUI {
         this.burger_menu_open_item = what;
         // let small_menu_full_width = 255;
 
-        $('#menubar_hamburger_close').text('Back')
+        $('#menubar_hamburger_close').text('Back');
 
         if (what == '#graph_display') {
             let min_w = $('#graph_display').css('min-width'); //?? +20; //+margin
@@ -562,7 +564,7 @@ export class PanelUI {
 
             let w_body = $('body').innerWidth(); 
             if (min_content_width > w_body-200) {
-                min_content_width = w_body; //expand to full if too close
+                min_content_width = w_body-40; //expand to full if too close
             }
         }
             
@@ -697,28 +699,48 @@ export class PanelUI {
     message_type_dialog(msg_type, onclose=null) {
 
         let msg_type_class = msg_type ? this.client.find_message_type(msg_type) : null;;
+        let isTouch = isTouchDevice();
+        let content = (msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>');
 
-        // $('#msg_type-dialog').attr('title', );
-        $('#msg_type-dialog').html((msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>'));
-        $( "#msg_type-dialog" ).dialog({
-            resizable: true,
-            height: 700,
-            width: 700,
-            top: 180,
-            modal: true,
-            title: msg_type,
-            buttons: {
-                Okay: function() {
-                    $(this).dialog( "close" );
+        if (!isTouch) {
+            $('#msg_type-dialog')
+                .html(content);
+            $( "#msg_type-dialog" ).dialog({
+                resizable: true,
+                draggable: true,
+                height: 700,
+                width: 700,
+                top: 180,
+                modal: true,
+                title: msg_type,
+                buttons: {
+                    Okay: function() {
+                        $(this).dialog( "close" );
+                        if (onclose)
+                            onclose();
+                    },
+                },
+                close: function( event, ui ) {
                     if (onclose)
                         onclose();
-                },
-            },
-            close: function( event, ui ) {
-                if (onclose)
-                    onclose();
-            }
-        });
+                }
+            });
+        } else {
+
+            $('#touch-ui-dialog .title').html(msg_type);
+            $('#touch-ui-dialog .content').html(content);
+            $('BODY').addClass('no-scroll');
+            $('#touch-ui-dialog').addClass('msg_type').css({
+                display: 'block'
+            });
+            $('#touch-ui-dialog .content').scrollTop(0).scrollLeft(0);
+            $('#close-touch-ui-dialog').unbind().click((e)=>{
+                $('#touch-ui-dialog').css('display', 'none').removeClass('msg_type');
+                $('BODY').removeClass('no-scroll');
+            });
+                
+        }
+        
     }
 
     topic_selector_dialog(label, msg_type, exclude_topics, onselect) {
@@ -1277,7 +1299,7 @@ export class PanelUI {
 
     set_body_classes(enabled_classes) {
 
-        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui'];
+        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui', 'portrait', 'landscape'];
         let inactive_classes = [];
         
         for (let i = 0; i < all_body_classes.length; i++) {
@@ -1307,9 +1329,9 @@ export class PanelUI {
     //on resize, robot name update
     update_layout_width() {
 
-        const full_menubar_w = 682;
-        const narrow_menubar_w = 542;
-        const narrower_menubar_w = 502;
+        const full_menubar_w = 705;
+        const narrow_menubar_w = 575;
+        const narrower_menubar_w = 535;
 
         let w_body = $('body').innerWidth();
         let w_right = $('#fixed-right').innerWidth();
@@ -1344,7 +1366,14 @@ export class PanelUI {
         let cls = [];
         let hb = false;
 
-        if (isPortraitMode() || available_w_center < narrower_menubar_w) { // .narrower menubar
+        let portrait = isPortraitMode();
+        if (portrait) {
+            cls.push('portrait');
+        } else {
+            cls.push('landscape');
+        }
+
+        if (portrait || available_w_center < narrower_menubar_w) { // .narrower menubar
             cls.push('hamburger');
             hb = true;
             available_w_center = w_body; //uses full page width
@@ -1363,18 +1392,26 @@ export class PanelUI {
             cls.push('top-menu');
         }
 
+        let graph_w_full = 825;
         if (hb) {
             $('#menubar_items').css({
-                height: (screen.availHeight-60)+'px' // bg fills screenheight
+                height: (window.innerHeight-60)+'px' // bg fills screenheight
             });
-            let graph_w_full = 820;
+            
             //  let graph_w = $('#graph_display').innerWidth();
             // console.log('HB is on, full_w='+graph_w_full+' w_body='+w_body);
-            if (graph_w_full > w_body) {
+            let h = window.innerHeight-110;
+            $('#graph_display').css('height', h);
+            if (graph_w_full+45 > w_body) {
                 $('#graph_display').addClass('narrow');
                 // console.log('HB > narrow');
             } else {
                 $('#graph_display').removeClass('narrow');
+                if (this.graph_menu) {
+                    let available_w = window.innerWidth - 35;
+                    this.graph_menu.set_dimensions(available_w, h); // defaults
+                }
+                    
                 // console.log('HB > full');
             }
             if (this.burger_menu_open_item) {
@@ -1388,7 +1425,15 @@ export class PanelUI {
                 height: '' //unset
             });
             $('#graph_display').removeClass('narrow');
+            $('#graph_display').css('height', ''); // unset
+            if (this.graph_menu)
+                this.graph_menu.set_dimensions(graph_w_full, 600); // defaults
+
         };
+
+        $('BODY.touch-ui #touch-ui-dialog .content').css({
+            'height': (portrait ? window.innerHeight-160 : window.innerHeight-90) +'px'
+        });
 
         //this.update_graph_menu_size();
 
