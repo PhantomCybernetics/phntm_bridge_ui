@@ -84,7 +84,9 @@ export class GraphMenu {
     }
 
     set_dimensions(full_w, h) {
+        
         let w_svg = full_w - 300 - 300 - 25;
+        // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
         this.width = w_svg - this.margin.left - this.margin.right;
         this.height = h - this.margin.top - this.margin.bottom;
         this.topic_container_el.css('padding-left', w_svg);

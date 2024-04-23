@@ -86,6 +86,14 @@ export class PanelUI {
         });
         client.on('peer_disconnected', ()=>{
             $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+
+            that.set_dot_state(1, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
+            that.update_wifi_signal(-1);
+            that.update_num_peers(-1);
+            that.update_rtt(-1);
+            // this.update_wifi_status();
+            $('#trigger_wifi_scan').css('display','none');
+            $('#robot_wifi_info').empty().css('display', 'none');
         });
 
         let last_saved_name = this.load_last_robot_name();
@@ -109,18 +117,22 @@ export class PanelUI {
             }
 
             $('#robot_info').html('<span class="label">Robot ID:</span> '+ client.id_robot + '<br>'
-                                + '<span class="label">Robot IP:</span> ' + (client.online ? '<span class="online">'+client.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+'<br>'
+                                + '<span class="label">Robot IP:</span> ' + (client.robot_online ? '<span class="online">'+client.ip.replace('::ffff:', '')+'</span>':'<span class="offline">Offline</span>')+'<br>'
                                 + '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> '
                                 );
 
-            that.set_dot_state(1, client.online ? 'green' : 'red', 'Robot ' + (client.online ? 'conected to' : 'disconnected from') +' Cloud Bridge (Socket.io)');
-            if (!client.online) {
+            that.set_dot_state(1, client.robot_online ? 'green' : 'red', 'Robot ' + (client.robot_online ? 'conected to' : 'disconnected from') +' Cloud Bridge (Socket.io)');
+            if (!client.robot_online) {
                 that.update_wifi_signal(-1);
                 that.update_num_peers(-1);
                 that.update_rtt(-1);
             }
             that.update_webrtc_status()
             that.update_layout_width(); // robot name length affects layout
+        });
+
+        client.on('socket_disconnect', ()=>{
+            that.set_dot_state(1, client.robot_online ? 'green' : 'red', 'Robot ' + (client.robot_online ? 'conected to' : 'disconnected from') +' Cloud Bridge (Socket.io)');
         });
 
         client.on('media_stream', (id_src, stream)=>{
@@ -1408,7 +1420,7 @@ export class PanelUI {
             } else {
                 $('#graph_display').removeClass('narrow');
                 if (this.graph_menu) {
-                    let available_w = window.innerWidth - 35;
+                    let available_w = w_body - 35;
                     this.graph_menu.set_dimensions(available_w, h); // defaults
                 }
                     
@@ -1507,7 +1519,7 @@ export class PanelUI {
         if (w_body < 600) {
             net_el
                 .addClass('one-column')
-                .css('width', w_body+20); //+padding
+                .css('width', w_body-20); //-padding
         } else {
             net_el
                 .removeClass('one-column') 

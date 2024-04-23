@@ -206,9 +206,9 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
     float: none;
 }
 
-#menubar_items #graph_display.narrow #graph_topics .graph_topic:last-of-type{
+/* #menubar_items #graph_display.narrow #graph_topics .graph_topic:last-of-type{
     padding-bottom: 50px;
-}
+} */
 
 #modal-underlay {
     display: none;

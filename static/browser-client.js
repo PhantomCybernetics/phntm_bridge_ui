@@ -183,6 +183,8 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on("disconnect", () => {
             console.log('Socket.io disconnected'); // undefined
+            that.robot_online = false;
+            that.emit('socket_disconnect');
         });
 
         this.socket.on("error", (err) => {
@@ -655,8 +657,8 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         this.name = robot_data['name'];
-        let prev_online = this.online;
-        this.online = robot_data['ip'] ? true : false;
+        let prev_online = this.robot_online;
+        this.robot_online = robot_data['ip'] ? true : false;
         this.ip = robot_data['ip'];
         let prev_introspection = this.introspection;
         this.introspection = robot_data['introspection'];
@@ -665,13 +667,16 @@ export class PhntmBridgeClient extends EventTarget {
         }
             
 
-        if (this.online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
+        if (this.robot_online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn('Creating new webrtc peer');
             this.pc = this._init_peer_connection(this.id_robot);
+        } else {
+            console.warn(`NOT Creating new webrtc peer, robot_online=${this.robot_online} pc=${this.pc}`);
+            // this.pc.connect();
         }
 
-        if (prev_online != this.online)
-            this.emit('online', this.online);
+        if (prev_online != this.robot_online)
+            this.emit('online', this.robot_online);
         this.emit('update');
         if (prev_introspection != this.introspection)
             this.emit('introspection', this.introspection);
@@ -788,7 +793,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         // server reports robot disconnect
         // in case of socket connection loss this webrtc stays up transmitting p2p
-        if (!this.online && this.pc && this.pc_connected) {
+        if (!this.robot_online && this.pc && this.pc_connected) {
             // console.warn('Robot offline, restarting pc...');
             // this.pc.close();
             // const ev = new Event("connectionstatechange");
@@ -1258,20 +1263,24 @@ export class PhntmBridgeClient extends EventTarget {
                 }
             } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
-                console.error('Peer disconnected', evt);
+                console.error(`Peer disconnected, robot_online=${that.robot_online }`);
 
+                let was_connected = pc.connected;
                 pc.connected = false;
 
-                that.emit('peer_disconnected');
+                if (was_connected)
+                    that.emit('peer_disconnected');
 
                 Object.keys(that.subscribers).forEach((sub) => {
 
                 });
 
-                // that.pc.close();
-                // that.pc = null;
-
-                // that.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
+                if (!that.robot_online && (!that.socket || !that.socket.connected)) {
+                    console.warn('Clearing peer connection & instance id');
+                    that.pc.close();
+                    that.pc = null;
+                    that.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
+                }
 
                 // return;
 
