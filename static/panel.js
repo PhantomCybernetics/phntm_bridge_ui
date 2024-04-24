@@ -100,6 +100,58 @@ export class Panel {
         window.setTimeout(()=>{
             panels[id_source].onResize()
         }, 300); // resize at the end of the animation
+
+        if (!this.editBtn) {
+            // pause panel updates
+            this.editBtn = $('<span id="edit_panel_'+this.n+'" class="edit-panel-button" title="Edit panel"></span>');
+            this.editBtn.insertBefore('#monitor_menu_'+this.n);
+        }
+
+        let that = this;
+        this.editBtn.click(function(e) {
+            let w = $(that.grid_widget);
+            console.log('Edit clicked, editing='+that.editing);
+            if (!that.editing) {
+                that.editing = true;
+                w.addClass('editing');
+                that.ui.grid.resizable(that.grid_widget, true);
+                that.ui.grid.movable(that.grid_widget, true);
+            } else {
+                that.editing = false;
+                w.removeClass('editing');
+                that.ui.grid.resizable(that.grid_widget, false);
+                that.ui.grid.movable(that.grid_widget, false);
+            }
+            
+            e.cancelBubble = true;
+            return false;
+        });
+
+        this.edit_timeout = null;
+        $('#panel_title_'+this.n).on('touchstart', () => {
+            if (that.editing)
+                return;
+            console.log('Touch start '+id_source);
+            that.edit_timeout = window.setTimeout(()=>{
+                if (!that.editing) {
+                    let w = $(that.grid_widget);
+                    that.editing = true;
+                    w.addClass('editing');
+                    that.ui.grid.resizable(that.grid_widget, true);
+                    that.ui.grid.movable(that.grid_widget, true);
+                }
+            }, 1000);
+        });
+
+        $('#panel_title_'+this.n).on('touchend', () => {
+            if (that.editing)
+                return;
+            if (that.edit_timeout) {
+                window.clearTimeout(that.edit_timeout);
+                that.edit_timeout = null;
+            }
+            console.log('Touch end '+id_source);
+        });
     }
 
     // init with message type when it's known
@@ -109,12 +161,6 @@ export class Panel {
         console.log('Panel init '+this.id_source+'; msg_type='+msg_type);
 
         let fallback_show_src = true;
-
-        if (!this.editBtn) {
-            // pause panel updates
-            this.editBtn = $('<span id="edit_panel_'+this.n+'" class="edit-panel-button" title="Edit panel"></span>');
-            this.editBtn.insertBefore('#monitor_menu_'+this.n);
-        }
 
         if (!this.pauseEl) {
             // pause panel updates
@@ -219,25 +265,6 @@ export class Panel {
                 e.cancelBubble = true;
                 return false;
             });
-
-            this.editBtn.click(function(e) {
-                let w = $(that.grid_widget);
-                if (!that.editing) {
-                    that.editing = true;
-                    w.addClass('editing');
-                    that.ui.grid.resizable(that.grid_widget, true);
-                    that.ui.grid.movable(that.grid_widget, true);
-                } else {
-                    that.editing = false;
-                    w.removeClass('editing');
-                    that.ui.grid.resizable(that.grid_widget, false);
-                    that.ui.grid.movable(that.grid_widget, false);
-                }
-                
-                e.cancelBubble = true;
-                return false;
-            });
-
         } else if (!this.initiated) {
             this.setMenu(); //draw menu placeholder fast without type
         }

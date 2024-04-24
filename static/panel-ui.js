@@ -77,6 +77,12 @@ export class PanelUI {
         this.lastAP = null;
         this.lastESSID = null;
 
+        this.graph_menu = null;
+        this.num_services = 0;
+        this.num_cameras = 0;
+        this.num_docker_containers = 0;
+        this.num_widgets = 0;
+
         client.on('introspection',  (state) => {
             if (state) {
                 $('#introspection_state').addClass('active').removeClass('inactive').attr('title', 'Introspection running...');
@@ -87,7 +93,7 @@ export class PanelUI {
         client.on('peer_disconnected', ()=>{
             $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
 
-            that.set_dot_state(1, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
+            that.set_dot_state(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
             that.update_wifi_signal(-1);
             that.update_num_peers(-1);
             that.update_rtt(-1);
@@ -172,16 +178,16 @@ export class PanelUI {
 
             $('#docker_list').empty();
 
-            let num_containers = Object.keys(containers).length;
+            this.num_docker_containers = Object.keys(containers).length;
 
-            if (num_containers > 0) {
+            if (this.num_docker_containers > 0) {
                 $('#docker_controls').addClass('active');
             } else {
                 $('#docker_controls').removeClass('active');
             }
 
-            $('#docker_heading .full-w').html(num_containers == 1 ? 'Container' : 'Containers');
-            $('#docker_heading B').html(num_containers);
+            $('#docker_heading .full-w').html(this.num_docker_containers == 1 ? 'Container' : 'Containers');
+            $('#docker_heading B').html(this.num_docker_containers);
 
             let i = 0;
             Object.values(containers).forEach((container) => {
@@ -278,7 +284,8 @@ export class PanelUI {
                         that.panels[id_src].onResize();
                         window.setTimeout(() => {
                             // console.warn('Delayed resize '+id_src);
-                            that.panels[id_src].onResize();
+                            if (that.panels[id_src])
+                                that.panels[id_src].onResize();
                         }, 300); // animaiton duration
                     }
                 });
@@ -479,49 +486,66 @@ export class PanelUI {
 
         $('#menubar_hamburger_close').text('Back');
 
-        if (what == '#graph_display') {
-            let min_w = $('#graph_display').css('min-width'); //?? +20; //+margin
-            let menu_w = this.set_min_burger_menu_width(min_w);
-
-            let el_w = (menu_w-20);
-            let el = $(what);
-            if (now_opening) {
-                console.log('Now opening '+what);
-
-                // move menu items out to the left
-                $('#menubar_items > DIV').stop().animate({
-                    left: -(this.small_menu_full_width+20)+'px'
-                }, 200, () => {
-
-                });
-
-                $('#hamburger_menu_label')
-                    .text(this.graph_menu.node_ids.length + ' Nodes / ' + this.graph_menu.topic_ids.length + ' Topics')
-                    .addClass('graph_controls')
-                    .css('display','block');
-
-                el.css({
-                        width: el_w + 'px', //10 is padding
-                        left: (this.small_menu_full_width+20)+'px', // top right of the parent (moving) item
-                        top: '0px'
-                    })
-                    .addClass('hamburger-open')
-                    .stop();
-                    // .animate({
-                    //     left: this.small_menu_full_width + 'px', // compensate for moving parent menu item
-                    //     width: el_w +'px' //10 is padding
-                    // });
-            } else {
-                console.log('Now updating '+what);
-                el.css({
-                    width: el_w + 'px' //10 is padding
-                });
-            }
+        let el = $(what);
+        let min_w = el.css('min-width'); //?? +20; //+margin
+        console.log('setting meu min_w: ', min_w);
+        let menu_w = this.set_min_burger_menu_width(min_w);
             
+        let el_w = (menu_w-20);
+        
+        if (now_opening) {
+            console.log('Now opening '+what);
+
+            // move menu items out to the left
+            $('#menubar_items > DIV').stop().animate({
+                left: -(this.small_menu_full_width+20)+'px'
+            }, 200, () => {
+
+            });
+
+            let label = '';
+            switch (what) {
+                case '#graph_display': 
+                    label = this.graph_menu.node_ids.length + ' Nodes / ' + this.graph_menu.topic_ids.length + ' Topics';
+                    break;
+                case '#service_list':
+                    label = this.num_services + ' Services';
+                    break;
+                case '#cameras_list':
+                    label = this.num_cameras + ' Cameras';
+                    break;
+                case '#docker_list':
+                    label = this.num_docker_containers + ' Containers';
+                    break;
+                case '#widget_list':
+                    label = this.num_widgets + ' Widgets';
+                    break;
+            }
+
+            $('#hamburger_menu_label')
+                .text(label)
+                .addClass('graph_controls')
+                .css('display','block');
+
+            el.css({
+                    width: el_w + 'px', //10 is padding
+                    left: (this.small_menu_full_width+20)+'px', // top right of the parent (moving) item
+                    top: ((el.parent().parent().children().index(el.parent())-2)*-(15+15+21+1))+'px'
+                })
+                .addClass('hamburger-open')
+                .stop();
+                // .animate({
+                //     left: this.small_menu_full_width + 'px', // compensate for moving parent menu item
+                //     width: el_w +'px' //10 is padding
+                // });
         } else {
-
-
+            console.log('Now updating '+what);
+            el.css({
+                width: el_w + 'px' //10 is padding
+            });
         }
+            
+   
 
         // // $('BODY').addClass('menu-overlay');
         // let w_body = screen.availWidth;
@@ -651,6 +675,8 @@ export class PanelUI {
             });
         }
 
+        this.num_cameras = cameras.length;
+
         $('#cameras_heading .full-w').html(cameras.length == 1 ? 'Camera' : 'Cameras');
         $('#cameras_heading B').html(cameras.length);
 
@@ -690,6 +716,11 @@ export class PanelUI {
             let h = that.type_widgets[msg_type].h;
 
             that.toggle_panel(id_cam, msg_type, state, w, h);
+
+            if (state && $('BODY').hasClass('hamburger')) {
+                //close burger menu
+                that.set_burger_menu_state(false, false);
+            }
         });
 
     }
@@ -820,9 +851,9 @@ export class PanelUI {
 
     widgets_menu() {
          $('#widget_list').empty();
-         let num_widgets = Object.keys(this.widgets).length;
+         this.num_widgets = Object.keys(this.widgets).length;
 
-         if (num_widgets > 0) {
+         if (this.num_widgets > 0) {
              $('#widget_controls').addClass('active');
          } else {
              $('#widget_controls').removeClass('active');
@@ -874,14 +905,19 @@ export class PanelUI {
          //     SetCameraSubscription(id_robot, subscribe_cameras, true);
 
          $('#widget_list INPUT.enabled:checkbox').change(function(event) {
-             let widget_class = $(this).parent('DIV.widget').data('class');
-             let state = this.checked;
+            let widget_class = $(this).parent('DIV.widget').data('class');
+            let state = this.checked;
 
-             let w = that.widgets[widget_class].class.default_width;
-             let h = that.widgets[widget_class].class.default_height;
+            let w = that.widgets[widget_class].class.default_width;
+            let h = that.widgets[widget_class].class.default_height;
 
-             that.toggle_panel(widget_class, widget_class, state, w, h);
-             // client.SetCameraSubscription(id_robot, [ cam ], state);
+            that.toggle_panel(widget_class, widget_class, state, w, h);
+            // client.SetCameraSubscription(id_robot, [ cam ], state);
+
+            if (state && $('BODY').hasClass('hamburger')) {
+                //close burger menu
+                that.set_burger_menu_state(false, false);
+            }
          });
 
     }
@@ -889,7 +925,7 @@ export class PanelUI {
     services_menu_from_nodes(nodes) {
 
         $('#service_list').empty();
-        let num_services = 0;
+        this.num_services = 0;
 
         // let nodes_with_handled_ui = [];
         // let unhandled_nodes = [];
@@ -917,7 +953,7 @@ export class PanelUI {
                     ].includes(msg_type))
                     continue; // not rendering internals (?!)
                 
-                num_services++; // activates menu
+                this.num_services++; // activates menu
 
                 service.ui_handled = this.input_widgets[msg_type] != undefined;
 
@@ -950,10 +986,10 @@ export class PanelUI {
             }
         });
         
-        $('#services_heading .full-w').html(num_services == 1 ? 'Service' : 'Services');
-        $('#services_heading B').html(num_services);
+        $('#services_heading .full-w').html(this.num_services == 1 ? 'Service' : 'Services');
+        $('#services_heading B').html(this.num_services);
 
-        if (num_services > 0) {
+        if (this.num_services > 0) {
             $('#service_controls').addClass('active');
         } else {
             $('#service_controls').removeClass('active');
@@ -1412,20 +1448,23 @@ export class PanelUI {
             
             //  let graph_w = $('#graph_display').innerWidth();
             // console.log('HB is on, full_w='+graph_w_full+' w_body='+w_body);
-            let h = window.innerHeight-110;
-            $('#graph_display').css('height', h);
-            if (graph_w_full+45 > w_body) {
-                $('#graph_display').addClass('narrow');
-                // console.log('HB > narrow');
-            } else {
-                $('#graph_display').removeClass('narrow');
-                if (this.graph_menu) {
-                    let available_w = w_body - 35;
-                    this.graph_menu.set_dimensions(available_w, h); // defaults
+            let graph_h = $(window).height()-110;
+            $('#graph_display').css('height', graph_h);
+            if (this.graph_menu) {
+                if (graph_w_full+45 > w_body) {
+                    this.graph_menu.set_narrow(true);
+                } else {
+                    this.graph_menu.set_narrow(false);
                 }
-                    
-                // console.log('HB > full');
+                let available_w = w_body - 35;
+                this.graph_menu.set_dimensions(available_w, graph_h); // defaults
             }
+            let h = $(window).height()-100;
+            $('#service_list').css('height', h);
+            $('#cameras_list').css('height', h); 
+            $('#docker_list').css('height', h); 
+            $('#widget_list').css('height', h); 
+
             if (this.burger_menu_open_item) {
                 this.burger_menu_action(this.burger_menu_open_item);
             }
@@ -1437,10 +1476,19 @@ export class PanelUI {
                 height: '' //unset
             });
             $('#graph_display').removeClass('narrow');
-            $('#graph_display').css('height', ''); // unset
+            $('#graph_display').css({
+                'height': '',
+                'width': '',
+                'left': '',
+                'top': ''
+            }); // unset
             if (this.graph_menu)
                 this.graph_menu.set_dimensions(graph_w_full, 600); // defaults
 
+            $('#service_list').css('height', ''); //unset
+            $('#cameras_list').css('height', ''); //unset
+            $('#docker_list').css('height', ''); //unset
+            $('#widget_list').css('height', ''); //unset
         };
 
         $('BODY.touch-ui #touch-ui-dialog .content').css({
@@ -1495,10 +1543,9 @@ export class PanelUI {
         let direct_editing_enabled = true;
         if (isTouchDevice()) {
             direct_editing_enabled = false;
-            cls.push('touch-ui');  //TEMP
+            cls.push('touch-ui');
         }
             
-
         Object.values(this.panels).forEach((p)=>{
             if (p.editing)
                 return;

@@ -1,5 +1,6 @@
 
 import { IsImageTopic} from '/static/browser-client.js';
+import { isTouchDevice } from './lib.js'
 
 export class GraphMenu {
 
@@ -35,7 +36,7 @@ export class GraphMenu {
         let available_h = 600; //
         if ($('BODY').hasClass('hamburger')) {
             available_w = window.innerWidth - 35;
-            available_h = window.innerHeight-110;
+            available_h =$(window).height()-110;
         }
         this.set_dimensions(available_w, available_h);
 
@@ -83,12 +84,30 @@ export class GraphMenu {
         });
     }
 
+    set_narrow(state=true) {
+        if (state) {
+            if (!this.is_narrow) {
+                this.graph_display_el.addClass('narrow');
+                this.reset_focus();
+            }
+        } else if (this.is_narrow) {
+            this.graph_display_el.removeClass('narrow');
+        }
+        this.is_narrow = state;
+    }
+
     set_dimensions(full_w, h) {
         
         let w_svg = full_w - 300 - 300 - 25;
         // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
         this.width = w_svg - this.margin.left - this.margin.right;
         this.height = h - this.margin.top - this.margin.bottom;
+
+        if (this.width < 0)
+            this.width = 0;
+        if (this.height < 0)
+            this.height = 0;
+
         this.topic_container_el.css('padding-left', w_svg);
         if (this.svg) {
             console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
@@ -196,12 +215,14 @@ export class GraphMenu {
 
             let that = this;
 
-            node_el.on('mouseenter', (e) => {
-                that.hover_node(id_node, true); 
-            });
-            node_el.on('mouseleave', (e) => {
-                that.hover_node(id_node, false); 
-            });
+            if (!isTouchDevice()) {
+                node_el.on('mouseenter', (e) => {
+                    that.hover_node(id_node, true); 
+                });
+                node_el.on('mouseleave', (e) => {
+                    that.hover_node(id_node, false); 
+                });
+            }
             node_el.on('click', (e) => {
                 that.node_focus_toggle(id_node); 
             });
@@ -250,14 +271,20 @@ export class GraphMenu {
             this.topic_container_el.append(topic_el);
             // console.log(el.offset());
 
-            topic_el.on('mouseenter', (e) => {
-                that.hover_topic(topic, true); 
-            });
- 
-            topic_el.on('mouseleave', (e) => {
-                that.hover_topic(topic, false); 
-            });
+            if (!isTouchDevice()) {
+                topic_el.on('mouseenter', (e) => {
+                    that.hover_topic(topic, true); 
+                });
+     
+                topic_el.on('mouseleave', (e) => {
+                    that.hover_topic(topic, false); 
+                });
+            }
+
             topic_el.on('click', (e) => {
+                if (that.is_narrow)
+                    return;
+                
                 that.topic_focus_toggle(topic); 
             });
 
@@ -289,6 +316,11 @@ export class GraphMenu {
                 }
 
                 that.ui.toggle_panel(topic, msg_type, state, w, h);
+
+                if (state && $('BODY').hasClass('hamburger')) {
+                    //close burger menu
+                    that.ui.set_burger_menu_state(false, false);
+                }
             });
 
             box_el.find('.msg_type').on('click', (e)=>{
@@ -372,6 +404,15 @@ export class GraphMenu {
         let offset_topic = link.group == 1 ? this.width-5 : this.width-2;
 
         return 'M '+offset_node+' '+pos_node+' C 100 '+pos_node+', 100 '+pos_topic+', '+offset_topic+' '+pos_topic;
+    }
+
+    reset_focus( ) {
+        if (this.focused_id_node) {
+            this.node_focus_toggle(this.focused_id_node);
+        }
+        if (this.focused_topic) {
+            this.topic_focus_toggle(this.focused_topic)
+        }
     }
 
     node_focus_toggle(id_node) {
