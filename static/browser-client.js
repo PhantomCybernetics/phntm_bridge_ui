@@ -196,10 +196,15 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on('instance', (id_instance) => {
-            console.warn('Got id instance: '+id_instance);
-            that.socket_auth.id_instance = id_instance;
-            // console.log(this.socket)
-            // that._process_robot_data(robot_data, return_callback);
+            if (that.socket_auth.id_instance != id_instance) {
+                console.warn('Got new id instance: '+id_instance);
+                if (that.pc) {
+                    console.warn('Removing pc for old instance: '+that.socket_auth.id_instance);
+                    that.pc.close();
+                    that.pc = null;
+                }
+                that.socket_auth.id_instance = id_instance;
+            }
         });
 
         this.socket.on('robot', (robot_data, return_callback) => {
@@ -668,11 +673,11 @@ export class PhntmBridgeClient extends EventTarget {
             
 
         if (this.robot_online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
-            console.warn('Creating new webrtc peer');
+            console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
             this.pc = this._init_peer_connection(this.id_robot);
         } else {
-            console.warn(`NOT Creating new webrtc peer, robot_online=${this.robot_online} pc=${this.pc}`);
-            // this.pc.connect();
+            console.warn(`Re-using old webrtc peer, robot_online=${this.robot_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}; this should autoconnect...`);
+            // should autoconnect ?!?!
         }
 
         if (prev_online != this.robot_online)

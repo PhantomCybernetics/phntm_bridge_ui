@@ -2495,7 +2495,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
 
   .menu_line.zoom_ctrl .val {
     display: block;
-    margin: 0px 0px 0px -40px;
+    margin: 0px 0px 0px -50px;
     float: none;
     padding: 0px;
     background: transparent;
@@ -2503,7 +2503,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     width: auto;
     position: absolute;
     left: 50%;
-    width: 80px;
+    width: 100px;
   }
 
   .menu_line.zoom_ctrl .plus {

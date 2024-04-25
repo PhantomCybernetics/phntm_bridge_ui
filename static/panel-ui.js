@@ -77,7 +77,8 @@ export class PanelUI {
         this.lastAP = null;
         this.lastESSID = null;
 
-        this.graph_menu = null;
+        this.graph_menu = new GraphMenu(this);
+    
         this.num_services = 0;
         this.num_cameras = 0;
         this.num_docker_containers = 0;
@@ -374,7 +375,7 @@ export class PanelUI {
                     .css('display', 'block')
                     .unbind()
                     .on('click', (e) => {
-                        console.log('overlay clicked')
+                        //console.log('overlay clicked')
                         that.set_burger_menu_state(false, false);
                     });
             }
@@ -443,7 +444,7 @@ export class PanelUI {
                 }
             }
             
-            console.log('closing burger menu');
+            //console.log('closing burger menu');
 
             // close -> roll out to the left
             this.burger_menu_open = false;
@@ -726,10 +727,6 @@ export class PanelUI {
     }
 
     graph_from_nodes(nodes) {
-
-        if (!this.graph_menu) {
-            this.graph_menu = new GraphMenu(this);
-        } 
 
         this.graph_menu.update(nodes);        
 
