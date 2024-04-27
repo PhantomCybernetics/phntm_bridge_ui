@@ -1,3 +1,5 @@
+import { isTouchDevice } from "./../../lib.js";
+
 export class MultiTopicSource {
 
     constructor(widget) {
@@ -186,11 +188,30 @@ export class MultiTopicSource {
 
     setupMenu (label="Edit input") {
 
-        $('<div class="menu_line src_ctrl">' +
-            '<span class="label">'+label+'</span>' +
-            '<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>' +
-            '</div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
+        let menu_line_el = $('<div class="menu_line src_ctrl"></div>');
+
+        let label_el = $('<span class="label">'+label+'</span>');
+        let that = this;
+        label_el.on('click', () => { 
+            if (menu_line_el.hasClass('open'))
+                menu_line_el.removeClass('open');
+            else
+                menu_line_el.addClass('open');
+
+            console.log('Multitopic clicked, open='+menu_line_el.hasClass('open'))
+
+            if (isTouchDevice()) {
+                that.panel.ui.panel_menu_autosize(that.panel);
+            }
+        });
+
+        label_el.appendTo(menu_line_el);
+        $('<span class="icon"></span>').appendTo(menu_line_el);
+        $('<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>').appendTo(menu_line_el);
+
+        menu_line_el.insertBefore($('#close_panel_menu_'+this.panel.n));
+
+        menu_line_el.parent().parent().addClass('wider');
 
         this.src_ctrl_menu = $('#src_ctrl_'+this.panel.n);
 

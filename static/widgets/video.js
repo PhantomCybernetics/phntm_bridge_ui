@@ -185,7 +185,7 @@ export class VideoWidget {
 
     setupMenu = () => {
 
-        $('#monitor_menu_content_'+this.panel.n+' .panel_msg_types_line').addClass('nospace');
+        // $('#monitor_menu_content_'+this.panel.n+' .panel_msg_types_line').addClass('nospace');
 
         this.overlay_sources.setupMenu("Overlay");
 

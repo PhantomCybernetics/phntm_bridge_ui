@@ -19,7 +19,7 @@ export class PanelUI {
 
     lastAP = null;
     lastESSID = null;
-
+    
     // override or edit to customize topic panel defaults
     topic_widgets = {
         // '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
@@ -60,6 +60,8 @@ export class PanelUI {
         });
 
         this.panels = {}
+        this.panel_menu_on = null; //touch only
+
         this.keyboard = keyboard;
         this.gamepad = gamepad;
         this.gamepad.ui = this;
@@ -359,6 +361,38 @@ export class PanelUI {
         $('#widgets_heading').click(()=>{
             that.burger_menu_action('#widget_list');
         });
+
+        // $(window).on('touchmove',  { passive: false }, (ev) => {
+        //     console.log('win touchmove', ev);
+        //     if (that.panel_menu_on) {
+        //         that.panel_menu_touch_toggle(); //off
+        //     }
+        // });
+        $(window).on('scroll touchmove',  { passive: false }, (ev) => {
+           
+            if (that.panel_menu_on) {
+
+                if (that.menu_locked_scroll) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    console.log('ignoring win scroll', ev);
+                    // window.scrollTo(that.menu_locked_scroll.x, that.menu_locked_scroll.y);
+                    return;
+                }
+                console.log('win scroll', ev);
+
+                that.panel_menu_touch_toggle(); //off
+            }
+        });
+        window.addEventListener('touchstart', (ev) => {
+            // ev.preventDefault();
+            // ev.stopPropagation();
+        }, { passive: false });
+        $(window).on('resize', () => {
+            if (that.panel_menu_on) {
+                that.panel_menu_touch_toggle(); //off
+            }
+        });
     }
 
     set_burger_menu_state (open, animate=true) {
@@ -399,7 +433,7 @@ export class PanelUI {
             
             if (this.burger_menu_open_item) {
 
-                console.log('closing burger menu open item '+this.burger_menu_open_item);
+                // console.log('closing burger menu open item '+this.burger_menu_open_item);
 
                 $('#menubar_hamburger_close').text('Close');
                 $('#hamburger_menu_label')
@@ -475,13 +509,101 @@ export class PanelUI {
         }       
     }
 
+    panel_menu_autosize(panel) {
+        let l = panel.menu_el.offset().left-panel.menu_content_el.width()-15;
+        // let max_w = window.innerWidth-20; // screen offset & padding
+        let w_cont = panel.menu_content_el.innerWidth(); //includes padding
+        if (l < 0 && panel.menu_el.offset().left + 45 + w_cont < window.innerWidth) {
+            l = panel.menu_el.offset().left + 45;
+        }
+        panel.menu_content_el.css('height', ''); //unset
+        let h_cont = panel.menu_content_el.innerHeight(); //includes padding
+        let max_h = window.innerHeight-50-10; // screne offset & padding
+        let scrolls = h_cont > max_h;
+        let h = scrolls ? max_h : h_cont-10; // unset on fitting
+        let t = panel.menu_el.offset().top-(h_cont/2.0);
+        if (panel.floating_menu_top !== null)
+            t =  panel.floating_menu_top;
+        let min_top = $(window).scrollTop()+25.0;
+        let t0 = t;
+        if (t < min_top) {
+            console.log('over top');
+            t = min_top;
+        } else if (t + h + 10 > ($(window).scrollTop()+window.innerHeight-10)) {
+            console.log('over bottom');
+            t = $(window).scrollTop()+window.innerHeight-10-h-10;
+        }
+        // console.log('menu content='+h_cont+'; min-top='+min_top+'; scrolls='+scrolls+'; t='+t);
+       
+        panel.menu_content_el
+            .css({
+                left: l,
+                top: t,
+                height: scrolls ? h : '' //unset
+            });
+        panel.floating_menu_top = t;
+
+        if (!scrolls)
+            panel.menu_content_el.addClass('noscroll'); //stops body from scrolling through a non-scrolling menu
+        else
+            panel.menu_content_el.removeClass('noscroll');
+    }
+
+    panel_menu_touch_toggle(panel) {
+
+        if (!panel && this.panel_menu_on) {
+            panel = this.panel_menu_on;
+        }
+
+        if (this.panel_menu_on && this.panel_menu_on != panel) { 
+            this.panel_menu_touch_toggle(this.panel_menu_on) //turn off previous
+        }
+
+        if (!panel.menu_el.hasClass('open')) {
+            this.panel_menu_autosize(panel);
+            panel.menu_el.addClass('open');
+            panel.menu_content_el.addClass('floating')
+                                 .appendTo('BODY');
+
+            this.panel_menu_on = panel;
+            let that = this;
+            // $('BODY').addClass('no-scroll');
+            $('#menu-underlay')
+                .css('display', 'block')
+                .unbind()
+                .on('click', (e) => {
+                    //console.log('overlay clicked')
+                    that.panel_menu_touch_toggle();
+                });
+        } else {
+            panel.menu_el.removeClass('open');
+            // $('BODY').removeClass('no-scroll');
+            panel.menu_content_el
+                .removeClass('floating')
+                .removeClass('noscroll')
+                .css({
+                    left: '',
+                    top: '',
+                    height: ''
+                })
+                .appendTo(panel.menu_el);
+            this.panel_menu_on = null;
+
+            $('#menu-underlay')
+                .css('display', '')
+                .unbind();
+
+            panel.floating_menu_top = null;
+        }
+    }
+
     burger_menu_action(what) {
 
         if (!$('BODY').hasClass('hamburger') || !this.burger_menu_open)
             return;
 
         let now_opening = this.burger_menu_open_item === null;
-        console.warn('Burger menu: '+what);
+        // console.warn('Burger menu: '+what);
         this.burger_menu_open_item = what;
         // let small_menu_full_width = 255;
 
@@ -489,13 +611,13 @@ export class PanelUI {
 
         let el = $(what);
         let min_w = el.css('min-width'); //?? +20; //+margin
-        console.log('setting meu min_w: ', min_w);
+        // console.log('setting meu min_w: ', min_w);
         let menu_w = this.set_min_burger_menu_width(min_w);
             
         let el_w = (menu_w-20);
         
         if (now_opening) {
-            console.log('Now opening '+what);
+            // console.log('Now opening '+what);
 
             // move menu items out to the left
             $('#menubar_items > DIV').stop().animate({
@@ -540,7 +662,7 @@ export class PanelUI {
                 //     width: el_w +'px' //10 is padding
                 // });
         } else {
-            console.log('Now updating '+what);
+            // console.log('Now updating '+what);
             el.css({
                 width: el_w + 'px' //10 is padding
             });
@@ -1344,7 +1466,7 @@ export class PanelUI {
 
     set_body_classes(enabled_classes) {
 
-        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui', 'portrait', 'landscape'];
+        let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui', 'desktop-ui', 'portrait', 'landscape'];
         let inactive_classes = [];
         
         for (let i = 0; i < all_body_classes.length; i++) {
@@ -1541,6 +1663,8 @@ export class PanelUI {
         if (isTouchDevice()) {
             direct_editing_enabled = false;
             cls.push('touch-ui');
+        } else {
+            cls.push('desktop-ui');
         }
             
         Object.values(this.panels).forEach((p)=>{

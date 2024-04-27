@@ -8,6 +8,7 @@ body {
 BODY.no-scroll {
     overflow: hidden;
     height: 100%;
+    touch-action: none;
 }
 
 .msgTypes {
@@ -152,7 +153,7 @@ BODY.hamburger #menubar {
     left: 0px;
     position: absolute;
     margin-left: 0px;
-    z-index: 36;
+    z-index: 81;
     width: 100%;
 }
 
@@ -257,7 +258,8 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
     padding-bottom: 50px;
 } */
 
-#modal-underlay {
+#modal-underlay,
+#menu-underlay {
     display: none;
     position: fixed;
     left: 0px;
@@ -265,8 +267,12 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.457);
-    z-index: 35px;
+    z-index: 80;
     cursor: pointer;
+}
+
+#menu-underlay {
+    background-color: transparent;
 }
 
 #hamburger_menu_label {
@@ -664,7 +670,7 @@ BODY.hamburger #introspection_state {
     }
 }
 
-#introspection_state:hover,
+BODY.desktop-ui #introspection_state:hover,
 #introspection_state.active {
     /* background: #82b727; */
     filter: opacity(1) !important;
@@ -861,7 +867,7 @@ BODY.hamburger .docker_btns button {
     cursor: wait;
 }
 
-.docker_btns button:hover,
+BODY.desktop-ui .docker_btns button:hover,
 .running .docker_btns button.docker_run,
 .exited .docker_btns button.docker_stop {
     filter: grayscale(0) opacity(1);
@@ -1260,26 +1266,26 @@ BUTTON#trigger_wifi_scan.working {
     position: absolute;
     display: block;
     width: 27px;
-    height: 20px;
+    height: 26px;
     right: 0px;
-    top: 1px;
+    top: -1px;
     z-index: 114;
     background-image: url(/static/icon-menu.png);
     background-size: 59px;
     background-repeat: no-repeat;
-    background-position: -30px -2px;
+    background-position: -31px 1px;
     cursor: pointer;
 }
 
 BODY.touch-ui .monitor_menu{
     width: 40px;
-    height: 40px;
+    height: 38px;
     right: 0px;
     top: -8px;
     /* background-color: blue; */
     background-image: url(/static/icon-menu-thicker.png);
-    background-size: 80px;
-    background-position: -47px 13px;
+    background-size: 128px;
+    background-position: -44px 12px;
 }
 
 .monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
@@ -1287,79 +1293,126 @@ BODY.touch-ui .monitor_menu{
     position: absolute;
     left: -5%;
     top: -13%;
-    width: 110%;
+    width: 115%;
     height: 120%;
     background-color: transparent;
     z-index: -1;
+}
+.monitor_menu.right .hover_keeper {
+    left: -10%;
 }
 
 BODY.touch-ui .monitor_menu .hover_keeper {
     display: none;
 }
 
-.monitor_menu:hover {
-    border-radius: 5px 5px 0px 0px;
+BODY.desktop-ui .monitor_menu:hover {
+    border-radius: 0px 5px 5px 0px;
 }
 
-.monitor_menu:hover,
-.grid_panel .menu_line {
-    background-color: #383838;
+BODY.desktop-ui .monitor_menu.right:hover {
+    border-radius: 5px 0px 0px 5px;
 }
 
-BODY.touch-ui .monitor_menu:hover {
-    height: 43px;   
+BODY.touch-ui .monitor_menu.open {
+    /* border-radius: 5px; */
+    background-position: -95px 12px;
 }
 
-.monitor_menu:hover .hover_keeper {
+
+BODY.desktop-ui .monitor_menu:hover {
+    width: 32px;
+    background-position: -26px 1px;
+}   
+
+BODY.touch-ui .monitor_menu.open {
+   
+}
+
+BODY.desktop-ui .monitor_menu:hover .hover_keeper {
     display: block;
+    /* background-color: red;; */
 }
-
 
 .monitor_menu_content {
     display: none;
     position: absolute;
-    right: 0px;
-    top: 15px;
+    right: 30px;
+    top: 0px;
     border-radius: 5px 0px 5px 5px;
-    padding: 5px 0px 0px 0px;
+    padding: 3px 5px 5px 5px;;
     font-size: 13px;
     color: #fff;
     text-align: left;
-    min-width: 150px;
+    width: 320px;
+    overscroll-behavior: none;
+}
+
+BODY.desktop-ui .monitor_menu_content {
+    width: 220px;
+}
+
+BODY.desktop-ui .monitor_menu.wider .monitor_menu_content {
+    width: 300px; /* more space for sources selectors */ 
+}
+
+BODY.desktop-ui .monitor_menu.right .monitor_menu_content {
+    border-radius: 0px 5px 5px 5px;
+}
+
+.monitor_menu_content.noscroll {
+    touch-action: none;
+}
+
+.monitor_menu_content,
+BODY.desktop-ui .monitor_menu:hover {
+    background-color: #000000e6;
 }
 
 BODY.touch-ui .monitor_menu_content {
-    top: 38px;
+    /* top: 38px; */
     font-size: 16px;
+    /* height: 400px; */
+    overflow-y: scroll;
+    border-radius: 5px;
 }
 
-.monitor_menu_content.right { /* used when panel is thin and on the very left of the screen */
+.monitor_menu_content.floating { /* moved to BODY for z-index */
+    display: block;
+    z-index: 90;
+}
+
+BODY.desktop-ui .monitor_menu.right .monitor_menu_content { /* used when panel is thin and on the very left of the screen */
     right: auto;
-    left: 0px;
+    left: 30px;
 }
 
 .monitor_menu_content A {
     color: #fff;
 }
 
-.monitor_menu:hover .monitor_menu_content {
+BODY.desktop-ui .monitor_menu:hover .monitor_menu_content {
     display: block;
 }
 
-.grid_panel .menu_line INPUT {
+.monitor_menu_content .menu_line INPUT {
     margin: 0px 1px 0px 0px;
     position: relative;
     top: 1px;
     float: right;
 }
 
-.grid_panel .menu_line {
+.monitor_menu_content.floating .menu_line INPUT {
+    margin-right: 8px;
+}   
+
+.monitor_menu_content .menu_line {
     clear: both;
 }
 
-.grid_panel .menu_line A,
-.grid_panel .menu_line LABEL,
-.grid_panel .menu_line .label {
+.monitor_menu_content .menu_line A,
+.monitor_menu_content .menu_line LABEL,
+.monitor_menu_content .menu_line .label {
     text-decoration: none;
     display: block;
     padding: 5px 5px 5px 8px;
@@ -1367,25 +1420,42 @@ BODY.touch-ui .monitor_menu_content {
     cursor: pointer;
 }
 
-BODY.touch-ui .grid_panel .menu_line A,
-BODY.touch-ui .grid_panel .menu_line LABEL,
-BODY.touch-ui .grid_panel .menu_line .label {
-    padding: 8px 5px 8px 10px;
+BODY.touch-ui .monitor_menu_content .menu_line A,
+BODY.touch-ui .monitor_menu_content .menu_line LABEL,
+BODY.touch-ui .monitor_menu_content .menu_line .label {
+    padding: 10px 5px 7px 10px;
+    /* background: red; */
+    line-height: 20px;
+    font-size: 18px;
 }
 
-.panel_msg_types_line SPAN.msg_types {
+.monitor_menu_content .panel_msg_types_line SPAN.msg_types {
     display: block;
     padding: 5px 5px 5px 8px;
     white-space: nowrap;
 }
 
-.grid_panel .menu_line:last-child A {
-    padding-bottom: 7px;
+BODY.touch-ui .monitor_menu_content .panel_msg_types_line SPAN.msg_types {
+    padding-top: 8px;
 }
 
-.grid_panel .menu_line:hover {
+BODY.touch-ui .monitor_menu_content .panel_msg_types_line {
+    margin-bottom: 4px;
+}
+
+/* .grid_panel .menu_line:last-child A {
+    padding-bottom: 7px;
+} */
+
+BODY.desktop-ui .monitor_menu_content .menu_line:hover,
+.monitor_menu_content .menu_line.open {
     background-color: #001649;
 }
+
+BODY.desktop-ui .monitor_menu_content .panel_msg_types_line:hover,
+BODY.desktop-ui .monitor_menu_content .menu_line.zoom_ctrl:hover {
+    background-color: unset;
+} 
 
 /* .monitor_menu_content .menu_line:first-of-type {
     padding-top: 5px;
@@ -1393,19 +1463,26 @@ BODY.touch-ui .grid_panel .menu_line .label {
 } */
 
 .monitor_menu_content > .menu_line { 
-    border-radius: 5px 0px 0px 0px;
-}
-.monitor_menu_content.right > .menu_line { 
-    border-radius: 0px 5px 0px 0px;
+    border-radius: 5px;
+    position: relative;
+    margin-top: 2px;
 }
 
-.monitor_menu_content > .menu_line ~ .menu_line { 
+BODY.touch-ui .monitor_menu_content > .menu_line { 
+    border-radius: 0px;
+    position: relative;
+    margin-top: 1px;
+    border-bottom: 1px solid #ffffff2b;
+}
+/* .monitor_menu_content.right > .menu_line { 
+    border-radius: 0px 5px 5px 5px;
+} */
+
+/* .monitor_menu_content > .menu_line ~ .menu_line { 
     border-radius: 0px 0px 0px 0px;
 }
+*/
 
-.monitor_menu_content .menu_line:last-of-type {
-    border-radius: 0px 0px 5px 5px !important;
-}
 
 .monitor_menu_content .menu_line.solo {
     padding-top: 3px;
@@ -1421,59 +1498,101 @@ BODY.touch-ui .grid_panel .menu_line .label {
     padding-top: 4px;
 } */
 
-.panel_msg_types_line {
+.monitor_menu_content .panel_msg_types_line {
     padding-bottom: 4px;
-    padding-top: 4px;
+    padding-top: 1px;
 }
 
-.panel_msg_types_line.nospace {
+BODY.touch-ui .monitor_menu_content .menu_line:last-of-type,
+BODY.touch-ui .monitor_menu_content .menu_line.panel_msg_types_line
+{
+    border-bottom: 0px;
+}
+
+/* .monitor_menu_content  .panel_msg_types_line.nospace {
     padding-bottom: 0px;
+} */
+
+BODY.desktop-ui .monitor_menu_content .menu_line.src_ctrl {
+    /* background-image: url(/static/menu-arrow.png);
+    background-repeat: no-repeat;
+    background-size: 6px;
+    background-position: 5px center; */
+    /* border-top: 5px solid #383838;*/
+}
+/* 
+BODY.desktop-ui .monitor_menu_content .menu_line.src_ctrl:hover {
+    border-radius: 0px 5px 5px 0px;
+} */
+
+BODY.touch-ui .menu_line.src_ctrl {
+    padding-bottom: 1px;
+    border-radius: 5px;
 }
 
-.menu_line.src_ctrl {
-    padding-top: 4px;
-    padding-bottom: 4px;
-    position: relative;
+BODY.touch-ui .menu_line.src_ctrl.open {
+    border-bottom: 0px;
+}
+
+.menu_line.src_ctrl > .icon {
+    display: block;
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 30px;
+    height: 30px;
     background-image: url(/static/menu-arrow.png);
     background-repeat: no-repeat;
     background-size: 6px;
-    background-position: 7px 12px;
-    border-top: 5px solid #383838;
+    background-position: 11px 12px;
+    transform: rotate(180deg);
+    pointer-events: none; /* don't steal clicks */
 }
 
-.menu_line.src_ctrl .label {
-    padding-left: 17px;
+BODY.touch-ui .menu_line.src_ctrl > .icon {
+    right: 5px;
+    top: 8px;
 }
 
-.panel_msg_types_line:hover, .menu_line.zoom_ctrl:hover {
-    background-color: #383838 !important;
+.monitor_menu_content  .menu_line.src_ctrl.open > .icon {
+    transform: rotate(-90deg);
 }
 
-.menu_line.src_ctrl:hover {
+.monitor_menu_content  .menu_line.src_ctrl:hover {
     /* border-radius: 0px; */
 }
 
-.src_ctrl_menu {
-    position: absolute;
-    right: 100%;
+BODY.desktop-ui .src_ctrl_menu {
+    position: relative;
     display: none;
     background: #001649;
     top: 0px;
-    border-radius: 5px 0px 5px 5px;
-    padding: 5px 3px;
+    border-radius: 5px;
+    padding: 0px 3px 5px 3px;
 }
 
-.menu_line.src_ctrl:hover .src_ctrl_menu {
+BODY.touch-ui .src_ctrl_menu {
+    position: relative;
+    /* right: 100%; */
+    display: none;
+    background: #001649;
+    top: 0px;
+    border-radius: 5px;
+    padding: 0px 3px 5px 3px;
+}
+
+.menu_line.src_ctrl.open .src_ctrl_menu {
     display: block;
-   
 }
 
-.grid_panel .msg_types, .src_ctrl_menu BUTTON {
+.monitor_menu_content .msg_types, .src_ctrl_menu BUTTON {
     border: 1px dashed white;
     padding: 6px 10px;
     border-radius: 5px;
     background: #4c7fb0;
     margin: 0px 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .src_ctrl_menu BUTTON {
@@ -1529,15 +1648,15 @@ BODY.touch-ui .grid_panel .menu_line .label {
     opacity: 1.0;
 }
 
-.grid_panel .msg_types.err, .src_ctrl_menu BUTTON.err {
+.monitor_menu_content  .msg_types.err, .src_ctrl_menu BUTTON.err {
     background: red;
 }
 
-.grid_panel A.msg_types:hover, .src_ctrl_menu BUTTON:hover  {
+.monitor_menu_content A.msg_types:hover, .src_ctrl_menu BUTTON:hover  {
     background: #558ec3;
 }
 
-.grid_panel A.msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
+.monitor_menu_content A.msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
     background: #c20000;
 }
 
@@ -2162,9 +2281,9 @@ BODY.touch-ui .editing .grid-stack-item-content {
 
 #gamepad.connected #gamepad_status,
 #keyboard.open #keyboard_status,
-#keyboard_status:hover,
-#gamepad_status:hover,
-#touch_ui_status:hover,
+BODY.desktop-ui #keyboard_status:hover,
+BODY.desktop-ui #gamepad_status:hover,
+BODY.desktop-ui #touch_ui_status:hover,
 #keyboard.enabled #keyboard_status {
     filter: grayscale(0);
 }

@@ -98,6 +98,9 @@ export class GraphMenu {
 
     set_dimensions(full_w, h) {
         
+        let old_w = this.width;
+        let old_h = this.height;
+
         let w_svg = full_w - 300 - 300 - 25;
         // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
         this.width = w_svg - this.margin.left - this.margin.right;
@@ -110,7 +113,7 @@ export class GraphMenu {
 
         this.topic_container_el.css('padding-left', w_svg);
         if (this.svg) {
-            console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
+            // console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
             $('#graph_display svg').attr({
                 "width": this.width,
                 "height": this.height
@@ -118,7 +121,9 @@ export class GraphMenu {
             this.svg
                 .attr("width", this.width)
                 .attr("height", this.height);
-            this.redraw_links();
+            if (old_w != this.width || old_h != this.height) {
+                this.redraw_links();
+            }
         }
         
      }
@@ -136,7 +141,7 @@ export class GraphMenu {
         this.topic_container_el.empty();
         this.svg.selectAll("path").remove();
 
-        console.log('Graphing ', nodes);
+        // console.log('Graphing ', nodes);
         let that = this;
 
         let node_offset = 0;
@@ -302,7 +307,7 @@ export class GraphMenu {
                     return;
 
                 let state = chb.prop('checked');
-                console.log('CB '+topic+': '+state);
+                // console.log('CB '+topic+': '+state);
 
                 let w = 3; let h = 3; //defaults overridden by widgets
                 let msg_type = that.topics[topic].msg_type;

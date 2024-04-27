@@ -1,7 +1,7 @@
 
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice } from "./lib.js";
 
 export class Panel {
 
@@ -48,6 +48,7 @@ export class Panel {
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
         this.widget_menu_cb = null;
+        this.floating_menu_top = null;
 
         this.n = Panel.PANEL_NO++;
         //let display_source = false;
@@ -56,7 +57,7 @@ export class Panel {
             '<div class="grid_panel" data-source="'+id_source+'">' +
                 '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
-                '<div class="monitor_menu" id="monitor_menu_'+this.n+'">' +
+                '<div class="monitor_menu prevent-select" id="monitor_menu_'+this.n+'">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
                 '<div class="panel_content_space">' +
@@ -128,7 +129,7 @@ export class Panel {
         });
 
         this.edit_timeout = null;
-        $('#panel_title_'+this.n).on('touchstart', () => {
+        $('#panel_title_'+this.n).on('touchstart', (ev) => {
             if (that.editing)
                 return;
             console.log('Touch start '+id_source);
@@ -140,7 +141,7 @@ export class Panel {
                     that.ui.grid.resizable(that.grid_widget, true);
                     that.ui.grid.movable(that.grid_widget, true);
                 }
-            }, 1000);
+            }, 2000); // hold panel label for 2s to edit
         });
 
         $('#panel_title_'+this.n).on('touchend', () => {
@@ -151,6 +152,36 @@ export class Panel {
                 that.edit_timeout = null;
             }
             console.log('Touch end '+id_source);
+        });
+
+        this.menu_el = $('#monitor_menu_'+this.n);
+        this.menu_content_el = $('#monitor_menu_content_'+this.n);
+        this.menu_el.on('click', () => {
+            if (!isTouchDevice())
+                return;
+            that.ui.panel_menu_touch_toggle(that);
+        });
+        this.menu_content_el.on('touchstart', (ev) => {
+            console.log('menu touchstart', ev);
+            // ev.preventDefault();
+            that.ui.menu_locked_scroll = true;
+        
+            // ev.stopPropagation();
+        });
+
+        // this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
+        //     console.log('menu touchmove', ev);
+        //     ev.preventDefault();
+        //     // that.ui.menu_locked_scroll = true;
+        
+        //     ev.stopPropagation();
+        // });
+
+        this.menu_content_el.on('touchend', (ev) => {
+            console.log('menu touchend', ev);
+            // ev.preventDefault();
+            that.ui.menu_locked_scroll = null;
+            // ev.stopPropagation();
         });
     }
 
@@ -346,7 +377,7 @@ export class Panel {
             els.push(msgTypesEl);
         }
 
-        let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Close</a></div>');
+        let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel</a></div>');
         closeEl.click(function(ev) {
             that.close();
             if (that.ui.widgets[that.id_source])
@@ -372,15 +403,16 @@ export class Panel {
     }
 
     auto_menu_position() {
-        let menu_el = $('#monitor_menu_content_'+this.n);
-        if (!menu_el.length)
+        let menu_el = $('#monitor_menu_'+this.n);
+        let content_el = $('#monitor_menu_content_'+this.n);
+        if (!menu_el.length || !content_el.length)
             return;
-        let pos = menu_el.parent().offset();
-        console.log(this.id_source+' menuburger pos ', pos);
-        if (pos.left < 150 && !$('#grid-stack').hasClass('gs-1')) { //not in 1-col mode
-            menu_el.addClass('right')   
+        let pos = menu_el.offset();
+         console.log(this.id_source+' menu test pos ', pos);
+        if (!isTouchDevice() && pos.left < 330 && !$('#grid-stack').hasClass('gs-1')) { //not in 1-col mode
+            menu_el.addClass('right');
         } else {
-            menu_el.removeClass('right')
+            menu_el.removeClass('right');
         }
     }
 
@@ -550,7 +582,10 @@ export class Panel {
         console.log('Got stream for '+this.id_source+': ', stream)
     }
 
-    close() {
+    close() { // remove panel
+
+        if (this.ui.panel_menu_on === this)
+            this.ui.panel_menu_touch_toggle();  //remove open menu
 
         if (this.ui.graph_menu.topics[this.id_source]) {
             // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
