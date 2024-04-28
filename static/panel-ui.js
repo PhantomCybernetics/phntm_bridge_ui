@@ -390,6 +390,9 @@ export class PanelUI {
         }, { passive: false });
         $(window).on('resize', () => {
             if (that.panel_menu_on) {
+                if ($('#touch-ui-selector').hasClass('src_selection')) {
+                    $('#touch-ui-dialog-underlay').trigger('click');
+                }
                 that.panel_menu_touch_toggle(); //off
             }
         });
@@ -572,6 +575,10 @@ export class PanelUI {
                 .css('display', 'block')
                 .unbind()
                 .on('click', (e) => {
+                    if (that.menu_blocking_element) { // multiselect uses this to cancel src remove on touch ui
+                        that.menu_blocking_element.trigger('cancel');
+                        return;
+                    }
                     //console.log('overlay clicked')
                     that.panel_menu_touch_toggle();
                 });
@@ -861,10 +868,9 @@ export class PanelUI {
     message_type_dialog(msg_type, onclose=null) {
 
         let msg_type_class = msg_type ? this.client.find_message_type(msg_type) : null;;
-        let isTouch = isTouchDevice();
         let content = (msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>');
 
-        if (!isTouch) {
+        if (!isTouchDevice()) {
             $('#msg_type-dialog')
                 .html(content);
             $( "#msg_type-dialog" ).dialog({
@@ -905,9 +911,9 @@ export class PanelUI {
         
     }
 
-    topic_selector_dialog(label, msg_type, exclude_topics, onselect) {
+    topic_selector_dialog(label, msg_type, exclude_topics, onselect, align_el=null) {
 
-        let d = $('#topic-selector-dialog');
+        let d = !isTouchDevice() ? $('#topic-selector-dialog') : $('#touch-ui-selector .content');
         let that = this;
 
         const render_list = (discovered_topics) => {
@@ -927,7 +933,12 @@ export class PanelUI {
                 l.on('click', (e) => {
                     onselect(topic);
                     e.cancelBubble = true;
-                    d.dialog("close");
+                    if (!isTouchDevice()) {
+                        d.dialog("close");
+                    } else {                       
+                        $('#touch-ui-dialog-underlay').trigger('click');
+                    }
+                    
                     return false;
                 });
                 l.appendTo(d);
@@ -936,27 +947,68 @@ export class PanelUI {
 
             if (!some_match) {
                 let l = $('<span class="empty">No matching topics foud</span>');
+                if (isTouchDevice()) { // if empty, click anywhere closes
+                    $('#touch-ui-selector').unbind().click((ev)=>{
+                        $('#touch-ui-dialog-underlay').trigger('click');
+                        ev.stopPropagation();
+                    });
+                }
                 l.appendTo(d);
             }
         }
+
+
         this.client.on('topics', render_list);
         render_list(this.client.discovered_topics);
 
-        d.dialog({
-            resizable: true,
-            height: 300,
-            width: 700,
-            modal: true,
-            title: label,
-            buttons: {
-                Cancel: function() {
-                    $(this).dialog("close");
+        if (!isTouchDevice()) {
+            d.dialog({
+                resizable: true,
+                height: 300,
+                width: 700,
+                modal: true,
+                title: label,
+                buttons: {
+                    Cancel: function() {
+                        $(this).dialog("close");
+                    },
                 },
-            },
-            close: function( event, ui ) {
-                that.client.off('topics', render_list);
-            }
-        });
+                close: function( event, ui ) {
+                    that.client.off('topics', render_list);
+                }
+            });
+        } else {
+            // touch
+            $('BODY').addClass('no-scroll');
+            // $('#touch-ui-dialog .content').html(content);
+            let offset = align_el.offset();
+            console.log('offset', offset)
+            $('#touch-ui-selector').addClass('src_selection').css({
+                display: 'block',
+                left: offset.left,
+                top: offset.top+30
+            });
+            align_el.addClass('selecting');
+
+            $('#touch-ui-dialog-underlay')
+                .css('display', 'block')
+                .unbind()
+                .on('click', (e) => { //close
+                    $('#touch-ui-selector').unbind()
+                    $('#touch-ui-selector').css('display', 'none').removeClass('src_selection');
+                    d.empty();
+                    $('BODY').removeClass('no-scroll');
+                    that.client.off('topics', render_list);
+                    $('#touch-ui-dialog-underlay').unbind().css('display', 'none');
+                    $('#close-touch-ui-dialog').unbind();
+                    align_el.removeClass('selecting');
+                });
+            // $('#close-touch-ui-dialog').unbind().click((e)=>{
+            //     $('#touch-ui-dialog').css('display', 'none').removeClass('msg_type');
+            //     $('BODY').removeClass('no-scroll');
+            // });
+        }
+        
     }
 
 
@@ -1587,6 +1639,13 @@ export class PanelUI {
             if (this.burger_menu_open_item) {
                 this.burger_menu_action(this.burger_menu_open_item);
             }
+
+            $('#bottom-links').appendTo('#menubar_items');
+            if (window.innerHeight < 425) {
+                $('#bottom-links').css('display', 'none');
+            } else {
+                $('#bottom-links').css('display', 'block');
+            }
         } else {
             if (this.burger_menu_open) {
                 this.set_burger_menu_state(false, false); //no animations
@@ -1608,6 +1667,8 @@ export class PanelUI {
             $('#cameras_list').css('height', ''); //unset
             $('#docker_list').css('height', ''); //unset
             $('#widget_list').css('height', ''); //unset
+
+            $('#bottom-links').appendTo('body');
         };
 
         $('BODY.touch-ui #touch-ui-dialog .content').css({

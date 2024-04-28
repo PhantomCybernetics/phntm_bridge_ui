@@ -2,7 +2,9 @@ body {
     background-color: #0b141f;
     color: black;
     margin: 0px;
-    padding: 0px 0px 100px 0px; /* make some space for panel resizing  */
+    min-height: 100%;
+    position: relative;
+    padding: 0px 0px 10px 0px; /* make some space for panel resizing  */
 }
 
 BODY.no-scroll {
@@ -107,7 +109,7 @@ h3 {
     height: 50px;
     position: relative;
     padding-right: 60px;
-    z-index: 36;
+    /* z-index: 36; */
     display: none;
 }
 
@@ -259,7 +261,8 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 } */
 
 #modal-underlay,
-#menu-underlay {
+#menu-underlay,
+#touch-ui-dialog-underlay {
     display: none;
     position: fixed;
     left: 0px;
@@ -269,6 +272,10 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
     background-color: rgba(0, 0, 0, 0.457);
     z-index: 80;
     cursor: pointer;
+}
+
+#touch-ui-dialog-underlay {
+    z-index: 91; /* above menu */
 }
 
 #menu-underlay {
@@ -1306,6 +1313,21 @@ BODY.touch-ui .monitor_menu .hover_keeper {
     display: none;
 }
 
+BODY.touch-ui .monitor_menu_content .menu_content_underlay { /* makes the hover area bigger for your conveninence */
+    display: none;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    z-index: 100; /* active button must be above this */
+}
+
+BODY.touch-ui .monitor_menu_content .menu_content_underlay.open {
+    display: block;
+}
+
 BODY.desktop-ui .monitor_menu:hover {
     border-radius: 0px 5px 5px 0px;
 }
@@ -1353,7 +1375,7 @@ BODY.desktop-ui .monitor_menu_content {
 }
 
 BODY.desktop-ui .monitor_menu.wider .monitor_menu_content {
-    width: 300px; /* more space for sources selectors */ 
+    width: 290px; /* more space for sources selectors */ 
 }
 
 BODY.desktop-ui .monitor_menu.right .monitor_menu_content {
@@ -1603,6 +1625,21 @@ BODY.touch-ui .src_ctrl_menu {
     text-align: left;
 }
 
+BODY.touch-ui .src_ctrl_menu BUTTON {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+
+BODY.touch-ui  .monitor_menu_content {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+
+
 .src_ctrl_menu BUTTON .remove {
     position: absolute;
     display: none;
@@ -1625,38 +1662,49 @@ BODY.touch-ui .src_ctrl_menu {
     display: block;
 }
 
-.src_ctrl_menu BUTTON:hover .remove {
+BODY.touch-ui .src_ctrl_menu BUTTON.warn .remove,
+BODY.desktop-ui .src_ctrl_menu BUTTON:hover .remove {
     display: block;
 }
 
+BODY.touch-ui .src_ctrl_menu BUTTON.notset:hover,
 .src_ctrl_menu BUTTON.notset {
     border: 1px dashed white;
     background: transparent;
     padding-right: 10px;
 }
 
-.src_ctrl_menu BUTTON.notset:hover {
+BODY.touch-ui .src_ctrl_menu BUTTON.notset.selecting,
+BODY.desktop-ui .src_ctrl_menu BUTTON.notset:hover {
     background-color: #ff8c00;
 }
 
-.src_ctrl_menu BUTTON.warn:hover,
+BODY.desktop-ui .src_ctrl_menu BUTTON.warn:hover,
+BODY.touch-ui .src_ctrl_menu BUTTON.warn,
 .src_ctrl_menu BUTTON.warn .remove {
     background-color: red;
+}
+
+BODY.touch-ui .src_ctrl_menu BUTTON.warn {
+    z-index: 101; /* above cancelling underlay */
 }
 
 .src_ctrl_menu BUTTON.warn .icon {
     opacity: 1.0;
 }
 
-.monitor_menu_content  .msg_types.err, .src_ctrl_menu BUTTON.err {
+.monitor_menu_content .msg_types.err,
+.src_ctrl_menu BUTTON.err {
     background: red;
 }
 
-.monitor_menu_content A.msg_types:hover, .src_ctrl_menu BUTTON:hover  {
+BODY.desktop-ui .monitor_menu_content A.msg_types:hover,
+.src_ctrl_menu BUTTON:hover  {
     background: #558ec3;
 }
 
-.monitor_menu_content A.msg_types.err:hover, .src_ctrl_menu BUTTON.err:hover {
+BODY.desktop-ui .monitor_menu_content A.msg_types.err:hover,
+.src_ctrl_menu BUTTON.err:hover {
     background: #c20000;
 }
 
@@ -1802,6 +1850,50 @@ SPAN.error {
     display: none;
     background: #000000e0;
 }
+
+#touch-ui-selector {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: auto;
+    height: auto;
+    z-index: 100;
+    padding: 20px;
+    display: none;
+    background: #000000e0;
+    border-radius: 15px;
+}
+
+#touch-ui-selector .content {
+    /* padding: 10px; */
+    /* border-radius: 5px; */
+    font-size: 15px;
+    /* overscroll-behavior: none; */
+
+}
+
+#touch-ui-selector .content .empty {
+    display: block;
+    border-radius: 5px;
+    background-color: #660000;
+    color: #fff;
+    font-weight: bold;
+    line-height: 50px;
+    padding: 10px 40px;
+}
+
+#touch-ui-selector .content .topic-option {
+    display: block;
+    border-radius: 5px;
+    background-color: #0088ff;
+    color: #fff;
+    font-weight: bold;
+    line-height: 30px;
+    padding: 10px 10px 10px 10px;
+    margin-bottom: 2px;
+    min-width: 200px;
+}
+
 
 #touch-ui-dialog .title {
     position: absolute;
@@ -2538,6 +2630,7 @@ BODY.desktop-ui #touch_ui_status:hover,
 
 #grid-stack-container {
     position: relative;
+    margin-bottom: 50px;
     /* padding: 0px 10px; */
 }
 
@@ -2666,4 +2759,78 @@ BODY.desktop-ui #touch_ui_status:hover,
 
   #page_message.error A {
     color: #fff;
+  }
+
+BODY.desktop-ui  #bottom-links {
+    text-align: right;
+    /* margin-top: 20px; */
+    padding: 30px 10px 10px 10px;
+    color: #ffffff23;
+    font-size: 13px;
+}
+
+BODY.desktop-ui  #bottom-links {
+    text-align: right;
+    padding: 7px 10px 7px 10px;
+    color: #ffffff23;
+    font-size: 13px;
+    /* background: #000000d1; */
+    /* float: right; */
+    border-radius: 5px 0px 0px 0px;
+    position: absolute;
+    right: 0px;
+    top: calc(100% - 40px);
+}
+
+BODY.desktop-ui  #bottom-links I  {
+    margin-right: 4px;
+}
+
+BODY.hamburger  #bottom-links I  {
+    margin-right: 6px;
+}
+
+BODY.hamburger  #bottom-links I.bm-hide  {
+    display: none;
+}
+
+BODY.hamburger  #bottom-links SPAN {
+    display: block;
+    margin-top: 10px;
+}
+
+BODY.hamburger  #bottom-links {
+    text-align: left;
+    position: absolute;
+    left: 10px;
+    bottom: 35px;
+    padding: 7px 10px 7px 10px;
+    color: #ffffff23;
+    font-size: 12px;
+    line-height: 15px;
+    top: unset !important;
+}
+
+ #bottom-links A {
+    color: #ffffff4a;
+    margin: 0px 4px 0px 0px;
+    line-height: 20px;
+    display: inline-block;
+  }
+
+  BODY.hamburger #bottom-links A {
+    color: #ffffff4a;
+    margin: 0px 4px 0px 0px;
+    /* line-height: 20px; */
+    display: inline-block;
+    font-size: 18px;
+  }
+
+  #bottom-links A.credits {
+    background-image: url(/static/favicons/favicon-blue-purple-16x16.png);
+    background-repeat: no-repeat;
+    padding-left: 19px;
+    background-size: 16px;
+    /* filter: opacity(-0.5); */
+    background-position: 0px 2px;
   }

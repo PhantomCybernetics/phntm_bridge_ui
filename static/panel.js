@@ -391,6 +391,9 @@ export class Panel {
 
         $('#monitor_menu_content_'+this.n).empty();
         $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
+        this.menu_content_underlay = $('<div class="menu_content_underlay"></div>');
+        $('#monitor_menu_content_'+this.n).append(this.menu_content_underlay);
+
         // let linesCont = $('<div class="menu_lines"></div>');
         for (let i = 0; i < els.length; i++) {
             $('#monitor_menu_content_'+this.n).append(els[i]);

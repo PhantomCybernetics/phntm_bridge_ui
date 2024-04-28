@@ -288,22 +288,74 @@ export class MultiTopicSource {
         rem_btn.appendTo(btn);
 
         btn.on('click', (e) => {
+            if (isTouchDevice && btn.hasClass('warn')) {
+                rem_btn.trigger('click');
+                return;
+            }
+            
             that.widget.panel.ui.message_type_dialog(slot.msg_type);
-            e.cancelBubble = true;
-            return false;
+        });
+
+        btn.on('touchstart', (e) => {
+            if (!isTouchDevice()) return;
+            console.log('touchstart '+slot.label);
+            if (slot.btn_timer)
+                window.clearTimeout(slot.btn_timer);
+            slot.btn_timer = window.setTimeout(()=>{
+                btn.addClass('warn');
+                that.panel.ui.menu_blocking_element = btn;
+                that.panel.menu_content_underlay
+                    .addClass('open')
+                    .unbind()
+                    .on('click', () => {
+                        btn.trigger('cancel');
+                    });
+
+            }, 2000) // hold for 2s for the delete button to appear
+        });
+
+        btn.on('touchend', (e) => {
+            if (!isTouchDevice()) return;
+            if (slot.btn_timer) {
+                window.clearTimeout(slot.btn_timer);
+                slot.btn_timer = null;
+            }
+        });
+
+        btn.on('cancel', (e) => {
+            if (!isTouchDevice()) return;
+            if (btn.hasClass('warn')) {
+                btn.removeClass('warn');
+            }
+            that.panel.ui.menu_blocking_element = null;
+            // console.log('cancel!');
+            that.panel.menu_content_underlay
+                    .removeClass('open')
+                    .unbind();
         });
 
         rem_btn.on('mouseenter', (e) => {
             btn.addClass('warn');
         });
+
         rem_btn.on('mouseleave', (e) => {
             btn.removeClass('warn');
         });
-        rem_btn.on('click', (e) => {
+        
+        rem_btn.on('click', (ev) => {
             that.clearSlot(slot);
+            if (isTouchDevice()) {
+                btn.removeClass('warn');
+                that.panel.ui.menu_blocking_element = null;
+                that.panel.menu_content_underlay
+                        .removeClass('open')
+                        .unbind();
+            }
             that.panel.ui.update_url_hash();
-            e.cancelBubble = true;
-            return false;
+            if (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
         });
         
 
@@ -319,7 +371,7 @@ export class MultiTopicSource {
                 slot.msg_type, //filter by msg type
                 Object.keys(that.subscribed_topics), //exclude
                 (topic) => {
-                    console.log('Selected '+topic);
+                    // console.log('Selected '+topic);
                     slot.selected_topic = topic;
                     that.assignSlotTopic(slot);
                     that.updateSlots(slot.src);
@@ -327,7 +379,8 @@ export class MultiTopicSource {
                     that.panel.ui.update_url_hash();
                     if (that.onChange)
                         that.onChange();
-                }
+                }, 
+                btn
             );
             e.cancelBubble = true;
             return false;
