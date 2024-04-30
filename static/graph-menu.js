@@ -30,13 +30,15 @@ export class GraphMenu {
         this.hovered_topic = null;
 
         this.margin = {top: 0, right: 0, bottom: 0, left: 0};
-        this.width = 0;
+        this.width_svg = 0;
         this.height = 0;
+        this.is_narrow = false;
+
         let available_w = 825; // top menu defauls
         let available_h = 600; //
         if ($('BODY').hasClass('hamburger')) {
             available_w = window.innerWidth - 35;
-            available_h =$(window).height()-110;
+            available_h = $(window).height()-110;
         }
         this.set_dimensions(available_w, available_h);
 
@@ -45,7 +47,7 @@ export class GraphMenu {
         // append the svg object to the body of the page
         this.svg = d3.select("#graph_display")
             .append("svg")
-            .attr("width", this.width)
+            .attr("width", this.width_svg)
             .attr("height", this.height)
             .append("g")
                 .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
@@ -96,36 +98,54 @@ export class GraphMenu {
         this.is_narrow = state;
     }
 
-    set_dimensions(full_w, h) {
+    set_dimensions(available_w, h) {
         
-        let old_w = this.width;
-        let old_h = this.height;
-
-        let w_svg = full_w - 300 - 300 - 25;
-        // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
-        this.width = w_svg - this.margin.left - this.margin.right;
-        this.height = h - this.margin.top - this.margin.bottom;
-
-        if (this.width < 0)
-            this.width = 0;
-        if (this.height < 0)
-            this.height = 0;
-
-        this.topic_container_el.css('padding-left', w_svg);
-        if (this.svg) {
-            // console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
-            $('#graph_display svg').attr({
-                "width": this.width,
-                "height": this.height
-            });
-            this.svg
-                .attr("width", this.width)
-                .attr("height", this.height);
-            if (old_w != this.width || old_h != this.height) {
-                this.redraw_links();
-            }
+        if (h === null) {
+            h = this.graph_display_el.innerHeight()-20;
+            console.log('h was null, is '+h+'; is_narrow'+this.is_narrow);
         }
-        
+
+        console.log('set_dimensions w='+available_w+' h='+h+'; is_narrow='+this.is_narrow);
+
+        if (this.is_narrow) {
+            this.graph_display_el.css({
+                'width': available_w
+            });
+            this.topic_container_el.css({
+                'padding-left': 0,
+                'width': available_w-20
+            });
+        } else {
+            let old_w = this.width_svg;
+            let old_h = this.height;
+    
+            let w_svg = available_w - 300 - 300 - 20;
+            // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
+            this.width_svg = w_svg - this.margin.left - this.margin.right;
+            this.height = h - this.margin.top - this.margin.bottom;
+    
+            if (this.width_svg < 0)
+                this.width_svg = 0;
+            // if (this.width > )
+    
+            if (this.height < 0)
+                this.height = 0;
+    
+            this.topic_container_el.css('padding-left', this.width_svg);
+            if (this.svg) {
+                // console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
+                $('#graph_display svg').attr({
+                    "width": this.width_svg,
+                    "height": this.height
+                });
+                this.svg
+                    .attr("width", this.width_svg)
+                    .attr("height", this.height);
+                if (old_w != this.width_svg || old_h != this.height) {
+                    this.redraw_links();
+                }
+            }
+        } 
      }
 
     update(nodes) {
@@ -406,7 +426,7 @@ export class GraphMenu {
         let pos_topic = -this.topic_container_el.scrollTop() + 18 + t.offset + link.topic_conn_no*5;
 
         let offset_node  = link.group == 1 ? 2 : 5; // 1 >, 2 <
-        let offset_topic = link.group == 1 ? this.width-5 : this.width-2;
+        let offset_topic = link.group == 1 ? this.width_svg-5 : this.width_svg-2;
 
         return 'M '+offset_node+' '+pos_node+' C 100 '+pos_node+', 100 '+pos_topic+', '+offset_topic+' '+pos_topic;
     }

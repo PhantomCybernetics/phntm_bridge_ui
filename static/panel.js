@@ -60,7 +60,7 @@ export class Panel {
                 '<div class="monitor_menu prevent-select" id="monitor_menu_'+this.n+'">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
-                '<div class="panel_content_space">' +
+                '<div class="panel_content_space" id="panel_content_space_'+this.n+'">' +
                     '<div class="panel_widget'+(this.src_visible?' source_visible':'')+'" id="panel_widget_'+this.n+'"></div>' +
                     '<div class="panel_source'+(this.src_visible?' enabled':'')+'" id="panel_source_'+this.n+'">Waiting for data...</div>' +
                     '<div class="cleaner"></div>' +
@@ -153,6 +153,30 @@ export class Panel {
             }
             console.log('Touch end '+id_source);
         });
+
+        this.last_content_space_click = null;
+        this.maximized = false;
+
+        $('#panel_content_space_'+this.n).on('click', () => {
+            if (that.editing)
+                return;
+            // if (that.edit_timeout) {
+            //     window.clearTimeout(that.edit_timeout);
+            //     that.edit_timeout = null;
+            // }
+            
+            if (that.last_content_space_click && Date.now() - that.last_content_space_click < 250) {
+                console.log('Duble Clicked '+id_source);
+                that.last_content_space_click = null;
+                that.maximize(!that.maximized);
+                return;
+            } 
+
+            console.log('Clicked '+id_source);
+            that.last_content_space_click = Date.now();
+        });
+
+        
 
         this.menu_el = $('#monitor_menu_'+this.n);
         this.menu_content_el = $('#monitor_menu_content_'+this.n);
@@ -428,8 +452,10 @@ export class Panel {
 
         // console.log('Max h', h);
 
-        w -= 20;
-        h -= 56;
+        if (!this.maximized) {
+            w -= 20;
+            h -= 56;
+        }
 
         return [w, h];
     }
@@ -491,6 +517,33 @@ export class Panel {
 
        if (this.resize_event_handler != null)
            this.resize_event_handler();
+    }
+
+    maximize(state=true) {
+        if (state == this.maximized)
+            return;
+        if (state) {
+            $('BODY').addClass('no-scroll');
+            $(this.grid_widget)
+                .addClass('maximized')
+                .css({
+                    top: $(window).scrollTop()-60,
+                    height: window.innerHeight
+                });
+        } else {
+            $(this.grid_widget)
+                .removeClass('maximized')
+                .css({
+                    top: '',
+                    height: ''
+                });
+            $('BODY').removeClass('no-scroll');
+        }
+        this.maximized = state;
+        let that = this;
+        window.setTimeout(()=>{
+            that.onResize()
+        }, 500); // resize at the end of the animation
     }
 
     on_data(msg, ev) {

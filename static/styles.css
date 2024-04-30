@@ -90,7 +90,7 @@ h3 {
 }
 
 #fixed-header {
-    position: sticky;
+    position: fixed;
     z-index: 16; /* above hovered grid panel (15) */
     background: #000000d6;
     width: 100%;
@@ -194,8 +194,8 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
 }
 
 #menubar_items #graph_display.narrow {
-    width: auto;
-    min-width: 300px;
+    /* width: auto; */
+    /* min-width: 300px; */
 }
 
 #menubar_items #graph_display.narrow svg,
@@ -211,20 +211,16 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
 
 /* affect menu scaling */
 BODY.hamburger #menubar_items #service_list {
-    min-width: 350px;
     max-height: unset;
 }
 BODY.hamburger #menubar_items #cameras_list {
-    min-width: 350px;
     max-height: unset;
 }
 BODY.hamburger #menubar_items #docker_list {
-    min-width: 350px;
     max-height: unset;
     border-top: 0px;
 }
 BODY.hamburger #menubar_items #widget_list {
-    min-width: 350px;
     max-height: unset;
 }
 
@@ -279,6 +275,7 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 }
 
 #menu-underlay {
+    z-index: 82; 
     background-color: transparent;
 }
 
@@ -384,7 +381,6 @@ BODY.narrower .narrower-w { display: inline; }
 
 #graph_display {
     width: 800px;
-    min-width: 800px;
     height: 600px;
     position: absolute;
     left: 0px;
@@ -817,6 +813,10 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     color: #fff;
     line-height: 30px;
     position: relative;
+}
+
+BODY.hamburger #docker_list {
+    padding: 10px;
 }
 
 BODY.hamburger #docker_list .docker_cont {
@@ -1754,8 +1754,58 @@ BODY.touch-ui .grid-stack-item.editing .panel-title {
     z-index: 1;
 }
 
-.grid-stack>.grid-stack-item:hover {
+BODY.desktop-ui .grid-stack>.grid-stack-item:hover {
     z-index: 15;
+}
+
+.grid-stack-item.maximized {
+    left: -4px !important;
+    width: 100vw !important;
+    /* height: calc(100vh - 85px) !important; */
+    z-index: 15 !important;
+    background: red;
+    margin: 0px !important;
+    padding: 0px !important;
+}
+
+.grid-stack-item.maximized .grid-stack-item-content {
+    inset: 0px !important;
+    border-radius: 0px !important;
+    padding:  0px !important;
+}
+
+.grid-stack-item.maximized .panel-title {
+    top: 58px;
+    left: 8px;
+    position: absolute;
+    font-size: 16px;
+    opacity: 0.5;
+}
+
+.grid-stack-item.maximized .panel_content_space {
+    height: 100% !important;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+.grid-stack-item.maximized .monitor_menu  {
+    top: 58px;
+    right: 20px;
+}
+
+.grid-stack-item.maximized  .panel_widget {
+    border-radius: 0px !important;
+}
+
+.grid-stack-item.maximized .video_fps  {
+    top: 100px;
+    right: 22px;
+}
+
+.grid-stack-item.maximized .pause-panel-button {
+    top: 55px;
+    left: 10px;
+    z-index: 3;
 }
 
 SPAN.error {
@@ -2013,7 +2063,7 @@ BODY.landscape #touch-ui-dialog button.close {
 }
 
 .pause-panel-button,
-.pause-panel-button.paused:hover {
+BODY.desktop-ui .pause-panel-button.paused:hover {
     display: block;
     cursor: pointer;
     position: absolute;
@@ -2028,14 +2078,13 @@ BODY.landscape #touch-ui-dialog button.close {
     background-size: 60px;
 }
 
-.pause-panel-button:hover,
-.pause-panel-button.paused {
+BODY.desktop-ui .pause-panel-button:hover,
+BODY.desktop-ui .pause-panel-button.paused {
     /* background-color: #139a80; */
     background-position: 6px 0px;
 }
 
-BODY.touch-ui .pause-panel-button,
-BODY.touch-ui .pause-panel-button:hover {
+BODY.touch-ui .pause-panel-button {
     width: 40px;
     height: 40px;
     left: -4px;
@@ -2045,8 +2094,7 @@ BODY.touch-ui .pause-panel-button:hover {
     background-size: 82px;
 }
 
-BODY.touch-ui .pause-panel-button.paused,
-BODY.touch-ui .pause-panel-button.paused:hover {
+BODY.touch-ui .pause-panel-button.paused {
     background-position: 13px 7px;
 }
 
@@ -2631,6 +2679,7 @@ BODY.desktop-ui #touch_ui_status:hover,
 #grid-stack-container {
     position: relative;
     margin-bottom: 50px;
+    margin-top: 60px;
     /* padding: 0px 10px; */
 }
 
@@ -2782,6 +2831,10 @@ BODY.desktop-ui  #bottom-links {
     top: calc(100% - 40px);
 }
 
+#bottom-links {
+    display: none;
+}
+
 BODY.desktop-ui  #bottom-links I  {
     margin-right: 4px;
 }
@@ -2796,14 +2849,14 @@ BODY.hamburger  #bottom-links I.bm-hide  {
 
 BODY.hamburger  #bottom-links SPAN {
     display: block;
-    margin-top: 10px;
+    margin-top: 5px;
 }
 
 BODY.hamburger  #bottom-links {
     text-align: left;
     position: absolute;
-    left: 10px;
-    bottom: 35px;
+    left: 12px;
+    bottom: 33px;
     padding: 7px 10px 7px 10px;
     color: #ffffff23;
     font-size: 12px;
@@ -2823,7 +2876,7 @@ BODY.hamburger  #bottom-links {
     margin: 0px 4px 0px 0px;
     /* line-height: 20px; */
     display: inline-block;
-    font-size: 18px;
+    font-size: 16px;
   }
 
   #bottom-links A.credits {
@@ -2834,3 +2887,15 @@ BODY.hamburger  #bottom-links {
     /* filter: opacity(-0.5); */
     background-position: 0px 2px;
   }
+
+BODY.touch-ui .grid-stack-item>.ui-resizable-se {
+    width: 30px;
+    height: 30px;
+}
+
+BODY.touch-ui .grid-stack-item>.ui-resizable-ne,
+BODY.touch-ui .grid-stack-item>.ui-resizable-nw,
+BODY.touch-ui .grid-stack-item>.ui-resizable-se,
+BODY.touch-ui .grid-stack-item>.ui-resizable-sw {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 20 20"><path d="m10 3 2 2H8l2-2v14l-2-2h4l-2 2"/></svg>') !important;
+}
