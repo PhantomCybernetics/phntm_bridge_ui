@@ -166,13 +166,13 @@ export class Panel {
             // }
             
             if (that.last_content_space_click && Date.now() - that.last_content_space_click < 250) {
-                console.log('Duble Clicked '+id_source);
+                // console.log('Duble Clicked '+id_source);
                 that.last_content_space_click = null;
                 that.maximize(!that.maximized);
                 return;
             } 
 
-            console.log('Clicked '+id_source);
+            // console.log('Clicked '+id_source);
             that.last_content_space_click = Date.now();
         });
 
@@ -520,17 +520,23 @@ export class Panel {
     }
 
     maximize(state=true) {
-        if (state == this.maximized)
-            return;
+        // if (state == this.maximized)
+        //     return;
         if (state) {
+            console.log(`Maximizing panel ${this.id_source} w.height=${$(window).height()}`);
             $('BODY').addClass('no-scroll');
+            this.ui.maximized_panel = this;
             $(this.grid_widget)
                 .addClass('maximized')
                 .css({
                     top: $(window).scrollTop()-60,
-                    height: window.innerHeight
+                    height: $(window).height()
                 });
         } else {
+            console.log(`Unmaximizing panel ${this.id_source}`);
+            if (this.ui.maximized_panel == this) {
+                this.ui.maximized_panel = null;
+            }
             $(this.grid_widget)
                 .removeClass('maximized')
                 .css({
@@ -541,9 +547,20 @@ export class Panel {
         }
         this.maximized = state;
         let that = this;
-        window.setTimeout(()=>{
-            that.onResize()
-        }, 500); // resize at the end of the animation
+
+        let start = Date.now();
+        // console.log('animating onresize')
+        let resize_timer = window.setInterval(()=>{
+            that.onResize();
+            let done_animating = start + 1000 < Date.now();
+            if (done_animating) {
+                // console.log('done animating, stopping onresize')
+                window.clearInterval(resize_timer);
+            }
+        }, 10);
+        // window.setTimeout(()=>{
+        //     that.onResize()
+        // }, 500); // resize at the end of the animation
     }
 
     on_data(msg, ev) {

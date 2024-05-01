@@ -3,8 +3,9 @@
 <div id="fixed-header">
     <div id="page_message"></div>
 
-    <div id="modal-underlay"></div>
-    <div id="menu-underlay"></div>
+    <div id="modal-underlay" class="prevent-select"></div>
+    <div id="menu-underlay" class="prevent-select"></div>
+
     <div id="fixed-left">
 
         <h1 id="robot_name">
@@ -53,56 +54,60 @@
                     <span id="menubar_hamburger_close" class="prevent-select">Close</span>
                     <span id="hamburger_menu_label"></span>
 
-                    <div id="graph_controls">
-                        <h3 id="graph_controls_heading" title="Graph view">
-                            <span id="graph_nodes_label">
+                    <div id="menubar_scrollable">
+
+                        <div id="graph_controls">
+                            <h3 id="graph_controls_heading" title="Graph view">
+                                <span id="graph_nodes_label">
+                                    <b>0</b>
+                                    <span class="full-w narrow-w">Nodes</span>
+                                    <span class="narrower-w">Nds</span>
+                                </span>
+                                <span id="graph_topics_label">
+                                    <b>0</b>
+                                    <span class="full-w narrow-w">Topics</span>
+                                    <span class="narrower-w">Tpcs</span>
+                                </span>
+                            </h3>
+                            <div id="graph_display" data-min-width="805" data-max-width="1005"></div>
+                        </div>
+
+                        <div id="service_controls">
+                            <h3 id="services_heading">
                                 <b>0</b>
-                                <span class="full-w narrow-w">Nodes</span>
-                                <span class="narrower-w">Nds</span>
-                            </span>
-                            <span id="graph_topics_label">
+                                <span class="full-w">Services</span>
+                                <span class="narrow-w narrower-w">Srv</span>
+                            </h3>
+                            <div id="service_list" data-min-width="350"></div>
+                        </div>
+
+                        <div id="camera_controls">
+                            <h3 id="cameras_heading">
                                 <b>0</b>
-                                <span class="full-w narrow-w">Topics</span>
-                                <span class="narrower-w">Tpcs</span>
-                            </span>
-                        </h3>
-                        <div id="graph_display" data-min-width="805" data-max-width="1005"></div>
-                    </div>
+                                <span class="full-w">Cameras</span>
+                                <span class="narrow-w narrower-w">Cam</span>
+                            </h3>
+                            <div id="cameras_list" data-min-width="350"></div>
+                        </div>
 
-                    <div id="service_controls">
-                        <h3 id="services_heading">
-                            <b>0</b>
-                            <span class="full-w">Services</span>
-                            <span class="narrow-w narrower-w">Srv</span>
-                        </h3>
-                        <div id="service_list" data-min-width="350"></div>
-                    </div>
+                        <div id="docker_controls">
+                            <h3 id="docker_heading">
+                                <b>0</b>
+                                <span class="full-w">Containers</span>
+                                <span class="narrow-w narrower-w">Cont</span>
+                            </h3>
+                            </h3>
+                            <div id="docker_list" data-min-width="350"></div>
+                        </div>
 
-                    <div id="camera_controls">
-                        <h3 id="cameras_heading">
-                            <b>0</b>
-                            <span class="full-w">Cameras</span>
-                            <span class="narrow-w narrower-w">Cam</span>
-                        </h3>
-                        <div id="cameras_list" data-min-width="350"></div>
-                    </div>
+                        <div id="widget_controls">
+                            <h3 id="widgets_heading">
+                                <b>+</b>
+                                <span class="hamburger-w">Widgets</span>
+                            </h3>
+                            <div id="widget_list" data-min-width="350"></div>
+                        </div>
 
-                    <div id="docker_controls">
-                        <h3 id="docker_heading">
-                            <b>0</b>
-                            <span class="full-w">Containers</span>
-                            <span class="narrow-w narrower-w">Cont</span>
-                        </h3>
-                        </h3>
-                        <div id="docker_list" data-min-width="350"></div>
-                    </div>
-
-                    <div id="widget_controls">
-                        <h3 id="widgets_heading">
-                            <b>+</b>
-                            <span class="hamburger-w">Widgets</span>
-                        </h3>
-                        <div id="widget_list" data-min-width="350"></div>
                     </div>
                 </div>
             </div>
@@ -129,7 +134,7 @@
 <div id="touch-ui-selector">
     <div class="content"></div>
 </div>
-<div id="touch-ui-dialog-underlay"></div>
+<div id="touch-ui-dialog-underlay" class="prevent-select"></div>
 
 <div id="topic-selector-dialog"></div>
 

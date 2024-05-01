@@ -84,9 +84,12 @@ h3 {
 }
 
 .prevent-select {
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
+    -webkit-user-select: none; /* Safari */
+    -webkit-text-select: none;
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    -moz-user-select: none;
+    -webkit-tap-highlight-color: transparent; /* removes the highlight on overlays on mobile opera */
 }
 
 #fixed-header {
@@ -202,6 +205,22 @@ BODY.hamburger #menubar_content.open #menubar_hamburger {
 #menubar_items #graph_display.narrow #graph_nodes {
     display: none; /* no nodes or connections in narrow mode */
 }
+BODY.hamburger #menubar_scrollable {
+    padding-bottom: 10px;
+    /* background: red; */
+    position: absolute;
+    left: 0px;
+    padding-left: 20px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 200vw; /* clipped by parent */
+    /* height: calc(-160px + 100vh); */
+}
+
+BODY.hamburger #menubar_scrollable.open {
+    overflow-y: hidden;
+}
+
 
 #menubar_items #graph_display.narrow #graph_topics {
     width: auto;
@@ -276,7 +295,7 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 
 #menu-underlay {
     z-index: 82; 
-    background-color: transparent;
+    /* background-color: transparent; */
 }
 
 #hamburger_menu_label {
@@ -1554,6 +1573,7 @@ BODY.touch-ui .menu_line.src_ctrl {
 
 BODY.touch-ui .menu_line.src_ctrl.open {
     border-bottom: 0px;
+    -webkit-tap-highlight-color: transparent; /* removes the highlight on overlays on mobile opera */
 }
 
 .menu_line.src_ctrl > .icon {
@@ -2855,13 +2875,25 @@ BODY.hamburger  #bottom-links SPAN {
 BODY.hamburger  #bottom-links {
     text-align: left;
     position: absolute;
-    left: 12px;
-    bottom: 33px;
-    padding: 7px 10px 7px 10px;
+    left: 20px;
+    bottom: 10px;
+    padding: 7px 10px 7px 0px;
     color: #ffffff23;
     font-size: 12px;
     line-height: 15px;
     top: unset !important;
+}
+
+BODY.hamburger  #bottom-links.inline {
+    display: block;
+    position: relative;
+    left: 0px;
+    /* top: 0px !important; */
+    bottom: unset;
+    /* background: lime; */
+    clear: both;
+    margin-top: 10px;
+    float: left;
 }
 
  #bottom-links A {

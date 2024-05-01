@@ -63,6 +63,7 @@ export class PanelUI {
 
         this.panels = {}
         this.panel_menu_on = null; //touch only
+        this.maximized_panel = null;
 
         this.keyboard = keyboard;
         this.gamepad = gamepad;
@@ -500,6 +501,7 @@ export class PanelUI {
 
             if (!this.burger_menu_open) {
                 $('#menubar_hamburger_close').text('Close');
+                this.body_scroll_was_disabled_before_burger_menu = $('BODY').hasClass('no-scroll');
                 $('BODY').addClass('no-scroll');
                 $('#modal-underlay')
                     .css('display', 'block')
@@ -532,6 +534,7 @@ export class PanelUI {
                 // console.log('closing burger menu open item '+this.burger_menu_open_item);
 
                 $('#menubar_hamburger_close').text('Close');
+                $('#menubar_scrollable').removeClass('open'); // disable menu scrolling
                 $('#hamburger_menu_label')
                     .text('')
                     .removeClass('graph_controls')
@@ -602,7 +605,10 @@ export class PanelUI {
                 });
             }
 
-            $('BODY').removeClass('no-scroll');
+            if (!this.body_scroll_was_disabled_before_burger_menu) {
+                $('BODY').removeClass('no-scroll');
+            }
+                
             $('#modal-underlay').css('display', 'none');
         }
     }
@@ -619,6 +625,7 @@ export class PanelUI {
         // let small_menu_full_width = 255;
 
         $('#menubar_hamburger_close').text('Back');
+        $('#menubar_scrollable').addClass('open'); // disable menu scrolling
 
         let el = $(what);
         let w_body = $('body').innerWidth();
@@ -661,7 +668,7 @@ export class PanelUI {
             $('#menubar_items > DIV').stop().animate({
                 left: -(this.small_menu_width + 20) + 'px'
             }, 200, () => {
-
+                // finished
             });
 
             let label = '';
@@ -688,10 +695,12 @@ export class PanelUI {
                 .addClass('graph_controls')
                 .css('display', 'block');
 
+            let t = ((el.parent().parent().children().index(el.parent())) * -(15 + 15 + 21 + 1));
+            t += $('#menubar_scrollable').scrollTop();
             el.css({
                 width: el_w + 'px', //10 is padding
                 left: (this.small_menu_width + 20) + 'px', // top right of the parent (moving) item
-                top: ((el.parent().parent().children().index(el.parent()) - 2) * -(15 + 15 + 21 + 1)) + 'px'
+                top: t + 'px'
                 })
                 .addClass('hamburger-open')
                 .stop();
@@ -929,6 +938,7 @@ export class PanelUI {
 
             $('#touch-ui-dialog .title').html(msg_type);
             $('#touch-ui-dialog .content').html(content);
+            let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
             $('BODY').addClass('no-scroll');
             $('#touch-ui-dialog').addClass('msg_type').css({
                 display: 'block'
@@ -936,7 +946,8 @@ export class PanelUI {
             $('#touch-ui-dialog .content').scrollTop(0).scrollLeft(0);
             $('#close-touch-ui-dialog').unbind().click((e) => {
                 $('#touch-ui-dialog').css('display', 'none').removeClass('msg_type');
-                $('BODY').removeClass('no-scroll');
+                if (!body_scroll_was_disabled)
+                    $('BODY').removeClass('no-scroll');
             });
 
         }
@@ -1011,6 +1022,7 @@ export class PanelUI {
             });
         } else {
             // touch
+            let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
             $('BODY').addClass('no-scroll');
             // $('#touch-ui-dialog .content').html(content);
             let offset = align_el.offset();
@@ -1029,7 +1041,8 @@ export class PanelUI {
                     $('#touch-ui-selector').unbind()
                     $('#touch-ui-selector').css('display', 'none').removeClass('src_selection');
                     d.empty();
-                    $('BODY').removeClass('no-scroll');
+                    if (!body_scroll_was_disabled)
+                        $('BODY').removeClass('no-scroll');
                     that.client.off('topics', render_list);
                     $('#touch-ui-dialog-underlay').unbind().css('display', 'none');
                     $('#close-touch-ui-dialog').unbind();
@@ -1658,31 +1671,46 @@ export class PanelUI {
 
         if (hamburger) {
 
+            let h = $(window).height();
             $('#menubar_items').css({
-                height: (window.innerHeight - 60) + 'px' // bg fills screenheight
+                height: (h-60) + 'px' // bg fills screenheight
             });
-
+            $('#menubar_scrollable').css('height', h-74);
             //  let graph_w = $('#graph_display').innerWidth();
-            let h = $(window).height() - 100;
-            $('#service_list').css('height', h);
-            $('#cameras_list').css('height', h);
-            $('#docker_list').css('height', h);
-            $('#widget_list').css('height', h);
-            $('#graph_display').css('height', h);
+            
+            
+
+            $('#service_list').css('height', h-100);
+            $('#cameras_list').css('height', h-100);
+            $('#docker_list').css('height', h-100);
+            $('#widget_list').css('height', h-100);
+            $('#graph_display').css('height', h-100);
+
+            
 
             if (this.burger_menu_open_item) {
-                this.burger_menu_action(this.burger_menu_open_item, h); // only update
+                this.burger_menu_action(this.burger_menu_open_item, h-100); // only update
             }
 
             if (!$('BODY').hasClass('hamburger')) { // switched
-                $('#bottom-links').appendTo('#menubar_items'); // move to burger menu
+                $('#bottom-links')
+                    .appendTo('#menubar_scrollable') // move to burger menu
+                    .css('display', 'block');
             }
 
-            if (window.innerHeight < 425) {
-                $('#bottom-links').css('display', 'none');
+            if (h < 520) {
+                $('#bottom-links').addClass('inline');
             } else {
-                $('#bottom-links').css('display', 'block');
+                $('#bottom-links').removeClass('inline');
             }
+
+            // if (window.innerHeight < 425) {
+            //     console.log('hiding bottom links, window.innerHeight='+window.innerHeight)
+            //     $('#bottom-links').css('display', 'none');
+            // } else {
+            //     console.log('showig bottom links, window.innerHeight='+window.innerHeight)
+            //     $('#bottom-links').css('display', 'block');
+            // }
 
         } else { // top menu on desktop
 
@@ -1692,6 +1720,7 @@ export class PanelUI {
             $('#menubar_items').css({
                 height: '' //unset
             });
+            $('#menubar_scrollable').css('height', '');
             $('#graph_display').removeClass('narrow');
             $('#graph_display').css({
                 'height': '',
@@ -1709,14 +1738,20 @@ export class PanelUI {
             $('#widget_list').css('height', ''); //unset
 
             if ($('BODY').hasClass('hamburger')) {
-                $('#bottom-links').appendTo('body'); // move to body
-                $('#bottom-links').css('display', 'block');
+                $('#bottom-links')
+                    .appendTo('body') // move to body
+                    .css('display', 'block')
+                    .removeClass('inline');
             }
         };
 
         $('BODY.touch-ui #touch-ui-dialog .content').css({
             'height': (portrait ? window.innerHeight - 160 : window.innerHeight - 90) + 'px'
         });
+
+        if (this.maximized_panel) {
+            this.maximized_panel.maximize(true); //resize
+        }
 
         //this.update_graph_menu_size();
 
