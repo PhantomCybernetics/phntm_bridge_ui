@@ -11,6 +11,7 @@ BODY.no-scroll {
     overflow: hidden;
     height: 100%;
     touch-action: none;
+    padding-bottom: 0px;
 }
 
 .msgTypes {

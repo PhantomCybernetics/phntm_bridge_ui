@@ -523,14 +523,14 @@ export class Panel {
         // if (state == this.maximized)
         //     return;
         if (state) {
-            console.log(`Maximizing panel ${this.id_source} w.height=${$(window).height()}`);
+            console.log(`Maximizing panel ${this.id_source} w.height=${window.innerHeight}`);
             $('BODY').addClass('no-scroll');
             this.ui.maximized_panel = this;
             $(this.grid_widget)
                 .addClass('maximized')
                 .css({
                     top: $(window).scrollTop()-60,
-                    height: $(window).height()
+                    height: window.innerHeight
                 });
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);

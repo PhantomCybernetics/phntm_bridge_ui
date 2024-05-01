@@ -1671,7 +1671,7 @@ export class PanelUI {
 
         if (hamburger) {
 
-            let h = $(window).height();
+            let h = window.innerHeight;
             $('#menubar_items').css({
                 height: (h-60) + 'px' // bg fills screenheight
             });
