@@ -149,3 +149,11 @@ export function roughSizeOfObject(object) {
     // return screen.availHeight > screen.availWidth;
     return window.matchMedia("(orientation: portrait)").matches;
   }
+
+  export function isSafari() {
+
+    let is_safari = navigator.userAgent.toLowerCase().indexOf('safari/') > -1;
+    console.log('safari: ', is_safari);
+    return is_safari;
+  
+  }

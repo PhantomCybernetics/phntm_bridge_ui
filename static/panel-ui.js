@@ -11,7 +11,7 @@ import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.j
 import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice } from "./lib.js";
+import { isPortraitMode, isTouchDevice, isSafari } from "./lib.js";
 
 export class PanelUI {
 
@@ -1671,7 +1671,10 @@ export class PanelUI {
 
         if (hamburger) {
 
-            let h = window.innerHeight;
+            let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
+            if (isTouchDevice() && isSafari()) {
+                h = $(window).height();
+            }
             $('#menubar_items').css({
                 height: (h-60) + 'px' // bg fills screenheight
             });
@@ -1679,14 +1682,11 @@ export class PanelUI {
             //  let graph_w = $('#graph_display').innerWidth();
             
             
-
             $('#service_list').css('height', h-100);
             $('#cameras_list').css('height', h-100);
             $('#docker_list').css('height', h-100);
             $('#widget_list').css('height', h-100);
             $('#graph_display').css('height', h-100);
-
-            
 
             if (this.burger_menu_open_item) {
                 this.burger_menu_action(this.burger_menu_open_item, h-100); // only update

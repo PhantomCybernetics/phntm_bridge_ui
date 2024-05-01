@@ -1,7 +1,7 @@
 
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
 
 export class Panel {
 
@@ -523,14 +523,18 @@ export class Panel {
         // if (state == this.maximized)
         //     return;
         if (state) {
-            console.log(`Maximizing panel ${this.id_source} w.height=${window.innerHeight}`);
+            let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
+            if (isTouchDevice() && isSafari()) {
+                h = '100dvh';
+            }
+            console.log(`Maximizing panel ${this.id_source} w.height=${h}`);
             $('BODY').addClass('no-scroll');
             this.ui.maximized_panel = this;
             $(this.grid_widget)
                 .addClass('maximized')
                 .css({
                     top: $(window).scrollTop()-60,
-                    height: window.innerHeight
+                    height: h
                 });
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);

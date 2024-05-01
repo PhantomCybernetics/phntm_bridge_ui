@@ -85,7 +85,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
-            precision : 'lowp'
+            precision : 'highp' // med & low are really bad on some devices, there could be a switch for this in the menu
         });
         this.renderer.shadowMap.enabled = true;
         this.renderer.setSize(panel.widget_width, panel.widget_height);
@@ -819,6 +819,7 @@ export class DescriptionTFWidget extends EventTarget {
         }
             
         this.labelRenderer.render(this.scene, this.camera);
+        
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()
         });
