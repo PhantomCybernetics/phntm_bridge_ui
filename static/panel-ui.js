@@ -365,12 +365,14 @@ export class PanelUI {
             that.burger_menu_action('#widget_list');
         });
 
-        // $(window).on('touchmove',  { passive: false }, (ev) => {
-        //     console.log('win touchmove', ev);
-        //     if (that.panel_menu_on) {
-        //         that.panel_menu_touch_toggle(); //off
-        //     }
-        // });
+        $('#fixed-header').on('mouseenter', (ev) => {
+            $('BODY').addClass('menu-cancels-scroll');
+        });
+
+        $('#fixed-header').on('mouseleave', (ev) => {
+            $('BODY').removeClass('menu-cancels-scroll');
+        });
+
         $(window).on('scroll touchmove', { passive: false }, (ev) => {
 
             if (that.panel_menu_on) {
@@ -387,10 +389,12 @@ export class PanelUI {
                 that.panel_menu_touch_toggle(); //off
             }
         });
+
         window.addEventListener('touchstart', (ev) => {
             // ev.preventDefault();
             // ev.stopPropagation();
         }, { passive: false });
+
         $(window).on('resize', () => {
             if (that.panel_menu_on) {
                 if ($('#touch-ui-selector').hasClass('src_selection')) {
@@ -1671,16 +1675,15 @@ export class PanelUI {
 
         if (hamburger) {
 
-            let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
+            let h = window.innerHeight; // does not work on mobils afari (adddress bar is not included)
             if (isTouchDevice() && isSafari()) {
-                h = $(window).height();
+                h = $(window).height(); // TODO: still not very good
             }
             $('#menubar_items').css({
                 height: (h-60) + 'px' // bg fills screenheight
             });
             $('#menubar_scrollable').css('height', h-74);
             //  let graph_w = $('#graph_display').innerWidth();
-            
             
             $('#service_list').css('height', h-100);
             $('#cameras_list').css('height', h-100);
@@ -1692,10 +1695,10 @@ export class PanelUI {
                 this.burger_menu_action(this.burger_menu_open_item, h-100); // only update
             }
 
-            if (!$('BODY').hasClass('hamburger')) { // switched
+            if (!$('BODY').hasClass('hamburger') || $('#bottom-links').hasClass('hidden')) { // switched
                 $('#bottom-links')
                     .appendTo('#menubar_scrollable') // move to burger menu
-                    .css('display', 'block');
+                    .removeClass('hidden');
             }
 
             if (h < 520) {
@@ -1737,11 +1740,11 @@ export class PanelUI {
             $('#docker_list').css('height', ''); //unset
             $('#widget_list').css('height', ''); //unset
 
-            if ($('BODY').hasClass('hamburger')) {
+            if ($('BODY').hasClass('hamburger') || $('#bottom-links').hasClass('hidden')) {
                 $('#bottom-links')
                     .appendTo('body') // move to body
                     .css('display', 'block')
-                    .removeClass('inline');
+                    .removeClass(['inline', 'hidden']);
             }
         };
 

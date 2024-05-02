@@ -129,7 +129,8 @@ export class Panel {
         });
 
         this.edit_timeout = null;
-        $('#panel_title_'+this.n).on('touchstart', (ev) => {
+        let title_el = document.getElementById('panel_title_'+this.n);
+        title_el.addEventListener('touchstart', (ev) => {
             if (that.editing)
                 return;
             console.log('Touch start '+id_source);
@@ -142,9 +143,9 @@ export class Panel {
                     that.ui.grid.movable(that.grid_widget, true);
                 }
             }, 2000); // hold panel label for 2s to edit
-        });
+        }, {'passive':true});
 
-        $('#panel_title_'+this.n).on('touchend', () => {
+        title_el.addEventListener('touchend', () => {
             if (that.editing)
                 return;
             if (that.edit_timeout) {
@@ -152,7 +153,7 @@ export class Panel {
                 that.edit_timeout = null;
             }
             console.log('Touch end '+id_source);
-        });
+        }, {'passive':true});
 
         this.last_content_space_click = null;
         this.maximized = false;
@@ -177,21 +178,22 @@ export class Panel {
         });
 
         
-
-        this.menu_el = $('#monitor_menu_'+this.n);
+        let menu_content_el = document.getElementById('monitor_menu_'+this.n);
+        this.menu_el = $(menu_content_el);
         this.menu_content_el = $('#monitor_menu_content_'+this.n);
         this.menu_el.on('click', () => {
             if (!isTouchDevice())
                 return;
             that.ui.panel_menu_touch_toggle(that);
         });
-        this.menu_content_el.on('touchstart', (ev) => {
+        
+        menu_content_el.addEventListener('touchstart', (ev) => {
             console.log('menu touchstart', ev);
             // ev.preventDefault();
             that.ui.menu_locked_scroll = true;
         
             // ev.stopPropagation();
-        });
+        }, { passive: true});
 
         // this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
         //     console.log('menu touchmove', ev);
@@ -201,12 +203,12 @@ export class Panel {
         //     ev.stopPropagation();
         // });
 
-        this.menu_content_el.on('touchend', (ev) => {
+        menu_content_el.addEventListener('touchend', (ev) => {
             console.log('menu touchend', ev);
             // ev.preventDefault();
             that.ui.menu_locked_scroll = null;
             // ev.stopPropagation();
-        });
+        }, { passive: true });
     }
 
     // init with message type when it's known
@@ -536,6 +538,10 @@ export class Panel {
                     top: $(window).scrollTop()-60,
                     height: h
                 });
+
+            this.ui.grid.resizable(this.grid_widget, false);
+            this.ui.grid.movable(this.grid_widget, false);
+
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);
             if (this.ui.maximized_panel == this) {
@@ -548,6 +554,11 @@ export class Panel {
                     height: ''
                 });
             $('BODY').removeClass('no-scroll');
+
+            if (!isTouchDevice()) {
+                this.ui.grid.resizable(this.grid_widget, true);
+                this.ui.grid.movable(this.grid_widget, true);
+            }
         }
         this.maximized = state;
         let that = this;

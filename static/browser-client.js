@@ -460,18 +460,18 @@ export class PhntmBridgeClient extends EventTarget {
     off(event, cb) {
         // console.warn('unsubscribe', cb)
         if (!this.event_calbacks[event]) {
-            // console.warn('Event not registered', event, this.event_calbacks)
+            console.warn('Event not registered', event, this.event_calbacks)
             return;
         }
 
         let p = this.event_calbacks[event].indexOf(cb)
         if (p !== -1) {
             this.event_calbacks[event].splice(p, 1);
-            // console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
+            console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
             if (Object.keys(this.event_calbacks[event]).length == 0) {
                 delete this.event_calbacks[event];
                 if (event.indexOf('/') === 0) { // topic or camera id
-                    // console.log('Unsubscribing from '+event);
+                    console.log('Unsubscribing from '+event);
                     this.remove_subscriber(event);
                 }
             }
@@ -482,8 +482,12 @@ export class PhntmBridgeClient extends EventTarget {
     }
 
     emit(event, ...args) {
-        if (!this.event_calbacks[event])
+        if (!this.event_calbacks[event]) {
+            // console.log('no callbacks for '+event);
             return;
+        }
+
+        // console.log('calling callbacks for '+event, this.event_calbacks[event]);
         let callbacks = Object.values(this.event_calbacks[event]);
         callbacks.forEach((cb) => {
             cb(...args)

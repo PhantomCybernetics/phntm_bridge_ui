@@ -7,6 +7,10 @@ body {
     padding: 0px 0px 10px 0px; /* make some space for panel resizing  */
 }
 
+BODY.desktop-ui {
+    min-height: calc(100% - 70px);
+}
+
 BODY.no-scroll {
     overflow: hidden;
     height: 100%;
@@ -101,6 +105,11 @@ h3 {
     left: 0px;
     top: 0px;
     height: 55px;
+    overscroll-behavior: contain;
+}
+
+BODY.desktop-ui.menu-cancels-scroll {
+    overflow: hidden; /* no body scrolling when mouse is over fixed-header */
 }
 
 /* BODY.hamburger #fixed-header {
@@ -400,7 +409,7 @@ BODY.narrower .full-w, BODY.narrower .narrow-w  { display: none; }
 BODY.narrower .narrower-w { display: inline; }
 
 #graph_display {
-    width: 800px;
+    width: 785px;
     height: 600px;
     position: absolute;
     left: 0px;
@@ -1796,11 +1805,16 @@ BODY.desktop-ui .grid-stack>.grid-stack-item:hover {
 }
 
 .grid-stack-item.maximized .panel-title {
-    top: 58px;
+    top: 47px;
     left: 8px;
     position: absolute;
     font-size: 16px;
     opacity: 0.5;
+}
+
+BODY.touch-ui .grid-stack-item.maximized .panel-title {
+    top: 55px;
+    left: 8px;
 }
 
 .grid-stack-item.maximized .panel_content_space {
@@ -2852,7 +2866,7 @@ BODY.desktop-ui  #bottom-links {
     top: calc(100% - 40px);
 }
 
-#bottom-links {
+#bottom-links.hidden {
     display: none;
 }
 

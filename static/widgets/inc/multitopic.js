@@ -123,8 +123,10 @@ export class MultiTopicSource {
         let assigned = false;
 
         Object.values(this.widget.panel.ui.client.discovered_topics).forEach((topic)=>{
-            if (this.subscribed_topics[topic.id])
+            if (this.subscribed_topics[topic.id]) {
+                console.log('topic already subscriber; ignoring');
                 return; // topic already used, igore
+            }
 
             if (topic.id == slot.selected_topic) {
                 this.setSubscription(slot, topic);
@@ -148,6 +150,7 @@ export class MultiTopicSource {
         console.log('Topic assigned: '+topic.id);
 
         slot.cb_wrapper = (data) => {
+            // console.log('multitopic setting slot with '+topic.id, data);
             return slot.src.cb(topic.id, data);
         }
         this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
@@ -162,8 +165,10 @@ export class MultiTopicSource {
 
         Object.values(discovered_topics).forEach((topic)=>{
 
-            if (that.subscribed_topics[topic.id])
+            if (that.subscribed_topics[topic.id]) {
+                console.log(`multitopic already subscribed to ${topic.id}`)
                 return; // already subscribed
+            }
 
             that.sources.forEach((src)=>{
                 src.topic_slots.forEach((slot)=>{

@@ -603,6 +603,10 @@ export class DescriptionTFWidget extends EventTarget {
         }
     }
 
+    on_model_removed() {
+        console.log('on_model_removed');
+    }
+
     on_description_data = (topic, desc) => {
 
         if (this.panel.paused)
@@ -614,6 +618,7 @@ export class DescriptionTFWidget extends EventTarget {
             while (this.labelRenderer.domElement.children.length > 0) {
                 this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
             }
+            this.on_model_removed();
         }
 
         this.robot = this.urdf_loader.parse(desc.data);
@@ -819,7 +824,7 @@ export class DescriptionTFWidget extends EventTarget {
         }
             
         this.labelRenderer.render(this.scene, this.camera);
-        
+
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()
         });

@@ -10,7 +10,7 @@ export class LaserScanWidget {
         this.topic = topic;
         
         this.data_trace = [];
-        this.max_trace_length = 5;
+        this.max_trace_length = 1;
 
         $('#panel_widget_'+panel.n).addClass('enabled laser_scan');
 
@@ -60,15 +60,117 @@ export class LaserScanWidget {
         // });
         panel.resize_event_handler = function () {
             // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
-            that.render();
+            that.render_dirty = true;
         };
 
-        $('#panel_widget_'+panel.n).on('wheel', (ev) => {
+        $('#panel_widget_'+panel.n).on('mousewheel', (ev) => {
             ev.preventDefault();
             let d = ev.originalEvent.deltaY;
             that.setZoom(that.panel.zoom - d*0.005);
             // console.log('wheel', );
         });
+
+        //pinch zoom
+        const evCache = [];
+        let prevDiff = -1;
+        let offsetDiff = -1;
+        let baseZoom = -1;
+
+        function pointerdownHandler(ev) {
+            // The pointerdown event signals the start of a touch interaction.
+            // This event is cached to support 2-finger gestures
+            evCache.push(ev);
+            console.log("pointerDown", ev);
+            if (evCache.length > 1) {
+                offsetDiff = -1; // reset
+                ev.preventDefault();
+            }
+                
+        }
+
+        function pointermoveHandler(ev) {
+            // This function implements a 2-pointer horizontal pinch/zoom gesture.
+            //
+            // If the distance between the two pointers has increased (zoom in),
+            // the target element's background is changed to "pink" and if the
+            // distance is decreasing (zoom out), the color is changed to "lightblue".
+            //
+            // This function sets the target element's border to "dashed" to visually
+            // indicate the pointer's target received a move event.
+            // console.log("pointerMove", ev);
+            // ev.target.style.border = "dashed";
+            
+            // Find this event in the cache and update its record with this event
+            const index = evCache.findIndex(
+                (cachedEv) => cachedEv.pointerId === ev.pointerId,
+            );
+            evCache[index] = ev;
+            
+            
+
+            // If two pointers are down, check for pinch gestures
+            if (evCache.length === 2 && evCache[0].touches.length === 2) {
+                // Calculate the distance between the two pointers
+                let curDiff = Math.sqrt(
+                    Math.pow(evCache[0].touches[0].clientX - evCache[0].touches[1].clientX, 2) +
+                    Math.pow(evCache[0].touches[0].clientY - evCache[0].touches[1].clientY, 2)
+                );
+                
+                if (offsetDiff < 0) {
+                    offsetDiff = curDiff;
+                    baseZoom = that.panel.zoom;
+                }
+                    
+                curDiff -= offsetDiff;
+
+                // console.log('touch move curDiff='+curDiff)
+                let zoom = baseZoom + (curDiff/10.0);
+                that.setZoom(zoom);
+            
+                // Cache the distance for the next move event
+                prevDiff = curDiff;
+
+                ev.preventDefault();
+            }
+
+            
+        }
+
+        function removeEvent(ev) {
+            // Remove this event from the target's cache
+            const index = evCache.findIndex(
+              (cachedEv) => cachedEv.pointerId === ev.pointerId,
+            );
+            evCache.splice(index, 1);
+        }
+
+        function pointerupHandler(ev) {
+            console.log(ev.type, ev);
+            // Remove this pointer from the cache and reset the target's
+            // background and border
+            removeEvent(ev);
+            // ev.target.style.background = "white";
+            // ev.target.style.border = "1px solid black";
+          
+            // If the number of pointers down is less than two then reset diff tracker
+            if (evCache.length < 2) {
+              prevDiff = -1;
+            }
+        }
+
+        const el = document.getElementById('panel_widget_'+panel.n);
+        el.addEventListener('touchstart', pointerdownHandler, { passive: false });
+        el.addEventListener('touchmove', pointermoveHandler, { passive: false });
+
+        // Use same handler for pointer{up,cancel,out,leave} events since
+        // the semantics for these events - in this app - are the same.
+        el.onpointerup = pointerupHandler;
+        el.onpointercancel = pointerupHandler;
+        el.onpointerout = pointerupHandler;
+        el.onpointerleave = pointerupHandler;
+
+        this.rendering = true;
+        this.rendering_loop();     
     }
 
     setZoom(zoom) {
@@ -92,6 +194,7 @@ export class LaserScanWidget {
     }
 
     onClose() {
+        this.rendering = false; //kills the loop
     }
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);
@@ -132,7 +235,22 @@ export class LaserScanWidget {
 
         this.range_max = decoded.range_max; //save for later
 
-        this.render();
+        this.render_dirty = true;
+    }
+
+    rendering_loop() {
+
+        if (!this.rendering)
+            return;
+    
+        if (this.render_dirty) {
+            this.render();
+            this.render_dirty = false;
+        }
+
+        window.requestAnimationFrame((step)=>{
+            this.rendering_loop()
+        });
     }
 
     render = () => {
