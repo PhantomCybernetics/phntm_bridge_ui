@@ -1101,9 +1101,9 @@ export class PanelUI {
 
             // let subscribe = $('#cb_camera_'+i).is(':checked');
 
-            if (that.panels[widget_class]) {
-                that.panels[widget_class].init(widget_class);
-            }
+            // if (that.panels[widget_class]) {
+            //     that.panels[widget_class].init(widget_class);
+            // }
 
             //if (!old_topics[topic.topic]) {
 

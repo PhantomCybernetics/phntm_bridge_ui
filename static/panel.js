@@ -91,6 +91,11 @@ export class Panel {
             widget_opts.x = x;
             widget_opts.y = y;
         }
+
+        if (panels[id_source]) {
+            console.error('PANEL ALREADY EXITED FOR '+id_source);
+        }
+
         panels[id_source] = this;
 
         console.log('Adding widget '+id_source+': ', widget_opts);
@@ -238,6 +243,7 @@ export class Panel {
                 }
 
             } else {
+
                 this.msg_type = msg_type;
                 if (this.zoom === undefined || this.zoom === null) {
                     this.zoom = this.default_zoom;
@@ -259,13 +265,14 @@ export class Panel {
             }
 
             if (this.ui.topic_widgets[this.id_source] != undefined) {
+                console.log('Initiating display topic widget '+this.id_source, this.display_widget)
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
                     fallback_show_src = false;
                 }
             } else if (this.ui.type_widgets[this.msg_type] != undefined) {
-                console.log('Initiating display widget '+this.id_source+' w '+this.msg_type, this.display_widget)
+                console.log('Initiating display type widget '+this.id_source+' w '+this.msg_type, this.display_widget)
                 if (!this.display_widget) { //only once
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
@@ -344,7 +351,7 @@ export class Panel {
 
     }
 
-    setMenu = () => {
+    setMenu() {
 
         console.log('Setting up panel menu of ' + this.id_source)
 

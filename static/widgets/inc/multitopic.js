@@ -8,7 +8,8 @@ export class MultiTopicSource {
         this.sources = [];
         this.subscribed_topics = {};
 
-        this.widget.panel.ui.client.on('topics', this.onTopics);
+        let that = this;
+        this.widget.panel.ui.client.on('topics', (discovered_topics) => { this.onTopics(discovered_topics); });
 
         this.onChange = null;
     }
@@ -40,6 +41,11 @@ export class MultiTopicSource {
     }
 
     parseUrlParts (custom_url_vars) {
+        if (this.widget.log_dirty_stack) {
+            console.error('Dead multitopic got parseUrlParts');
+            return;
+        }
+        console.warn('multitopic got parseUrlParts');
         if (!custom_url_vars)
             return;
         custom_url_vars.forEach((kvp)=>{
@@ -124,7 +130,7 @@ export class MultiTopicSource {
 
         Object.values(this.widget.panel.ui.client.discovered_topics).forEach((topic)=>{
             if (this.subscribed_topics[topic.id]) {
-                console.log('topic already subscriber; ignoring');
+                console.log(`topic ${topic.id} already subscriber; ignoring`);
                 return; // topic already used, igore
             }
 
@@ -156,7 +162,7 @@ export class MultiTopicSource {
         this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
     }
 
-    onTopics = (discovered_topics) => { // client updated topics
+    onTopics (discovered_topics) { // client updated topics
 
         let changed = false;
         let that = this;
@@ -173,7 +179,7 @@ export class MultiTopicSource {
             that.sources.forEach((src)=>{
                 src.topic_slots.forEach((slot)=>{
                     if (topic.id == slot.selected_topic) {
-                        this.setSubscription(slot, topic);
+                        that.setSubscription(slot, topic);
                         changed = true;
                         return;
                     }
@@ -272,14 +278,16 @@ export class MultiTopicSource {
 
     //clear all subs
     close() {
-        this.widget.panel.ui.client.off('topics', this.onTopics);
+        // this.widget.panel.ui.client.off('topics', this.onTopics);
         let topics = Object.keys(this.subscribed_topics);
+        let that = this;
         topics.forEach((topic)=>{
-            let slot = this.subscribed_topics[topic];
+            let slot = that.subscribed_topics[topic];
             if (slot.clear_cb)
                 slot.clear_cb(slot.topic);
+            console.log(`mutitopic cleared slot for ${topic}`)
             slot.topic = null;
-            this.widget.panel.ui.client.off(topic, slot.cb_wrapper);
+            that.widget.panel.ui.client.off(topic, slot.cb_wrapper);
         });
         this.subscribed_topics = {};
 

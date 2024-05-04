@@ -45,6 +45,8 @@ export class DescriptionTFWidget extends EventTarget {
         this.transforms_queue = [];
         this.last_tf_stamps = {};
 
+        let that = this;
+
         this.manager = new THREE.LoadingManager();
         this.manager.setURLModifier((url)=>{
 
@@ -57,6 +59,7 @@ export class DescriptionTFWidget extends EventTarget {
             let url_fw = panel.ui.client.get_bridge_file_url(url);
             console.log('URDF Loader requesting '+url+' > '+url_fw);
             return url_fw;
+
         });
         this.tex_loader = new THREE.TextureLoader(this.manager)
         this.urdf_loader = new URDFLoader(this.manager);
@@ -64,13 +67,47 @@ export class DescriptionTFWidget extends EventTarget {
         this.urdf_loader.packages = (targetPkg) => {
             return 'package://'+targetPkg+''; // puts back the url scheme removed by URDFLoader 
         }
-        this.stl_base_mat = new THREE.MeshPhongMaterial({
-             color: 0xff0000,
-             side: THREE.DoubleSide,
-             depthWrite: true,
-             transparent: false
-        } );
-        this.urdf_loader.loadMeshCb = this.load_mesh_cb;
+       
+        this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
+
+            console.log('loaded mesh from '+path);
+
+            if (/\.stl$/i.test(path)) {
+    
+                const loader = new STLLoader(manager);
+                loader.load(path, (geom) => {
+    
+                    const stl_base_mat = new THREE.MeshPhongMaterial({
+                        color: 0xff0000,
+                        side: THREE.DoubleSide,
+                        depthWrite: true,
+                        transparent: false
+                     } );
+                   
+                    const mesh = new THREE.Mesh(geom, stl_base_mat);
+                    
+                    done_cb(mesh);
+                });
+    
+            } else if (/\.dae$/i.test(path)) {
+    
+                const loader = new ColladaLoader(manager);
+                loader.load(path, dae => {
+                    done_cb(dae.scene);
+                });
+    
+            } else {
+                console.error(`URDFLoader: Could not load model at ${path}.\nNo loader available`);
+            }
+        }
+        this.manager.onLoad = () => {
+            console.info('All loaded');
+            if (that.robot) {
+                that.clear_model(that.robot); //clear after urdf  sets mats
+                that.init_markers();
+                that.renderDirty();
+            }
+        };
         this.robot = null;
 
         $('#panel_widget_'+panel.n).addClass('enabled imu');
@@ -117,7 +154,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
             ev.preventDefault(); //stop from moving the panel
         } );
-        this.controls.addEventListener('change', this.controls_changed);
+        this.controls.addEventListener('change', () => { this.controls_changed(); });
         this.controls_dirty = false;
         this.controls.target = this.camera_target_pos;
         this.controls.update();
@@ -153,8 +190,6 @@ export class DescriptionTFWidget extends EventTarget {
         // this.scene.add( gridHelper );
         // this.scene.add( planeHelper );
 
-    
-
         // const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 ); 
         // const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} ); 
         // const cube = new THREE.Mesh( boxGeometry, boxMaterial ); 
@@ -174,37 +209,39 @@ export class DescriptionTFWidget extends EventTarget {
         //     ResizeWidget(panel);
         //     RenderImu(panel);
         // });
-        let that = this;
-        panel.resize_event_handler = function () {
-            // ResizeWidget(panel);
-            // URDFWidget_Render(panel);
+        
+        panel.resize_event_handler = () => {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
-            that.render_dirty = true;
+            that.renderDirty();
         };
 
         this.sources = new MultiTopicSource(this);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, this.on_tf_data);
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, this.on_tf_data);
-        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, this.on_description_data);
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, (topic, tf)=> { that.on_tf_data(topic, tf); });
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, (topic, tf) => { that.on_tf_data(topic, tf); });
+        this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, (topic, tf) => { that.on_description_data(topic, tf); });
 
         this.parseUrlParts(this.panel.custom_url_vars);
 
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
 
         //ground plane
-        const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
-        const plane_tex = this.tex_loader.load('/static/tiles.png');
-        plane_tex.wrapS = THREE.RepeatWrapping;
-        plane_tex.wrapT = THREE.RepeatWrapping;
-        plane_tex.repeat.set(100, 100);
-        plane_material.map = plane_tex;
-        this.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
-        this.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
-        this.ground_plane.position.set(0,0,0);
-        this.ground_plane.receiveShadow = true;
-        this.ground_plane.visible = this.render_ground_plane;
-        this.scene.add(this.ground_plane);
+        
+        this.tex_loader.load('/static/tiles.png', (plane_tex) => {
+            const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
+            plane_tex.wrapS = THREE.RepeatWrapping;
+            plane_tex.wrapT = THREE.RepeatWrapping;
+            plane_tex.repeat.set(100, 100);
+            plane_material.map = plane_tex;
 
+            that.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
+            that.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
+            that.ground_plane.position.set(0,0,0);
+            that.ground_plane.receiveShadow = true;
+            that.ground_plane.visible = that.render_ground_plane;
+            that.scene.add(that.ground_plane);
+        });
+        
+    
         this.camera.layers.enableAll();
         if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
         if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
@@ -231,10 +268,7 @@ export class DescriptionTFWidget extends EventTarget {
             wireframe: true,
             // depthFunc: THREE.LessEqualDepth
         });
-
-
-        this.rendering = true;
-        this.rendering_loop();        
+        
 
         // this.topic_tf_static = '/tf_static';
         // this.topic_tf = '/tf';
@@ -246,10 +280,16 @@ export class DescriptionTFWidget extends EventTarget {
         // panel.ui.client.on(this.topic_desc, this.on_description_data);
 
      
-        panel.widget_menu_cb = this.setupMenu;
+        panel.widget_menu_cb = () => { that.setupMenu(); }
+
+        console.log('constructor done; renderDirty()');
+
+        this.rendering = true;
+        this.renderDirty();
+        this.rendering_loop();        
     }
 
-    setupMenu = () => {
+    setupMenu() {
        
         if (this.sources) {
             this.sources.setupMenu();
@@ -265,8 +305,8 @@ export class DescriptionTFWidget extends EventTarget {
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#follow_target_'+this.panel.n).change(function(ev) {
             that.follow_target = $(this).prop('checked');         
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
@@ -281,8 +321,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //labels
             }        
-            that.panel.ui.update_url_hash(); 
-            that.render_dirty = true;           
+            // that.panel.ui.update_url_hash(); 
+            that.renderDirty();          
         });
 
         $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
@@ -297,8 +337,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_LINKS);
                 that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //labels
             }
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
@@ -314,8 +354,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
                 that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
             }
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
@@ -327,28 +367,28 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_collisions_'+this.panel.n).change(function(ev) {
+        $('#render_collisions_'+that.panel.n).change(function(ev) {
             that.render_collisions = $(this).prop('checked');
             if (that.render_collisions)
                 that.camera.layers.enable(DescriptionTFWidget.L_COLLIDERS);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS);
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix base</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#fix_base_'+this.panel.n).change(function(ev) {
             that.fix_base = $(this).prop('checked');
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
@@ -359,8 +399,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.enable(DescriptionTFWidget.L_POSE_GRAPH);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
 
         $('<div class="menu_line"><label for="render_grnd_'+this.panel.n+'""><input type="checkbox" '+(this.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"> Ground plane</label></div>')
@@ -368,15 +408,22 @@ export class DescriptionTFWidget extends EventTarget {
         $('#render_grnd_'+this.panel.n).change(function(ev) {
             that.render_ground_plane = $(this).prop('checked');
             that.ground_plane.visible = that.render_ground_plane;
-            that.panel.ui.update_url_hash();
-            that.render_dirty = true;
+            // that.panel.ui.update_url_hash();
+            that.renderDirty();
         });
     }
 
     onClose() {
-        console.warn('Closing desc/tf widget')
+        // console.warn('Closing desc/tf widget')
         this.rendering = false; //kills the loop
         this.sources.close();
+        
+        this.controls.dispose();
+        this.controls = null;
+        this.scene.clear();
+        this.scene = null;
+        this.renderer.dispose();
+        this.renderer = null;
     }
 
     getUrlHashParts (out_parts) {
@@ -423,7 +470,7 @@ export class DescriptionTFWidget extends EventTarget {
         // });
     }
 
-    on_tf_data = (topic, tf) => {
+    on_tf_data (topic, tf) {
         if (this.panel.paused)
             return;
 
@@ -506,30 +553,33 @@ export class DescriptionTFWidget extends EventTarget {
     //     return false;
     // }
 
-    clear_model = (obj) => {
+    clear_model(obj, lvl=0) {
 
-        // console.warn('clear_model:', obj);
-
-        if (obj.isLight) {
-            // console.error(obj+' isLight: ', obj);
+        if (obj.isLight || obj.isScene || obj.isCamera) {
+            if (lvl==0) {
+                console.error('Invalid model imported')
+            }
             return false;
         }
 
-        if (obj.isScene) {
-            // console.error(obj+' isScene: ', obj);
-            return false;
-        }
-
-        if (obj.isCamera) {
-            // console.error(obj+' isCamera: ', obj);
-            return false;
-        }
-
-        if (obj.isMesh) {
+        if (obj.isMesh && !obj.material) {
+            obj.material = new THREE.MeshPhongMaterial({
+                color: 0xff0000,
+                side: THREE.DoubleSide,
+                depthWrite: true,
+                transparent: false
+            });
+            obj.material.needsUpdate = true;
+            obj.castShadow = true;
+            // }
+            // console.warn('clearing mesh', obj);
+        } else if (obj.isMesh) {
             obj.material.depthWrite = true;
             obj.material.side = THREE.DoubleSide;
-            // console.warn('clearing mesh', obj);
+            obj.castShadow = true;
         }
+
+       
 
         // if (obj.isMesh && obj.material) {
         //     // obj.material = this.stl_base_mat;
@@ -547,11 +597,9 @@ export class DescriptionTFWidget extends EventTarget {
         if (!obj.children || !obj.children.length)
             return true;
         
-        let that = this;
-
         for (let i = 0; i < obj.children.length; i++) {
             let ch = obj.children[i];
-            let res = that.clear_model(ch); // recursion
+            let res = this.clear_model(ch, lvl+1); // recursion
             if (!res) {
                 obj.remove(ch);
                 i--;
@@ -561,80 +609,57 @@ export class DescriptionTFWidget extends EventTarget {
         return true;
     }
 
-    load_mesh_cb = (path, manager, done_cb) => {
-
-        let that = this;
-
-        if (/\.stl$/i.test(path)) {
-
-            const loader = new STLLoader(manager);
-            loader.load(path, (geom) => {
-
-                // let trans = new THREE.Matrix4().makeScale(-1,-1,1);
-                // geom.applyMatrix4(trans)
-                // geom.computeBoundingBox();
-                // geom.computeVertexNormals();
-                // geom.computeVertexNormals();
-                // geom.computeTangents();
-                // geom.normalizeNormals();
-               
-                const mesh = new THREE.Mesh(geom, that.stl_base_mat);
-                done_cb(mesh);
-                that.clear_model(mesh); //clear after urdf loadet sets mats
-                that.render_dirty = true;
-            });
-
-        } else if (/\.dae$/i.test(path)) {
-
-            const loader = new ColladaLoader(manager);
-            loader.load(path, dae => {
-                // console.warn('Dae loading done', dae.scene)
-                // dae.library.lights = {};
-                // console.log('cleared: ', dae.scene);
-                done_cb(dae.scene);
-                that.clear_model(dae.scene); //clear after urdf loadet sets mats
-                that.render_dirty = true;
-            });
-
-        } else {
-
-            console.warn(`URDFLoader: Could not load model at ${ path }.\nNo loader available`);
-
-        }
-    }
-
     on_model_removed() {
-        console.log('on_model_removed');
+        console.warn('on_model_removed');
     }
 
-    on_description_data = (topic, desc) => {
+    on_description_data (topic, desc) {
 
         if (this.panel.paused)
             return;
 
+        if (desc == this.last_processed_desc) {
+            console.warn('Ignoring identical robot description from '+topic);
+            return false;
+        }
+        this.last_processed_desc = desc;
+
         if (this.robot) {
-            this.world.remove(this.robot);
+            console.warn('REMOVIG old model')
+            this.world.clear();//this.world.remove(this.robot);
+            this.on_model_removed();
             this.robot = null;
             while (this.labelRenderer.domElement.children.length > 0) {
                 this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
             }
-            this.on_model_removed();
         }
 
-        this.robot = this.urdf_loader.parse(desc.data);
-        this.clear_model(this.robot);
-        this.robot.castShadow = true;
-
-        console.log('parsed urdf robot', this.robot);
+        console.warn('Parsing robot description...');
+        let robot = this.urdf_loader.parse(desc.data);
+        
+        this.clear_model(robot);
+        robot.castShadow = true;
+        
         this.world.clear();
+        this.robot = robot;
         this.world.add(this.robot);
         this.world.position.set(0,0,0);
 
         let that = this;
-        let farthest_pt_dist = 0;
         
+        // console.log('got desc: ', desc.data);
+
+        console.log('model initiated...');
+        this.renderDirty();
+    }
+
+    init_markers() {
+
         let wp = new Vector3();
         let ji = 0;
+        let that = this;
+        let farthest_pt_dist = 0;
+
         Object.keys(this.robot.joints).forEach((key)=>{
             that.make_mark(that.robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
             that.robot.joints[key].getWorldPosition(wp);
@@ -672,18 +697,13 @@ export class DescriptionTFWidget extends EventTarget {
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
 
-            if (this.robot.frames[key].children) {
-                this.robot.frames[key].children.forEach((ch)=>{
+            if (that.robot.frames[key].children) {
+                that.robot.frames[key].children.forEach((ch)=>{
                     if (ch.isObject3D) {
                         if (ch.isURDFVisual) {
                             if (ch.children && ch.children.length > 0) {
                                 if (ch.children[0].layers)
                                     ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
-                                ch.children[0].castShadow = true;
-                                ch.children[0].material.depthWrite = true;
-                                ch.children[0].material.needsUpdate = true;
-                                console.log('visual mat', ch.children[0].material);
-                                // ch.children[0].renderOrder = 2;
                             }
                         } else if (ch.isURDFCollider) {
                             if (ch.children && ch.children.length > 0) { 
@@ -709,10 +729,6 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera.position.copy(this.initial_camera_pos);
             this.camera.position.normalize().multiplyScalar(initial_dist);
         }
-        
-        // console.log('got desc: ', desc.data);
-
-        
     }
 
     make_mark(target, label_text, layer_axes, layer_labels) {
@@ -753,8 +769,15 @@ export class DescriptionTFWidget extends EventTarget {
         }
     }
 
-    controls_changed = () => {
+    controls_changed() {
         this.controls_dirty = true;
+    }
+
+    renderDirty() {
+        if (!this.renderer)
+            return;
+
+        this.render_dirty = true;
     }
 
     rendering_loop() {
@@ -764,7 +787,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         if (this.robot && this.robot.links) {
             for (let i = 0; i < this.transforms_queue.length; i++) {
-                this.render_dirty = true;
+                this.renderDirty();
                 let id_parent = this.transforms_queue[i].header.frame_id;
                 let id_child = this.transforms_queue[i].child_frame_id;
                 let t = this.transforms_queue[i].transform;
@@ -816,14 +839,50 @@ export class DescriptionTFWidget extends EventTarget {
         }
     
         this.controls.update();
-
-        if (this.controls_dirty || this.render_dirty) {
-            this.renderer.render(this.scene, this.camera);
+        let that = this;
+        if ((this.controls_dirty || this.render_dirty) && this.robot) {
             this.controls_dirty = false;
             this.render_dirty = false;
-        }
-            
-        this.labelRenderer.render(this.scene, this.camera);
+            try {
+                this.renderer.render(this.scene, this.camera);
+                this.labelRenderer.render(this.scene, this.camera);
+
+                if (this.error_logged) {
+                    this.error_logged = false;
+
+                    console.warn('All good here now, scene:');
+                    this.scene.traverse(function(obj) {
+                        var s = '';
+                        var obj2 = obj;
+                        while(obj2 !== that.scene) {
+                            s += '-';
+                            obj2 = obj2.parent;
+                        }
+                        console.log(s + obj.type + ' ' + obj.name+ ' mat: '+obj.material);
+                    });
+                }
+            } catch (e) {
+
+                if (!this.error_logged) {
+                    this.error_logged = true;
+                    console.error('Error caught while rendering', e);
+
+                    this.scene.traverse(function(obj) {
+                        var s = '';
+                        var obj2 = obj;
+                        while(obj2 !== that.scene) {
+                            s += '-';
+                            obj2 = obj2.parent;
+                        }
+                        console.log(s + obj.type + ' ' + obj.name+ ' mat: '+obj.material);
+                    });
+
+                } else {
+                    console.error('Same error caught while rendering');
+                }
+                
+            }
+        }        
 
         window.requestAnimationFrame((step)=>{
             this.rendering_loop()

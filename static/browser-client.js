@@ -79,7 +79,7 @@ export class PhntmBridgeClient extends EventTarget {
     discovered_cameras = {}; // str id => { info: {}}
     discovered_docker_containers = {}; // str id => { info: {}}
 
-    topic_streams = {}; //topic/cam => is_stream
+    topic_streams = {}; // topic/cam => id_stream
     media_streams = {}; // id_stream => MediaStream
 
     transievers = []; // RTCRtpTransceiver[]
@@ -477,7 +477,7 @@ export class PhntmBridgeClient extends EventTarget {
             }
         }
         else {
-            // console.error('cb not found in unsubscribe for '+event, cb)
+            console.error('cb not found in unsubscribe for '+event, cb)
         }
     }
 

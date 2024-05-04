@@ -41,14 +41,20 @@ export class Everything3DWidget extends DescriptionTFWidget {
     
     on_model_removed() {
         super.on_model_removed();
-        let laser_topics = Object.keys(this.laser_visuals).concat(Object.keys(this.laser_frames));
+        let that = this;
+        let laser_topics = this.laser_visuals ? Object.keys(this.laser_visuals) : [];
+        if (this.laser_frames)
+            laser_topics = laser_topics.concat(Object.keys(this.laser_frames));
+        this.base_link_frame = null;
         console.log('Robot removed, clearing laser topics', laser_topics)
+
         laser_topics.forEach((topic) => {
-            this.clear_laser(topic);
+            that.clear_laser(topic);
         });
-        let range_topics = Object.keys(this.range_visuals);
+        let range_topics = this.range_visuals ? [].concat(Object.keys(this.range_visuals)) : [];
+        console.log('Robot removed, clearing range topics', range_topics)
         range_topics.forEach((topic) => {
-            this.clear_range(topic);
+            that.clear_range(topic);
         });
     }
 
@@ -142,7 +148,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         // console.log('3d laser render dirty, this.rendering='+this.rendering)
 
-        this.render_dirty = true;
+        this.renderDirty();
     }
 
 
@@ -206,7 +212,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             this.range_visuals[topic].cone.scale.set(0,0,0);
         }
         
-        this.render_dirty = true;
+        this.renderDirty();
         // console.log('got range for '+frame_id, range, f);
     }
 

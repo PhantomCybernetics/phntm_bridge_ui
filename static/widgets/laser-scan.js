@@ -60,7 +60,7 @@ export class LaserScanWidget {
         // });
         panel.resize_event_handler = function () {
             // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
-            that.render_dirty = true;
+            that.renderDirty()
         };
 
         $('#panel_widget_'+panel.n).on('mousewheel', (ev) => {
@@ -80,7 +80,7 @@ export class LaserScanWidget {
             // The pointerdown event signals the start of a touch interaction.
             // This event is cached to support 2-finger gestures
             evCache.push(ev);
-            console.log("pointerDown", ev);
+            // console.log("pointerDown", ev);
             if (evCache.length > 1) {
                 offsetDiff = -1; // reset
                 ev.preventDefault();
@@ -145,7 +145,7 @@ export class LaserScanWidget {
         }
 
         function pointerupHandler(ev) {
-            console.log(ev.type, ev);
+            // console.log(ev.type, ev);
             // Remove this pointer from the cache and reset the target's
             // background and border
             removeEvent(ev);
@@ -190,6 +190,10 @@ export class LaserScanWidget {
             .html('Zoom: '+panel.zoom.toFixed(1)+'x');
         panel.ui.update_url_hash();
         
+        this.renderDirty();
+    }
+
+    renderDirty() {
         this.render_dirty = true;
     }
 
@@ -235,7 +239,7 @@ export class LaserScanWidget {
 
         this.range_max = decoded.range_max; //save for later
 
-        this.render_dirty = true;
+        this.renderDirty();
     }
 
     rendering_loop() {
