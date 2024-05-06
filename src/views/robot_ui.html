@@ -1,8 +1,9 @@
 <%- include('partial/header.html'); %>
 
-<div id="fixed-header">
-    <div id="page_message"></div>
+<div id="page_message"></div>
 
+<div id="fixed-header">
+    
     <div id="modal-underlay" class="prevent-select"></div>
     <div id="menu-underlay" class="prevent-select"></div>
 
@@ -286,6 +287,11 @@
 
         //connects socket.io, then runs handshake with the robot
         robot.connect();
+
+
+        if (navigator.userAgent.toLowerCase().includes('firefox')) {
+            panel_ui.show_page_error(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>');
+        }
 
         // socket.on('offer', (offer_data) => {
         //     console.log('Got webrtc offer:', offer_data)

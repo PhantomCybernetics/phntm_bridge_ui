@@ -120,6 +120,10 @@ export class PanelUI {
             that.update_layout()
         });
 
+        client.on('error', (error, msg) => {
+            that.show_page_error(error, msg);
+        });
+
         client.on('update', () => { // from socket
 
             if (client.name) {
@@ -525,6 +529,16 @@ export class PanelUI {
 
             panel.floating_menu_top = null;
         }
+    }
+
+    show_page_error(error, msg) {
+        // console.log('Showing error', msg, error);
+        $('#page_message')
+            .html(msg)
+            .addClass('error');
+        $('BODY')
+            .addClass('has-page-message');
+        this.showing_page_message = true;
     }
 
     set_burger_menu_state(open, animate = true) {
@@ -1711,6 +1725,9 @@ export class PanelUI {
             let h = window.innerHeight; // does not work on mobils afari (adddress bar is not included)
             if (isTouchDevice() && isSafari()) {
                 h = $(window).height(); // TODO: still not very good
+            }
+            if (this.showing_page_message) {
+                h -= 50;
             }
             $('#menubar_items').css({
                 height: (h-60) + 'px' // bg fills screenheight

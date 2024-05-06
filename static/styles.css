@@ -2842,9 +2842,14 @@ BODY.desktop-ui #touch_ui_status:hover,
   #page_message {
     font-size: 16px;
     padding: 15px;
-    margin: -20px -20px 10px -20px;
+    margin: 0px;
     text-align: center;
     display: none;
+    position: fixed;
+    width: 100%;
+    top: 0px;
+    height: 20px;
+    z-index: 16; /* above hovered grid panel (15) */
   }
 
   #page_message.error {
@@ -2852,6 +2857,14 @@ BODY.desktop-ui #touch_ui_status:hover,
     color: #fff;
     display: block;
   }
+
+BODY.has-page-message {
+    padding-top: 50px;
+}
+
+BODY.has-page-message #fixed-header {
+    margin-top: 50px;
+}
 
   #page_message.error A {
     color: #fff;
