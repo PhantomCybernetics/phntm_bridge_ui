@@ -10,7 +10,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
     static default_height = 6;
     
     constructor(panel) {
-        super(panel);
+        super(panel, false); // don't start rendering loop yet
 
         // this.laser_msg_type = 'sensor_msgs/msg/LaserScan';
         // this.rage_msg_type = 'sensor_msgs/msg/Range';
@@ -30,15 +30,62 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.range_visuals = {};
         this.laser_visuals = {};
+        this.laser_geometry = {}; //topic => 
         this.laser_data_queue = {};
+        this.latest_scan_data_stamps = {}; // topic => latest processed stamp
+        this.scan_older_stamp_drops = {}; // topic => num
         this.laser_frames = {};
+        this.dirty_laser_points = {}; // topic => vector3[]
         this.base_link_frame = null;
         
         panel.widget_menu_cb = () => {
             that.setupMenu();
         }
+
+        this.rendering = true;
+        this.renderDirty();
+        this.rendering_loop();        
     }
     
+    rendering_loop() {
+
+        if (!this.rendering)
+            return;
+        
+        let dirty_lasers = Object.keys(this.dirty_laser_points);
+
+        let that = this;
+        dirty_lasers.forEach((topic)=>{
+            let laser_points = that.dirty_laser_points[topic];
+            if (!laser_points)
+                    return;
+            that.dirty_laser_points[topic] = null;
+
+            if (!that.laser_visuals[topic]) {
+    
+                let color = new THREE.Color(0x00ffff);
+                const material = new THREE.LineBasicMaterial( {
+                    color: color,
+                    transparent: true,
+                    opacity: .85
+                } );
+              
+                that.laser_geometry[topic] = new THREE.BufferGeometry().setFromPoints( laser_points );
+    
+                that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
+                that.laser_visuals[topic].castShadow = false;
+                that.laser_visuals[topic].receiveShadow = false;
+                
+                that.laser_frames[topic].add(that.laser_visuals[topic]);
+        
+            } else {
+                that.laser_geometry[topic].setFromPoints(laser_points);
+            }
+        });
+        
+        super.rendering_loop();
+    }
+
     on_model_removed() {
         super.on_model_removed();
         let that = this;
@@ -69,23 +116,42 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         let scan_ns_stamp = scan.header.stamp.sec*1000000000 + scan.header.stamp.nanosec;
 
+        if (!this.latest_scan_data_stamps[topic]) {
+            this.latest_scan_data_stamps[topic] = -1;
+        }
+        if (this.latest_scan_data_stamps[topic] > scan_ns_stamp) {
+            if (!this.scan_older_stamp_drops[topic]) {
+                this.scan_older_stamp_drops[topic] = 0;
+            }
+            if (this.scan_older_stamp_drops[topic] > 10) {
+                console.log(topic+ ' latest timestamp reset');
+            } else {
+                console.log(topic+ ' dropped older laser');
+                this.scan_older_stamp_drops[topic]++;
+                return;
+            }
+        }
+        this.latest_scan_data_stamps[topic] = scan_ns_stamp;
+        if (this.scan_older_stamp_drops[topic])
+            delete this.scan_older_stamp_drops[topic];
+
         let frame_id = scan.header.frame_id;
 
-        if (!this.laser_frames[frame_id]) 
-            this.laser_frames[frame_id] = this.robot.getFrame(frame_id);
+        if (!this.laser_frames[topic]) 
+            this.laser_frames[topic] = this.robot.getFrame(frame_id);
 
-        if (!this.laser_frames[frame_id]) {
-            console.error('Frame '+frame_id+' not found in robot model for laser data');
+        if (!this.laser_frames[topic]) {
+            console.error('Frame '+frame_id+' not found in robot model for laser data from '+topic);
             return;
         }
 
-        if (!this.base_link_frame) 
-            this.base_link_frame = this.robot.getFrame('base_link');
+        // if (!this.base_link_frame) 
+        //     this.base_link_frame = this.robot.getFrame('base_link');
 
-        if (!this.base_link_frame) {
-            console.error('Frame base_link not found in robot model for laser data');
-            return;
-        }
+        // if (!this.base_link_frame) {
+        //     console.error('Frame base_link not found in robot model for laser data');
+        //     return;
+        // }
 
         // let base_to_laser_mat = this.base_link_frame.matrixWorld.clone()
         //                             .invert()
@@ -107,46 +173,9 @@ export class Everything3DWidget extends DescriptionTFWidget {
             laser_points.push(p);
         };
 
-        if (!this.laser_visuals[topic]) {
-    
-            let color = new THREE.Color(0x00ffff);
-            const material = new THREE.LineBasicMaterial( {color: color, transparent: true, opacity: .85 } );
-          
-            this.laser_geometry = new THREE.BufferGeometry().setFromPoints( laser_points );
-
-            this.laser_visuals[topic] = new THREE.LineSegments(this.laser_geometry, material);
-            this.laser_frames[frame_id].add(this.laser_visuals[topic]);
-    
-        } else {
-            
-            this.laser_geometry.setFromPoints( laser_points );
-
-        }
-        
-        // let mat = base_to_laser_mat;
-
-        // let pos = new THREE.Vector3().setFromMatrixPosition(mat);
-        // let rot = new THREE.Quaternion().setFromRotationMatrix(mat);
-
-        // this.laser_visuals[topic].quaternion.copy(rot);
-        // this.laser_visuals[topic].position.copy(pos);
-
-        //put scan to queue
-        // if (!this.laser_data_queue[topic])
-        //     this.laser_data_queue[topic] = [];
-        // this.laser_data_queue[topic].push({
-        //     ns_stamp: scan_ns_stamp,
-        //     msg: scan
-        // });
-
-        // let latest_base_pg_stamp = this.get_latest_pg_ns_stamp();
-        // if (latest_base_pg_stamp !== NaN && scan_ns_stamp <= latest_base_pg_stamp) {
-        //    this.render_queued_laser_data(topic, latest_base_pg_stamp); //render now with closest pg 
-        // }
-
-        // this.render_queued_laser_data(topic);
-
-        // console.log('3d laser render dirty, this.rendering='+this.rendering)
+        if (!this.dirty_laser_points[topic])
+            this.dirty_laser_points[topic] = 
+        this.dirty_laser_points[topic] = laser_points;
 
         this.renderDirty();
     }
@@ -185,8 +214,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
             geometry.rotateZ(90 * Math.PI/180);
             geometry.translate(range.max_range/2.0, 0, 0);
             let color = new THREE.Color(0xffff00);
-            const material = new THREE.MeshBasicMaterial( {color: color, transparent: true, opacity: .85 } );
+            const material = new THREE.MeshBasicMaterial({
+                color: color, transparent: true, opacity: .85
+            } );
             const cone = new THREE.Mesh(geometry, material );
+            cone.castShadow = false;
             this.range_visuals[topic] = {
                 cone: cone,
                 color: color,

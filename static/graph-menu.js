@@ -102,10 +102,10 @@ export class GraphMenu {
         
         if (h === null) {
             h = this.graph_display_el.innerHeight()-20;
-            console.log('h was null, is '+h+'; is_narrow'+this.is_narrow);
+            // console.log('h was null, is '+h+'; is_narrow'+this.is_narrow);
         }
 
-        console.log('set_dimensions w='+available_w+' h='+h+'; is_narrow='+this.is_narrow);
+        // console.log('set_dimensions w='+available_w+' h='+h+'; is_narrow='+this.is_narrow);
 
         if (this.is_narrow) {
             this.graph_display_el.css({

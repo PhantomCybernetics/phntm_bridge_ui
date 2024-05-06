@@ -23,7 +23,7 @@ export class DescriptionTFWidget extends EventTarget {
     static L_LINK_LABELS  = 6;
     static L_POSE_GRAPH   = 7;
 
-    constructor(panel) {
+    constructor(panel, start_loop=true) {
         super();
 
         this.panel = panel;
@@ -67,7 +67,8 @@ export class DescriptionTFWidget extends EventTarget {
         this.urdf_loader.packages = (targetPkg) => {
             return 'package://'+targetPkg+''; // puts back the url scheme removed by URDFLoader 
         }
-       
+        this.robot = null;
+        
         this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
 
             console.log('loaded mesh from '+path);
@@ -78,7 +79,7 @@ export class DescriptionTFWidget extends EventTarget {
                 loader.load(path, (geom) => {
     
                     const stl_base_mat = new THREE.MeshPhongMaterial({
-                        color: 0xff0000,
+                        color: 0xffffff,
                         side: THREE.DoubleSide,
                         depthWrite: true,
                         transparent: false
@@ -99,16 +100,18 @@ export class DescriptionTFWidget extends EventTarget {
             } else {
                 console.error(`URDFLoader: Could not load model at ${path}.\nNo loader available`);
             }
+
         }
         this.manager.onLoad = () => {
             console.info('All loaded');
             if (that.robot) {
                 that.clear_model(that.robot); //clear after urdf  sets mats
-                that.init_markers();
+                that.init_markers(that.robot); 
+                that.world.add(this.robot);
                 that.renderDirty();
             }
         };
-        this.robot = null;
+       
 
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
@@ -152,7 +155,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.controls = new OrbitControls( this.camera, this.labelRenderer.domElement );
         this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
-            ev.preventDefault(); //stop from moving the panel
+            ev.preventDefault(); // stop from moving the panel
         } );
         this.controls.addEventListener('change', () => { this.controls_changed(); });
         this.controls_dirty = false;
@@ -168,9 +171,11 @@ export class DescriptionTFWidget extends EventTarget {
         this.scene.add( light );
         light.position.set( 1, 2, 1 );
         light.lookAt(this.model.position);
-        light.shadow.mapSize.width = 2048; // default
-        light.shadow.mapSize.height = 2048; // default
-        this.renderer.shadowMapType = THREE.PCFShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
+        light.shadow.mapSize.width = 2 * 1024; // default
+        light.shadow.mapSize.height = 2 * 1024; // default
+        
+        light.shadow.bias= -0.002;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
         this.light = light;
 
         const ambience = new THREE.AmbientLight( 0x606060 ); // soft white light
@@ -282,11 +287,13 @@ export class DescriptionTFWidget extends EventTarget {
      
         panel.widget_menu_cb = () => { that.setupMenu(); }
 
-        console.log('constructor done; renderDirty()');
-
-        this.rendering = true;
-        this.renderDirty();
-        this.rendering_loop();        
+        // console.log('constructor done; renderDirty()');
+        
+        if (start_loop) {
+            this.rendering = true;
+            this.renderDirty();
+            this.rendering_loop();        
+        }
     }
 
     setupMenu() {
@@ -553,7 +560,7 @@ export class DescriptionTFWidget extends EventTarget {
     //     return false;
     // }
 
-    clear_model(obj, lvl=0) {
+    clear_model(obj, lvl=0, inVisual=false, inCollider=false) {
 
         if (obj.isLight || obj.isScene || obj.isCamera) {
             if (lvl==0) {
@@ -562,44 +569,47 @@ export class DescriptionTFWidget extends EventTarget {
             return false;
         }
 
-        if (obj.isMesh && !obj.material) {
-            obj.material = new THREE.MeshPhongMaterial({
-                color: 0xff0000,
-                side: THREE.DoubleSide,
-                depthWrite: true,
-                transparent: false
-            });
-            obj.material.needsUpdate = true;
-            obj.castShadow = true;
-            // }
-            // console.warn('clearing mesh', obj);
-        } else if (obj.isMesh) {
-            obj.material.depthWrite = true;
-            obj.material.side = THREE.DoubleSide;
-            obj.castShadow = true;
+        if (obj.isURDFVisual) {
+            inVisual = true;
+        } else if (obj.isURDFCollider) {
+            inCollider = true;
         }
 
-       
+        // mesh visuals
+        if (obj.isMesh && inVisual) {
 
-        // if (obj.isMesh && obj.material) {
-        //     // obj.material = this.stl_base_mat;
-        //     const m = obj.material;
-            
-        //     obj.material.needsUpdate = true;
-        //     // obj.material.needsUpdate = true;
-        //     console.log('Mesh material ', m)
-        // }
+            if (!obj.material) {
+                obj.material = new THREE.MeshPhongMaterial({
+                    color: 0xffffff,
+                    side: THREE.DoubleSide,
+                    depthWrite: true,
+                    transparent: false
+                });
+                obj.material.needsUpdate = true;
+            } else  {
+                obj.material.depthWrite = true;
+                obj.material.side = THREE.DoubleSide;
+            }
+            obj.material.needsUpdate = true;
+            obj.castShadow = true;
+            obj.renderOrder = -1;
+            obj.layers.set(DescriptionTFWidget.L_VISUALS);
+        
+        // colliders
+        } else if (obj.isMesh && inCollider) {
 
-        obj.renderOrder = -1;
-        obj.layers.set(DescriptionTFWidget.L_VISUALS);
-        obj.castShadow = true;
+            obj.material = this.collider_mat;
+            obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
+            obj.layers.set(DescriptionTFWidget.L_COLLIDERS);
+
+        }
 
         if (!obj.children || !obj.children.length)
             return true;
         
         for (let i = 0; i < obj.children.length; i++) {
             let ch = obj.children[i];
-            let res = this.clear_model(ch, lvl+1); // recursion
+            let res = this.clear_model(ch, lvl+1, inVisual, inCollider); // recursion
             if (!res) {
                 obj.remove(ch);
                 i--;
@@ -625,7 +635,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.last_processed_desc = desc;
 
         if (this.robot) {
-            console.warn('REMOVIG old model')
+            console.warn('Removing old model')
             this.world.clear();//this.world.remove(this.robot);
             this.on_model_removed();
             this.robot = null;
@@ -636,13 +646,14 @@ export class DescriptionTFWidget extends EventTarget {
 
         console.warn('Parsing robot description...');
         let robot = this.urdf_loader.parse(desc.data);
-        
-        this.clear_model(robot);
-        robot.castShadow = true;
+        // console.warn('Parsed robot:', robot);
+        // this.clear_model(robot);
+        this.init_camera(robot); 
+        // robot.castShadow = true;
         
         this.world.clear();
         this.robot = robot;
-        this.world.add(this.robot);
+        
         this.world.position.set(0,0,0);
 
         let that = this;
@@ -653,69 +664,88 @@ export class DescriptionTFWidget extends EventTarget {
         this.renderDirty();
     }
 
-    init_markers() {
-
+    init_camera(robot) {
         let wp = new Vector3();
+        let farthest_pt_dist = 0;
         let ji = 0;
         let that = this;
-        let farthest_pt_dist = 0;
 
-        Object.keys(this.robot.joints).forEach((key)=>{
-            that.make_mark(that.robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
-            that.robot.joints[key].getWorldPosition(wp);
+        Object.keys(robot.joints).forEach((key)=>{
+            robot.joints[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
 
             if (ji == 0) {
-                console.log('Focusing cam on joint '+key);      
-                that.camera_anchor_joint = that.robot.joints[key];
+                console.log('Focusing cam on 1st joint: '+key);      
+                that.camera_anchor_joint = robot.joints[key];
                 that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
             }
             ji++;
         });
 
-        Object.keys(this.robot.links).forEach((key)=>{
-            that.make_mark(that.robot.links[key], key, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS);
-            that.robot.links[key].getWorldPosition(wp);
+         Object.keys(robot.links).forEach((key)=>{
+            robot.links[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
         });
 
-        if (this.robot.links['base_footprint']) {
+        if (robot.links['base_footprint']) {
             let v = new THREE.Vector3();
-            this.robot.links['base_footprint'].getWorldPosition(v);
+            robot.links['base_footprint'].getWorldPosition(v);
             this.world.position.copy(v.negate());
         }
-        
-        // let camera_target = null;
-        Object.keys(this.robot.frames).forEach((key)=>{
 
-            that.robot.frames[key].getWorldPosition(wp);
+        Object.keys(robot.frames).forEach((key)=>{
+            robot.frames[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
 
-            if (that.robot.frames[key].children) {
-                that.robot.frames[key].children.forEach((ch)=>{
-                    if (ch.isObject3D) {
-                        if (ch.isURDFVisual) {
-                            if (ch.children && ch.children.length > 0) {
-                                if (ch.children[0].layers)
-                                    ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
-                            }
-                        } else if (ch.isURDFCollider) {
-                            if (ch.children && ch.children.length > 0) { 
-                                if (ch.children[0].layers)
-                                    ch.children[0].layers.set(DescriptionTFWidget.L_COLLIDERS);
-                                ch.children[0].material = this.collider_mat;
-                                ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
-                            }
-                        }
-                    }
-                });
-            }
+        });
+
+        if (this.follow_target) {
+            let initial_dist = farthest_pt_dist * 3.0;
+            this.camera.position.copy(this.initial_camera_pos);
+            this.camera.position.normalize().multiplyScalar(initial_dist);
+        }
+    }
+
+    init_markers(robot) {
+
+        let that = this;        
+
+        Object.keys(robot.joints).forEach((key)=>{
+            that.make_mark(robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
+        });
+
+        Object.keys(robot.links).forEach((key)=>{
+            that.make_mark(robot.links[key], key, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS);
+        });
+
+        // let camera_target = null;
+        Object.keys(robot.frames).forEach((key)=>{
+
+            // if (robot.frames[key].children) {
+            //     robot.frames[key].children.forEach((ch)=>{
+            //         if (ch.isObject3D) {
+            //             if (ch.isURDFVisual) {
+            //                 if (ch.children && ch.children.length > 0) {
+            //                     if (ch.children[0].layers)
+            //                         ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
+            //                 }
+            //             } else if (ch.isURDFCollider) {
+            //                 if (ch.children && ch.children.length > 0) { 
+            //                     if (ch.children[0].layers)
+            //                         ch.children[0].layers.set(DescriptionTFWidget.L_COLLIDERS);
+            //                     ch.children[0].material = this.collider_mat;
+            //                     ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
+            //                 }
+            //             }
+            //         }
+            //     });
+            // }
 
             // that.make_mark(that.robot.joints[key], key)
             // that.robot.visual[key].castShadow = true;
@@ -724,11 +754,7 @@ export class DescriptionTFWidget extends EventTarget {
         });
 
         // update initial cam pos
-        if (this.follow_target) {
-            let initial_dist = farthest_pt_dist * 3.0;
-            this.camera.position.copy(this.initial_camera_pos);
-            this.camera.position.normalize().multiplyScalar(initial_dist);
-        }
+        
     }
 
     make_mark(target, label_text, layer_axes, layer_labels) {
@@ -785,6 +811,8 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.rendering)
             return;
 
+        this.controls.update();
+
         if (this.robot && this.robot.links) {
             for (let i = 0; i < this.transforms_queue.length; i++) {
                 this.renderDirty();
@@ -838,7 +866,7 @@ export class DescriptionTFWidget extends EventTarget {
             this.transforms_queue = [];
         }
     
-        this.controls.update();
+        
         let that = this;
         if ((this.controls_dirty || this.render_dirty) && this.robot) {
             this.controls_dirty = false;

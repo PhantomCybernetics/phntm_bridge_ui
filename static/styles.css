@@ -12,7 +12,7 @@ BODY.desktop-ui {
 }
 
 BODY.no-scroll {
-    overflow: hidden;
+    overflow: hidden;1896
     height: 100%;
     touch-action: none;
     padding-bottom: 0px;
@@ -1897,6 +1897,10 @@ SPAN.error {
     display: block;
 }
 
+.grid-stack-item.maximized .grid_panel .panel_source.enabled {
+    padding-top: 90px;
+}
+
 .grid_panel .panel_source A {
     color: #fff;
 }
@@ -2288,6 +2292,9 @@ BODY.touch-ui .editing .grid-stack-item-content {
 .video_stats {
     bottom: 20px;
     overflow: scroll;
+}
+.grid-stack-item.maximized .video_stats {
+    top: 90px;
 }
 .video_fps {
     left: auto;

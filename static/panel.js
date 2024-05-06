@@ -1,7 +1,7 @@
 
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari, openFullscreen, closeFullscreen } from "./lib.js";
 
 export class Panel {
 
@@ -314,18 +314,7 @@ export class Panel {
             }
             let that = this;
             this.pauseEl.click(function(e) {
-                that.paused = !that.paused;
-                console.log('Panel updates paused '+that.paused);
-                if (that.paused) {
-                    that.pauseEl.addClass('paused');
-                    that.pauseEl.attr('title', 'Unpause');
-                } else {
-                    that.pauseEl.removeClass('paused');
-                    that.pauseEl.attr('title', 'Pause');
-                }
-                if (that.display_widget && that.display_widget.is_video) {
-                    that.display_widget.el.trigger(that.paused ? 'pause' : 'play');    
-                }
+                that.pauseToggle();
                 e.cancelBubble = true;
                 return false;
             });
@@ -334,6 +323,21 @@ export class Panel {
         }
         
         this.onResize();
+    }
+
+    pauseToggle() {
+        this.paused = !this.paused;
+        console.log('Panel updates paused '+this.paused);
+        if (this.paused) {
+            this.pauseEl.addClass('paused');
+            this.pauseEl.attr('title', 'Unpause');
+        } else {
+            this.pauseEl.removeClass('paused');
+            this.pauseEl.attr('title', 'Pause');
+        }
+        if (this.display_widget && this.display_widget.is_video) {
+            this.display_widget.el.trigger(this.paused ? 'pause' : 'play');    
+        }
     }
 
     _on_data_context_wrapper = (msg, ev) => {
@@ -538,7 +542,7 @@ export class Panel {
             }
             console.log(`Maximizing panel ${this.id_source} w.height=${h}`);
             $('BODY').addClass('no-scroll');
-            this.ui.maximized_panel = this;
+            this.ui.set_maximized_panel(this);
             $(this.grid_widget)
                 .addClass('maximized')
                 .css({
@@ -548,11 +552,14 @@ export class Panel {
 
             this.ui.grid.resizable(this.grid_widget, false);
             this.ui.grid.movable(this.grid_widget, false);
+            
+            if (isTouchDevice())
+                openFullscreen();
 
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);
             if (this.ui.maximized_panel == this) {
-                this.ui.maximized_panel = null;
+                this.ui.set_maximized_panel(null);
             }
             $(this.grid_widget)
                 .removeClass('maximized')
@@ -566,6 +573,10 @@ export class Panel {
                 this.ui.grid.resizable(this.grid_widget, true);
                 this.ui.grid.movable(this.grid_widget, true);
             }
+
+            if (isTouchDevice())
+                closeFullscreen();
+
         }
         this.maximized = state;
         let that = this;

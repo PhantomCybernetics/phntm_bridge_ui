@@ -20,7 +20,13 @@ const https = require('https');
 const dir:string  = __dirname + "/..";
 
 import * as JSONC from 'comment-json';
-const defaultConfig = JSONC.parse(fs.readFileSync(dir+'/config.jsonc').toString());
+let configFname = dir+'/config.jsonc';
+console.log('Loading config from '+configFname);
+if (!fs.existsSync(configFname)) {
+    console.error('Config file not found at '+configFname);
+    process.exit(1);
+}
+const defaultConfig = JSONC.parse(fs.readFileSync(configFname).toString());
 const CONFIG = _.merge(defaultConfig);
 
 const SSL_CERT_PRIVATE =  CONFIG['WEB_UI'].ssl.private;

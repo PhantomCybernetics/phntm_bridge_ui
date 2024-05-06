@@ -157,3 +157,33 @@ export function roughSizeOfObject(object) {
     return is_safari;
   
   }
+
+/* View in fullscreen */
+export function openFullscreen() {
+  /* Get the documentElement (<html>) to display the page in fullscreen */
+  let elem = document.documentElement;
+  
+  try {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+      elem.msRequestFullscreen();
+    }
+  } catch (e) {
+    
+  }
+  
+}
+
+/* Close fullscreen */
+export function closeFullscreen() {
+  if (document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if (document.webkitExitFullscreen) { /* Safari */
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) { /* IE11 */
+    document.msExitFullscreen();
+  }
+}

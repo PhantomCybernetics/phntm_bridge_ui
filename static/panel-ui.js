@@ -403,6 +403,36 @@ export class PanelUI {
                 that.panel_menu_touch_toggle(); //off
             }
         });
+
+        // prevent screen dimming on touch devices
+        if (isTouchDevice()) { 
+
+            // The wake lock sentinel.
+            let wakeLock = null;
+
+            // Function that attempts to request a screen wake lock.
+            const requestWakeLock = async () => {
+                try {
+                    wakeLock = await navigator.wakeLock.request();
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Screen Wake Lock released:', wakeLock.released);
+                    });
+                    console.log('Screen Wake Lock released:', wakeLock.released);
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            };
+            
+            requestWakeLock();
+
+            const handleVisibilityChange = async () => {
+                if (wakeLock !== null && document.visibilityState === 'visible') {
+                    await requestWakeLock();
+                }
+            };
+
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
     }
 
     panel_menu_autosize(panel) {
@@ -1605,6 +1635,27 @@ export class PanelUI {
         return name;
     }
 
+    set_maximized_panel(max_panel) {
+        this.maximized_panel = max_panel;
+        let panel_ids = Object.keys(this.panels);
+        let that = this;
+        panel_ids.forEach((id_panel)=>{
+            let p = that.panels[id_panel];
+            if (p !== max_panel) {
+                if (max_panel) {
+                    if (!p.paused) {
+                        p.pauseToggle();   
+                    }
+                } else {
+                    if (p.paused) {
+                        p.pauseToggle();
+                    }
+                        
+                }
+            }
+        })
+       
+    }
 
     //on resize, robot name update
     update_layout() {
