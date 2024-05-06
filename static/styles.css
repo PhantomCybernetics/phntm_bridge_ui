@@ -1357,8 +1357,11 @@ BODY.touch-ui .monitor_menu_content .menu_content_underlay.open {
     display: block;
 }
 
-BODY.desktop-ui .monitor_menu:hover {
+BODY.desktop-ui .monitor_menu:hover,
+BODY.desktop-ui .monitor_menu.hover_waiting {
     border-radius: 0px 5px 5px 0px;
+    width: 32px;
+    background-position: -26px 1px;
 }
 
 BODY.desktop-ui .monitor_menu.right:hover {
@@ -1370,17 +1373,12 @@ BODY.touch-ui .monitor_menu.open {
     background-position: -95px 12px;
 }
 
-
-BODY.desktop-ui .monitor_menu:hover {
-    width: 32px;
-    background-position: -26px 1px;
-}   
-
 BODY.touch-ui .monitor_menu.open {
    
 }
 
-BODY.desktop-ui .monitor_menu:hover .hover_keeper {
+BODY.desktop-ui .monitor_menu:hover .hover_keeper,
+BODY.desktop-ui .monitor_menu.hover_waiting .hover_keeper {
     display: block;
     /* background-color: red;; */
 }
@@ -1416,7 +1414,8 @@ BODY.desktop-ui .monitor_menu.right .monitor_menu_content {
 }
 
 .monitor_menu_content,
-BODY.desktop-ui .monitor_menu:hover {
+BODY.desktop-ui .monitor_menu:hover,
+BODY.desktop-ui .monitor_menu.hover_waiting {
     background-color: #000000e6;
 }
 
@@ -1442,7 +1441,8 @@ BODY.desktop-ui .monitor_menu.right .monitor_menu_content { /* used when panel i
     color: #fff;
 }
 
-BODY.desktop-ui .monitor_menu:hover .monitor_menu_content {
+BODY.desktop-ui .monitor_menu:hover .monitor_menu_content,
+BODY.desktop-ui .monitor_menu.hover_waiting .monitor_menu_content {
     display: block;
 }
 
@@ -1704,7 +1704,7 @@ BODY.touch-ui .src_ctrl_menu BUTTON.notset:hover,
     padding-right: 10px;
 }
 
-BODY.touch-ui .src_ctrl_menu BUTTON.notset.selecting,
+.src_ctrl_menu BUTTON.notset.selecting,
 BODY.desktop-ui .src_ctrl_menu BUTTON.notset:hover {
     background-color: #ff8c00;
 }
@@ -1953,6 +1953,10 @@ SPAN.error {
     border-radius: 15px;
 }
 
+BODY.desktop-ui #touch-ui-selector {
+    padding: 10px;
+}
+
 #touch-ui-selector .content {
     /* padding: 10px; */
     /* border-radius: 5px; */
@@ -1967,8 +1971,9 @@ SPAN.error {
     background-color: #660000;
     color: #fff;
     font-weight: bold;
-    line-height: 50px;
-    padding: 10px 40px;
+    line-height: 20px;
+    padding: 20px 40px;;
+    width: 200px;
 }
 
 #touch-ui-selector .content .topic-option {

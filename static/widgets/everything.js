@@ -58,8 +58,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
         dirty_lasers.forEach((topic)=>{
             let laser_points = that.dirty_laser_points[topic];
             if (!laser_points)
-                    return;
-            that.dirty_laser_points[topic] = null;
+                return;
+            delete that.dirty_laser_points[topic];
+
+            if (!this.sources.topicSubscribed(topic))
+                return;
 
             if (!that.laser_visuals[topic]) {
     
@@ -239,6 +242,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         if (range.range < range.max_range-0.001) {
             this.range_visuals[topic].material.color.set(color);
+            this.range_visuals[topic].material.opacity = Math.max(1.0-gageVal, 0.2);
             this.range_visuals[topic].cone.scale.set(gageVal,gageVal,gageVal);
         } else {
             this.range_visuals[topic].cone.scale.set(0,0,0);

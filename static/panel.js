@@ -192,6 +192,13 @@ export class Panel {
             that.ui.panel_menu_touch_toggle(that);
         });
         
+        if (!isTouchDevice()) {
+            this.menu_el.on('mouseenter', () => {
+                this.menu_el.removeClass('hover_waiting');
+            });
+        }
+
+
         menu_content_el.addEventListener('touchstart', (ev) => {
             console.log('menu touchstart', ev);
             // ev.preventDefault();

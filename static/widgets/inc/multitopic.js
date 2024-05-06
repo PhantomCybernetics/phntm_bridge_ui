@@ -27,6 +27,19 @@ export class MultiTopicSource {
         return false;
     }
 
+    topicSubscribed(topic) {
+        for (let i = 0; i < this.sources.length; i++) {
+            if (!this.sources[i].topic_slots)
+                continue;
+            for (let j = 0; j < this.sources[i].topic_slots.length; j++) {    
+                if (this.sources[i].topic_slots[j].selected_topic == topic) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     getUrlHashParts (out_parts) {
         for (let i = 0; i < this.sources.length; i++) {
             let src = this.sources[i];
@@ -380,6 +393,11 @@ export class MultiTopicSource {
 
         let btn = $('<button class="notset" title="'+slot.label+'">'+slot.msg_type+'</button>');
         btn.on('click', (e) => {
+
+            if (!isTouchDevice()) {
+                that.panel.menu_el.addClass('hover_waiting');
+            }
+
             that.widget.panel.ui.topic_selector_dialog(slot.label,
                 slot.msg_type, //filter by msg type
                 Object.keys(that.subscribed_topics), //exclude
@@ -392,7 +410,12 @@ export class MultiTopicSource {
                     that.panel.ui.update_url_hash();
                     if (that.onChange)
                         that.onChange();
-                }, 
+                },
+                () => { //onclose
+                    // if (!isTouchDevice()) {
+                    //     // this.panel.menu_el.removeClass('hover_waiting');
+                    // }
+                },
                 btn
             );
             e.cancelBubble = true;

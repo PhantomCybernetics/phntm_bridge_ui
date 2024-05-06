@@ -988,10 +988,18 @@ export class PanelUI {
 
     }
 
-    topic_selector_dialog(label, msg_type, exclude_topics, onselect, align_el = null) {
+    topic_selector_dialog(label, msg_type, exclude_topics, onselect, onclose=null, align_el = null) {
 
-        let d = !isTouchDevice() ? $('#topic-selector-dialog') : $('#touch-ui-selector .content');
+        let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
+        $('BODY').addClass('no-scroll');
+
+        // let d = !isTouchDevice() ? $('#topic-selector-dialog') : $('#touch-ui-selector .content');
+        let d = $('#touch-ui-selector .content');
         let that = this;
+
+        let offset = align_el.offset();
+        let w_body = $('body').innerWidth();
+        d.empty();
 
         const render_list = (discovered_topics) => {
             d.empty();
@@ -1009,13 +1017,8 @@ export class PanelUI {
                 let l = $('<a href="#" class="topic-option">' + topic + '</a>');
                 l.on('click', (e) => {
                     onselect(topic);
-                    e.cancelBubble = true;
-                    if (!isTouchDevice()) {
-                        d.dialog("close");
-                    } else {
-                        $('#touch-ui-dialog-underlay').trigger('click');
-                    }
-
+                    e.cancelBubble = true;               
+                    $('#touch-ui-dialog-underlay').trigger('click'); //close
                     return false;
                 });
                 l.appendTo(d);
@@ -1024,70 +1027,49 @@ export class PanelUI {
 
             if (!some_match) {
                 let l = $('<span class="empty">No matching topics foud</span>');
-                if (isTouchDevice()) { // if empty, click anywhere closes
-                    $('#touch-ui-selector').unbind().click((ev) => {
-                        $('#touch-ui-dialog-underlay').trigger('click');
-                        ev.stopPropagation();
-                    });
-                }
+                
+                $('#touch-ui-selector').unbind().click((ev) => {
+                    $('#touch-ui-dialog-underlay').trigger('click');
+                    ev.stopPropagation();
+                });
                 l.appendTo(d);
+            }
+            let w = d.parent().outerWidth();
+            console.log('inner w='+w+'; offset='+offset.left+'; w_body='+w_body);
+            if (w+offset.left+20 > w_body) {
+                $('#touch-ui-selector').css('left', w_body-w-20);
             }
         }
 
+        this.client.on('topics', render_list); // update on new topics
+        
+        
+        $('#touch-ui-selector').addClass('src_selection').css({
+            display: 'block',
+            left: offset.left,
+            top: (offset.top - $(window).scrollTop()) + 30
+        });
+        align_el.addClass('selecting');
 
-        this.client.on('topics', render_list);
         render_list(this.client.discovered_topics);
 
-        if (!isTouchDevice()) {
-            d.dialog({
-                resizable: true,
-                height: 300,
-                width: 700,
-                modal: true,
-                title: label,
-                buttons: {
-                    Cancel: function () {
-                        $(this).dialog("close");
-                    },
-                },
-                close: function (event, ui) {
-                    that.client.off('topics', render_list);
+        $('#touch-ui-dialog-underlay')
+            .css('display', 'block')
+            .unbind()
+            .on('click', (e) => { //close
+                $('#touch-ui-selector').unbind()
+                $('#touch-ui-selector').css('display', 'none').removeClass('src_selection');
+                d.empty();
+                if (!body_scroll_was_disabled)
+                    $('BODY').removeClass('no-scroll');
+                that.client.off('topics', render_list);
+                $('#touch-ui-dialog-underlay').unbind().css('display', 'none');
+                $('#close-touch-ui-dialog').unbind();
+                align_el.removeClass('selecting');
+                if (onclose) {
+                    onclose();
                 }
             });
-        } else {
-            // touch
-            let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
-            $('BODY').addClass('no-scroll');
-            // $('#touch-ui-dialog .content').html(content);
-            let offset = align_el.offset();
-            console.log('offset', offset)
-            $('#touch-ui-selector').addClass('src_selection').css({
-                display: 'block',
-                left: offset.left,
-                top: (offset.top - $(window).scrollTop()) + 30
-            });
-            align_el.addClass('selecting');
-
-            $('#touch-ui-dialog-underlay')
-                .css('display', 'block')
-                .unbind()
-                .on('click', (e) => { //close
-                    $('#touch-ui-selector').unbind()
-                    $('#touch-ui-selector').css('display', 'none').removeClass('src_selection');
-                    d.empty();
-                    if (!body_scroll_was_disabled)
-                        $('BODY').removeClass('no-scroll');
-                    that.client.off('topics', render_list);
-                    $('#touch-ui-dialog-underlay').unbind().css('display', 'none');
-                    $('#close-touch-ui-dialog').unbind();
-                    align_el.removeClass('selecting');
-                });
-            // $('#close-touch-ui-dialog').unbind().click((e)=>{
-            //     $('#touch-ui-dialog').css('display', 'none').removeClass('msg_type');
-            //     $('BODY').removeClass('no-scroll');
-            // });
-        }
-
     }
 
 
@@ -1593,7 +1575,7 @@ export class PanelUI {
                 rttc = 'lime'
 
             $('#network-info-rtt')
-                .html(rtt_ms + 'ms')
+                .html(Math.floor(rtt_ms) + 'ms')
                 .css({
                     'color': rttc,
                     'display': 'block'
