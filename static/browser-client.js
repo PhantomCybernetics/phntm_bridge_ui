@@ -79,6 +79,7 @@ export class PhntmBridgeClient extends EventTarget {
     discovered_cameras = {}; // str id => { info: {}}
     discovered_docker_containers = {}; // str id => { info: {}}
 
+    topic_configs = {};
     topic_streams = {}; // topic/cam => id_stream
     media_streams = {}; // id_stream => MediaStream
 
@@ -128,7 +129,10 @@ export class PhntmBridgeClient extends EventTarget {
         this.msg_readers = {}; //msg_type => reader
         this.topic_writers = {}; //id => writer
         this.subscribers = {}; //id => topic ot cam reader
+        this.can_change_subscriptions = false;
+        this.requested_subscription_change = false;
         this.topic_streams = {};
+        this.topic_configs = {}; //id => extra topic config
         this.media_streams = {}; //id_stream => stream
         this.latest = {};
 
@@ -567,7 +571,7 @@ export class PhntmBridgeClient extends EventTarget {
 
     delayed_bulk_create_subscribers () {
 
-        if (!this.pc || !this.pc.connected || this.pc.signalingState != 'stable' || this.requested_subscription_change) {
+        if (!this.can_change_subscriptions || this.requested_subscription_change) {
             this.add_subscribers_timeout = window.setTimeout(
                 () => this.delayed_bulk_create_subscribers(),
                 100 // wait
@@ -590,7 +594,7 @@ export class PhntmBridgeClient extends EventTarget {
 
     delayed_bulk_remove_subscribers () {
 
-        if (!this.pc || !this.pc.connected || this.pc.signalingState != 'stable' || this.requested_subscription_change) {
+        if (!this.can_change_subscriptions || this.requested_subscription_change) {
             this.remove_subscribers_timeout = window.setTimeout(
                 () => this.delayed_bulk_remove_subscribers(),
                 100 // wait
@@ -599,7 +603,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         console.log('requesting unsubscribe from ', this.queued_unsubs);
-        this.requested_subscription_change = true; //lock
+        
         this.socket.emit('unsubscribe', {
             id_robot: this.id_robot,
             sources: this.queued_unsubs
@@ -775,9 +779,16 @@ export class PhntmBridgeClient extends EventTarget {
                 let msg_type = topic_data[2];
                 let reliable = topic_data[3];
                 let topic_config = topic_data[4]; //extra topic config
-                
-                console.log('topic '+topic+' got config: ', topic_config);
-                this.emit('topic_config', topic, topic_config);
+
+                if (topic_config && Object.keys(topic_config).length) {
+                    console.log('Got '+topic+' extra config:', topic_config);
+                    this.topic_configs[topic] = topic_config;
+                    this.emit('topic_config', topic, this.topic_configs[topic]);
+                } else if (this.topic_configs[topic]) {
+                    console.log('Deleted '+topic+' extra config');
+                    delete this.topic_configs[topic];
+                    this.emit('topic_config', topic, null);
+                }
                 
                 // if (dc_id && msg_type) {
                 //     this._make_read_data_channel(topic, dc_id, msg_type, reliable)
@@ -869,6 +880,9 @@ export class PhntmBridgeClient extends EventTarget {
                     });
                 });
             });
+        } else {
+            console.log('Initiated without subs, unlocking...');
+            this.can_change_subscriptions = true;
         }
 
 
@@ -1307,6 +1321,8 @@ export class PhntmBridgeClient extends EventTarget {
 
         pc.addEventListener('signalingstatechange', (evt) => {
             console.warn('signalingstatechange', pc.signalingState);
+
+            that.can_change_subscriptions = (pc.signalingState == 'stable');
 
             switch (pc.signalingState) {
                 case "closed":

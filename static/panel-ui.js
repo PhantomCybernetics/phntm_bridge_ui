@@ -1543,6 +1543,7 @@ export class PanelUI {
     update_webrtc_status() {
         let state = null;
         let via_turn = null;
+        let ip = 'n/a';
         let pc = this.client.pc;
         if (pc) {
             state = pc.connectionState
@@ -1553,6 +1554,7 @@ export class PanelUI {
                 let selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
                 if (selectedPair && selectedPair.remote) {
                     via_turn = selectedPair.remote.type == 'relay' ? true : false;
+                    ip = selectedPair.remote.address;
                 }
             }
         }
@@ -1562,10 +1564,14 @@ export class PanelUI {
         else
             state = 'n/a'
 
-        $('#webrtc_info').html('<span class="label">WebRTC:</span> <span id="webrtc_status"></span>');
+        $('#webrtc_info').html(
+            '<span class="label">WebRTC:</span> <span id="webrtc_status"></span><br>' +
+            '<span class="label">IP:</span> <span id="webrtc_ip"></span>'
+        );
+        $('#webrtc_ip').html(ip);
 
         if (state == 'Connected') {
-            $('#webrtc_status').html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]<//span>'));
+            $('#webrtc_status').html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]</span>'));
             $('#trigger_wifi_scan').removeClass('working')
             if (via_turn)
                 this.set_dot_state(2, 'yellow', 'WebRTC connected to robot (TURN)');
@@ -2035,14 +2041,25 @@ export class PanelUI {
 
     update_battery_status(msg) {
         
+        let topic = this.battery_topic;
+        if (!topic || !this.client.topic_configs[topic])
+            return;
+        
+        let voltage_min = this.client.topic_configs[topic].min_voltage;
+        let voltage_max = this.client.topic_configs[topic].max_voltage;
 
-        let voltage_min = 9.0;
-        let voltage_max = 12.0;
+        if (!this.battery_samples)
+            this.battery_samples = [];
+        this.battery_samples.push(msg.voltage);
+        if (this.battery_samples.length > 5)
+            this.battery_samples.shift();
+        let v_smooth = 0;
+        for (let i = 0; i < this.battery_samples.length; i++)
+            v_smooth += this.battery_samples[i];
+        v_smooth /= this.battery_samples.length;
 
         let range = voltage_max - voltage_min;
-        let percent = Math.max(0, Math.min(100, ((msg.voltage-voltage_min)/range)*100.0));
-
-        console.log(`updating battery ${msg.voltage}V > ${percent}%`);
+        let percent = Math.max(0, Math.min(100, ((v_smooth-voltage_min)/range)*100.0));
 
         if (percent > 75) {
             let c = 'lime';
