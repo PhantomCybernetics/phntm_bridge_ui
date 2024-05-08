@@ -14,9 +14,19 @@
             <span id="network-info-peers"></span>
         </h1>
 
+        <div id="battery-info" style="display: none;">
+            <span id="battery-bar">
+                <span id="battery-bar-0"></span>
+                <span id="battery-bar-1"></span>
+                <span id="battery-bar-2"></span>
+                <span id="battery-bar-3"></span>
+            </span>
+            <span id="battery-label">23%</span>
+        </div>
+
         <div id="network-info-wrapper">
             <div id="network-info">
-                <span id="signal-monitor"></span>
+                <span id="signal-monitor" style="display: none;"></span>
 
                 <span id="dot-0" class="network-info-dot"></span>
                 <span id="dot-1" class="network-info-dot"></span>
@@ -25,9 +35,10 @@
                 <!-- <span id="network-info-ip" title="Robot's IP address"></span> -->
                 <span id="network-info-rtt" title="RTT"></span>
             </div>
-            <div id="network-details"> 
+            <div id="network-details" style="display: none;"> 
                 <div id="socketio_status"></div>
                 <div id="robot_info"></div>
+                <div id="webrtc_info"></div>
                 <div id="robot_wifi_info"></div>
                 <button id="trigger_wifi_scan" title="#trigger_wifi_scan">Re-scan &amp; Roam</button>
             </div>
@@ -39,14 +50,13 @@
         <%- include('partial/touch-ui.html'); %>
         <%- include('partial/keyboard.html'); %>
         <%- include('partial/gamepad.html'); %>
+        <div id="introspection_state" class="inactive"></div>
     </div>
 
     <div id="fixed-center">
         <!-- <div id="robot_stats" style="display:none"></div> -->
 
         <div id="menubar">
-
-            <div id="introspection_state" class="inactive"></div>
 
             <div id="menubar_content">
                 <span id="menubar_hamburger"></span>
@@ -231,7 +241,7 @@
             if (state)
                 console.info('(Socket.io) Robot connected to Bridge server');
             else
-                console.info('(Socket.io) Robot disconnected from Bridge server');
+                console.warn('(Socket.io) Robot disconnected from Bridge server');
         });
 
         // introspection running in the robot

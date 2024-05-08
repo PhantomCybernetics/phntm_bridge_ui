@@ -168,7 +168,8 @@ export class BatteryStateWidget {
         // console.warn('setting wxh='+panel.widget_width+'x'+panel.widget_height);
         //Render Chart
         this.chart.render();
-
+        
+        
         panel.resize_event_handler = () => { this.onResize() } ; //no need here
     }
 

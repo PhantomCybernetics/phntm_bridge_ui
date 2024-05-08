@@ -133,8 +133,7 @@ export class PanelUI {
             }
 
             $('#robot_info').html('<span class="label">Robot ID:</span> ' + client.id_robot + '<br>'
-                + '<span class="label">Robot IP:</span> ' + (client.robot_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>') + '<br>'
-                + '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> '
+                + '<span class="label">Robot IP (public):</span> ' + (client.robot_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>')
             );
 
             that.set_dot_state(1, client.robot_online ? 'green' : 'red', 'Robot ' + (client.robot_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
@@ -166,8 +165,71 @@ export class PanelUI {
             }
         });
 
-        client.on('/iw_status', (msg) => that.update_wifi_status(msg));
+        let battery_status_wrapper = (msg) => {
+            that.update_battery_status(msg);
+        }
 
+        let iw_status_wrapper = (msg) => {
+            that.update_wifi_status(msg);
+        }
+
+        this.battery_topic = null;
+        this.iw_topic = null;
+        
+        // display ui elements as last time to prevent them moving around too much during init
+        if (this.load_last_robot_battery_shown()) {
+            $('#battery-info').css('display', 'block');
+        }
+        if (this.load_last_robot_wifi_signal_shown()) {
+            $('#signal-monitor').css('display', 'block');
+            $('#network-details').css('display', '');
+        }
+
+        client.on('ui_config', (robot_ui_config) => {
+            //battery
+            let battery_shown = false;
+            if (that.battery_topic && that.battery_topic != robot_ui_config['battery_topic']) {
+                client.off(that.battery_topic, battery_status_wrapper);
+                that.battery_topic = null;
+                battery_shown = false;
+            }
+            if (robot_ui_config['battery_topic']) {
+                that.battery_topic = robot_ui_config['battery_topic'];
+                client.on(that.battery_topic, battery_status_wrapper);
+                console.warn('battery topic is '+that.battery_topic)
+                $('#battery-info').css('display', 'block');
+                battery_shown = true;
+            } else {
+                $('#battery-info').css('display', 'none');
+                battery_shown = false;
+            }
+            that.save_last_robot_battery_shown(battery_shown);
+
+            //wifi status
+            let wifi_shown = false;
+            if (that.iw_topic && that.iw_topic != robot_ui_config['iw_monitor_topic']) {
+                client.off(that.iw_topic, iw_status_wrapper);
+                that.iw_topic = null;
+                wifi_shown = false;
+            }
+            if (robot_ui_config['iw_monitor_topic']) {
+                that.iw_topic = robot_ui_config['iw_monitor_topic'];
+                client.on(that.iw_topic, iw_status_wrapper);
+                $('#signal-monitor').css('display', 'block');
+                $('#network-details').css('display', '');
+                wifi_shown = true;
+            } else {
+                $('#signal-monitor').css('display', 'none');
+                $('#network-details').css('display', 'none !important');
+                wifi_shown = false;
+            }
+            that.save_last_robot_wifi_signal_shown(wifi_shown);
+        });
+
+        // we must open at least one webrtc channel to establish connection, 
+        // so this subscribes every time
+        // client.on('/iw_status', iw_status_wrapper);
+       
         client.on('topics', (topics) => {
             that.init_panels(topics);
         });
@@ -285,7 +347,7 @@ export class PanelUI {
         }, 1000);
 
         this.grid.on('added removed change', function (e, items) {
-            console.log('grid changed', items);
+            // console.log('grid changed', items);
             if (items) {
                 items.forEach(function (item) {
                     let id_src = $(item.el).find('.grid_panel').attr('data-source');
@@ -1471,9 +1533,8 @@ export class PanelUI {
                 }
             }
         }
-        console.log('Sorting...')
+        
         this.grid.engine.sortNodes();
-        console.log('Sorted: ', this.grid.engine.nodes);
 
         this.widgets_menu();
         return this.panels;
@@ -1500,6 +1561,8 @@ export class PanelUI {
             state = state.charAt(0).toUpperCase() + state.slice(1);
         else
             state = 'n/a'
+
+        $('#webrtc_info').html('<span class="label">WebRTC:</span> <span id="webrtc_status"></span>');
 
         if (state == 'Connected') {
             $('#webrtc_status').html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]<//span>'));
@@ -1631,6 +1694,26 @@ export class PanelUI {
         return name;
     }
 
+    save_last_robot_battery_shown(val) {
+        localStorage.setItem('last-robot-battery-shown:' + this.client.id_robot, val);
+    }
+
+    load_last_robot_battery_shown() {
+        let val = localStorage.getItem('last-robot-battery-shown:' + this.client.id_robot) == 'true';
+        return val;
+    }
+
+    save_last_robot_wifi_signal_shown(val) {
+        localStorage.setItem('last-robot-wifi-shown:' + this.client.id_robot, val);
+    }
+
+    load_last_robot_wifi_signal_shown() {
+        let val = localStorage.getItem('last-robot-wifi-shown:' + this.client.id_robot) == 'true';
+        return val;
+    }
+
+
+
     set_maximized_panel(max_panel) {
         this.maximized_panel = max_panel;
         let panel_ids = Object.keys(this.panels);
@@ -1653,19 +1736,57 @@ export class PanelUI {
        
     }
 
+
+    update_input_buttons() {
+
+        $('#introspection_state').css('display', 'block'); //always
+
+        let w_body = $('body').innerWidth();
+
+        let min_only = w_body < 600 && isTouchDevice();
+        
+        if ((!isTouchDevice() || navigator.keyboard) && !min_only) { // TODO (??)
+            $('#keyboard').css('display', 'block');
+            console.log('keyboard is on', navigator.keyboard, navigator.keyboard.getLayoutMap());
+            // num_btns++;
+        } else {
+            $('#keyboard').css('display', 'none');
+        }
+        if (this.gamepad.gamepad && !min_only) {
+            $('#gamepad').css('display', 'block');
+            // num_btns++;
+        } else {
+            $('#gamepad').css('display', 'none');
+        }
+
+        if (isTouchDevice()) {
+            $('#touch_ui').css('display', 'block');
+            // num_btns++;
+        } else {
+            $('#touch_ui').css('display', 'none');
+        }
+
+        $('#fixed-right')
+            .removeClass(['btns-4', 'btns-2'])
+            .addClass('btns-'+(min_only ? 2 : 4));
+    }
+
     //on resize, robot name update
     update_layout() {
 
-        const full_menubar_w = 705;
-        const narrow_menubar_w = 575;
-        const narrower_menubar_w = 535;
+        let k = 0;
+        const full_menubar_w = 705-k;
+        const narrow_menubar_w = 575-k;
+        const narrower_menubar_w = 535-k;
 
         let w_body = $('body').innerWidth();
-        let w_right = $('#fixed-right').innerWidth();
+
+        this.update_input_buttons(); //changes #fixed-right
+        let w_right = $('#fixed-right').innerWidth(); // right margin
 
         let label_el = $('h1 .label');
         label_el.removeClass('smaller');
-        let w_left = $('#fixed-left').innerWidth();
+        let w_left = $('#fixed-left').innerWidth()+60;
 
         let w_netinfo = $('#network-info').innerWidth();
 
@@ -1680,7 +1801,7 @@ export class PanelUI {
             label_el.addClass('smaller');
         }
 
-        w_left = $('#fixed-left').innerWidth();
+        w_left = $('#fixed-left').innerWidth()+60;
 
         $('#fixed-center')
             .css({
@@ -1751,6 +1872,12 @@ export class PanelUI {
                     .removeClass('hidden');
             }
 
+            // if (!$('BODY').hasClass('hamburger') || $('#introspection_state').hasClass('hidden')) { // switched
+            //     $('#introspection_state')
+            //         .appendTo('#fixed-right') // move to the right icons
+            //         .removeClass('hidden');
+            // }
+
             if (h < 520) {
                 $('#bottom-links').addClass('inline');
             } else {
@@ -1796,6 +1923,12 @@ export class PanelUI {
                     .css('display', 'block')
                     .removeClass(['inline', 'hidden']);
             }
+
+            // if ($('BODY').hasClass('hamburger') || $('#introspection_state').hasClass('hidden')) { // switched
+            //     $('#introspection_state')
+            //         .appendTo('#menubar') // move center part
+            //         .removeClass('hidden');
+            // }
         };
 
         $('BODY.touch-ui #touch-ui-dialog .content').css({
@@ -1898,6 +2031,46 @@ export class PanelUI {
             panel.onResize();
         });
 
+    }
+
+    update_battery_status(msg) {
+        
+
+        let voltage_min = 9.0;
+        let voltage_max = 12.0;
+
+        let range = voltage_max - voltage_min;
+        let percent = Math.max(0, Math.min(100, ((msg.voltage-voltage_min)/range)*100.0));
+
+        console.log(`updating battery ${msg.voltage}V > ${percent}%`);
+
+        if (percent > 75) {
+            let c = 'lime';
+            $('#battery-bar-0').css('background-color', c);
+            $('#battery-bar-1').css('background-color', c);
+            $('#battery-bar-2').css('background-color', c);
+            $('#battery-bar-3').css('background-color', c);
+        } else if (percent > 50) {
+            let c = 'cyan';
+            $('#battery-bar-0').css('background-color', 'transparent');
+            $('#battery-bar-1').css('background-color', c);
+            $('#battery-bar-2').css('background-color', c);
+            $('#battery-bar-3').css('background-color', c);
+        } else if (percent > 25) {
+            let c = 'orange';
+            $('#battery-bar-0').css('background-color', 'transparent');
+            $('#battery-bar-1').css('background-color', 'transparent');
+            $('#battery-bar-2').css('background-color', c);
+            $('#battery-bar-3').css('background-color', c);
+        } else {
+            let c = 'red';
+            $('#battery-bar-0').css('background-color', 'transparent');
+            $('#battery-bar-1').css('background-color', 'transparent');
+            $('#battery-bar-2').css('background-color', 'transparent');
+            $('#battery-bar-3').css('background-color', c)
+        }
+
+        $('#battery-info').attr('title', `Battery at ${Math.round(percent)}%`)
     }
 
     update_wifi_status(msg) { // /iw_status in

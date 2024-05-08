@@ -101,7 +101,11 @@ export class GamepadController {
             $('#gamepad_id').html(' / ' + that.gamepad.id);
 
             that.init_gamepad();
+            that.client.ui.update_layout();
         });
+
+        const gps = navigator.getGamepads();
+        console.log('Conected gamepads: ', gps);
 
         window.addEventListener('gamepaddisconnected', (event) => {
             if (that.gamepad.id == event.gamepad.id) {
@@ -109,6 +113,7 @@ export class GamepadController {
                 console.warn('Gamepad disconnected:', event.gamepad);
                 $('#gamepad_id').html('');
                 $('#gamepad').removeClass('connected');
+                that.client.ui.update_layout();
             }
         });
 

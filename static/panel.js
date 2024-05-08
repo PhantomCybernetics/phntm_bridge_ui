@@ -455,7 +455,6 @@ export class Panel {
         if (!menu_el.length || !content_el.length)
             return;
         let pos = menu_el.offset();
-         console.log(this.id_source+' menu test pos ', pos);
         if (!isTouchDevice() && pos.left < 330 && !$('#grid-stack').hasClass('gs-1')) { //not in 1-col mode
             menu_el.addClass('right');
         } else {

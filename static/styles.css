@@ -138,10 +138,29 @@ BODY.desktop-ui.menu-cancels-scroll {
 #fixed-right {
     float: right;
     /* background-color: blue; */
-
-    width: 190px; /* 3 buttons */
     /* height: 50px; */
+    /* background-color: blue; */
+    height: 50px;
 }
+
+#fixed-right.btns-4 {
+    width: 256px;
+}
+
+#fixed-right.btns-3 {
+    width: 192px;
+}
+
+#fixed-right.btns-2 {
+    width: 128px;
+    margin-right: 0px;
+}
+
+#fixed-right.btns-1 {
+    width: 64px;
+}
+
+
 
 #menubar {
     position: absolute;
@@ -666,60 +685,6 @@ BODY.hamburger #graph_controls {
     border-radius: 5px 0px 5px 5px;
 }
 
-#introspection_state {
-    width: 34px;
-    /* background: #4a4a4a; */
-    padding: 0px;
-    position: relative;
-    left: -7px;
-    float: left;
-    margin: 5px 0px 0px 0px;
-    height: 33px;
-    background-image: url(/static/discovery_stopped.svg);
-    -webkit-animation-play-state: paused;
-    -moz-animation-play-state: paused;
-    animation-play-state: paused;
-    background-size: 24px 24px;
-    background-repeat: no-repeat;
-    background-position: center;
-    cursor: pointer;
-}
-
-BODY.hamburger #introspection_state {
-    position: absolute;
-    right: 190px;
-    top: -15px;
-    left: auto;
-    float: none;
-    width: 50px;
-    height: 50px;
-    background-size: 37px;
-}
-
-@media screen and (orientation: portrait) {
-    BODY.hamburger #introspection_state {
-        right: 60px;
-    }
-}
-
-BODY.desktop-ui #introspection_state:hover,
-#introspection_state.active {
-    /* background: #82b727; */
-    filter: opacity(1) !important;
-}
-
-#introspection_state.inactive {
-    filter: opacity(.2);
-}
-
-#introspection_state.active {
-    background-image: url(/static/discovery.svg);
-}
-
-#gamepad.connected #gamepad_status {
-
-}
-
 #graph_controls H3,
 #service_controls H3,
 #camera_controls H3,
@@ -1107,6 +1072,74 @@ BODY.hamburger #docker_controls.active H3 {
     background: #ff8c00 !important;
 }
 
+#battery-info {
+    display: none;
+    /* background-color: #033669; */
+    background-image: url(/static/battery.png);
+    width: 23px;
+    height: 41px;
+    margin-top: 7px;
+    margin-right: 5px;
+    position: relative;
+    float: left;
+    /* border-radius: 0px 5px 5px 0px; */
+    background-size: 96px;
+    /* border-radius: 0px 5px 5px 0px; */
+    /* padding-top: 8px; */
+    background-blend-mode: overlay;
+    margin-left: 4px;
+    cursor: help;
+}
+
+#battery-info #battery-bar {
+    display: block;
+    /* background: blue; */
+    height: 24px;
+    z-index: 0;
+    margin: 0px 1px 1px 1px;
+    width: 13px;
+    overflow: hidden;
+    position: absolute;
+    left: 3px;
+    /* bottom: 4px; */
+    /* display: none; */
+    top: 11px;
+}
+
+#battery-info #battery-bar SPAN {
+    display: block;
+    background: transparent;
+    height: 4px;
+    z-index: -1;
+    margin: 0px 0px 2px 0px;
+    /* width: 100px; */
+    position: relative;
+    /* bottom: 0px; */
+    /* left: 0px; */
+    /* rotate: 74deg; */
+    border-radius: 2px;
+}
+
+#battery-info #battery-label {
+    position: absolute;
+    left: 1px;
+    bottom: 11px;
+    color: black;
+    font-size: 11px;
+    /* background: #000000a1; */
+    display: block;
+    width: 20px;
+    padding: 1px 0px;
+    text-align: center;
+    border-radius: 2px;
+    line-height: 10px;
+    rotate: -90deg;
+    white-space: nowrap;
+    font-weight: bold;
+    display: none;
+}
+
+
 #network-info {
     display: block;
     float: left;
@@ -1119,7 +1152,7 @@ BODY.hamburger #docker_controls.active H3 {
 }
 
 #network-info #signal-monitor {
-    display: block;
+    display: none;
     /* background-color: blue; */
     position: absolute;
     left: 0px;
@@ -1206,15 +1239,15 @@ BODY.hamburger #docker_controls.active H3 {
 }
 
 #network-info #dot-0 {
-    left: 0px;
+    left: 1px;
 }
 
 #network-info #dot-1 {
-    left: 10px;
+    left: 11px;
 }
 
 #network-info #dot-2 {
-    left: 20px;
+    left: 21px;
 }
 
 #network-info-wrapper #network-details {
@@ -1259,6 +1292,10 @@ BODY.hamburger #docker_controls.active H3 {
 #robot_wifi_info, #robot_info {
    margin-top: 10px;
 }
+
+#robot_wifi_info, #webrtc_info {
+    margin-top: 10px;
+ }
 
 BUTTON#trigger_wifi_scan {
     /* margin-left: 5px; */
@@ -2395,41 +2432,84 @@ BODY.touch-ui .editing .grid-stack-item-content {
 
 #gamepad,
 #touch_ui,
-#keyboard {
-    position: absolute;
+#keyboard,
+#introspection_state {
+    position: relative;
     top: 0;
-    display: block;
+    display: none;
     z-index: 35;
+    float: right;
+    width: 64px;
+    height: 55px;
+}
+
+#introspection_state {
+    /* background: #4a4a4a; */
+    background-image: url(/static/discovery_stopped.svg);
+    -webkit-animation-play-state: paused;
+    -moz-animation-play-state: paused;
+    animation-play-state: paused;
+    background-size: 37px;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    width: 50px;
+    /* background-color: magenta; */
+}
+
+@media screen and (orientation: portrait) {
+    /* BODY.hamburger #introspection_state {
+        right: 60px;
+    } */
+}
+
+BODY.desktop-ui #introspection_state:hover,
+#introspection_state.active {
+    /* background: #82b727; */
+    filter: opacity(1) !important;
+}
+
+#introspection_state.inactive {
+    filter: opacity(.2);
+}
+
+#introspection_state.active {
+    background-image: url(/static/discovery.svg);
+}
+
+#gamepad.connected #gamepad_status {
+
 }
 
 /* Portrait orientation */
 @media screen and (orientation: portrait) {
-    #fixed-right {
+    /* #fixed-right {
         width: 120px;
-    }
-    #keyboard {
+    } */
+    /* #keyboard {
         display: none;
     }
     #gamepad {
         display: none;
-    }
+    } */
 }
 
 #gamepad {
-    right: 61px;
+    /* right: 61px; */
+    /* background-color: lime; */
 }
 
 #keyboard {
-    right: 122px;
-    width: 60px;
-    height: 45px;
+    /* right: 122px; */
+    /* width: 60px; */
+    /* background-color: cyan; */
     border-radius: 10px 10px 0px 0px;
 }
 
 #touch_ui {
-    right: 0px;
-    width: 60px;
-    height: 45px;
+    /* right: 0px; */
+    /* width: 60px; */
+   /* background-color: yellow; */
 }
 
 #keyboard_status,
@@ -2441,29 +2521,26 @@ BODY.touch-ui .editing .grid-stack-item-content {
 }
 
 #keyboard_status {
-    background-size: 100px;
+    background-size: 126px;
     background-image: url(/static/keyboard.png);
-    background-position: 0px 3px;
-    width: 50px;
-    height: 27px;
-    margin-top: 10px;
-    margin-left: 5px;
+    background-position: 8px 17px;
+    height: 55px;
+    margin-top: 0;
+    margin-left: 0;
 }
 
 #gamepad_status {
-    width: 60px;
-    height: 45px;
+    height: 55px;
     background-image: url(/static/gamepad.png);
     background-size: 130px;
-    background-position: 4px 3px;
+    background-position: 6px 7px;
 }
 
 #touch_ui_status {
-    width: 50px;
-    height: 45px;
+    height: 55px;
     background-image: url(/static/touch-input.png);
-    background-size: 100px;
-    background-position: 0px 5px;
+    background-size: 105px;
+    background-position: 9px 9px;
 }
 
 #gamepad.connected #gamepad_status,
@@ -2476,11 +2553,11 @@ BODY.desktop-ui #touch_ui_status:hover,
 }
 
 #gamepad.connected.enabled #gamepad_status {
-    background-position: -61px 3px;
+    background-position: -59px 7px;
 }
 
 #keyboard.enabled #keyboard_status {
-    background-position: -50px 3px;
+    background-position: -70px 17px;
 }
 
 #touch_ui.enabled #touch_ui_status {
@@ -2505,7 +2582,7 @@ BODY.desktop-ui #touch_ui_status:hover,
     font-weight: normal;
     padding: 10px;
     border-radius: 5px 0px 5px 5px;
-    top: 45px;
+    top: 55px;
     display: none;
     z-index: 2;
 }

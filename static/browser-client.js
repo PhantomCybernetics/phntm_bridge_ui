@@ -494,6 +494,8 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
+
+
     create_subscriber(id_source) {
 
         if (this.subscribers[id_source]) {
@@ -506,12 +508,19 @@ export class PhntmBridgeClient extends EventTarget {
         this.subscribers[id_source] = new Subscriber(this, id_source);
 
         if (this.init_complete) { //not waiting for initial subs
-            this.socket.emit('subscribe', {
-                id_robot: this.id_robot,
-                sources: [ id_source ]
-            }, (res) => {
-                //  console.warn('Res sub', res);
-            });
+            console.log('emitting subscribe for '+id_source)
+
+            if (this.add_subscribers_timeout) {
+                window.clearTimeout(this.add_subscribers_timeout);
+                this.add_subscribers_timeout = null;
+            }
+            if (!this.queued_subs)
+                this.queued_subs = [];
+            this.queued_subs.push(id_source);
+            this.add_subscribers_timeout = window.setTimeout(
+                () => this.delayed_bulk_create_subscribers(),
+                5
+            );
         }
 
         //init dc async
@@ -537,16 +546,69 @@ export class PhntmBridgeClient extends EventTarget {
             delete this.topic_streams[id_source];
         }
 
-        if (this.init_complete) { //not waiting for initial subs
-            this.socket.emit('unsubscribe', {
-                id_robot: this.id_robot,
-                sources: [ id_source ]
-            }, (res) => {
-                // console.warn('Res unsub', res);
-            });
+        if (topic_dcs) {
+            
         }
 
-        //TODO
+        if (this.init_complete) { //not waiting for initial subs
+            if (this.remove_subscribers_timeout) {
+                window.clearTimeout(this.remove_subscribers_timeout);
+                this.remove_subscribers_timeout = null;
+            }
+            if (!this.queued_unsubs)
+                this.queued_unsubs = [];
+            this.queued_unsubs.push(id_source);
+            this.remove_subscribers_timeout = window.setTimeout(
+                () => this.delayed_bulk_remove_subscribers(),
+                5
+            );
+        }
+    }
+
+    delayed_bulk_create_subscribers () {
+
+        if (!this.pc || !this.pc.connected || this.pc.signalingState != 'stable' || this.requested_subscription_change) {
+            this.add_subscribers_timeout = window.setTimeout(
+                () => this.delayed_bulk_create_subscribers(),
+                100 // wait
+            );
+            return;
+        }
+
+        console.log('requesting subscribe to ', this.queued_subs);
+        this.requested_subscription_change = true; //lock
+        this.socket.emit('subscribe', {
+            id_robot: this.id_robot,
+            sources: this.queued_subs
+        }, (res) => {
+            console.warn('Res sub', res);
+            this.requested_subscription_change = false; //unlock
+        });
+        this.queued_subs = [];
+        this.add_subscribers_timeout = null;
+    }
+
+    delayed_bulk_remove_subscribers () {
+
+        if (!this.pc || !this.pc.connected || this.pc.signalingState != 'stable' || this.requested_subscription_change) {
+            this.remove_subscribers_timeout = window.setTimeout(
+                () => this.delayed_bulk_remove_subscribers(),
+                100 // wait
+            );
+            return;
+        }
+
+        console.log('requesting unsubscribe from ', this.queued_unsubs);
+        this.requested_subscription_change = true; //lock
+        this.socket.emit('unsubscribe', {
+            id_robot: this.id_robot,
+            sources: this.queued_unsubs
+        }, (res) => {
+            console.warn('Res unsub', res);
+            this.requested_subscription_change = false; //unlock
+        });
+        this.queued_unsubs = [];
+        this.remove_subscribers_timeout = null;
     }
 
     create_writer(topic, msg_type, on_ready_cb) {
@@ -712,6 +774,11 @@ export class PhntmBridgeClient extends EventTarget {
                 let dc_id = topic_data[1];
                 let msg_type = topic_data[2];
                 let reliable = topic_data[3];
+                let topic_config = topic_data[4]; //extra topic config
+                
+                console.log('topic '+topic+' got config: ', topic_config);
+                this.emit('topic_config', topic, topic_config);
+                
                 // if (dc_id && msg_type) {
                 //     this._make_read_data_channel(topic, dc_id, msg_type, reliable)
                 // } else if (topic && this.topic_dcs[topic]) {
@@ -720,6 +787,11 @@ export class PhntmBridgeClient extends EventTarget {
                 //     delete this.topic_dcs[topic];
                 // }
             });
+        }
+
+        if (robot_data['ui']) {
+            console.log('ui got config: ', robot_data['ui']);
+            this.emit('ui_config', robot_data['ui']);
         }
 
         if (robot_data['read_video_streams']) {

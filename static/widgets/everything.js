@@ -78,7 +78,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
                 that.laser_visuals[topic].castShadow = false;
                 that.laser_visuals[topic].receiveShadow = false;
-                
+                // that.laser_visuals[topic].frustumCulled = false;
                 that.laser_frames[topic].add(that.laser_visuals[topic]);
         
             } else {
@@ -172,12 +172,14 @@ export class Everything3DWidget extends DescriptionTFWidget {
             let p = new THREE.Vector3(dist, 0, 0);
             p.applyAxisAngle(rot_axis, scan.angle_min + (i * scan.angle_increment));
 
+            laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
             laser_points.push(center);
-            laser_points.push(p);
+
         };
 
-        if (!this.dirty_laser_points[topic])
-            this.dirty_laser_points[topic] = 
+        // if (!this.dirty_laser_points[topic])
+        //     this.dirty_laser_points[topic] = 
+
         this.dirty_laser_points[topic] = laser_points;
 
         this.renderDirty();
