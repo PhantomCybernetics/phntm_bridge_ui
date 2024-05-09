@@ -106,8 +106,6 @@ export class LaserScanWidget {
             );
             evCache[index] = ev;
             
-            
-
             // If two pointers are down, check for pinch gestures
             if (evCache.length === 2 && evCache[0].touches.length === 2) {
                 // Calculate the distance between the two pointers

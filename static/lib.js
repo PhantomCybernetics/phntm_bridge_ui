@@ -165,14 +165,19 @@ export function openFullscreen() {
   
   try {
     if (elem.requestFullscreen) {
-      elem.requestFullscreen();
+      elem.requestFullscreen().then(
+        ()=>{
+          console.log('Cool opening full screen');
+        }, () => {
+          console.log('Err opening full screen?');
+        })
     } else if (elem.webkitRequestFullscreen) { /* Safari */
       elem.webkitRequestFullscreen();
     } else if (elem.msRequestFullscreen) { /* IE11 */
       elem.msRequestFullscreen();
     }
   } catch (e) {
-    
+    console.log('Err caught while opening full screen')
   }
   
 }
@@ -186,4 +191,27 @@ export function closeFullscreen() {
   } else if (document.msExitFullscreen) { /* IE11 */
     document.msExitFullscreen();
   }
+}
+
+export function detectHWKeyboard () {
+    // if (!isTouchDevice())
+    //   return true; // always on on desktop
+
+    // if (navigator.userAgent.includes('Android')) {
+    //   return true; // no good way to detect on Adroid
+    // }
+
+    // if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+    //   // if (navigator.userAgent.includes('OS 14_') || navigator.userAgent.includes('OS 15_')) {
+    //     if (navigator.getGamepads().some(gamepad => gamepad?.connected && gamepad?.id.includes('Keyboard'))) {
+    //       return true;
+    //     } else {
+    //       return false;
+    //     }
+    //   // }
+    // }
+
+    // return false;
+
+    return true;
 }

@@ -70,9 +70,10 @@ h1 .label.smaller {
     /*  clip; */
     /* white-space: nowrap; */
     
-    /* min-width: 200px; */
+    min-width: 60px;
     font-size: 17px;
     line-height: 35px;
+    
 }
 
 h3 {
@@ -121,7 +122,7 @@ BODY.desktop-ui.menu-cancels-scroll {
     /* background-color: red; */
     height: 50px;
     position: relative;
-    padding-right: 60px;
+    padding-right: 0px;
     /* z-index: 36; */
     display: none;
 }
@@ -1147,7 +1148,7 @@ BODY.hamburger #docker_controls.active H3 {
     height: 50px;
     /* background: red; */
     position: absolute;
-    right: 0px;
+    right: -60px;
     top: 0px;
 }
 

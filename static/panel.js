@@ -163,15 +163,22 @@ export class Panel {
         this.last_content_space_click = null;
         this.maximized = false;
 
-        $('#panel_content_space_'+this.n).on('click', () => {
+        $('#panel_content_space_'+this.n).on('touchstart', (ev) => {
             if (that.editing)
                 return;
+
+            if (ev.touches.length != 1) {
+                that.last_content_space_click = null;
+                return;
+            }
+        
             // if (that.edit_timeout) {
             //     window.clearTimeout(that.edit_timeout);
             //     that.edit_timeout = null;
             // }
             
-            if (that.last_content_space_click && Date.now() - that.last_content_space_click < 250) {
+            if (that.last_content_space_click &&
+                Date.now() - that.last_content_space_click < 250) {
                 // console.log('Duble Clicked '+id_source);
                 that.last_content_space_click = null;
                 that.maximize(!that.maximized);
@@ -542,6 +549,10 @@ export class Panel {
         // if (state == this.maximized)
         //     return;
         if (state) {
+
+            if (isTouchDevice())
+                openFullscreen();
+
             let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
             if (isTouchDevice() && isSafari()) {
                 h = '100dvh';
@@ -559,9 +570,6 @@ export class Panel {
             this.ui.grid.resizable(this.grid_widget, false);
             this.ui.grid.movable(this.grid_widget, false);
             
-            if (isTouchDevice())
-                openFullscreen();
-
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);
             if (this.ui.maximized_panel == this) {

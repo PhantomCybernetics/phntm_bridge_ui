@@ -11,7 +11,7 @@ import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.j
 import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari } from "./lib.js";
+import { isPortraitMode, isTouchDevice, isSafari, detectHWKeyboard } from "./lib.js";
 
 export class PanelUI {
 
@@ -108,18 +108,6 @@ export class PanelUI {
             $('#robot_wifi_info').empty().css('display', 'none');
         });
 
-        let last_saved_name = this.load_last_robot_name();
-        if (last_saved_name) {
-            client.name = last_saved_name;
-            $('#robot_name .label').html(client.name);
-        }
-
-        this.update_layout();
-
-        window.addEventListener("resize", (event) => {
-            that.update_layout()
-        });
-
         client.on('error', (error, msg) => {
             that.show_page_error(error, msg);
         });
@@ -165,6 +153,17 @@ export class PanelUI {
             }
         });
 
+
+        let last_saved_name = this.load_last_robot_name();
+        if (last_saved_name) {
+            client.name = last_saved_name;
+            $('#robot_name .label').html(client.name);
+        }
+
+        window.addEventListener("resize", (event) => {
+            that.update_layout()
+        });
+
         let battery_status_wrapper = (msg) => {
             that.update_battery_status(msg);
         }
@@ -175,9 +174,9 @@ export class PanelUI {
 
         this.battery_topic = null;
         this.iw_topic = null;
-        
+        this.battery_shown = this.load_last_robot_battery_shown();
         // display ui elements as last time to prevent them moving around too much during init
-        if (this.load_last_robot_battery_shown()) {
+        if (this.battery_shown) {
             $('#battery-info').css('display', 'block');
         }
         if (this.load_last_robot_wifi_signal_shown()) {
@@ -185,25 +184,26 @@ export class PanelUI {
             $('#network-details').css('display', '');
         }
 
+        this.update_layout();
+
         client.on('ui_config', (robot_ui_config) => {
             //battery
-            let battery_shown = false;
+            // let battery_shown = false;
             if (that.battery_topic && that.battery_topic != robot_ui_config['battery_topic']) {
                 client.off(that.battery_topic, battery_status_wrapper);
                 that.battery_topic = null;
-                battery_shown = false;
             }
             if (robot_ui_config['battery_topic']) {
                 that.battery_topic = robot_ui_config['battery_topic'];
                 client.on(that.battery_topic, battery_status_wrapper);
                 console.warn('battery topic is '+that.battery_topic)
                 $('#battery-info').css('display', 'block');
-                battery_shown = true;
+                this.battery_shown = true;
             } else {
                 $('#battery-info').css('display', 'none');
-                battery_shown = false;
+                this.battery_shown = false;
             }
-            that.save_last_robot_battery_shown(battery_shown);
+            that.save_last_robot_battery_shown(this.battery_shown);
 
             //wifi status
             let wifi_shown = false;
@@ -1751,9 +1751,9 @@ export class PanelUI {
 
         let min_only = w_body < 600 && isTouchDevice();
         
-        if ((!isTouchDevice() || navigator.keyboard) && !min_only) { // TODO (??)
+        if (detectHWKeyboard() && !min_only) { // TODO (??)
             $('#keyboard').css('display', 'block');
-            console.log('keyboard is on', navigator.keyboard, navigator.keyboard.getLayoutMap());
+            // console.log('keyboard is on', navigator.keyboard, navigator.keyboard.getLayoutMap());
             // num_btns++;
         } else {
             $('#keyboard').css('display', 'none');
@@ -1794,9 +1794,13 @@ export class PanelUI {
         label_el.removeClass('smaller');
         let w_left = $('#fixed-left').innerWidth()+60;
 
+        let w_battery = this.battery_shown ? 4+23+5 : 0;
+
         let w_netinfo = $('#network-info').innerWidth();
 
-        let max_label_w = w_body - w_right - w_netinfo;
+        let max_label_w = w_body - w_right - w_netinfo - w_battery - 50;
+
+        console.log(`max_label_w=${max_label_w}\nw_body=${w_body}\nw_right=${w_right}\nw_netinfo=${w_netinfo}\nw_battery=${w_battery}`)
         // w_left += w_netinfo;
 
         label_el.css({
