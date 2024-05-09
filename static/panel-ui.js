@@ -9,6 +9,7 @@ import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
+import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
 import { isPortraitMode, isTouchDevice, isSafari, detectHWKeyboard } from "./lib.js";
@@ -456,6 +457,14 @@ export class PanelUI {
             }
         });
 
+        // TODO: UNCOMMENT THIS
+        // $(window).blur((ev)=>{
+        //     console.log('window blur');
+        //     if (that.touch_gamepad_on) {
+        //         that.toggleTouchGamepad();
+        //     }
+        // });
+
         window.addEventListener('touchstart', (ev) => {
             // ev.preventDefault();
             // ev.stopPropagation();
@@ -472,6 +481,11 @@ export class PanelUI {
 
         // prevent screen dimming on touch devices
         if (isTouchDevice()) { 
+
+            $('#touch_ui').click((ev)=>{
+                that.toggleTouchGamepad();
+            });
+
 
             // The wake lock sentinel.
             let wakeLock = null;
@@ -606,6 +620,9 @@ export class PanelUI {
     set_burger_menu_state(open, animate = true) {
 
         let that = this;
+
+        if (this.touch_gamepad_on)
+            this.toggleTouchGamepad();
 
         if (open) {
 
@@ -1746,6 +1763,62 @@ export class PanelUI {
     }
 
 
+    toggleTouchGamepad() {
+        
+        if (!this.touch_gamepad_on) {
+            this.touch_gamepad_on = true;
+            this.update_input_buttons();
+            $('#touch_ui').addClass('enabled');
+            $('BODY').addClass('touch-gamepad');
+            console.log('Touch Gamepad on');
+            let that = this;
+            this.touch_gamepad = new TouchGamepad([
+                {
+                    id: "touch-left-stick", // MANDATORY
+                    // type: "joystick", // Optional (Default is "joystick")
+                    parent: "#touch-gamepad-left", // Where to append the controller
+                    fixed: false, // Change position on touch-start
+                    position: { // Initial position on inside parent
+                        left: "50%",
+                        bottom: "40%",
+                    },
+                    onInput() { // Triggered on angle or value change.
+                        // // If you update your Player position and angle continuosly inside a
+                        // // requestAnimationFrame you're good to go with i.e:
+                        // Player.controller.value = this.value;
+                        // Player.controller.angle = this.angle;
+                        //
+                        // // otherwise use here something like:
+                        // Player.move(this.value, this.angle);
+                        // to update your player position when the Controller triggers onInput
+                        that.gamepad.touch_input('left', this.value, this.angle);
+                    }
+                }, { 
+                    id: "touch-right-stick", // MANDATORY
+                    // type: "button", // Since type is "joystick" by default 
+                    parent: "#touch-gamepad-right",
+                    fixed: false,
+                    position: { // Anchor point position
+                        right: "50%",
+                        bottom: "40%",
+                    },
+                    onInput() {
+                        that.gamepad.touch_input('right', this.value, this.angle);
+                    }
+                }
+            ]);
+            this.gamepad.set_touch(true);
+            
+        } else {
+            this.touch_gamepad_on = false;
+            this.gamepad.set_touch(false);
+            this.touch_gamepad.destroy();
+            $('#touch_ui').removeClass('enabled');
+            console.log('Touch Gamepad off');
+            $('BODY').removeClass('touch-gamepad');
+        }
+    }
+
     update_input_buttons() {
 
         $('#introspection_state').css('display', 'block'); //always
@@ -1761,7 +1834,7 @@ export class PanelUI {
         } else {
             $('#keyboard').css('display', 'none');
         }
-        if (this.gamepad.gamepad && !min_only) {
+        if ((this.gamepad.gamepad || isTouchDevice()) && !min_only) {
             $('#gamepad').css('display', 'block');
             // num_btns++;
         } else {
@@ -1787,6 +1860,7 @@ export class PanelUI {
         const full_menubar_w = 705-k;
         const narrow_menubar_w = 575-k;
         const narrower_menubar_w = 535-k;
+
 
         let w_body = $('body').innerWidth();
 
@@ -1830,8 +1904,12 @@ export class PanelUI {
         let portrait = isPortraitMode();
         if (portrait) {
             cls.push('portrait');
+            if (!$('body').hasClass('portrait') && this.touch_gamepad_on)
+                this.toggleTouchGamepad(); // off on rotate
         } else {
             cls.push('landscape');
+            if (!$('body').hasClass('landscape') && this.touch_gamepad_on)
+                this.toggleTouchGamepad(); // off on rotate
         }
 
         if (portrait || available_w_center < narrower_menubar_w || isTouchDevice()) { // .narrower menubar

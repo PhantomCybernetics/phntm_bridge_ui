@@ -11,8 +11,9 @@ BODY.desktop-ui {
     min-height: calc(100% - 70px);
 }
 
-BODY.no-scroll {
-    overflow: hidden;1896
+BODY.no-scroll,
+BODY.touch-gamepad {
+    overflow: hidden;
     height: 100%;
     touch-action: none;
     padding-bottom: 0px;
@@ -1359,6 +1360,12 @@ BUTTON#trigger_wifi_scan.working {
     cursor: pointer;
 }
 
+BODY.touch-gamepad .monitor_menu,
+BODY.touch-gamepad .pause-panel-button,
+BODY.touch-gamepad H3.panel-title {
+    opacity: 0.2 !important;
+}
+
 BODY.touch-ui .monitor_menu{
     width: 40px;
     height: 38px;
@@ -2570,7 +2577,8 @@ BODY.desktop-ui #touch_ui_status:hover,
 }
 
 #touch_ui.enabled #touch_ui_status {
-    background-position: -50px 3px;
+    background-position: -50px 9px;
+    filter: grayscale(0) opacity(1);
 }
 
 #gamepad.open,
@@ -3056,4 +3064,29 @@ BODY.touch-ui .grid-stack-item>.ui-resizable-nw,
 BODY.touch-ui .grid-stack-item>.ui-resizable-se,
 BODY.touch-ui .grid-stack-item>.ui-resizable-sw {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 20 20"><path d="m10 3 2 2H8l2-2v14l-2-2h4l-2 2"/></svg>') !important;
+}
+
+#touch-gamepad-left,
+#touch-gamepad-right {
+    display: none;
+}
+
+BODY.touch-gamepad #touch-gamepad-left,
+BODY.touch-gamepad #touch-gamepad-right {
+    position: fixed;
+    /* background-color: cyan; */
+    width: 50%;
+    height: auto;
+    left: 0px;
+    bottom: 0px;
+    top: 55px;
+    display: block;
+    z-index: 15; /* above gridstack, below fixed-top */
+    /* border: 3px solid lime; */
+}
+
+BODY.touch-gamepad #touch-gamepad-right {
+    /* background-color: magenta; */
+    left: unset;
+    right: 0px;
 }

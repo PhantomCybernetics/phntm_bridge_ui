@@ -39,6 +39,7 @@
     "@foxglove/message-definition": "^0.3.0",
     "@foxglove/rosmsg": "^4.2.2",
     "@foxglove/rosmsg2-serialization": "^2.0.2",
+    "@rbuljan/gamepad": "^1.0.3",
     "@types/ejs": "^3.1.2",
     "@types/express": "^4.17.17",
     "@types/js-yaml": "^4.0.5",

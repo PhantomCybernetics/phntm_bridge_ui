@@ -26,6 +26,9 @@ export class GamepadController {
         this.loop_running = false;
         $('#gamepad_enabled').prop('checked', this.enabled);
 
+        this.touch_gamepad = false;
+        this.last_touch_input = {};
+
         let that = this;
 
         client.on('gp_config', (gp_drivers, gp_defaults)=>{
@@ -327,6 +330,33 @@ export class GamepadController {
         this.disable_kb_on_conflict();
 
         return true;
+    }
+
+    set_touch(state) {
+        this.touch_gamepad = state;
+       
+        if (state) {
+            console.log('Gamepad in touch mode')
+            $('#gamepad').addClass('connected');
+        } else {
+            console.log('Gamepad touch mode off')
+            $('#gamepad').removeClass('connected');
+        }
+        this.enabled = state;
+    }
+
+    
+    touch_input(where, value, angle) {
+        console.log('Touch GP '+where+' val='+value+'; a='+angle.toFixed(2));
+        if (value)
+            this.last_touch_input[where] = [ value, angle ];
+        else
+            delete this.last_touch_input[where];
+        if (value || Object.keys(this.last_touch_input).length) {
+            $('#gamepad').addClass('enabled');
+        } else {
+            $('#gamepad').removeClass('enabled');
+        }
     }
 
     config_to_editor() {

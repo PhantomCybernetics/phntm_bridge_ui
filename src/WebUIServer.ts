@@ -85,6 +85,7 @@ webExpressApp.use('/static/three/examaples/', express.static('node_modules/three
 webExpressApp.use('/static/urdf-loader/', express.static('node_modules/urdf-loader/src/'));
 
 webExpressApp.use('/static/canvasjs-charts/', express.static('node_modules/@canvasjs/charts'));
+webExpressApp.use('/static/touch-gamepad/', express.static('node_modules/@rbuljan/gamepad/'));
 
 // temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
 
