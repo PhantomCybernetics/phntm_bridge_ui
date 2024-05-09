@@ -1251,7 +1251,8 @@ BODY.hamburger #docker_controls.active H3 {
     left: 21px;
 }
 
-#network-info-wrapper #network-details {
+#network-info-wrapper #network-details,
+#battery-info #battery-details {
     position: absolute;
     display: none;
     left: auto;
@@ -1264,18 +1265,25 @@ BODY.hamburger #docker_controls.active H3 {
     width: 350px;
 }
 
+#battery-info #battery-details {
+    width: 130px;
+    right: -100px;
+}
 
-#network-info-wrapper #network-details.one-column {
+
+#network-info-wrapper #network-details.one-column,
+#battery-info #battery-details.one-column {
     left: 0px; /* move to left edge */
     right: auto;
 }
 
-
-#network-info-wrapper:hover #network-details {
+#network-info-wrapper:hover #network-details,
+#battery-info:hover #battery-details {
     display: block;
 }
 
-#network-details .label {
+#network-details .label,
+#battery-details .label {
     color: #ffffff78;
     margin-right: 5px;
 }

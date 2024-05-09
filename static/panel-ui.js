@@ -2063,7 +2063,7 @@ export class PanelUI {
         v_smooth /= this.battery_samples.length;
 
         let range = voltage_max - voltage_min;
-        let percent = Math.max(0, Math.min(100, ((v_smooth-voltage_min)/range)*100.0));
+        let percent = Math.round(Math.max(0, Math.min(100, ((v_smooth-voltage_min)/range)*100.0)));
 
         if (percent > 75) {
             let c = 'lime';
@@ -2091,7 +2091,12 @@ export class PanelUI {
             $('#battery-bar-3').css('background-color', c)
         }
 
-        $('#battery-info').attr('title', `Battery at ${Math.round(percent)}%`)
+        $('#battery-info').attr('title', `Battery at ${percent}%`)
+        $('#battery-details').html(
+            '<span class="label">Battery:</span> <span id="battery-percent">'+percent+'%</span><br>' +
+            '<span class="label">Voltage:</span> <span id="battery-voltage">'+msg.voltage.toFixed(2)+'V</span>'
+        )
+
     }
 
     update_wifi_status(msg) { // /iw_status in
