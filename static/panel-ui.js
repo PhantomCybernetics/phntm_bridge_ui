@@ -1564,11 +1564,14 @@ export class PanelUI {
         else
             state = 'n/a'
 
-        $('#webrtc_info').html(
-            '<span class="label">WebRTC:</span> <span id="webrtc_status"></span><br>' +
-            '<span class="label">IP:</span> <span id="webrtc_ip"></span>'
-        );
-        $('#webrtc_ip').html(ip);
+        let wrtc_info = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span>' ];
+        if (via_turn)
+            wrtc_info.push('<span class="label">TURN Server: </span> <span id="turn_ip" class="turn">'+ip+'</span>')
+        else if (ip.indexOf('redacted') === -1 && ip != 'n/a')
+            wrtc_info.push('<span class="label">IP: </span> <span id="robot_ip">'+ip+'</span>')
+
+        $('#webrtc_info').html(wrtc_info.join('<br>'));
+
 
         if (state == 'Connected') {
             $('#webrtc_status').html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]</span>'));
