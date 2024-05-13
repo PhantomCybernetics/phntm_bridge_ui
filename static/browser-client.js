@@ -550,9 +550,9 @@ export class PhntmBridgeClient extends EventTarget {
             delete this.topic_streams[id_source];
         }
 
-        if (topic_dcs) {
+        // if (topic_dcs) {
             
-        }
+        // }
 
         if (this.init_complete) { //not waiting for initial subs
             if (this.remove_subscribers_timeout) {
@@ -770,6 +770,12 @@ export class PhntmBridgeClient extends EventTarget {
             let drivers =  robot_data['gp_drivers'];
             let defaults = robot_data['gp_defaults'];
             this.emit('gp_config', drivers, defaults);
+        }
+
+        if (robot_data['touch_drivers'] || robot_data['touch_defaults']) {
+            let drivers =  robot_data['touch_drivers'];
+            let defaults = robot_data['touch_defaults'];
+            this.emit('touch_config', drivers, defaults);
         }
 
         if (robot_data['read_data_channels']) {

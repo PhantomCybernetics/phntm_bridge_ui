@@ -2,10 +2,39 @@
     <div id="gamepad_status" title="Gamepad Settings"></div>
 
     <div id="gamepad_settings">
-        <h3>Gamepad Controls <span id="gamepad_id"></span></h3>
+
+        <div class="touch-zone" id="gamepad-touch-left-zone"></div>
+
+        <div id="gamepad-settings-container">
+
+            <select id="gamepad-profile-select">
+                <option>Joy</option>
+                <option>Twist Forward</option>
+                <option>Twist Reverse</option>
+                <option>New profile...</option>
+            </select>
+            <input type="checkbox" id="gamepad_enabled"/>
+
+            <span id="gamepad-axes-tab" class="tab active">Axes</span>
+            <span id="gamepad-buttons-tab" class="tab">Buttons</span>
+            <span id="gamepad-output-tab" class="tab">Output</span>
+            <span id="gamepad-settings-tab" class="tab"></span>
+            <div id="gamepad-axes-panel" class="panel active"></div>
+            <div id="gamepad-buttons-panel" class="panel"></div>
+            <div id="gamepad-output-panel" class="panel"></div>
+            <div id="gamepad-settings-panel" class="panel">
+                <span id="connected-gamepad"></span>
+            </div>
+        
+        </div>
+
+        <div  class="touch-zone" id="gamepad-touch-right-zone"></div>
+
+        <!-- <h3>Gamepad Controls <span id="gamepad_id"></span></h3>
         <div class="cleaner"></div>
-        <input type="checkbox" id="gamepad_enabled"/> <label for="gamepad_enabled" class="prevent-select">Enabled and generating </label>
-        <select id="gamepad_driver"></select>
+        
+
+       
         <span id="gamepad_debug_output_label"></span>
 
         <div id="gamepad_settings_controls">
@@ -42,6 +71,7 @@
                 <b>Output:</b><br>
                 <div class="p">{}</div>
             </div>
-        </div>
+        </div> -->
+
     </div>
 </div>

@@ -1772,6 +1772,13 @@ export class PanelUI {
             $('BODY').addClass('touch-gamepad');
             console.log('Touch Gamepad on');
             let that = this;
+            if ($('BODY').hasClass('gamepad-editing')) {
+                $('#touch-gamepad-left').appendTo($('#gamepad-touch-left-zone'));
+                $('#touch-gamepad-right').appendTo($('#gamepad-touch-right-zone'));
+            } else {
+                $('#touch-gamepad-left').appendTo($('BODY'));
+                $('#touch-gamepad-right').appendTo($('BODY'));
+            }
             this.touch_gamepad = new TouchGamepad([
                 {
                     id: "touch-left-stick", // MANDATORY
@@ -1780,7 +1787,7 @@ export class PanelUI {
                     fixed: false, // Change position on touch-start
                     position: { // Initial position on inside parent
                         left: "50%",
-                        bottom: "40%",
+                        top: "60%",
                     },
                     onInput() { // Triggered on angle or value change.
                         // // If you update your Player position and angle continuosly inside a
@@ -1800,13 +1807,14 @@ export class PanelUI {
                     fixed: false,
                     position: { // Anchor point position
                         right: "50%",
-                        bottom: "40%",
+                        top: "60%",
                     },
                     onInput() {
                         that.gamepad.touch_input('right', this.value, this.angle);
                     }
                 }
             ]);
+            
             this.gamepad.set_touch(true);
             
         } else {
@@ -1834,7 +1842,7 @@ export class PanelUI {
         } else {
             $('#keyboard').css('display', 'none');
         }
-        if ((this.gamepad.gamepad || isTouchDevice()) && !min_only) {
+        if ((this.gamepad.show_icon || isTouchDevice()) && !min_only) {
             $('#gamepad').css('display', 'block');
             // num_btns++;
         } else {
