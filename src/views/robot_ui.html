@@ -163,7 +163,9 @@
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
     import { NavigationWidget } from '/static/widgets/navigation.js';
     import { Everything3DWidget } from '/static/widgets/everything.js';
-    import { JoyInputDriver, TwistInputDriver, TwistStampedInputDriver } from '/static/input-drivers.js';
+    
+    import { JoyInputDriver } from '/static/input/joy-driver.js';
+    import { TwistInputDriver } from '/static/input/twist-driver.js';
 
     $(document).ready(function() {
 
@@ -218,12 +220,10 @@
         let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
         gamepad.register_driver('Joy', JoyInputDriver);
         gamepad.register_driver('Twist', TwistInputDriver);
-        gamepad.register_driver('TwistStamped', TwistStampedInputDriver);
 
         let keyboard = new KeyboardController(robot); // creates write channels when enabled
         keyboard.register_driver('Joy', JoyInputDriver);
         keyboard.register_driver('Twist', TwistInputDriver);
-        keyboard.register_driver('TwistStamped', TwistStampedInputDriver);
 
         let panel_ui = new PanelUI(robot, 119, keyboard, gamepad);
         panel_ui.add_widget(Everything3DWidget);

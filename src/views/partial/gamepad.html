@@ -7,12 +7,7 @@
 
         <div id="gamepad-settings-container">
 
-            <select id="gamepad-profile-select">
-                <option>Joy</option>
-                <option>Twist Forward</option>
-                <option>Twist Reverse</option>
-                <option>New profile...</option>
-            </select>
+            <select id="gamepad-profile-select"></select>
             <input type="checkbox" id="gamepad_enabled"/>
 
             <span id="gamepad-axes-tab" class="tab active">Axes</span>
@@ -22,8 +17,14 @@
             <div id="gamepad-axes-panel" class="panel active"></div>
             <div id="gamepad-buttons-panel" class="panel"></div>
             <div id="gamepad-output-panel" class="panel"></div>
+
             <div id="gamepad-settings-panel" class="panel">
-                <span id="connected-gamepad"></span>
+                <div id="gamepad-profile-config"></div>
+                <div class="bottom-buttons">
+                    <button id="delete-gamepad-profile" title="Delete profile"></button>
+                    <button id="save-gamepad-profile">SAVE</button>
+                    <button id="gamepad-profile-json">JSON</button>
+                </div>
             </div>
         
         </div>

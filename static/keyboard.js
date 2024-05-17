@@ -1,4 +1,4 @@
-import { Handle_Shortcut } from '/static/input-drivers.js';
+// import { Handle_Shortcut } from '/static/input-drivers.js';
 
 export class KeyboardController {
 
@@ -348,8 +348,8 @@ export class KeyboardController {
     }
 
     handle_shortcut = (cfg) => {
-        console.log('handling kb shortcut', cfg);
-        Handle_Shortcut(cfg, this.client);
+        // console.log('handling kb shortcut', cfg);
+        // Handle_Shortcut(cfg, this.client);
     }
 
     
@@ -432,21 +432,21 @@ export class KeyboardController {
 
     select_driver(id_driver) {
 
-        if (!this.drivers[id_driver]) {
-            console.error('Kb driver not found: '+id_driver)
-            return false;
-        }
+        // if (!this.drivers[id_driver]) {
+        //     console.error('Kb driver not found: '+id_driver)
+        //     return false;
+        // }
 
-        console.info('Setting kb driver to '+id_driver);
-        this.current_driver = this.drivers[id_driver];
+        // console.info('Setting kb driver to '+id_driver);
+        // this.current_driver = this.drivers[id_driver];
 
-        this.config_to_editor();
+        // this.config_to_editor();
 
-        this.display_output(this.current_driver.read_keyboard(this.pressed_keys));
+        // this.display_output(this.current_driver.read_keyboard(this.pressed_keys));
 
-        this.disable_gp_on_conflict();
+        // this.disable_gp_on_conflict();
 
-        return true;
+        // return true;
     }
 
     disable_gp_on_conflict() {

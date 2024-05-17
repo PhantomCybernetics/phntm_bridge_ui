@@ -1,4 +1,4 @@
-import { isIOS } from './lib.js';
+import { isIOS, lerp } from './lib.js';
 import { Handle_Shortcut } from '/static/input-drivers.js';
 import * as THREE from 'three';
 
@@ -8,7 +8,7 @@ export class GamepadController {
 
         this.client = client;
 
-        this.registered_drivers = {}; // id: class 
+        this.registered_drivers = {}; // id: driver class 
 
         this.default_shortcuts_config = {};
         this.shortcuts_config = null;
@@ -74,42 +74,7 @@ export class GamepadController {
             }
         });
 
-        window.addEventListener('gamepadconnected', (event) => {
-            
-
-            if (!that.connected_gamepads[event.gamepad.id]) {
-                console.warn('Gamepad connected:', event.gamepad.id, event.gamepad);
-                that.connected_gamepads[event.gamepad.id] = {
-                    isTouch: false,
-                    id: event.gamepad.id,
-                    gamepad: event.gamepad,
-                    axes: [],
-                    buttons: [],
-                };
-                for (let i = 0; i < event.gamepad.axes.length; i++) {
-                    that.connected_gamepads[event.gamepad.id].axes.push({});
-                }
-                for (let i = 0; i < event.gamepad.buttons.length; i++) {
-                    that.connected_gamepads[event.gamepad.id].buttons.push({});
-                }
-                
-            } else {
-                that.connected_gamepads[event.gamepad.id].gamepad = event.gamepad;
-                console.info('Gamepad already connected:', event.gamepad.id);
-            }
-
-            if (that.current_gamepad && that.current_gamepad.isTouch)
-                return; //touch ui has priority when on
-
-            that.current_gamepad = that.connected_gamepads[event.gamepad.id];
-
-            that.make_ui();
-
-            if (!that.loop_running) {
-                that.loop_running = true;
-                that.run_loop();
-            }
-        });
+        window.addEventListener('gamepadconnected', (ev) => this.on_gamepad_connected(ev));
 
         const gps = navigator.getGamepads();
         console.log('Conected gamepads: ', gps);
@@ -410,127 +375,429 @@ export class GamepadController {
         this.registered_drivers[id_driver] = driver_class;
     }
 
+    make_profile_selector_ui() {
+        // profile selection
+        let profile_opts = [];
+        let that = this;
+
+        console.log('Current profile is ', this.current_gamepad.current_profile);
+
+        let profile_ids = Object.keys(this.current_gamepad.profiles);
+        for (let i = 0; i < profile_ids.length; i++) {
+            let id_profile = profile_ids[i];
+            let label = this.current_gamepad.profiles[id_profile].label ? this.current_gamepad.profiles[id_profile].label : id_profile;
+            profile_opts.push($('<option value="'+id_profile+'"' + (this.current_gamepad.current_profile == id_profile ? ' selected' : '') + '>'+label+'</option>'));
+        }
+        profile_opts.push($('<option value="+">New profile...</option>'));
+        $('#gamepad-profile-select').empty().attr('disabled', false).append(profile_opts);
+        
+        $('#gamepad-profile-select').unbind().change((ev)=>{
+            let val = $(ev.target).val()
+            console.log('Selected profile val '+val);
+            let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
+            if (val != '+') {
+                current_profile.scroll_offset = $('#gamepad-axes-panel').scrollTop();
+                that.current_gamepad.current_profile = $(ev.target).val();
+                that.make_ui();
+            } else {
+                let id_new_profile = 'Profile-'+Date.now();
+                that.current_gamepad.profiles[id_new_profile] = {
+                    id: id_new_profile,
+                    driver: current_profile.driver, // copy current as default
+                    label: id_new_profile,
+                }
+                that.init_profile(that.current_gamepad.profiles[id_new_profile]);
+                that.current_gamepad.current_profile = id_new_profile;
+
+                that.make_ui();
+                $('#gamepad_settings #gamepad-settings-tab').click();
+            }
+        });
+    }
+
+    make_profile_config_ui() {
+
+        let that = this;
+
+        if (!this.current_gamepad) {
+            $('#gamepad-profile-config').html('<div class="line"><span class="label">Input source:</span><span id="connected-gamepad">N/A</span></div>');
+            $('#gamepad-settings-panel .bottom-buttons').css('display', 'none');
+        } else {
+            
+            let lines = [];
+
+            let line_source = $('<div class="line"><span class="label">Input source:</span><span id="connected-gamepad">'
+                            + (this.current_gamepad.isTouch ? 'Virtual Gamepad (Touch UI)' : this.current_gamepad.id)
+                            + '</span></div>');
+            lines.push(line_source);
+
+            if (this.current_gamepad.current_profile) {
+                let profile = this.current_gamepad.profiles[this.current_gamepad.current_profile];
+
+                //profile id
+                let line_id = $('<div class="line"><span class="label">Profile ID:</span></div>');
+                let inp_id = $('<input type="text" inputmode="url" value="'+profile.id+'"/>');
+                inp_id.change((ev)=>{
+                    let val = $(ev.target).val();
+                    if (this.current_gamepad.current_profile == profile.id) {
+                        this.current_gamepad.current_profile = val;
+                    }
+                    this.current_gamepad.profiles[val] = this.current_gamepad.profiles[profile.id];
+                    delete this.current_gamepad.profiles[profile.id];
+                    profile.id = val;
+                    console.log('Profile id changed to: '+profile.id);
+                    that.make_profile_selector_ui();
+                });
+
+                inp_id.appendTo(line_id);
+                lines.push(line_id);
+
+                //profile name
+                let line_name = $('<div class="line"><span class="label">Profile name:</span></div>');
+                let inp_name = $('<input type="text" value="'+profile.label+'"/>');
+                inp_name.change((ev)=>{
+                    let val = $(ev.target).val();
+                    profile.label = val;
+                    console.log('Profile name changed to: '+profile.label);
+                    that.make_profile_selector_ui();
+                });
+
+                inp_name.appendTo(line_name);
+                lines.push(line_name);
+
+                //driver
+                let line_driver = $('<div class="line"><span class="label">Output driver:</span></div>');
+                let driver_opts = [];
+                
+                if (!this.enabled_drivers[this.current_gamepad.type]) {
+                    console.error('No enabled drivers fot '+this.current_gamepad.type+' (yet?)');
+                    return;
+                }
+
+                let driver_keys = this.enabled_drivers[this.current_gamepad.type];
+               
+                for (let i = 0; i < driver_keys.length; i++) {
+                    let id_driver = driver_keys[i];
+                    driver_opts.push('<option value="'+id_driver+'"'
+                                      + (profile.driver == id_driver ? ' selected' : '')
+                                      + '>'+id_driver+'</option>')
+                }
+                let inp_driver = $('<select id="gamepad-profile-driver-select">'
+                                 + driver_opts.join('')
+                                 + '</select>');
+    
+                inp_driver.appendTo(line_driver);
+                inp_driver.change((ev)=>{
+                    let val = $(ev.target).val();
+                    profile.driver = val;
+                    that.init_profile(profile);
+                    that.make_ui();
+
+                })
+                lines.push(line_driver);
+                
+                let driver = profile.driver_instances[profile.driver];
+                if (driver) {
+                    let driver_lines = driver.make_cofig_inputs();
+                    lines = lines.concat(driver_lines);
+                    console.log('Driver config lines ', driver_lines);
+                }
+
+                $('#gamepad-settings-panel .bottom-buttons').css('display', 'block');
+            } else {
+                $('#gamepad-settings-panel .bottom-buttons').css('display', 'none');
+            }
+
+            $('#gamepad-profile-config').empty().append(lines);            
+        }             
+
+        $('#delete-gamepad-profile')
+            .unbind()
+            .click((ev)=>{
+                if ($(ev.target).hasClass('warn')) {
+                    that.delete_current_profile();
+                    $(ev.target).removeClass('warn');
+                    return;
+                } else {
+                    $(ev.target).addClass('warn');
+                }
+            })
+            .blur((ev)=>{
+                $(ev.target).removeClass('warn');
+            });
+    }
+
     make_ui() {
+
+        let that = this;
+
+        this.make_profile_config_ui();
 
         if (!this.current_gamepad) {
             $('#gamepad').removeClass('connected');
-            $('#connected-gamepad').html('Gamepad not connected');
             $('#gamepad-axes-panel').html('Waiting for gamepad...');
             $('#gamepad-buttons-panel').html('Waiting for gamepad...');
             $('#gamepad-output-panel').html('{}');
+            // $('#gamepad-profile-config').css('display', 'none');
+            $('#gamepad_enabled').attr('disabled', true);
+            $('#gamepad-profile-select')
+                .empty()
+                .attr('disabled', true)
+                .append('<option disabled selected>No active gamepad</option>');
             return;
         }
 
         $('#gamepad').addClass('connected');
         console.log('Current gamepad is ', this.current_gamepad);
 
-        if (this.current_gamepad.isTouch) {
-            $('#connected-gamepad').html('Touch gamepad');
-        } else {
-            $('#connected-gamepad').html(this.current_gamepad.id);
-        }   
+        this.make_profile_selector_ui();
 
+        $('#gamepad_enabled').attr('disabled', false);
+
+        // gamepad name
+
+        let profile = this.current_gamepad.profiles[this.current_gamepad.current_profile];
+
+        let driver = profile.driver_instances[profile.driver];
+
+        // all gamepad axes
         let axes_els = [];
-        for (let i = 0; i < this.current_gamepad.axes.length; i++) {
+        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
+
+            let axis = driver.axes[i_axis];
 
             let row_el = $('<div class="axis-row unused"></div>');
 
-            let val_el = $('<span class="axis-val"></span>');
-            val_el.appendTo(row_el);
+            // raw val
+            let raw_val_el = $('<span class="axis-val" title="Raw axis value"></span>');
+            raw_val_el.appendTo(row_el);
+            axis.raw_val_el = raw_val_el;
 
-            //1st line
+            // 1st line
             let line_1_el = $('<div class="axis-config"></div>');
 
+            // axis assignment selection
             let opts = [ '<option value="">Not in use</option>' ];
-            opts.push('<option value="linear.x">Linear X</option>');
-            opts.push('<option value="linear.x+">Linear X (positive)</option>');
-            opts.push('<option value="linear.x-">Linear X (negative)</option>');
-            opts.push('<option value="linear.y">Linear Y</option>');
-            opts.push('<option value="linear.y+">Linear Y (positive)</option>');
-            opts.push('<option value="linear.y-">Linear Y (negative)</option>');
-            opts.push('<option value="linear.z">Linear Z</option>');
-            opts.push('<option value="linear.z+">Linear Z (positive)</option>');
-            opts.push('<option value="linear.z-">Linear Z (negative)</option>');
-            opts.push('<option value="angular.x">Angular X</option>');
-            opts.push('<option value="angular.y">Angular Y</option>');
-            opts.push('<option value="angular.z">Angular Z</option>');
-            let assignment_sel_el = $('<select id="">'+opts.join('')+'</select>');
+            // let dri = profile.driver_instance;
+            let dri_axes = driver.get_axes();
+            let dri_axes_ids = Object.keys(dri_axes);
+            for (let j = 0; j < dri_axes_ids.length; j++) {
+                let id_axis = dri_axes_ids[j];
+                opts.push('<option value="'+id_axis+'"'+(axis.assigned_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
+            }
+            let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
             assignment_sel_el.appendTo(line_1_el);
 
-            assignment_sel_el.change((ev)=>{
-                let assign_val = $(ev.target).val();
-                console.log(assign_val);
-                if (assign_val) {
-                    row_el.removeClass('unused');
-                } else {
-                    row_el.addClass('unused');
-                }
-            });
-
-            let out_val_el = $('<span class="axis-output-val">0.00</span>');
+            // output val
+            let out_val_el = $('<span class="axis-output-val" title="Axis output">0.00</span>');
             out_val_el.appendTo(line_1_el);
+            axis.out_val_el = out_val_el;
 
-            let conf_toggle_el = $('<span class="conf-toggle"></span>');
-            conf_toggle_el.appendTo(line_1_el);
-
-
-            // collapsable
-            let config_details_el = $('<div class="axis-config-details"></div>');
-
+            // config toggle
+            let conf_toggle_el = $('<span class="conf-toggle'+(axis.edit_open?' open' : '')+'"></span>');
             conf_toggle_el.click((ev)=>{
                 if (!conf_toggle_el.hasClass('open')) {
                     conf_toggle_el.addClass('open')
                     config_details_el.addClass('open')
+                    axis.edit_open = true;
                 } else {
                     conf_toggle_el.removeClass('open')
                     config_details_el.removeClass('open')
+                    axis.edit_open = false;
                 }
             });
+            conf_toggle_el.appendTo(line_1_el);
 
-            let dead_zone_min_el = $('<div class="config-row"><span class="label">Dead zone min:</span></div>');
-            let dead_zone_min_inp = $('<input type="text" class="inp-val" value="-0.1"/>');
-            dead_zone_min_inp.focus((ev)=>{ev.target.select();})
-            dead_zone_min_inp.appendTo(dead_zone_min_el);
-            dead_zone_min_el.appendTo(config_details_el);
+            // collapsable details
+            let config_details_el = $('<div class="axis-config-details'+(axis.edit_open?' open' : '')+'"></div>');
 
-            let dead_zone_max_el = $('<div class="config-row"><span class="label">Dead zone max:</span></div>');
-            let dead_zone_max_inp = $('<input type="text" class="inp-val" value="0.1"/>');
-            dead_zone_max_inp.focus((ev)=>{ev.target.select();})
-            dead_zone_max_inp.appendTo(dead_zone_max_el);
-            dead_zone_max_el.appendTo(config_details_el);
+            let prevent_context_menu = (ev)=>{
+                console.log('contex cancelled', ev.target);
+                ev.preventDefault();
+                ev.stopPropagation();
+            };
 
-            let dead_zone_val_el = $('<div class="config-row"><span class="label">Dead zone value:</span></div>');
-            let dead_zone_val_inp = $('<input type="text" class="inp-val" value="0.0"/>');
-            dead_zone_val_inp.focus((ev)=>{ev.target.select();})
-            dead_zone_val_inp.appendTo(dead_zone_val_el);
-            dead_zone_val_el.appendTo(config_details_el);
+            let render_axis_config = () => {
 
-            let scale_el = $('<div class="config-row"><span class="label">Scale input:</span></div>');
-            let scale_inp = $('<input type="text" class="inp-val" value="1.0"/>');
-            scale_inp.focus((ev)=>{ev.target.select();})
-            scale_inp.appendTo(scale_el);
-            dead_zone_val_inp.appendTo(dead_zone_val_el);
-            scale_el.appendTo(config_details_el);
+                config_details_el.empty();
+                let assigned_axis = axis.assigned_axis;
 
-            if (!isIOS()) { // safari can't do keyboard with decimals and minus sign => so default it is
-                dead_zone_min_inp.attr('inputmode', 'numeric');
-                dead_zone_max_inp.attr('inputmode', 'numeric');
-                dead_zone_val_inp.attr('inputmode', 'numeric');
-                scale_inp.attr('inputmode', 'numeric');
+                if (!assigned_axis) {
+                    conf_toggle_el.removeClass('open')
+                    config_details_el.removeClass('open')
+                    return;
+                }
+
+                // let default_axis_conf = this.current_gamepad.current_profile[assigned_axis];
+
+                // dead zone
+                let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
+                let dead_zone_wrapper_el = $('<div class="config-row2"></div>');
+                let dead_zone_min_inp = $('<input type="text" class="inp-val inp-val2"/>');
+                
+                dead_zone_min_inp.val(axis.dead_min.toFixed(2));
+                let dead_zone_max_label = $('<span class="label2">to</span>');
+                let dead_zone_max_inp = $('<input type="text" class="inp-val"/>');
+                dead_zone_max_inp.val(axis.dead_max.toFixed(2));
+                dead_zone_min_inp.appendTo(dead_zone_wrapper_el);
+                dead_zone_max_label.appendTo(dead_zone_wrapper_el);
+                dead_zone_max_inp.appendTo(dead_zone_wrapper_el);
+                dead_zone_wrapper_el.appendTo(dead_zone_el)
+
+                dead_zone_min_inp.focus((ev)=>{ev.target.select();});
+                dead_zone_max_inp.focus((ev)=>{ev.target.select();});
+
+                dead_zone_min_inp.change((ev)=>{axis.dead_min = parseFloat($(ev.target).val()); delete axis.dead_val; });
+                dead_zone_max_inp.change((ev)=>{axis.dead_max = parseFloat($(ev.target).val()); delete axis.dead_val; });
+
+                dead_zone_el.appendTo(config_details_el);
+
+                // input offset
+                let offset_el = $('<div class="config-row"><span class="label">Offset input:</span></div>');
+                let offset_inp = $('<input type="text" class="inp-val"/>');
+                offset_inp.val(axis.offset.toFixed(1));
+                offset_inp.focus((ev)=>{ev.target.select();});
+                offset_inp.change((ev)=>{axis.offset = parseFloat($(ev.target).val());});
+                offset_inp.appendTo(offset_el);
+                offset_el.appendTo(config_details_el);
+
+                // input scale
+                let scale_el = $('<div class="config-row"><span class="label">Scale input:</span></div>');
+                let scale_inp = $('<input type="text" class="inp-val"/>');
+                scale_inp.val(axis.scale.toFixed(1));
+                scale_inp.focus((ev)=>{ev.target.select();});
+                scale_inp.change((ev)=>{axis.scale = parseFloat($(ev.target).val());});
+                scale_inp.appendTo(scale_el);
+                scale_el.appendTo(config_details_el);
+
+                // modifier selection
+                let mod_func_el = $('<div class="config-row"><span class="label">Modifier:</span></div>');
+                let mod_func_opts = [ '<option value="">None</option>' ];
+                mod_func_opts.push('<option value="scale_by_velocity" '+(axis.mod_func=='scale_by_velocity'?' selected':'')+'>Scale by velocity</option>');  
+                let mod_func_inp = $('<select>'+mod_func_opts.join('')+'</select>');
+                mod_func_inp.appendTo(mod_func_el);
+                mod_func_el.appendTo(config_details_el);
+                let mod_func_cont = $('<div></div>');
+                mod_func_cont.appendTo(config_details_el);
+                
+                let set_mod_funct = (mod_func) => {
+                    if (mod_func) {
+                        axis.mod_func = mod_func;
+                        let mod_func_config_els = [];
+                        if (mod_func == 'scale_by_velocity') {
+
+                            let multiply_lerp_input_el = $('<div class="config-row"><span class="label sublabel">Velocity source:</span></div>');
+                            let multiply_lerp_input_opts = [ '<option value="">Select axis</option>' ];
+
+                            for (let j = 0; j < dri_axes_ids.length; j++) {
+                                let id_axis = dri_axes_ids[j];
+                                multiply_lerp_input_opts.push('<option value="'+id_axis+'"' + (axis.scale_by_velocity_src == id_axis ? ' selected':'') +'>'+dri_axes[id_axis]+'</option>');
+                            }
+                            
+                            let multiply_lerp_input_inp = $('<select>'+multiply_lerp_input_opts.join('')+'</select>');
+                            multiply_lerp_input_inp.appendTo(multiply_lerp_input_el);
+                            mod_func_config_els.push(multiply_lerp_input_el);
+                            multiply_lerp_input_inp.change((ev)=>{
+                                axis.scale_by_velocity_src = $(ev.target).val();
+                            });
+                            
+                            // multiplier min
+                            let multiply_lerp_min_el = $('<div class="config-row"><span class="label sublabel">Slow multiplier:</span></div>');
+                            let multiply_lerp_min_inp = $('<input type="text" class="inp-val"/>');
+                            multiply_lerp_min_inp.focus((ev)=>{ev.target.select();});
+                            if (axis.scale_by_velocity_mult_min === undefined)
+                                axis.scale_by_velocity_mult_min = 1.0;
+                            multiply_lerp_min_inp.val(axis.scale_by_velocity_mult_min.toFixed(1));
+                            multiply_lerp_min_inp.change((ev)=>{
+                                axis.scale_by_velocity_mult_min = parseFloat($(ev.target).val());
+                            });
+                            multiply_lerp_min_inp.appendTo(multiply_lerp_min_el);
+                            mod_func_config_els.push(multiply_lerp_min_el);
+                            
+
+                            // multiplier max
+                            let multiply_lerp_max_el = $('<div class="config-row"><span class="label sublabel">Fast multiplier:</span></div>');
+                            let multiply_lerp_max_inp = $('<input type="text" class="inp-val"/>');
+                            multiply_lerp_max_inp.focus((ev)=>{ev.target.select();});
+                            if (axis.scale_by_velocity_mult_max === undefined)
+                                axis.scale_by_velocity_mult_max = 1.0;
+                            multiply_lerp_max_inp.val(axis.scale_by_velocity_mult_max.toFixed(1));
+                            multiply_lerp_max_inp.change((ev)=>{
+                                axis.scale_by_velocity_mult_max = parseFloat($(ev.target).val());
+                            });
+                            multiply_lerp_max_inp.appendTo(multiply_lerp_max_el);
+                            mod_func_config_els.push(multiply_lerp_max_el);
+
+                            if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
+                                multiply_lerp_min_inp.attr('inputmode', 'numeric');
+                                multiply_lerp_max_inp.attr('inputmode', 'numeric');
+                            }
+                            multiply_lerp_min_inp.on('contextmenu', prevent_context_menu);
+                            multiply_lerp_max_inp.on('contextmenu', prevent_context_menu);
+
+                        }
+                        mod_func_cont.empty().append(mod_func_config_els).css('display', 'block');
+                    } else {
+                        axis.mod_func = null;
+                        mod_func_cont.empty().css('display', 'none');
+                    }
+                }
+                set_mod_funct(axis.mod_func);
+                mod_func_inp.change((ev)=>{
+                    set_mod_funct($(ev.target).val());
+                });
+                
+
+                if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
+                    dead_zone_min_inp.attr('inputmode', 'numeric');
+                    dead_zone_max_inp.attr('inputmode', 'numeric');
+                    offset_inp.attr('inputmode', 'numeric');
+                    scale_inp.attr('inputmode', 'numeric');
+                }
+
+                dead_zone_min_inp.on('contextmenu', prevent_context_menu);
+                dead_zone_max_inp.on('contextmenu', prevent_context_menu);
+                offset_inp.on('contextmenu', prevent_context_menu);
+                scale_inp.on('contextmenu', prevent_context_menu);
+
+            } // render_axis_config
+            // let that = this;
+            assignment_sel_el.change((ev)=>{
+                let id_axis_assigned = $(ev.target).val();
+                console.log('axis '+i_axis+' assigned to '+id_axis_assigned);
+                if (id_axis_assigned) {
+                    axis.assigned_axis = id_axis_assigned;
+                    
+                    render_axis_config();
+                    row_el.removeClass('unused');
+                } else {
+                    axis.assigned_axis = null;                   
+                    
+                    render_axis_config();
+                    row_el.addClass('unused');
+                }
+            });
+            render_axis_config();
+            if (axis.assigned_axis) {
+                row_el.removeClass('unused');
+            } else {
+                row_el.addClass('unused');
             }
 
             line_1_el.appendTo(row_el);
             config_details_el.appendTo(row_el);
 
             axes_els.push(row_el);
-
-            this.current_gamepad.axes[i].val_el = val_el;
-            this.current_gamepad.axes[i].out_val_el = out_val_el;
         }
 
         $('#gamepad-axes-panel')
             .empty()
             .append(axes_els);
+
+        if (driver.scroll_offset !== undefined) {
+            $('#gamepad-axes-panel').scrollTop(profile.scroll_offset);
+            delete profile.scroll_offset;
+        }
 
         // let opts = [];
         // Object.keys(this.drivers).forEach((id_driver) => {
@@ -548,13 +815,29 @@ export class GamepadController {
         if (!this.current_gamepad)
             return;
         
-        for (let i = 0; i < this.current_gamepad.axes.length; i++) {
+        let profile = this.current_gamepad.profiles[this.current_gamepad.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
+        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
+
+            let axis = driver.axes[i_axis];
+
             // if (this.current_gamepad.axes[i].val === undefined) {
             //     return;
             // }
-            let val = this.current_gamepad.axes[i].val;
-            let val_el = this.current_gamepad.axes[i].val_el;
-            val_el.html(val.toFixed(2));
+
+            // let val_el = this.current_gamepad.axes[i].;
+            axis.raw_val_el.html(axis.raw.toFixed(2));
+
+            if (!axis.assigned_axis)
+                continue;
+
+            axis.out_val_el.html(axis.val.toFixed(2));
+            if (axis.live) {
+                axis.out_val_el.addClass('live');
+            } else {
+                axis.out_val_el.removeClass('live');
+            }
             // if (val > 0.001 || val < -0.001) {
             //     if (!this.current_gamepad.axes[i].active_ui) {
             //         this.current_gamepad.axes[i].active_ui = true;
@@ -567,37 +850,248 @@ export class GamepadController {
         }
     }
 
-    select_profile(id_profile) {
+    // select_profile(id_profile) {
 
-        if (!this.drivers[id_driver]) {
-            console.error('Gamepad driver not found: '+id_driver)
-            return false;
+    //     if (!this.drivers[id_driver]) {
+    //         console.error('Gamepad driver not found: '+id_driver)
+    //         return false;
+    //     }
+
+    //     console.info('Setting driver to ', id_driver);
+    //     this.current_driver = this.drivers[id_driver];
+
+    //     this.config_to_editor();
+    //     this.update_output_info();
+
+    //     this.disable_kb_on_conflict();
+
+    //     return true;
+    // }
+
+    process_axes_input() {
+
+        let profile = this.current_gamepad.profiles[this.current_gamepad.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
+        let combined_axes_vals = {}; // 1st pass, same axess added to single val
+        let combined_axes_unscaled_vals = {}; // expected to be within [-1; +1] (offset added and scaling sign kept)
+
+        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
+            let axis = driver.axes[i_axis];
+           
+            if (!axis.assigned_axis)
+                continue;
+
+            if (axis.dead_val === undefined) // unset on min/max change
+                axis.dead_val = (axis.dead_min+axis.dead_max) / 2.0;
+
+            let out = axis.raw;
+            let out_unscaled = axis.raw;
+            let live = true;
+            if (axis.raw > axis.dead_min && axis.raw < axis.dead_max) {
+                live = false;
+                out = axis.dead_val;
+                out_unscaled = axis.dead_val;
+            } else {
+                out += axis.offset;
+                out_unscaled = out;
+                if (axis.scale < 0) // sign matters (saving unsaled offset vals as normalized)
+                    out_unscaled = -1.0 * out_unscaled;
+                out *= axis.scale;
+            }
+
+            axis.base_val = out;
+            axis.val = out; // modifier might change this in 2nd pass
+            axis.live = live;
+            
+            if (combined_axes_vals[axis.assigned_axis] === undefined) {
+                combined_axes_vals[axis.assigned_axis] = axis.base_val;
+                combined_axes_unscaled_vals[axis.assigned_axis] = out_unscaled;
+            } else { // add multiple axes into one (use this for negative/positive split)
+                combined_axes_vals[axis.assigned_axis] += axis.base_val;
+                combined_axes_unscaled_vals[axis.assigned_axis] += out_unscaled;
+            }
+                
         }
 
-        console.info('Setting driver to ', id_driver);
-        this.current_driver = this.drivers[id_driver];
+        driver.axes_output = {}; // this goes to the driver
 
-        this.config_to_editor();
-        this.update_output_info();
+        // 2nd pass - modifiers that use base vals and split-axes added together
+        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
+            let axis = driver.axes[i_axis];
 
-        this.disable_kb_on_conflict();
+            if (!axis.assigned_axis || !axis.live) {
+                continue;
+            }
 
-        return true;
+            if (!axis.mod_func) {
+                if (driver.axes_output[axis.assigned_axis] === undefined)
+                    driver.axes_output[axis.assigned_axis] = axis.val;
+                else
+                    driver.axes_output[axis.assigned_axis] += axis.val;
+                continue; // all good
+            }
+
+            switch (axis.mod_func) {
+                case 'scale_by_velocity':
+                    if (!axis.scale_by_velocity_src || combined_axes_unscaled_vals[axis.scale_by_velocity_src] === undefined) {
+                        axis.val = axis.dead_val; // hold until fully configured
+                        axis.live = false;
+                        continue;
+                    }
+                        
+                    let velocity_normalized = combined_axes_unscaled_vals[axis.scale_by_velocity_src];
+                    let abs_velocity_normalized = Math.abs(Math.max(-1.0, Math.min(1.0, velocity_normalized))); // clamp abs to [0.0; 1.0]
+                    
+                    let multiplier = lerp(axis.scale_by_velocity_mult_min, axis.scale_by_velocity_mult_max, abs_velocity_normalized);
+
+                    axis.val *= multiplier;
+                    if (driver.axes_output[axis.assigned_axis] === undefined)
+                        driver.axes_output[axis.assigned_axis] = axis.val;
+                    else
+                        driver.axes_output[axis.assigned_axis] += axis.val;
+
+                    console.log('Scaling axis '+i_axis+' ('+axis.assigned_axis+') by '+abs_velocity_normalized+' ('+axis.scale_by_velocity_src+') m='+multiplier)
+
+                    break;
+                default:
+                    break;
+            }
+
+        }
+
+    }
+
+    on_gamepad_connected(ev) {
+            
+        let id_gamepad = ev.gamepad.id;
+
+        if (!this.connected_gamepads[id_gamepad]) {
+
+            console.warn('Gamepad connected:', id_gamepad, ev.gamepad);
+            let gamepad = {
+                isTouch: false,
+                type: 'gamepad',
+                id: id_gamepad,
+                gamepad: ev.gamepad,
+                profiles: {
+                    'Twist_Forward': {
+                        'id': 'Twist_Forward',
+                        'label': "GP Twist Forward",
+                        'driver_instances': null,
+                        'default': true,
+                        'driver': 'Twist',
+                        'default_driver_config': {
+                            'Twist': {
+                                'output_topic': '/cmd_speed',
+                                'stamped': false,
+                            },
+                        },
+                    },
+                    'Twist_Reverse': {
+                        'id': 'Twist_Reverse',
+                        'label': "GP Twist Reverse",
+                        'driver_instances': null,
+                        'driver': 'Twist',
+                        'default_driver_config': {
+                            'Twist': {
+                                'output_topic': '/cmd_speed',
+                                'stamped': true,
+                            }
+                        },
+                    }
+                },
+                current_profile: 'Twist_Reverse',
+            };
+            this.connected_gamepads[id_gamepad] = gamepad;
+            let profile_ids = Object.keys(gamepad.profiles);
+            // let gamepad = this.connected_gamepads['touch']; // set before profile init
+            profile_ids.forEach((id_profile)=>{
+                this.init_profile(
+                    gamepad.profiles[id_profile],
+                    gamepad
+                );
+            });
+            
+        } else {
+            this.connected_gamepads[id_gamepad].gamepad = ev.gamepad;
+            console.info('Gamepad already connected:', id_gamepad);
+        }
+
+        if (this.current_gamepad && this.current_gamepad.isTouch)
+            return; //touch ui has priority when on
+
+        this.current_gamepad = this.connected_gamepads[id_gamepad];
+
+        this.make_ui();
+
+        if (!this.loop_running) {
+            this.loop_running = true;
+            this.run_loop();
+        }
+    }
+
+    on_gamepad_disconnected (ev) {
+
+        if (this.connected_gamepads[ev.gamepad.id]) {
+
+            this.connected_gamepads[ev.gamepad.id].gamepad = null;
+
+            if (this.current_gamepad.id == ev.gamepad.id) {
+                this.current_gamepad = null; // kills the loop
+                this.make_ui();
+            }
+        }
+
     }
 
     set_touch(state) {
         
 
         if (state) {
-            console.log('Gamepad in touch mode')
 
             if (!this.connected_gamepads['touch']) {
-                this.connected_gamepads['touch'] = {
+                let touch_gamepad = {
                     isTouch: true,
+                    type: 'touch',
                     id: 'touch',
-                    axes: [ {}, {}, {}, {} ],
-                    buttons: [ {}, {} ]
-                }
+                    profiles: {
+                        'Twist_Forward': {
+                            'id': 'Twist_Forward',
+                            'label': "Twist Forward",
+                            'driver_instances': null,
+                            'default': true,
+                            'driver': 'Twist',
+                            'default_driver_config': {
+                                'Twist': {
+                                    'output_topic': '/cmd_speed',
+                                    'stamped': false,
+                                },
+                            },
+                        },
+                        'Twist_Reverse': {
+                            'id': 'Twist_Reverse',
+                            'label': "Twist Reverse",
+                            'driver_instances': null,
+                            'driver': 'Twist',
+                            'default_driver_config': {
+                                'Twist': {
+                                    'output_topic': '/cmd_speed',
+                                    'stamped': false,
+                                }
+                            },
+                        }
+                    },
+                    current_profile: 'Twist_Reverse',
+                };
+                this.connected_gamepads['touch'] = touch_gamepad;
+                let profile_ids = Object.keys(touch_gamepad.profiles);
+                profile_ids.forEach((id_profile)=>{
+                    this.init_profile(
+                        touch_gamepad.profiles[id_profile],
+                        touch_gamepad
+                    );
+                });
             }
 
             if (this.current_gamepad != this.connected_gamepads['touch']) {
@@ -614,7 +1108,7 @@ export class GamepadController {
         } else {
 
             this.current_gamepad = null; // kills the loop
-            console.log('Gamepad touch mode off')
+            // console.log('Gamepad touch mode off')
 
             let that = this;
             Object.values(this.connected_gamepads).forEach((gp)=>{
@@ -631,11 +1125,107 @@ export class GamepadController {
         
     }
 
-    
-    debug_out(val) {
-        let html = JSON.stringify(val, null, 4);
-        $('#gamepad-output-panel').html(html);
+    init_profile(profile, gamepad = null) {
+
+        if (!gamepad) {
+            gamepad = this.current_gamepad;
+        }
+
+        if (!profile.driver_instances) {
+            profile.driver_instances = {};
+        }
+
+        if (!profile.driver_instances[profile.driver]) {
+            profile.driver_instances[profile.driver] = new this.registered_drivers[profile.driver](this);
+            if (profile.default_driver_config && profile.default_driver_config[profile.driver]) {
+                profile.driver_instances[profile.driver].set_config(profile.default_driver_config[profile.driver]);
+            }
+
+            let driver = profile.driver_instances[profile.driver];
+
+            driver.buttons = [];
+            profile.buttons = [];
+
+            if (!driver.axes) {
+                
+            }
+            driver.axes = [];
+            if (gamepad.isTouch) {
+                for (let i_axis = 0; i_axis < 4; i_axis++) {
+                    driver.axes.push({ 
+                        dead_min: -0.01, // TODO load & override these from conf/user
+                        dead_max: 0.01,
+                        offset: 0.0,
+                        scale: 1.0,
+        
+                        mod_func: null,
+                        scale_by_velocity_src: null,
+                        scale_by_velocity_mult_min: 1.0,
+                        scale_by_velocity_mult_max: 1.0
+                    });
+                }
+            } else if (gamepad && gamepad.gamepad) {
+
+                const gp = navigator.getGamepads()[gamepad.gamepad.index];
+
+                for (let i = 0; i < gp.axes.length; i++) {
+                    driver.axes.push({ 
+                        dead_min: -0.1, // TODO load & override these from conf/user
+                        dead_max: 0.1,
+                        offset: 0.0,
+                        scale: 1.0,
+        
+                        mod_func: null,
+                        scale_by_velocity_src: null,
+                        scale_by_velocity_mult_min: 1.0,
+                        scale_by_velocity_mult_max: 1.0
+                    });
+                }
+            }
+        }
+
     }
+    
+    delete_current_profile() {
+    
+        let id_delete = this.current_gamepad.current_profile;
+        let old_profile_ids = Object.keys(this.current_gamepad.profiles);
+        let pos = old_profile_ids.indexOf(id_delete);
+        
+        console.log('Deleting profile '+id_delete);
+
+        delete this.current_gamepad.profiles[id_delete];
+        let remaining_profile_ids = Object.keys(this.current_gamepad.profiles);
+
+        if (remaining_profile_ids.length == 0) {
+            console.log('No profile to autoselect, making new');
+            
+            let id_new_profile = 'Profile-'+Date.now();
+            this.current_gamepad.profiles[id_new_profile] = {
+                id: id_new_profile,
+                driver: this.enabled_drivers[this.current_gamepad.type][0], // copy current as default
+                label: id_new_profile,
+            }
+            this.init_profile(this.current_gamepad.profiles[id_new_profile]);
+            this.current_gamepad.current_profile = id_new_profile;
+
+        } else {
+            while (!remaining_profile_ids[pos] && pos > 0) {
+                pos--;
+            }
+            let id_select = remaining_profile_ids[pos];
+            console.log('Autoselecting '+id_select);
+            this.current_gamepad.current_profile = id_select;
+        }
+
+        this.make_ui();
+    }
+    
+
+    // debug_out(val) {
+    //     let html = JSON.stringify(val, null, 4);
+    //     $('#gamepad-output-panel').html(html);
+    // }
 
     touch_input(where, value, angle) {
         // console.log('Touch GP '+where+' val='+value+'; a='+angle.toFixed(2));
@@ -809,53 +1399,59 @@ export class GamepadController {
 
     run_loop() {
 
-        if (!this.loop_running || !this.current_gamepad) {
+        if (!this.loop_running || !this.current_gamepad || !this.current_gamepad.current_profile) {
             console.log('Gamepad loop stopped')
             this.loop_running = false;
             return;
         }
 
+        let profile = this.current_gamepad.profiles[this.current_gamepad.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
         if (this.current_gamepad.isTouch) {
 
-            
             if (this.last_touch_input['left']) {
-                this.current_gamepad.axes[0].val = this.last_touch_input['left'].x;
-                this.current_gamepad.axes[1].val = this.last_touch_input['left'].y;
+                driver.axes[0].raw = this.last_touch_input['left'].x;
+                driver.axes[1].raw = this.last_touch_input['left'].y;
             } else {
-                this.current_gamepad.axes[0].val = 0.0;
-                this.current_gamepad.axes[1].val = 0.0;
+                driver.axes[0].raw = 0.0;
+                driver.axes[1].raw = 0.0;
             }
             if (this.last_touch_input['right']) {
-                this.current_gamepad.axes[2].val = this.last_touch_input['right'].x;
-                this.current_gamepad.axes[3].val = this.last_touch_input['right'].y;
+                driver.axes[2].raw = this.last_touch_input['right'].x;
+                driver.axes[3].raw = this.last_touch_input['right'].y;
             } else {
-                this.current_gamepad.axes[2].val = 0.0;
-                this.current_gamepad.axes[3].val = 0.0;
+                driver.axes[2].raw = 0.0;
+                driver.axes[3].raw = 0.0;
             }
 
-            this.debug_out([
-                this.current_gamepad.axes[0].val,
-                this.current_gamepad.axes[1].val,
-                this.current_gamepad.axes[2].val,
-                this.current_gamepad.axes[3].val
-            ]);
-
-            this.update_axes_ui_values();
+            // this.debug_out([
+            //     this.current_gamepad.axes[0].val,
+            //     this.current_gamepad.axes[1].val,
+            //     this.current_gamepad.axes[2].val,
+            //     this.current_gamepad.axes[3].val
+            // ]);           
 
         } else if (this.current_gamepad.gamepad) {
 
             const gp = navigator.getGamepads()[this.current_gamepad.gamepad.index];
 
             for (let i = 0; i < gp.axes.length; i++) {
-                this.current_gamepad.axes[i].val = gp.axes[i];
+                driver.axes[i].raw = gp.axes[i];
             }
 
-            this.debug_out(gp.axes);
+            // this.debug_out(gp.axes);
 
-            this.update_axes_ui_values();
-
+        } else {
+            console.log('Gamepad loop stopped')
+            this.loop_running = false;
+            return;
         }
 
+        this.process_axes_input();
+
+        this.update_axes_ui_values();
+    
         return window.setTimeout(
             () => { this.run_loop(); },
             this.loop_delay
