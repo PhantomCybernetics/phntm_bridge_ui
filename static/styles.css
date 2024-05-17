@@ -3418,13 +3418,20 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     top: 0px;
 }
 
-#gamepad-settings-panel {
-    height: calc(100% - 145px);
+#gamepad-settings-panel.has-buttons {
+    height: auto;
+    padding-bottom: 50px !important;
 }
 
 #gamepad-profile-config {
-    /* margin-top: 15px; */
     font-size: 16px;
+    /* background: magenta; */
+    max-height: calc(100dvh - 220px);
+    overflow-y: scroll;
+}
+
+BODY.desktop-ui #gamepad-profile-config {
+    font-size: 14px;
 }
 
 #gamepad-profile-config .line {
@@ -3482,6 +3489,11 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     padding-top: 5px;
     padding-left: 5px;
     padding-right: 15px;
+    display: none;
+}
+
+#gamepad-settings-panel.has-buttons .bottom-buttons {
+    display: block;
 }
 
 #gamepad-settings-panel .bottom-buttons BUTTON {
@@ -3495,6 +3507,19 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     float: right;
     height: 40px;
     font-weight: bold;
+} 
+
+BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON {
+    line-height: 20px;
+    font-size: 12px;
+    height: 30px;
+}
+BODY.desktop-ui  #gamepad-settings-panel .bottom-buttons {
+    height: 40px;
+}
+
+BODY.desktop-ui #gamepad-settings-panel.has-buttons {
+    padding-bottom: 40px !important;
 }
 
 #gamepad-settings-panel .bottom-buttons BUTTON:last-of-type{
@@ -3513,7 +3538,8 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     padding: 0px;
 } 
 
-#gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-profile.warn {
+#gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-profile.warn,
+BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-profile:hover {
     background-color: rgb(173, 0, 0);
 }
 
@@ -3535,7 +3561,7 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     padding-left: 10px;
     display: block;
     /* background: lime; */
-    width: 60%;
+    width: calc(60% - 10px);
     float: left;
     opacity: 0.5;
     text-decoration: underline;

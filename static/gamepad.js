@@ -421,7 +421,7 @@ export class GamepadController {
 
         if (!this.current_gamepad) {
             $('#gamepad-profile-config').html('<div class="line"><span class="label">Input source:</span><span id="connected-gamepad">N/A</span></div>');
-            $('#gamepad-settings-panel .bottom-buttons').css('display', 'none');
+            $('#gamepad-settings-panel').removeClass('has-buttons');
         } else {
             
             let lines = [];
@@ -503,9 +503,9 @@ export class GamepadController {
                     console.log('Driver config lines ', driver_lines);
                 }
 
-                $('#gamepad-settings-panel .bottom-buttons').css('display', 'block');
+                $('#gamepad-settings-panel').addClass('has-buttons');
             } else {
-                $('#gamepad-settings-panel .bottom-buttons').css('display', 'none');
+                $('#gamepad-settings-panel').removeClass('has-buttons');
             }
 
             $('#gamepad-profile-config').empty().append(lines);            
