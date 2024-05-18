@@ -1885,7 +1885,7 @@ export class PanelUI {
 
         let max_label_w = w_body - w_right - w_netinfo - w_battery - 50;
 
-        console.log(`max_label_w=${max_label_w}\nw_body=${w_body}\nw_right=${w_right}\nw_netinfo=${w_netinfo}\nw_battery=${w_battery}`)
+        // console.log(`max_label_w=${max_label_w}\nw_body=${w_body}\nw_right=${w_right}\nw_netinfo=${w_netinfo}\nw_battery=${w_battery}`)
         // w_left += w_netinfo;
 
         label_el.css({

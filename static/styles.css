@@ -2675,7 +2675,10 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
     font-weight: bold;
     padding-left: 5px;
 }
-  
+
+BODY.desktop-ui #gamepad #gamepad_settings #gamepad-profile-select {
+    font-size: 15px;
+}
 
 
 
@@ -2693,6 +2696,10 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
     font-size: 18px;
     margin-right: 5px;
     height: 29px;
+}
+
+BODY.desktop-ui #gamepad_settings .tab {
+    font-size: 15px;
 }
 
 #gamepad_settings .tab#gamepad-settings-tab {
