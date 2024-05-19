@@ -2553,8 +2553,12 @@ BODY.desktop-ui #introspection_state:hover,
 #gamepad_status {
     height: 55px;
     background-image: url(/static/gamepad.png);
-    background-size: 130px;
+    background-size: 197px;
     background-position: 6px 7px;
+}
+
+#gamepad_status.transmitting {
+    background-position: -126px 7px !important;
 }
 
 #touch_ui_status {

@@ -5,8 +5,9 @@ export class InputDriver {
         // this.label = label;
         // this.config = null;
         this.gamepad_controller = gamepad_controller;
-        
+
         this.output_topic = '/user_input'; //override this
+        this.output = null;
     }
 
     set_config(cfg) {
@@ -50,16 +51,7 @@ export class InputDriver {
         return lines;
     }
 
-
-    apply_axis_deadzone(val, cfg) {
-
-        if (!cfg || cfg['dead_min'] === undefined || cfg['dead_max'] === undefined)
-            return val;
-
-        let dead_val = cfg['dead_value'] ? cfg['dead_value'] : 0.0;
-        if (val > cfg['dead_min'] && val < cfg['dead_max'])
-            return dead_val;
-
-        return val;
+    transmit() {
+        
     }
 }

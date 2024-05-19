@@ -3,25 +3,46 @@ import { InputDriver } from './base-driver.js'
 export class JoyInputDriver extends InputDriver {
 
     msg_type = 'sensor_msgs/msg/Joy';
+    num_axes = 10;
 
     get_axes() {
         // makes 10 axes
         let axes = {};
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < this.num_axes; i++) {
             axes[`${i}`] = 'Axis '+i
         }
         return axes;
     }
     
+    generate() {
+        // sensor_msgs/msg/Joy
+        let msg = {
+            header: this.get_header(),
+            axes: [],
+            buttons: []
+        }
+
+        for (let i = 0; i < this.num_axes; i++) {
+            let id_axis = `${i}`;
+            if (!this.axes_output[id_axis])
+                msg.axes[i] = null;
+            else
+                msg.axes[i] = this.axes_output[id_axis];
+        }
+        
+        this.output = msg;
+        return this.output;
+    }
+
+    display_output(el, transmitting) {
+        el.html('Message: <b>'+this.msg_type+'</b><br>'
+                + 'Topic: <b>'+this.output_topic+'</b>'+ (transmitting ? '' : ' (not transmitting)')  +'<br><br>'
+                + JSON.stringify(this.output, null, 4));
+    }
 
     // read(axes, buttons) {
 
-    //     // sensor_msgs/msg/Joy
-    //     let msg = {
-    //         header: this.get_header(),
-    //         axes: [],
-    //         buttons: []
-    //     }
+
 
     //     if (this.config.axes) { //remapping
     //         Object.keys(this.config.axes).forEach((axis) => {

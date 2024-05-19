@@ -63,6 +63,46 @@ export class TwistInputDriver extends InputDriver {
         return lines;
     }
 
+    generate() {
+        // geometry_msgs/msg/Twist
+        let msg = {
+            "linear": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+            },
+            "angular": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+            }
+        }
+
+        Object.keys(msg).forEach ((grp) => {
+            Object.keys(msg[grp]).forEach((axis) => {
+                let id_axis = grp+'.'+axis;
+                if (!this.axes_output[id_axis])
+                    return;
+                msg[grp][axis] = this.axes_output[id_axis];
+            });
+        });
+
+        if (this.msg_type == 'geometry_msgs/msg/TwistStamped') {
+            msg = {
+                header: this.get_header(),
+                twist: msg
+            }
+        }
+        
+        this.output = msg;
+        return this.output;
+    }
+
+    display_output(el, transmitting) {
+        el.html('Message: <b>'+this.msg_type+'</b><br>'
+                + 'Topic: <b>'+this.output_topic+'</b>'+ (transmitting ? '' : ' (not transmitting)')  +'<br><br>'
+                + JSON.stringify(this.output, null, 4));
+    }
 
     // read_axis(axes, cfg) {
     //     let offset = cfg.offset === undefined ? 0.0 : cfg.offset;
@@ -136,61 +176,6 @@ export class TwistInputDriver extends InputDriver {
     //     }
     // }
 
-    // read(axes, buttons) {
-
-    //     // geometry_msgs/msg/Twist
-    //     let msg = {
-    //         "linear": {
-    //             "x": 0,
-    //             "y": 0,
-    //             "z": 0
-    //         },
-    //         "angular": {
-    //             "x": 0,
-    //             "y": 0,
-    //             "z": 0,
-    //         }
-    //     }
-
-    //     Object.keys(msg).forEach ((grp) => {
-    //         if (!this.config[grp])
-    //             return;
-    //         Object.keys(msg[grp]).forEach((axis) => {
-    //             if (!this.config[grp][axis])
-    //                 return;
-    //             msg[grp][axis] = this.read_axis(axes, this.config[grp][axis]);
-    //         });
-    //     });
-
-    //     Object.keys(msg).forEach ((grp) => {
-    //         if (!this.config[grp])
-    //             return;
-    //         Object.keys(msg[grp]).forEach((axis) => {
-    //             if (!this.config[grp][axis] || !this.config[grp][axis]['multiply_lerp'])
-    //                 return;
-    //             msg[grp][axis] = msg[grp][axis] * this.lerp_abs(this.config[grp][axis]['multiply_lerp'], msg);
-    //         });
-    //     });
-
-    //     Object.keys(msg).forEach ((grp) => {
-    //         if (!this.config[grp])
-    //             return;
-    //         Object.keys(msg[grp]).forEach((axis) => {
-    //             if (!this.config[grp][axis] || this.config[grp][axis]['scale'] === undefined)
-    //                 return;
-    //             msg[grp][axis] = msg[grp][axis] * this.config[grp][axis].scale;
-    //         });
-    //     });
-
-    //     if (this.msg_type == 'geometry_msgs/msg/TwistStamped') {
-    //         msg = {
-    //             header: this.get_header(),
-    //             twist: msg
-    //         }
-    //     }
-
-    //     return msg;
-    // }
 
     // read_keyboard(pressed_keys) {
     //     // geometry_msgs/msg/Twist
