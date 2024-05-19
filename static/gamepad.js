@@ -376,6 +376,7 @@ export class GamepadController {
                 }
 
                 let new_axis = { 
+                    i: i_axis,
                     assigned_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
                     dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
                     dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
@@ -691,8 +692,10 @@ export class GamepadController {
                 let id_axis = dri_axes_ids[j];
                 opts.push('<option value="'+id_axis+'"'+(axis.assigned_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
             }
+            opts.push('<option value="=">Copy from axis...</option>');
             let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
             assignment_sel_el.appendTo(line_1_el);
+            axis.assignment_sel_el = assignment_sel_el;
 
             // output val
             let out_val_el = $('<span class="axis-output-val" title="Axis output">0.00</span>');
@@ -870,7 +873,66 @@ export class GamepadController {
             // let that = this;
             assignment_sel_el.change((ev)=>{
                 let id_axis_assigned = $(ev.target).val();
-                console.log('axis '+i_axis+' assigned to '+id_axis_assigned);
+
+                console.log('Axis '+axis.i+' assigned to '+id_axis_assigned)
+
+                let cancel_copy = () => {
+                    driver.axes.forEach((a)=>{
+                        a.raw_val_el
+                            .unbind()
+                            .removeClass('copy-source');
+                        if (profile.copying_into_axis === a) {
+                            a.assignment_sel_el.val(''); //set not in use
+                            a.row_el
+                                .removeClass('copy-destination')
+                                .addClass('unused');
+                        }
+                    });
+                    delete profile.copying_into_axis;
+                }
+
+                if (id_axis_assigned == '=') {
+                    if (profile.copying_into_axis) {
+                        // another one is waiting for input, close first
+                        cancel_copy();
+                    }
+                    //console.log('Copy config for axis '+axis.id)
+                    profile.copying_into_axis = axis;
+                    row_el.addClass('unused copy-destination');
+
+                    // let axes_ids = Object.keys()
+                    driver.axes.forEach((a)=>{
+                        if (axis == a) //skip self
+                            return;
+                        a.raw_val_el.addClass('copy-source')
+                            .unbind()
+                            .click((ev)=>{
+                                cancel_copy();
+                                console.log('Copying axis '+a.i, a);
+                                axis.assigned_axis = a.assigned_axis;
+                                axis.assignment_sel_el.val(a.assigned_axis);
+                                if (axis.assigned_axis) {
+                                    axis.dead_min = a.dead_min;
+                                    axis.dead_max = a.dead_max;
+                                    axis.offset = a.offset;
+                                    axis.scale = a.scale;
+                                    axis.mod_func = a.mod_func;
+                                    axis.scale_by_velocity_src = a.scale_by_velocity_src;
+                                    axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
+                                    axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
+                                    render_axis_config();
+                                    row_el.removeClass('unused');
+                                } else {
+                                    row_el.addClass('unused');
+                                }
+                            });
+                    });
+                    return;
+                } else if (profile.copying_into_axis) {
+                    cancel_copy();
+                }
+
+                // console.log('axis '+i_axis+' assigned to '+id_axis_assigned);
                 if (id_axis_assigned) {
                     axis.assigned_axis = id_axis_assigned;
                     
@@ -893,7 +955,9 @@ export class GamepadController {
             line_1_el.appendTo(row_el);
             config_details_el.appendTo(row_el);
 
+            axis.row_el = row_el;
             axes_els.push(row_el);
+           
         }
 
         $('#gamepad-axes-panel')
