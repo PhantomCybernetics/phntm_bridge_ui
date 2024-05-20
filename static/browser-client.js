@@ -617,12 +617,12 @@ export class PhntmBridgeClient extends EventTarget {
 
     create_writer(topic, msg_type, on_ready_cb) {
 
-        if (this.topic_writers[topic]) {
-            console.log('Reusing writer for '+topic+'; init_complete='+this.init_complete);
+        if (this.topic_writers[topic] && this.topic_writers[topic].msg_type == msg_type) {
+            console.log('Reusing writer for '+topic+' and '+msg_type+'; init_complete='+this.init_complete);
             return this.topic_writers[topic];
         }
 
-        console.log('Beginning writing into '+topic+'; init_complete='+this.init_complete)
+        console.warn('Beginning writing '+msg_type+' to '+topic+'; init_complete='+this.init_complete)
 
         this.topic_writers[topic] = new TopicWriter(this, topic, msg_type, on_ready_cb);
 

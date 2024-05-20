@@ -58,6 +58,12 @@ export class GamepadController {
                     $('#touch-gamepad-left > .Gamepad-anchor').css('inset', '60% 50% 40% 50%');
                     $('#touch-gamepad-right > .Gamepad-anchor').css('inset', '60% 50% 40% 50%');
                 }
+                $('#input-underlay').css('display', 'block')
+                    .unbind()
+                    .click((ev)=>{
+                        $(ev.target).unbind();
+                        $('#gamepad_status').click();
+                    })
             } else {
                 $('#gamepad').removeClass('open');
                 $('BODY').removeClass('gamepad-editing');
@@ -67,6 +73,7 @@ export class GamepadController {
                     $('#touch-gamepad-left > .Gamepad-anchor').css('inset', '60% 50% 40% 50%');
                     $('#touch-gamepad-right > .Gamepad-anchor').css('inset', '60% 50% 40% 50%');
                 }
+                $('#input-underlay').css('display', '').unbind();
             }
         });
 
@@ -164,6 +171,7 @@ export class GamepadController {
                         label: profile_default_cfg.label,
                         driver: profile_default_cfg.driver,
                         default_driver_config: {},
+                        
                         default_axes_config: profile_default_cfg.axes
                     }
                     
@@ -220,6 +228,7 @@ export class GamepadController {
             }
 
             let driver = profile.driver_instances[profile.driver];
+            let driver_axes_ids = Object.keys(driver.get_axes());
 
             profile.buttons = []; 
             driver.buttons = []; // driver independent buttons
@@ -229,7 +238,7 @@ export class GamepadController {
                 let axis_cfg = null;
                 if (profile.default_axes_config) {
                     profile.default_axes_config.forEach((cfg)=>{
-                        if (cfg.axis === i_axis) {
+                        if (cfg.axis === i_axis && driver_axes_ids.indexOf(cfg.driver_axis) > -1) {
                             axis_cfg = cfg;
                             return;
                         }
@@ -458,8 +467,10 @@ export class GamepadController {
                 inp_driver.appendTo(line_driver);
                 inp_driver.change((ev)=>{
                     let val = $(ev.target).val();
+                    console.log('profile driver changed to '+val);
                     profile.driver = val;
                     that.init_profile(profile);
+                    profile.driver_instances[profile.driver].setup_writer();
                     that.make_ui();
 
                 })
@@ -794,7 +805,7 @@ export class GamepadController {
                     cancel_copy();
                 }
 
-                // console.log('axis '+i_axis+' assigned to '+id_axis_assigned);
+                console.log('axis '+axis.i+' assigned to ', id_axis_assigned);
                 if (id_axis_assigned) {
                     axis.assigned_axis = id_axis_assigned;
                     
@@ -808,6 +819,7 @@ export class GamepadController {
                 }
             });
             render_axis_config();
+            console.log('axis '+i_axis+' assigned to ', axis.assigned_axis);
             if (axis.assigned_axis) {
                 row_el.removeClass('unused');
             } else {
@@ -1208,9 +1220,23 @@ export class GamepadController {
 
         this.update_axes_ui_values();
 
+        if (!some_axes_live) {
+            if (this.cooldown_started === undefined) {
+                this.cooldown_started = Date.now();
+                some_axes_live = true;
+            } else if (this.cooldown_started + 1000 > Date.now() ) {
+                some_axes_live = true;
+            }
+        } else if (this.cooldown_started !== undefined) {
+            delete this.cooldown_started;
+        }
+
         let transmitting = some_axes_live && this.current_gamepad.enabled;
 
         driver.generate();
+
+       
+
         driver.display_output(this.debug_output_panel, transmitting);
 
         if (transmitting) {

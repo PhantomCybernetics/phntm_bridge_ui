@@ -12,8 +12,7 @@ BODY.desktop-ui {
 }
 
 BODY.no-scroll,
-BODY.touch-ui.gamepad-editing,
-BODY.touch-gamepad {
+BODY.touch-ui.gamepad-editing.touch-gamepad {
     overflow: hidden;
     height: 100%;
     touch-action: none;
@@ -126,6 +125,7 @@ BODY.desktop-ui.menu-cancels-scroll {
     position: relative;
     padding-right: 0px;
     /* z-index: 36; */
+    z-index: 3; /* above gamepad config panel */
     display: none;
 }
 
@@ -309,6 +309,7 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 
 #modal-underlay,
 #menu-underlay,
+#input-underlay,
 #touch-ui-dialog-underlay {
     display: none;
     position: fixed;
@@ -319,6 +320,12 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
     background-color: rgba(0, 0, 0, 0.457);
     z-index: 80;
     cursor: pointer;
+}
+
+#input-underlay {
+    z-index: 2;
+    top: 55px;
+    height: calc(100% - 55px);
 }
 
 #touch-ui-dialog-underlay {
