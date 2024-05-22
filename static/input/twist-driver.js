@@ -44,6 +44,8 @@ export class TwistInputDriver extends InputDriver {
         inp_msg_type.change((ev)=>{
             that.msg_type = $(ev.target).val();
             console.log('Driver msg type is: '+that.msg_type);
+            that.setup_writer();
+            that.gamepad_controller.check_profile_saved(that.gamepad_controller.current_gamepad, that.gamepad_controller.current_gamepad.current_profile);
             that.gamepad_controller.make_profile_config_ui(); // redraw
         });
 
@@ -56,9 +58,16 @@ export class TwistInputDriver extends InputDriver {
         inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val();
             console.log('Driver output topic is: '+that.output_topic);
+            that.setup_writer();
+            that.gamepad_controller.check_profile_saved(that.gamepad_controller.current_gamepad, that.gamepad_controller.current_gamepad.current_profile);
         });
 
         lines.push(line_topic);
+
+        this.error_label = $('<span class="driver-error"></span>');
+        lines.push(this.error_label);
+
+        this.handle_error_message();
 
         return lines;
     }
@@ -96,12 +105,6 @@ export class TwistInputDriver extends InputDriver {
         
         this.output = msg;
         return this.output;
-    }
-
-    display_output(el, transmitting) {
-        el.html('Message: <b>'+this.msg_type+'</b><br>'
-                + 'Topic: <b>'+this.output_topic+'</b>'+ (transmitting ? '' : ' (not transmitting)')  +'<br><br>'
-                + JSON.stringify(this.output, null, 4));
     }
 
     // read_axis(axes, cfg) {

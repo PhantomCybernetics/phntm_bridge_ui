@@ -28,6 +28,10 @@ export function nl2br (str, is_xhtml) {
     return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2');
 }
 
+export function unquote(str) {
+  return str.replace(/"([^"]+)":/g, '$1:')
+}
+
 export function prettifyXml(sourceXml)
 {
     var xmlDoc = new DOMParser().parseFromString(sourceXml, 'application/xml');

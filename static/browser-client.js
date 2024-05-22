@@ -615,11 +615,21 @@ export class PhntmBridgeClient extends EventTarget {
         this.remove_subscribers_timeout = null;
     }
 
-    create_writer(topic, msg_type, on_ready_cb) {
+    get_writer(topic, msg_type, on_ready_cb, err_out = null) {
 
         if (this.topic_writers[topic] && this.topic_writers[topic].msg_type == msg_type) {
-            console.log('Reusing writer for '+topic+' and '+msg_type+'; init_complete='+this.init_complete);
+            console.log('Re-using writer for '+topic+' and '+msg_type+'; init_complete='+this.init_complete);
             return this.topic_writers[topic];
+        }
+
+        if (this.topic_writers[topic] && this.topic_writers[topic].msg_type != msg_type) {
+            console.error('Will not write '+msg_type+' into '+topic+' (type mixing)');
+            if (err_out) {
+                err_out.error = true;
+                err_out.message = 'Not writing because message type mixing within one topic breaks ROS. ' +
+                                  '(Save your changes, restart everything, then reload this page to override.)';
+            }
+            return false;
         }
 
         console.warn('Beginning writing '+msg_type+' to '+topic+'; init_complete='+this.init_complete)
@@ -1362,7 +1372,7 @@ export class PhntmBridgeClient extends EventTarget {
                     // }
                     // if (subscribe_topics.length)
                     //     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
-
+                    that.get_peer_stats_loop();
                 }
             } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
@@ -1374,9 +1384,9 @@ export class PhntmBridgeClient extends EventTarget {
                 if (was_connected)
                     that.emit('peer_disconnected');
 
-                Object.keys(that.subscribers).forEach((sub) => {
+                // Object.keys(that.subscribers).forEach((sub) => {
 
-                });
+                // });
 
                 if (!that.robot_online && (!that.socket || !that.socket.connected)) {
                     console.warn('Clearing peer connection & instance id');
@@ -1428,6 +1438,29 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         return pc;
+    }
+    
+    get_peer_stats_loop() {
+        // return;
+
+        if (window.clearTimeout(this.pc_stats_timer)) {
+            window.clearTimeout(this.pc_stats_timer);
+            this.pc_stats_timer = null;
+        }
+
+        if (!this.pc || !this.pc.connected)
+            return; // kills the loop (starts on pc connect)     
+
+        let that = this;
+        this.pc.getStats(null).then(
+            (results) => {
+                that.emit('peer_stats', results);
+                that.pc_stats_timer = window.setTimeout(() => that.get_peer_stats_loop(), 1000);
+            },
+            (err) => {
+                console.error(err);
+                that.pc_stats_timer = window.setTimeout(() => that.get_peer_stats_loop(), 1000);
+            });
     }
 
     service_call(service, data, cb) {

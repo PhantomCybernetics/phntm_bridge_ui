@@ -338,14 +338,10 @@ export class PanelUI {
             that.set_dot_state(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
         });
 
-        setInterval(() => {
-            if (client.pc) {
-                client.pc.getStats(null).then((results) => {
-                    that.last_pc_stats = results;
-                    that.update_video_stats(results)
-                }, err => console.log(err))
-            }
-        }, 1000);
+        client.on('peer_stats', (stats) => {
+            that.last_pc_stats = stats;
+            that.update_video_stats(stats);
+        });
 
         this.grid.on('added removed change', function (e, items) {
             // console.log('grid changed', items);
@@ -1320,8 +1316,8 @@ export class PanelUI {
             $('#service_controls').removeClass('active');
         }
 
-        if (this.gamepad)
-            this.gamepad.MarkMappedServiceButtons();
+        // if (this.gamepad)
+        //     this.gamepad.MarkMappedServiceButtons();
     }
 
     trigger_wifi_scan() {

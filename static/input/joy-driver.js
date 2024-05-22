@@ -34,12 +34,6 @@ export class JoyInputDriver extends InputDriver {
         return this.output;
     }
 
-    display_output(el, transmitting) {
-        el.html('Message: <b>'+this.msg_type+'</b><br>'
-                + 'Topic: <b>'+this.output_topic+'</b>'+ (transmitting ? '' : ' (not transmitting)')  +'<br><br>'
-                + JSON.stringify(this.output, null, 4));
-    }
-
     // read(axes, buttons) {
 
 

@@ -12,7 +12,8 @@ BODY.desktop-ui {
 }
 
 BODY.no-scroll,
-BODY.touch-ui.gamepad-editing.touch-gamepad {
+BODY.touch-gamepad,
+BODY.touch-ui.gamepad-editing {
     overflow: hidden;
     height: 100%;
     touch-action: none;
@@ -2721,8 +2722,31 @@ BODY.desktop-ui #gamepad_settings .tab {
     background-size: 21px;
     background-repeat: no-repeat;
     background-position: center 6px;
+    position: relative;
 }
 
+
+#gamepad_settings .tab#gamepad-settings-tab #gamepad-profile-unsaved-warn {
+    position: absolute;
+    background: white;
+    color: #e90fe9;
+    border-radius: 3px;
+    padding: 0px;
+    font-size: 12px;
+    line-height: 12px;
+    right: -2px;
+    top: -2px;
+    display: none;
+    font-weight: bold;
+    width: 15px;
+    height: 13px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 21px;
+    /* display: block; */
+    font-size: 25px;
+    padding-top: 3px;
+}
 
 #gamepad_settings .tab.active {
     background-color: rgb(233 15 233);
@@ -3457,6 +3481,7 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     width: 85%; /* small inactive gap to avoid gamepads in the other ui */
     height: 100%;
     top: 0px;
+    z-index: 1 !important; /* under the gamepad editing central panel */
 }
 
 #gamepad-settings-panel.has-buttons {
@@ -3539,7 +3564,7 @@ BODY.desktop-ui #gamepad-profile-config {
 
 #gamepad-settings-panel .bottom-buttons BUTTON {
     line-height: 30px;
-    padding: 5px 30px;
+    padding: 5px 20px;
     border-radius: 5px;
     border: 0px;
     background-color: #f000d0;
@@ -3585,9 +3610,13 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
 }
 
 #gamepad-settings-panel .bottom-buttons BUTTON#save-gamepad-profile {
-    background-color: #077d22;
+    background-color: #e90fe9;
     color: white;
 }
+#gamepad-settings-panel .bottom-buttons BUTTON#save-gamepad-profile.saved {
+    background-color: #063669;
+    opacity: 0.5;
+} 
 
 #gamepad-settings-panel .bottom-buttons BUTTON#gamepad-profile-json {
     background-color: #033669;
@@ -3609,3 +3638,13 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
     text-decoration-style: dashed;
     cursor: help;
 }
+
+#gamepad-settings-panel .driver-error {
+    background: #be1e1e;
+    display: block;
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 14px;
+    text-align: center;
+}
+
