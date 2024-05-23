@@ -27,6 +27,14 @@ export class TwistInputDriver extends InputDriver {
         }
     }
 
+    get_config() {
+        let cfg = super.get_config();
+
+        cfg.stamped = this.msg_type == 'geometry_msgs/msg/TwistStamped';
+
+        return cfg;
+    }
+
     make_cofig_inputs() {
         let lines = []
 

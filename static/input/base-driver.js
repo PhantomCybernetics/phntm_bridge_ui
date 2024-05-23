@@ -17,11 +17,18 @@ export class InputDriver {
         this.saved_state = null;
     }
 
-    set_config(cfg) {
+    set_config(cfg) { // from cookie, robot, etc
         if (cfg && cfg.output_topic) {
             this.output_topic = cfg.output_topic;
         }
         this.setup_writer();
+    }
+
+    get_config() { // to save as cookie, on robot, etc
+        let cfg = {
+            output_topic: this.output_topic,
+        };
+        return cfg;
     }
 
     set_saved_state() {

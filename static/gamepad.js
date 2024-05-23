@@ -35,7 +35,7 @@ export class GamepadController {
         this.zero = new THREE.Vector2(0,0);
 
         this.show_icon = this.load_some_gamepad_once_connected(); // once you'be connected a gamepad, the icon will stay on
-
+        
         // this.default_configs = {};
         // this.profiles = {}; // gp type => id => profile[]
 
@@ -153,7 +153,7 @@ export class GamepadController {
 
     init_gamepad(gamepad) {
 
-        if (this.robot_defaults[gamepad.type] === undefined) //waits for config
+        if (this.robot_defaults[gamepad.type] === undefined) // wait for robot config
             return;
 
         if (!gamepad.saved_profiles) 
@@ -166,48 +166,74 @@ export class GamepadController {
             let last_user_gamepad_profile = this.load_last_user_gamepad_profile(gamepad.id);
             console.log('Loaded last profile for gamepad "'+gamepad.id+'":', last_user_gamepad_profile);
 
-            let saved_user_gamepad_config = this.load_user_gamepad_config(gamepad.id);
-            console.log('Loaded user config for gamepad "'+gamepad.id+'":', saved_user_gamepad_config);
-
             gamepad.profiles = {};
             gamepad.current_profile = null;
             gamepad.enabled = gamepad.isTouch ? true : this.load_user_gamepad_enabled(gamepad.id);
 
+            let all_profile_ids = [];
+
+            let saved_profile_ids = localStorage.getItem('user-gamepad-profiles:'+this.client.id_robot+':'+gamepad.id);
+            all_profile_ids = saved_profile_ids ? JSON.parse(saved_profile_ids) : [];
+
+            console.log('loaded saved_profile_ids', saved_profile_ids);
+
+            let robot_defaults_by_id = {};
             if (robot_defaults.profiles) {
                 robot_defaults.profiles.forEach((profile_default_cfg)=>{
                     let id_profile = profile_default_cfg.id;
                     if (!id_profile) {
-                        console.error('Gamepad profile config for '+gamepad.id+' missing id', profile_default_cfg)
+                        console.error('Gamepad profile config for '+gamepad.type+' missing id', profile_default_cfg)
                         return;
                     }
-                    if (!profile_default_cfg.driver) {
-                        console.error('Gamepad profile config '+id_profile+' for '+gamepad.id+' missing driver', profile_default_cfg)
-                        return;
-                    }
-
-                    let profile = {
-                        id: id_profile,
-                        label: profile_default_cfg.label,
-                        driver: profile_default_cfg.driver,
-                        default_driver_config: {},
-                        
-                        default_axes_config: profile_default_cfg.axes
-                    }
-                    
-                    if (profile_default_cfg.driver_config) {
-                        profile.default_driver_config[profile_default_cfg.driver] = profile_default_cfg.driver_config;
-                    }
-
-                    gamepad.profiles[id_profile] = profile;
-
-                    if (profile_default_cfg.default) {
-                        gamepad.current_profile = id_profile;
+                    robot_defaults_by_id[id_profile] = profile_default_cfg;
+                    if (all_profile_ids.indexOf(id_profile) < 0) {
+                        all_profile_ids.push(id_profile);
                     }
                 });
             }
 
+            // let saved_user_gamepad_config = this.load_user_gamepad_config(gamepad.id);
+            // console.log('Loaded user config for gamepad "'+gamepad.id+'":', saved_user_gamepad_config);
+
+            all_profile_ids.forEach((id_profile)=>{
+
+                // let id_profile = profile_default_cfg.id;
+                let profile_default_cfg = {};
+                if (robot_defaults_by_id[id_profile])
+                    profile_default_cfg = robot_defaults_by_id[id_profile];
+                let user_defaults = this.load_user_gamepad_profile_config(gamepad, id_profile);
+                console.log('loaded user defults for '+id_profile, user_defaults);
+                if (user_defaults)
+                    profile_default_cfg = user_defaults;
+
+                if (!profile_default_cfg.driver) {
+                    console.error('Gamepad profile config '+id_profile+' for '+gamepad.id+' missing driver', profile_default_cfg)
+                    return;
+                }
+
+                let profile = {
+                    id: id_profile,
+                    label: profile_default_cfg.label,
+                    driver: profile_default_cfg.driver,
+                    default_driver_config: {},
+                    
+                    default_axes_config: profile_default_cfg.axes
+                }
+                
+                if (profile_default_cfg.driver_config) {
+                    profile.default_driver_config[profile_default_cfg.driver] = profile_default_cfg.driver_config;
+                }
+
+                gamepad.profiles[id_profile] = profile;
+
+                if (profile_default_cfg.default) { // default profile by robot
+                    gamepad.current_profile = id_profile;
+                }
+            });
+        
+
             if (last_user_gamepad_profile && gamepad.profiles[last_user_gamepad_profile]) {
-                gamepad.current_profile = last_user_gamepad_profile;
+                gamepad.current_profile = last_user_gamepad_profile;  // overrride default profile by user
             }
 
             let profile_ids = Object.keys(gamepad.profiles);
@@ -236,37 +262,58 @@ export class GamepadController {
         }
     }
 
-    set_saved_profile_state(gamepad, id_profile) {
+    get_profile_config(gamepad, id_profile, only_assigned=false) {
         let profile = gamepad.profiles[id_profile];
-        let saved = {
+        let driver = profile.driver_instances[profile.driver];
+
+        let data = {
             id: profile.id,
             label: profile.label,
             driver: profile.driver,
+            driver_config: driver.get_config(),
             axes: [],
             buttons: [],
         };
-        profile.driver_instances[profile.driver].set_saved_state();
-        let driver = profile.driver_instances[profile.driver];
+        
         for (let i = 0; i < driver.axes.length; i++) {
-            saved.axes.push({
-                assigned_axis: driver.axes[i].assigned_axis,
+            if (only_assigned && !driver.axes[i].driver_axis) {
+                continue;
+            }
+            let axis_data = {
+                axis: i,
+                driver_axis: driver.axes[i].driver_axis,
                 dead_min: driver.axes[i].dead_min,
                 dead_max: driver.axes[i].dead_max,
                 offset: driver.axes[i].offset,
                 scale: driver.axes[i].scale,
-                mod_func: driver.axes[i].mod_func,
-                scale_by_velocity_src: driver.axes[i].scale_by_velocity_src,
-                scale_by_velocity_mult_min: driver.axes[i].scale_by_velocity_mult_min,
-                scale_by_velocity_mult_max: driver.axes[i].scale_by_velocity_mult_max,
-            });
+            }
+            if (driver.axes[i].mod_func) {
+                axis_data['mod_func'] = {
+                    type: driver.axes[i].mod_func,
+                    velocity_src: driver.axes[i].scale_by_velocity_src,
+                    slow_multiplier: driver.axes[i].scale_by_velocity_mult_min,
+                    fast_multiplier: driver.axes[i].scale_by_velocity_mult_max,
+                }
+            }
+            data.axes.push(axis_data);
         }
-        gamepad.saved_profiles[id_profile] = saved;
+
+        return data;
+    }
+
+    set_saved_profile_state(gamepad, id_profile) {
+        let profile = gamepad.profiles[id_profile];
+        let driver = profile.driver_instances[profile.driver];
+        driver.set_saved_state();
+        
+        let saved_data = this.get_profile_config(gamepad, id_profile, false);
+        profile.saved_state = saved_data;
     }
 
     
     check_profile_saved(gamepad, id_profile, update_ui = true) {
         let live_profile = gamepad.profiles[id_profile];
-        let saved_profile = gamepad.saved_profiles[id_profile];
+        let saved_profile = live_profile.saved_state;
 
         function compare(profile, saved) {
             if (!profile || !saved)
@@ -285,7 +332,7 @@ export class GamepadController {
                 return false;
 
             for (let i = 0; i < driver.axes.length; i++) {
-                if (driver.axes[i].assigned_axis != saved.axes[i].assigned_axis)
+                if (driver.axes[i].driver_axis != saved.axes[i].driver_axis)
                     return false;
                 if (driver.axes[i].dead_min != saved.axes[i].dead_min)
                     return false;
@@ -296,15 +343,20 @@ export class GamepadController {
                 if (driver.axes[i].scale != saved.axes[i].scale)
                     return false;
 
-                if (driver.axes[i].mod_func != saved.axes[i].mod_func) { 
+                let has_mod_func = driver.axes[i].mod_func !== null && driver.axes[i].mod_func !== undefined && driver.axes[i].mod_func !== false && driver.axes[i].mod_func !== "";
+                let has_saved_mod_func = saved.axes[i].mod_func !== null && saved.axes[i].mod_func !== undefined; //obj
+
+                if (has_mod_func != has_saved_mod_func) { 
                     // console.warn('live v saved mod_func: ', driver.axes[i].mod_func, saved.axes[i].mod_func)
                     return false;
-                } else if (driver.axes[i].mod_func) {
-                    if (driver.axes[i].scale_by_velocity_src != saved.axes[i].scale_by_velocity_src)
+                } else if (driver.axes[i].mod_func && saved.axes[i].mod_func) {
+                    if (driver.axes[i].mod_func != saved.axes[i].mod_func.type) 
                         return false;
-                    if (driver.axes[i].scale_by_velocity_mult_min != saved.axes[i].scale_by_velocity_mult_min)
+                    if (driver.axes[i].scale_by_velocity_src != saved.axes[i].mod_func.velocity_src) 
                         return false;
-                    if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].scale_by_velocity_mult_max)
+                    if (driver.axes[i].scale_by_velocity_mult_min != saved.axes[i].mod_func.slow_multiplier) 
+                        return false;
+                    if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].mod_func.fast_multiplier) 
                         return false;
                 }
                 
@@ -369,7 +421,7 @@ export class GamepadController {
 
                 let new_axis = { 
                     i: i_axis,
-                    assigned_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
+                    driver_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
                     dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
                     dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
                     offset: axis_cfg && axis_cfg.offset !== undefined ? axis_cfg.offset : 0.0,
@@ -415,10 +467,27 @@ export class GamepadController {
     delete_current_profile() {
     
         let id_delete = this.current_gamepad.current_profile;
+        let saved_id_delete = this.current_gamepad.profiles[id_delete].saved_state.id;
         let old_profile_ids = Object.keys(this.current_gamepad.profiles);
         let pos = old_profile_ids.indexOf(id_delete);
         
-        console.log('Deleting profile '+id_delete);
+        console.log('Deleting profile '+id_delete+' (saved id was '+saved_id_delete+')');
+
+        // remove profile conf from cookie
+        let cookie_conf = 'gamepad-profile-config:'+this.client.id_robot+':'+this.current_gamepad.id+':'+saved_id_delete;
+        localStorage.removeItem(cookie_conf);
+
+        let cookie_conf_list = 'user-gamepad-profiles:'+this.client.id_robot+':'+this.current_gamepad.id;
+        let custom_profile_ids = localStorage.getItem(cookie_conf_list);
+        if (custom_profile_ids) {
+            custom_profile_ids = JSON.parse(custom_profile_ids)
+            let pos = custom_profile_ids.indexOf(saved_id_delete);
+            if (pos > -1) {
+                custom_profile_ids.splice(pos, 1);
+            }
+            console.log('saving updated custom_profile_ids', custom_profile_ids); 
+            localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
+        }
 
         delete this.current_gamepad.profiles[id_delete];
         let remaining_profile_ids = Object.keys(this.current_gamepad.profiles);
@@ -466,16 +535,56 @@ export class GamepadController {
         return localStorage.getItem('last-gamepad-profile:' + this.client.id_robot+':'+id_gamepad);
     }
 
-    save_user_gamepad_config(gamepad) {
-        xxx();
-        this.set_saved_profile_state(gamepad, gamepad.current_profile);
+    copy_gamepad_profile_json(gamepad, id_profile) {
+        let profile_data = this.get_profile_config(gamepad, id_profile, true);
+        navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
+        console.log('Copied json:', profile_data);
+    }
+
+    save_user_gamepad_profile_config(gamepad, id_profile) {
+        let profile = gamepad.profiles[id_profile];
+        let profile_data = this.get_profile_config(gamepad, id_profile, true); //filters assigned axes
+
+        console.log('Saving profile '+id_profile+' for '+gamepad.id, profile_data);
+        let cookie_conf = 'gamepad-profile-config:'+this.client.id_robot+':'+gamepad.id+':'+id_profile;
+        localStorage.setItem(cookie_conf, JSON.stringify(profile_data));
+        
+        let cookie_conf_list = 'user-gamepad-profiles:'+this.client.id_robot+':'+gamepad.id;
+        let custom_profile_ids = localStorage.getItem(cookie_conf_list);
+        if (!custom_profile_ids) {
+            custom_profile_ids = [];
+        } else {
+            custom_profile_ids = JSON.parse(custom_profile_ids)
+        }
+
+        // console.log('loaded custom_profile_ids', custom_profile_ids);
+
+        if (custom_profile_ids.indexOf(id_profile) === -1)
+            custom_profile_ids.push(id_profile);
+        if (profile.saved_state.id != id_profile) { // id changed, remove old
+            let pos = custom_profile_ids.indexOf(profile.saved_state.id);
+            if (pos > -1) {
+                custom_profile_ids.splice(pos, 1);
+            }
+            let deleted_cookie_conf = 'gamepad-profile-config:'+this.client.id_robot+':'+gamepad.id+':'+profile.saved_state.id;
+            localStorage.removeItem(deleted_cookie_conf);
+        }
+
+        console.log('saving custom_profile_ids', custom_profile_ids); 
+        localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
+
+        this.set_saved_profile_state(gamepad, id_profile);
         this.check_profile_saved(gamepad, gamepad.current_profile);
     }
 
-    load_user_gamepad_config(id_gamepad) {
-        let val = localStorage.getItem('last-gamepad-config:' + this.client.id_robot+':'+id_gamepad);
-        console.log('Loaded user gamepad config', val);
-        return val;
+    load_user_gamepad_profile_config(gamepad, id_profile) {
+        let cookie_conf = 'gamepad-profile-config:'+this.client.id_robot+':'+gamepad.id+':'+id_profile;
+        let val = localStorage.getItem(cookie_conf);
+
+        if (val)
+            return JSON.parse(val);
+        else
+            return null;
     }
 
     disable_kb_on_conflict() {
@@ -573,6 +682,10 @@ export class GamepadController {
                     delete this.current_gamepad.profiles[profile.id];
                     profile.id = val;
                     console.log('Profile id changed to: '+profile.id);
+                    that.save_last_user_gamepad_profile( // id changed
+                        that.current_gamepad.id,
+                        val
+                    );
                     that.check_profile_saved(that.current_gamepad, profile.id, false);
                     that.make_profile_selector_ui();
                 });
@@ -660,7 +773,13 @@ export class GamepadController {
         $('#save-gamepad-profile')
             .unbind()
             .click((ev)=>{
-                that.save_user_gamepad_config(that.current_gamepad);
+                that.save_user_gamepad_profile_config(that.current_gamepad, that.current_gamepad.current_profile);
+            });
+
+        $('#gamepad-profile-json')
+            .unbind()
+            .click((ev)=>{
+                that.copy_gamepad_profile_json(that.current_gamepad, that.current_gamepad.current_profile);
             });
     }
 
@@ -730,7 +849,7 @@ export class GamepadController {
             let dri_axes_ids = Object.keys(dri_axes);
             for (let j = 0; j < dri_axes_ids.length; j++) {
                 let id_axis = dri_axes_ids[j];
-                opts.push('<option value="'+id_axis+'"'+(axis.assigned_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
+                opts.push('<option value="'+id_axis+'"'+(axis.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
             }
             opts.push('<option value="=">Copy from axis...</option>');
             let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
@@ -773,15 +892,15 @@ export class GamepadController {
             let render_axis_config = () => {
 
                 config_details_el.empty();
-                let assigned_axis = axis.assigned_axis;
+                let driver_axis = axis.driver_axis;
 
-                if (!assigned_axis) {
+                if (!driver_axis) {
                     conf_toggle_el.removeClass('open')
                     config_details_el.removeClass('open')
-                    return;
+                    return; 
                 }
 
-                // let default_axis_conf = this.current_gamepad.current_profile[assigned_axis];
+                // let default_axis_conf = this.current_gamepad.current_profile[driver_axis];
 
                 // dead zone
                 let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
@@ -972,9 +1091,9 @@ export class GamepadController {
                             .click((ev)=>{
                                 cancel_copy();
                                 console.log('Copying axis '+a.i, a);
-                                axis.assigned_axis = a.assigned_axis;
-                                axis.assignment_sel_el.val(a.assigned_axis);
-                                if (axis.assigned_axis) {
+                                axis.driver_axis = a.driver_axis;
+                                axis.assignment_sel_el.val(a.driver_axis);
+                                if (axis.driver_axis) {
                                     axis.dead_min = a.dead_min;
                                     axis.dead_max = a.dead_max;
                                     axis.offset = a.offset;
@@ -998,12 +1117,12 @@ export class GamepadController {
 
                 console.log('axis '+axis.i+' assigned to ', id_axis_assigned);
                 if (id_axis_assigned) {
-                    axis.assigned_axis = id_axis_assigned;
+                    axis.driver_axis = id_axis_assigned;
                     
                     render_axis_config();
                     row_el.removeClass('unused');
                 } else {
-                    axis.assigned_axis = null;                   
+                    axis.driver_axis = null;                   
                     
                     render_axis_config();
                     row_el.addClass('unused');
@@ -1012,8 +1131,8 @@ export class GamepadController {
                 that.check_profile_saved(that.current_gamepad, profile.id);
             });
             render_axis_config();
-            console.log('axis '+i_axis+' assigned to ', axis.assigned_axis);
-            if (axis.assigned_axis) {
+            console.log('axis '+i_axis+' assigned to ', axis.driver_axis);
+            if (axis.driver_axis) {
                 row_el.removeClass('unused');
             } else {
                 row_el.addClass('unused');
@@ -1050,7 +1169,7 @@ export class GamepadController {
 
             axis.raw_val_el.html(axis.raw.toFixed(2));
 
-            if (!axis.assigned_axis)
+            if (!axis.driver_axis)
                 continue;
 
             axis.out_val_el.html(axis.val.toFixed(2));
@@ -1075,7 +1194,7 @@ export class GamepadController {
         for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
             let axis = driver.axes[i_axis];
            
-            if (!axis.assigned_axis)
+            if (!axis.driver_axis)
                 continue;
 
             if (axis.dead_val === undefined) // unset on min/max change
@@ -1102,12 +1221,12 @@ export class GamepadController {
             
             some_axes_live = some_axes_live || axis.live;
 
-            if (combined_axes_vals[axis.assigned_axis] === undefined) {
-                combined_axes_vals[axis.assigned_axis] = axis.base_val;
-                combined_axes_unscaled_vals[axis.assigned_axis] = out_unscaled;
+            if (combined_axes_vals[axis.driver_axis] === undefined) {
+                combined_axes_vals[axis.driver_axis] = axis.base_val;
+                combined_axes_unscaled_vals[axis.driver_axis] = out_unscaled;
             } else { // add multiple axes into one (use this for negative/positive split)
-                combined_axes_vals[axis.assigned_axis] += axis.base_val;
-                combined_axes_unscaled_vals[axis.assigned_axis] += out_unscaled;
+                combined_axes_vals[axis.driver_axis] += axis.base_val;
+                combined_axes_unscaled_vals[axis.driver_axis] += out_unscaled;
             }
                 
         }
@@ -1118,15 +1237,15 @@ export class GamepadController {
         for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
             let axis = driver.axes[i_axis];
 
-            if (!axis.assigned_axis || !axis.live) {
+            if (!axis.driver_axis || !axis.live) {
                 continue;
             }
 
             if (!axis.mod_func) {
-                if (driver.axes_output[axis.assigned_axis] === undefined)
-                    driver.axes_output[axis.assigned_axis] = axis.val;
+                if (driver.axes_output[axis.driver_axis] === undefined)
+                    driver.axes_output[axis.driver_axis] = axis.val;
                 else
-                    driver.axes_output[axis.assigned_axis] += axis.val;
+                    driver.axes_output[axis.driver_axis] += axis.val;
                 continue; // all good
             }
 
@@ -1144,12 +1263,12 @@ export class GamepadController {
                     let multiplier = lerp(axis.scale_by_velocity_mult_min, axis.scale_by_velocity_mult_max, abs_velocity_normalized);
 
                     axis.val *= multiplier;
-                    if (driver.axes_output[axis.assigned_axis] === undefined)
-                        driver.axes_output[axis.assigned_axis] = axis.val;
+                    if (driver.axes_output[axis.driver_axis] === undefined)
+                        driver.axes_output[axis.driver_axis] = axis.val;
                     else
-                        driver.axes_output[axis.assigned_axis] += axis.val;
+                        driver.axes_output[axis.driver_axis] += axis.val;
 
-                    // console.log('Scaling axis '+i_axis+' ('+axis.assigned_axis+') by '+abs_velocity_normalized+' ('+axis.scale_by_velocity_src+') m='+multiplier)
+                    // console.log('Scaling axis '+i_axis+' ('+axis.driver_axis+') by '+abs_velocity_normalized+' ('+axis.scale_by_velocity_src+') m='+multiplier)
 
                     break;
                 default:
