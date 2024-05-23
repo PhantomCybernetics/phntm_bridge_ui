@@ -3624,8 +3624,26 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
 #gamepad-settings-panel .bottom-buttons BUTTON#gamepad-profile-json {
     background-color: #033669;
     color: white;
+    position: relative;
+    overflow: hidden;
 }
 
+#gamepad-profile-json-bubble {
+    position: absolute;
+    display: block;
+    line-height: 12px;
+    font-size: 11px;
+    background-color: #e90fe9;
+    top: 0px;
+    /* padding: 10px; */
+    left: 0px;
+    width: 100%;
+    /* margin-left: -75px; */
+    height: 100%;
+    font-weight: normal;
+    padding: 8px 0px 0px 0px;
+    display: none;
+}
 
 #gamepad-settings-panel .line .comment {
     margin-left: 40%;

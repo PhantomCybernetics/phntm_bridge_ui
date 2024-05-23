@@ -539,6 +539,10 @@ export class GamepadController {
         let profile_data = this.get_profile_config(gamepad, id_profile, true);
         navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
         console.log('Copied json:', profile_data);
+        $('#gamepad-profile-json-bubble').css('display', 'block');
+        window.setTimeout(()=>{
+            $('#gamepad-profile-json-bubble').css('display', 'none');
+        }, 3000);
     }
 
     save_user_gamepad_profile_config(gamepad, id_profile) {
