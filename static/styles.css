@@ -2638,6 +2638,7 @@ BODY.gamepad-editing.touch-gamepad #gamepad #gamepad_settings #gamepad-settings-
     transform: translateX(-50%);
     z-index: 2;
     top: 0px;
+    border-radius: 0px;
 }
 
 BODY.gamepad-editing.touch-gamepad #gamepad_settings {
@@ -2659,11 +2660,12 @@ BODY.touch-gamepad #gamepad #gamepad_settings .touch-zone {
     display: block;
     height: calc(100% - 8px);
     background: #352f5d;
-    border: 4px dashed #554ca1;
-    border-radius: 10px;
-    width: 30%;
+    border: 4px dashed #5d53b0;
+    border-radius: 10px 0px 0px 10px;
+    width: calc((100% - max(40%, 300px)) / 2 - 18px);
     position: absolute;
     top: 0px;
+    z-index: 3; /* above central panel so that we can see the joysticks at all time */
 }
 
 BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-left-zone {
@@ -2672,6 +2674,7 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-left-zone {
 
 BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
     right: 0px;
+    border-radius: 0px 10px 10px 0px;
 }
 
 #gamepad #gamepad_settings #gamepad-profile-select {
@@ -3478,7 +3481,7 @@ BODY.touch-gamepad #touch-gamepad-right {
 BODY.touch-gamepad.gamepad-editing #touch-gamepad-left,
 BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     position: absolute;
-    width: 85%; /* small inactive gap to avoid gamepads in the other ui */
+    width: 100%; /* small inactive gap to avoid gamepads in the other ui */
     height: 100%;
     top: 0px;
     z-index: 1 !important; /* under the gamepad editing central panel */
