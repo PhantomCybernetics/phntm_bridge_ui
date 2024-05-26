@@ -45,7 +45,7 @@ export class PanelUI {
         'std_srvs/srv/SetBool': ServiceCallInput_Bool
     }
 
-    constructor(client, grid_cell_height, keyboard, gamepad) {
+    constructor(client, grid_cell_height, input_manager) {
         this.client = client;
         this.client.ui = this;
 
@@ -66,10 +66,9 @@ export class PanelUI {
         this.panel_menu_on = null; //touch only
         this.maximized_panel = null;
 
-        this.keyboard = keyboard;
-        this.gamepad = gamepad;
-        this.gamepad.ui = this;
-
+        this.input_manager = input_manager;
+        this.input_manager.ui = this;
+        
         this.latest_nodes = null;
         this.latest_cameras = null;
 
@@ -617,7 +616,7 @@ export class PanelUI {
 
         let that = this;
 
-        if (this.touch_gamepad_on)
+        if (this.input_manager.touch_gamepad_on)
             this.toggleTouchGamepad();
 
         if (open) {
@@ -1761,8 +1760,8 @@ export class PanelUI {
 
     toggleTouchGamepad() {
         
-        if (!this.touch_gamepad_on) {
-            this.touch_gamepad_on = true;
+        if (!this.input_manager.touch_gamepad_on) {
+            
             this.update_input_buttons();
             $('#touch_ui').addClass('enabled');
             $('BODY').addClass('touch-gamepad');
@@ -1794,7 +1793,7 @@ export class PanelUI {
                         // // otherwise use here something like:
                         // Player.move(this.value, this.angle);
                         // to update your player position when the Controller triggers onInput
-                        that.gamepad.touch_input('left', this.value, this.angle);
+                        that.input_manager.touch_input('left', this.value, this.angle);
                     }
                 }, { 
                     id: "touch-right-stick", // MANDATORY
@@ -1806,20 +1805,21 @@ export class PanelUI {
                         top: "60%",
                     },
                     onInput() {
-                        that.gamepad.touch_input('right', this.value, this.angle);
+                        that.input_manager.touch_input('right', this.value, this.angle);
                     }
                 }
             ]);
             
-            this.gamepad.set_touch(true);
+            this.input_manager.set_touch(true);
             
         } else {
-            this.touch_gamepad_on = false;
-            this.gamepad.set_touch(false);
+
+            this.input_manager.set_touch(false);
             this.touch_gamepad.destroy();
             $('#touch_ui').removeClass('enabled');
             console.log('Touch Gamepad off');
             $('BODY').removeClass('touch-gamepad');
+
         }
     }
 
@@ -1838,7 +1838,7 @@ export class PanelUI {
         } else {
             $('#keyboard').css('display', 'none');
         }
-        if ((this.gamepad.show_icon || isTouchDevice()) && !min_only) {
+        if (!min_only) {
             $('#gamepad').css('display', 'block');
             // num_btns++;
         } else {
@@ -1908,11 +1908,11 @@ export class PanelUI {
         let portrait = isPortraitMode();
         if (portrait) {
             cls.push('portrait');
-            if (!$('body').hasClass('portrait') && this.touch_gamepad_on)
+            if (!$('body').hasClass('portrait') && this.input_manager.touch_gamepad_on)
                 this.toggleTouchGamepad(); // off on rotate
         } else {
             cls.push('landscape');
-            if (!$('body').hasClass('landscape') && this.touch_gamepad_on)
+            if (!$('body').hasClass('landscape') && this.input_manager.touch_gamepad_on)
                 this.toggleTouchGamepad(); // off on rotate
         }
 

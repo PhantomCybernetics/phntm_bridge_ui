@@ -8,25 +8,38 @@
         <div id="gamepad-settings-container">
 
             <select id="gamepad-profile-select"></select>
-            <input type="checkbox" id="gamepad_enabled"/>
 
-            <span id="gamepad-axes-tab" class="tab active">Axes</span>
-            <span id="gamepad-buttons-tab" class="tab">Buttons</span>
-            <span id="gamepad-output-tab" class="tab">Output</span>
-            <span id="gamepad-settings-tab" class="tab"><span id="gamepad-profile-unsaved-warn">*</span></span>
-            <div id="gamepad-axes-panel" class="panel active"></div>
-            <div id="gamepad-buttons-panel" class="panel"></div>
-            <div id="gamepad-output-panel" class="panel"></div>
-
-            <div id="gamepad-settings-panel" class="panel">
-                <div id="gamepad-profile-config"></div>
-                <div class="bottom-buttons">
-                    <button id="delete-gamepad-profile" title="Delete profile"></button>
+            <div id="profile-buttons">
+                <span class="icon"></span>
+                <span id="profile-unsaved-warn">*</span>
+                <div id="profile-menu">
+                    <span class="arrow"></span>
                     <button id="save-gamepad-profile" class="saved">Save Profile</button>
-                    <button id="gamepad-profile-json">JSON <span id="gamepad-profile-json-bubble">Copied to clipboard</span></button>
+                    <button id="gamepad-profile-json">Copy JSON <span id="gamepad-profile-json-bubble">Copied to clipboard</span></button>
+                    <button id="delete-gamepad-profile">Delete profile</button>
                 </div>
             </div>
-        
+            
+            <div id="input-controller-selection"></div>
+
+            <div id="input-controller-config">
+                <input type="checkbox" id="gamepad_enabled"/>
+                <span id="gamepad-axes-tab" class="tab active">Axes</span>
+                <span id="gamepad-buttons-tab" class="tab">Buttons</span>
+                <span id="gamepad-output-tab" class="tab">Output</span>
+                <span id="gamepad-settings-tab" class="tab"></span>
+                <div id="gamepad-axes-panel" class="panel active"></div>
+
+                <div id="gamepad-buttons-panel" class="panel"></div>
+
+                <div id="gamepad-output-panel" class="panel"></div>
+
+                <div id="gamepad-settings-panel" class="panel">
+                    <div id="gamepad-profile-config"></div>
+                   
+                </div>
+            </div>
+
         </div>
 
         <div  class="touch-zone" id="gamepad-touch-right-zone"></div>

@@ -49,8 +49,7 @@
 
     <div id="fixed-right">
         <%- include('partial/touch-ui.html'); %>
-        <%- include('partial/keyboard.html'); %>
-        <%- include('partial/gamepad.html'); %>
+        <%- include('partial/input-manager.html'); %>
         <div id="introspection_state" class="inactive"></div>
     </div>
 
@@ -157,8 +156,8 @@
 <script type="module">
 
     import { PhntmBridgeClient } from '/static/browser-client.js';
-    import { GamepadController } from '/static/gamepad.js';
-    import { KeyboardController } from '/static/keyboard.js';
+    import { InputManager } from '/static/input-manager.js';
+    // import { KeyboardController } from '/static/keyboard.js';
     import { PanelUI  } from '/static/panel-ui.js';
     import { LaserOdometryWidget } from '/static/widgets/laser-odo.js';
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
@@ -218,15 +217,15 @@
             force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1
         });
 
-        let gamepad = new GamepadController(robot); // creates write channels when gamepad is connected
-        gamepad.register_driver('Joy', JoyInputDriver);
-        gamepad.register_driver('Twist', TwistInputDriver);
+        let input_manager = new InputManager(robot); // creates write channels when gamepad is connected
+        input_manager.register_driver('Joy', JoyInputDriver);
+        input_manager.register_driver('Twist', TwistInputDriver);
 
-        let keyboard = new KeyboardController(robot); // creates write channels when enabled
-        keyboard.register_driver('Joy', JoyInputDriver);
-        keyboard.register_driver('Twist', TwistInputDriver);
+        // let keyboard = new KeyboardController(robot); // creates write channels when enabled
+        // keyboard.register_driver('Joy', JoyInputDriver);
+        // keyboard.register_driver('Twist', TwistInputDriver);
 
-        let panel_ui = new PanelUI(robot, 119, keyboard, gamepad);
+        let panel_ui = new PanelUI(robot, 119, input_manager);
         panel_ui.add_widget(Everything3DWidget);
         panel_ui.add_widget(NavigationWidget);
         panel_ui.add_widget(DescriptionTFWidget);

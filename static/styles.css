@@ -2623,7 +2623,7 @@ BODY.desktop-ui #touch_ui_status:hover,
 #gamepad #gamepad_settings #gamepad-settings-container {
     overflow-x: hidden;
     overflow-y: hidden;
-    padding: 10px 10px 5px 10px;
+    padding: 10px 10px 10px 10px;
     border-radius: 5px 5px 5px 5px;
     background: #5d53b0;
     position: relative;
@@ -2662,7 +2662,7 @@ BODY.touch-gamepad #gamepad #gamepad_settings .touch-zone {
     background: #352f5d;
     border: 4px dashed #5d53b0;
     border-radius: 10px 0px 0px 10px;
-    width: calc((100% - max(40%, 300px)) / 2 - 18px);
+    width: calc((100% - max(40%, 300px)) / 2 - 16px);
     position: absolute;
     top: 0px;
     z-index: 3; /* above central panel so that we can see the joysticks at all time */
@@ -2679,21 +2679,132 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
 
 #gamepad #gamepad_settings #gamepad-profile-select {
     position: relative;
-    width: calc(100% - 45px);
-    background: #423a81;
+    width: calc(100% - 47px);
+    border: 5px solid #423a81;
     height: 40px;
     margin-bottom: 5px;
-    border-radius: 5px;
-    border: 0px;
-    color: #fff;
+    border-radius: 10px 0px 0px 10px;
+    /* border: 0px; */
+    color: #ffffff;
     font-size: 18px;
     font-weight: bold;
     padding-left: 5px;
+    background-color: #4a4290;
 }
 
 BODY.desktop-ui #gamepad #gamepad_settings #gamepad-profile-select {
     font-size: 15px;
 }
+
+
+
+#profile-buttons {
+    background: #423a81;
+    width: 47px;
+    height: 40px;
+    float: right;
+    border-radius: 0px 10px 10px 0px;
+    position: relative;
+}
+
+#profile-buttons .icon {
+    display: block;
+    position: absolute;
+    width: 46px;
+    height: 40px;
+    background-image: url(/static/icon-settings.png);
+    background-size: 21px;
+    background-repeat: no-repeat;
+    background-position: center 9px;
+    /* background-color: red; */
+    left: 0px;
+}
+
+#profile-buttons #profile-menu {
+    position: absolute;
+    right: 0px;
+    top: 45px;
+    background: black;
+    width: auto;
+    z-index: 1;
+    border-radius: 5px;
+    white-space: nowrap;
+    display: none;
+    padding: 3px 5px 5px 5px;
+}
+
+#profile-buttons.open #profile-menu {
+    display: block;
+}
+
+#profile-buttons #profile-menu .arrow {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    display: block;
+    background: black;
+    rotate: 45deg;
+    right: 8px;
+    top: -5px;
+    z-index: 1;
+}
+
+#profile-unsaved-warn {
+    position: absolute;
+    background: magenta;
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 0px;
+    font-size: 12px;
+    line-height: 12px;
+    right: -5px;
+    top: -4px;
+    font-weight: bold;
+    width: 17px;
+    height: 17px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 26px;
+    display: none;
+    font-size: 25px;
+    padding-top: 3px;
+}
+
+#gamepad #gamepad_settings.unsaved #profile-unsaved-warn {
+    display: block;
+}
+
+#profile-buttons BUTTON {
+    text-align: left;
+    line-height: 23px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 0px;
+    background-color: #05234c;
+    font-size: 13px;
+    margin: 2px 0px 0px 0px;
+    /* float: right; */
+    /* height: 40px; */
+    /* font-weight: bold; */
+    display: block;
+    width: 100%;
+    z-index: 2;
+    position: relative;
+} 
+
+#profile-buttons BUTTON#save-gamepad-profile {
+    background-color: green;
+    display: none;
+}
+
+#gamepad #gamepad_settings.unsaved #profile-buttons BUTTON#save-gamepad-profile {
+    display: block;
+}
+
+
+
+
+
 
 
 
@@ -2705,7 +2816,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #gamepad-profile-select {
     padding: 2px 10px;
     font-weight: bold;
     color: #fff;
-    background-color: #7166cf;
+    background-color: #4a4290;
     cursor: pointer;
     border-radius: 5px 5px 0px 0px;
     font-size: 18px;
@@ -2729,27 +2840,7 @@ BODY.desktop-ui #gamepad_settings .tab {
 }
 
 
-#gamepad_settings .tab#gamepad-settings-tab #gamepad-profile-unsaved-warn {
-    position: absolute;
-    background: white;
-    color: #e90fe9;
-    border-radius: 3px;
-    padding: 0px;
-    font-size: 12px;
-    line-height: 12px;
-    right: -2px;
-    top: -2px;
-    display: none;
-    font-weight: bold;
-    width: 15px;
-    height: 13px;
-    text-align: center;
-    vertical-align: middle;
-    line-height: 21px;
-    /* display: block; */
-    font-size: 25px;
-    padding-top: 3px;
-}
+
 
 #gamepad_settings .tab.active {
     background-color: rgb(233 15 233);
@@ -2841,11 +2932,11 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 }
 
 #gamepad_settings .conf-toggle.open {
-    background-color: #423a81;
+    background-color: #5d53b0;
     background-position: -34px 5px;
     height: 33px;
     border-radius: 5px 5px 0px 0px;
-    border-top: 3px solid #423a81;
+    border-top: 3px solid #5d53b0;
     margin-top: -3px;
 }
 
@@ -2875,7 +2966,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 
 #gamepad_settings .axis-config-details {
     display: none;
-    background-color: #423a81;
+    background-color: #5d53b0;
     border-radius: 5px;
     margin-top: 3px;
     padding: 5px 0px 5px 10px;
@@ -3100,13 +3191,12 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     display: none;
 }
 
-#gamepad_enabled,
-#keyboard_enabled {
-    top: 16px;
+#gamepad_enabled {
+    top: -40px;
     position: absolute;
     /* float: left; */
     margin-right: 3px;
-    right: 12px;
+    right: 5px;
     width: 30px;
     height: 30px;
     border: 0px;
@@ -3487,11 +3577,6 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     z-index: 1 !important; /* under the gamepad editing central panel */
 }
 
-#gamepad-settings-panel.has-buttons {
-    height: auto;
-    padding-bottom: 50px !important;
-}
-
 #gamepad-profile-config {
     font-size: 16px;
     /* background: magenta; */
@@ -3547,36 +3632,6 @@ BODY.desktop-ui #gamepad-profile-config {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-#gamepad-settings-panel .bottom-buttons {
-    position: absolute;
-    bottom: 0px;
-    left: 0px;
-    /* background-color: lime; */
-    width: calc(100% - 15px);
-    height: 50px;
-    padding-top: 5px;
-    padding-left: 5px;
-    padding-right: 15px;
-    display: none;
-}
-
-#gamepad-settings-panel.has-buttons .bottom-buttons {
-    display: block;
-}
-
-#gamepad-settings-panel .bottom-buttons BUTTON {
-    line-height: 30px;
-    padding: 5px 20px;
-    border-radius: 5px;
-    border: 0px;
-    background-color: #f000d0;
-    font-size: 15px;
-    margin: 0px 0px 0px 5px;
-    float: right;
-    height: 40px;
-    font-weight: bold;
-} 
 
 BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON {
     line-height: 20px;
@@ -3669,3 +3724,91 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
     text-align: center;
 }
 
+#gamepad-buttons-panel BUTTON {
+    line-height: 30px;
+    padding: 5px 20px;
+    border-radius: 5px;
+    border: 0px;
+    background-color: #f000d0;
+    font-size: 15px;
+    margin: 0px 0px 0px 5px;
+    float: right;
+    height: 40px;
+    font-weight: bold;
+} 
+
+#add-button-btn {
+    width: 40px;
+    background-image: url('/static/icon-plus.png');
+    background-size: 40px;
+    background-repeat: no-repeat;
+}
+
+#input-controller-selection {
+    height: 40px;
+    margin-bottom: 5px;
+    /* margin-top: 5px; */
+    width: calc(100% - 45px);
+}
+
+#input-controller-selection span {
+    display: block;
+    height: 45px;
+    width: 60px;
+    float: left;
+    margin-right: 5px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    background-color: #7166cf;
+    border-radius: 5px 5px 0px 0px;
+}
+
+#input-controller-selection span.disabled {
+    opacity: 0.25;
+    background-color: transparent;
+    filter: blur(1.5px);
+}
+
+#input-controller-selection span.editing {
+    background-color: #3A3376;
+    height: 50px;
+    border-radius: 5px 5px 0px 0px;
+}
+
+#input-controller-config {
+    background-color: #3A3376;
+    padding: 5px 5px 0px 5px;
+    border-radius: 0px 0px 5px 5px;
+    position: relative;
+}
+
+
+#input-controller-selection span.touch {
+    background-image: url(/static/touch-input.png);
+    background-size: 100px;
+    background-position: 8px 6px;
+}
+
+#input-controller-selection span.touch.enabled {
+    background-position: -48px 6px; /* green */
+}
+
+#input-controller-selection span.keyboard {
+    background-image: url(/static/keyboard.png);
+    background-size: 119px;
+    background-position: 8px 12px;
+}
+
+#input-controller-selection span.keyboard.enabled {
+    background-position: -66px 12px;
+}
+
+#input-controller-selection span.gamepad {
+    background-image: url(/static/gamepad.png);
+    background-size: 180px;
+    background-position: 5px 4px;
+}
+
+#input-controller-selection span.gamepad.enabled {
+    background-position: -55px 4px;
+}

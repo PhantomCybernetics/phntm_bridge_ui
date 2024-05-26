@@ -770,23 +770,23 @@ export class PhntmBridgeClient extends EventTarget {
         //     WebRTC_Negotiate(robot_data['id_robot']);
         // }
 
-        if (robot_data['kb_drivers'] || robot_data['kb_defaults']) {
-            let drivers = robot_data['kb_drivers'];
-            let defaults = robot_data['kb_defaults'];
-            this.emit('kb_config', drivers, defaults);
+        if (robot_data['input_drivers'] || robot_data['input_defaults']) {
+            let drivers = robot_data['input_drivers'];
+            let defaults = robot_data['input_defaults'];
+            this.emit('input_config', drivers, defaults);
         }
 
-        if (robot_data['gp_drivers'] || robot_data['gp_defaults']) {
-            let drivers =  robot_data['gp_drivers'];
-            let defaults = robot_data['gp_defaults'];
-            this.emit('gp_config', drivers, defaults);
-        }
+        // if (robot_data['gp_drivers'] || robot_data['gp_defaults']) {
+        //     let drivers =  robot_data['gp_drivers'];
+        //     let defaults = robot_data['gp_defaults'];
+        //     this.emit('gp_config', drivers, defaults);
+        // }
 
-        if (robot_data['touch_drivers'] || robot_data['touch_defaults']) {
-            let drivers =  robot_data['touch_drivers'];
-            let defaults = robot_data['touch_defaults'];
-            this.emit('touch_config', drivers, defaults);
-        }
+        // if (robot_data['touch_drivers'] || robot_data['touch_defaults']) {
+        //     let drivers =  robot_data['touch_drivers'];
+        //     let defaults = robot_data['touch_defaults'];
+        //     this.emit('touch_config', drivers, defaults);
+        // }
 
         if (robot_data['read_data_channels']) {
             robot_data['read_data_channels'].forEach((topic_data)=>{
