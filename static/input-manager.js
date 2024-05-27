@@ -1323,12 +1323,17 @@ export class InputManager {
 
             let axis = driver.axes[i_axis];
 
-            axis.raw_val_el.html(axis.raw.toFixed(2));
+            if (axis.raw !== null && axis.raw !== undefined)
+                axis.raw_val_el.html(axis.raw.toFixed(2));
+            else 
+                axis.raw_val_el.html('0.00');
 
             if (!axis.driver_axis)
                 continue;
+            
+            if (axis.val !== null && axis.val !== undefined)
+                axis.out_val_el.html(axis.val.toFixed(2));
 
-            axis.out_val_el.html(axis.val.toFixed(2));
             if (axis.live) {
                 axis.out_val_el.addClass('live');
             } else {
@@ -1353,18 +1358,18 @@ export class InputManager {
             if (axis.dead_val === undefined) // unset on min/max change
                 axis.dead_val = (axis.dead_min+axis.dead_max) / 2.0;
 
-            if (axis.raw === null) {
-                axis.raw = axis.dead_val; //null => assign dead
-            }
-
             if (!axis.driver_axis)
                 continue;
+        
+            let raw = axis.raw;
+            if (raw === null || raw === undefined)
+                raw = axis.dead_val; //null => assign dead;
 
-            let out = axis.raw; 
+            let out = raw; 
             
-            let out_unscaled = axis.raw;
+            let out_unscaled = raw;
             let live = true;
-            if (axis.raw > axis.dead_min && axis.raw < axis.dead_max) {
+            if (raw > axis.dead_min && raw < axis.dead_max) {
                 live = false;
                 out = axis.dead_val;
                 out_unscaled = axis.dead_val;
@@ -1627,10 +1632,10 @@ export class InputManager {
                         for (let i = 0; i < gp.axes.length; i++) {
                             let read_val = gp.axes[i];
                             if (driver.axes[i].needs_reset) {  
-                                if (read_val != 0.0) { // wait for first non-zero signal
+                                if (read_val != 0.0) { // wait for first non-zero signal because some gamepads are weird
                                     delete driver.axes[i].needs_reset;
                                     driver.axes[i].raw = read_val;
-                                    console.log('GP axis '+i+'; reset val='+read_val)
+                                    // console.log('GP axis '+i+'; reset val='+read_val)
                                 } else {
                                     driver.axes[i].raw = null;
                                 }
