@@ -18,13 +18,14 @@ export class TwistInputDriver extends InputDriver {
     }
 
     set_config(cfg) {
-        super.set_config(cfg);
-
+       
         if (cfg.stamped) {
             this.msg_type = 'geometry_msgs/msg/TwistStamped';
         } else {
             this.msg_type = 'geometry_msgs/msg/Twist';
         }
+
+        super.set_config(cfg);
     }
 
     get_config() {
@@ -53,8 +54,8 @@ export class TwistInputDriver extends InputDriver {
             that.msg_type = $(ev.target).val();
             console.log('Driver msg type is: '+that.msg_type);
             that.setup_writer();
-            that.gamepad_controller.check_profile_saved(that.gamepad_controller.current_gamepad, that.gamepad_controller.current_gamepad.current_profile);
-            that.gamepad_controller.make_profile_config_ui(); // redraw
+            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
+            that.input_manager.make_profile_config_ui(); // redraw
         });
 
         lines.push(line_msg_type);
@@ -67,7 +68,7 @@ export class TwistInputDriver extends InputDriver {
             that.output_topic = $(ev.target).val();
             console.log('Driver output topic is: '+that.output_topic);
             that.setup_writer();
-            that.gamepad_controller.check_profile_saved(that.gamepad_controller.current_gamepad, that.gamepad_controller.current_gamepad.current_profile);
+            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
         });
 
         lines.push(line_topic);

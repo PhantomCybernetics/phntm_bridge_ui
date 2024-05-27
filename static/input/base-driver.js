@@ -1,13 +1,13 @@
 export class InputDriver {
 
-    constructor(gamepad_controller) {
+    constructor(input_manager) {
         // this.id = id;
         // this.label = label;
         // this.config = null;
-        this.gamepad_controller = gamepad_controller;
+        this.input_manager = input_manager;
 
         this.output_topic = '/user_input'; //override this
-        this.client = gamepad_controller.client;
+        this.client = input_manager.client;
         this.output = null;
         this.topic_writer = null;
 
@@ -56,16 +56,15 @@ export class InputDriver {
         }
         let err = {};
         this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, null, err);
-        this.error_message = err.message;
-        this.handle_error_message();
+        this.handle_error_message(err.message);
     }
 
-    handle_error_message() {
-        if (this.error_message && this.error_label) {
+    handle_error_message(err_msg) {
+        if (err_msg && this.error_label) {
             this.error_label
-                .html(this.error_message)
+                .html(err_msg)
                 .css('display', 'block');
-        } else if (!this.error_message && this.error_label) {
+        } else if (!err_msg && this.error_label) {
             this.error_label
                 .empty()
                 .css('display', 'none');
@@ -82,7 +81,7 @@ export class InputDriver {
                 sec: sec,
                 nanosec: nanosec
             },
-            frame_id: 'gamepad'
+            frame_id: 'user_input'
         }
     }
 
@@ -104,7 +103,7 @@ export class InputDriver {
             that.output_topic = $(ev.target).val();
             // console.log('Driver output topic is: '+that.output_topic);
             that.setup_writer();
-            that.gamepad_controller.check_profile_saved(that.gamepad_controller.current_gamepad, that.gamepad_controller.current_gamepad.current_profile);
+            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
         });
 
         lines.push(line_topic);
@@ -135,8 +134,7 @@ export class InputDriver {
             return;
         }
         if (!this.topic_writer.send(this.output)) { // true when ready and written
-            // this.display_output(msg);
-            console.error('Gamepad driver writer failed writing into topic (warming up?)');
+            console.warn('Input driver\'s topic writer failed writing (warming up?)');
         }
     }
 }

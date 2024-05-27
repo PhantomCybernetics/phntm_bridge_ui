@@ -2572,8 +2572,8 @@ BODY.desktop-ui #introspection_state:hover,
 #touch_ui_status {
     height: 55px;
     background-image: url(/static/touch-input.png);
-    background-size: 105px;
-    background-position: 9px 9px;
+    background-size: 165px;
+    background-position: 11px 9px;
 }
 
 #gamepad.connected #gamepad_status,
@@ -2594,7 +2594,7 @@ BODY.desktop-ui #touch_ui_status:hover,
 }
 
 #touch_ui.enabled #touch_ui_status {
-    background-position: -50px 9px;
+    background-position: -47px 9px;
     filter: grayscale(0) opacity(1);
 }
 
@@ -2854,7 +2854,7 @@ BODY.desktop-ui #gamepad_settings .tab {
     /* border-radius: 0px 0px 5px 5px; */
     /* background-color: rgb(233 15 233); */
     clear: left;
-    max-height: calc(100dvh - 175px);
+    max-height: calc(100dvh - 220px);
     overflow-x: hidden;
     overflow-y: scroll;
 }
@@ -2875,7 +2875,7 @@ BODY.desktop-ui #gamepad_settings .tab {
 }
 
 BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
-    margin-bottom: 20px;
+    /* margin-bottom: 20px; */
 }
 
 #gamepad_settings .axis-val {
@@ -2974,7 +2974,11 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 
 #gamepad_settings .axis-config-details.open {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 7px;
+}
+
+#gamepad_settings .axis-row:last-of-type .axis-config-details.open {
+    margin-bottom: 0px;
 }
 
 /* #gamepad_settings .axis-val.active {
@@ -3785,22 +3789,30 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
 
 #input-controller-selection span.touch {
     background-image: url(/static/touch-input.png);
-    background-size: 100px;
-    background-position: 8px 6px;
+    background-size: 160px;
+    background-position: 11px 6px;
 }
 
 #input-controller-selection span.touch.enabled {
-    background-position: -48px 6px; /* green */
+    background-position: -46px 6px; /* green */
+}
+
+#input-controller-selection span.touch.transmitting {
+    background-position: -105px 6px !important; /* green */
 }
 
 #input-controller-selection span.keyboard {
     background-image: url(/static/keyboard.png);
-    background-size: 119px;
+    background-size: 182px;
     background-position: 8px 12px;
 }
 
 #input-controller-selection span.keyboard.enabled {
-    background-position: -66px 12px;
+    background-position: -64px 12px;
+}
+
+#input-controller-selection span.keyboard.transmitting {
+    background-position: -130px 12px !important;
 }
 
 #input-controller-selection span.gamepad {
@@ -3811,4 +3823,8 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
 
 #input-controller-selection span.gamepad.enabled {
     background-position: -55px 4px;
+}
+
+#input-controller-selection span.gamepad.transmitting {
+    background-position: -116px 4px !important;
 }

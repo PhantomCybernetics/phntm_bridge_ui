@@ -1,3 +1,4 @@
+import { cos } from 'three/examples/jsm/nodes/Nodes.js';
 import { isIOS, lerp, isTouchDevice } from './lib.js';
 import { Handle_Shortcut } from '/static/input-drivers.js';
 import * as THREE from 'three';
@@ -152,36 +153,45 @@ export class InputManager {
         this.make_ui();
     }
 
-    set_config(enabled_drivers, defaults) {
-        console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}] defaults:`, defaults);
+    set_config(enabled_drivers, robot_defaults) {
+        console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}]:`, robot_defaults);
 
         this.enabled_drivers = enabled_drivers;
 
-        this.robot_defaults = defaults;
+        this.robot_defaults = robot_defaults;
         
+        let user_defaults = localStorage.getItem('user-input-config:'+this.client.id_robot);
+        this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
+
+        console.log('Loaded user input defaults: ', this.user_defaults);
+
         if (!this.profiles) {
             this.profiles = {};
-            
-            Object.keys(defaults).forEach((id_profile)=>{
+
+            // robot defined profiles
+            Object.keys(robot_defaults).forEach((id_profile)=>{
                 if (this.current_profile === null)
                     this.current_profile = id_profile; // 1st is default
                 if (!this.profiles[id_profile]) {
-                    let label = defaults[id_profile].label ? defaults[id_profile].label : id_profile;
-                    this.profiles[id_profile] = label;
+                    let label = robot_defaults[id_profile].label ? robot_defaults[id_profile].label : id_profile;
+                    this.profiles[id_profile] = {
+                        label: label,
+                        saved: true,
+                    };
                 }
             });
 
-            // override from cookies
-            let local_profiles = localStorage.getItem('user-input-profiles:'+this.client.id_robot);
-            this.local_profiles = local_profiles ? JSON.parse(local_profiles) : {};
-            console.log('Loaded local_profiles', this.local_profiles);
-            Object.keys(this.local_profiles).forEach((id_profile)=>{
+            // override with local cookies
+            Object.keys(this.user_defaults).forEach((id_profile)=>{
                 if (!this.profiles[id_profile]) {
-                    let label = this.local_profiles[id_profile].label ? this.local_profiles[id_profile].label : id_profile;
-                    this.profiles[id_profile] = label;
+                    let label = this.user_defaults[id_profile].label ? this.user_defaults[id_profile].label : id_profile;
+                    this.profiles[id_profile] = {
+                        label: label,
+                        saved: true,
+                    };
                 } else {
-                    if (this.local_profiles[id_profile].label) 
-                        this.profiles[id_profile] = this.local_profiles[id_profile].label;
+                    if (this.user_defaults[id_profile].label) 
+                        this.profiles[id_profile].label = this.user_defaults[id_profile].label;
                 }
             });
 
@@ -344,9 +354,7 @@ export class InputManager {
     }
 
     
-    check_profile_saved(c, id_profile, update_ui = true) {
-
-        console.log('Checking profile '+id_profile+' saved:', c);
+    check_controller_profile_saved(c, id_profile, update_ui = true) {
 
         let live_profile = c.profiles[id_profile];
         let saved_profile = live_profile.saved_state;
@@ -407,17 +415,28 @@ export class InputManager {
 
         if (!match && live_profile.saved) {
             live_profile.saved = false;
+            this.profiles[id_profile].saved = false;
+            console.log('Profile '+id_profile+' not saved');
             if (update_ui)
                 this.make_profile_selector_ui();
-            $('#gamepad-profile-unsaved-warn').css('display', 'block');
-            $('#save-gamepad-profile').removeClass('saved');
+           
         } else if (match && !live_profile.saved) {
             live_profile.saved = true;
+            if (!this.profiles[id_profile].saved) {
+                let all_saved = true;
+                Object.values(this.controllers).forEach((cc)=>{
+                    if (cc == c)
+                        return;
+                    if (!cc.profiles[id_profile].saved)
+                        all_saved = false;
+                });
+                this.profiles[id_profile].saved = all_saved;
+            }
+            console.log('Profile '+id_profile+' saved: '+this.profiles[id_profile].saved);
             if (update_ui)
                 this.make_profile_selector_ui();
 
-            $('#gamepad-profile-unsaved-warn').css('display', 'none');
-            $('#save-gamepad-profile').addClass('saved');
+          
         }
     }
 
@@ -428,9 +447,13 @@ export class InputManager {
         }
 
         if (!profile.driver_instances[profile.driver]) {
+
+            //init driver
             profile.driver_instances[profile.driver] = new this.registered_drivers[profile.driver](this);
             if (profile.default_driver_config && profile.default_driver_config[profile.driver]) {
                 profile.driver_instances[profile.driver].set_config(profile.default_driver_config[profile.driver]);
+            } else {
+                profile.driver_instances[profile.driver].set_config({}); // init writer
             }
 
             let driver = profile.driver_instances[profile.driver];
@@ -476,18 +499,26 @@ export class InputManager {
                 return new_axis;
             }
 
-            if (c.type == 'touch' || c.type == 'keyboard') {
+            if (c.type == 'touch') {
                 for (let i_axis = 0; i_axis < 4; i_axis++) {
                     let new_axis = make_axis(i_axis, 0.01);
                     if (new_axis) {
                         driver.axes.push(new_axis);
                     }
                 }
+            } else if (c.type == 'keyboard') {
+                // for (let i_axis = 0; i_axis < 4; i_axis++) {
+                //     let new_axis = make_axis(i_axis, 0.01);
+                //     if (new_axis) {
+                //         driver.axes.push(new_axis);
+                //     }
+                // }
             } else if (c.type == 'gamepad') {
                 const gp = navigator.getGamepads()[c.gamepad.index];
                 for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
                     let new_axis = make_axis(i_axis, 0.1); //default deadzone bigger than touch
                     if (new_axis) {
+                        new_axis.needs_reset = true; //waits for 1st non-zero signals
                         driver.axes.push(new_axis);
                     }
                 }
@@ -603,7 +634,7 @@ export class InputManager {
         localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
 
         this.set_saved_profile_state(c, id_profile);
-        this.check_profile_saved(c, id_profile);
+        this.check_controller_profile_saved(c, id_profile);
     }
 
     load_user_controller_profile_config(c, id_profile) {
@@ -648,8 +679,8 @@ export class InputManager {
         for (let i = 0; i < profile_ids.length; i++) {
             let id_profile = profile_ids[i];
             let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
-            // if (!this.current_gamepad.profiles[id_profile].saved)
-            //     label = label + ' (edited)';
+            if (!this.profiles[id_profile].saved)
+                 label = label + ' (edited)';
             profile_opts.push($('<option value="'+id_profile+'"' + (this.current_profile == id_profile ? ' selected' : '') + '>'+label+'</option>'));
         }
         profile_opts.push($('<option value="+">New profile...</option>'));
@@ -682,6 +713,12 @@ export class InputManager {
             //     that.current_gamepad.current_profile
             // );
         });
+
+        if (this.profiles[this.current_profile].saved) {
+            $('#gamepad_settings').removeClass('unsaved');
+        } else {
+            $('#gamepad_settings').addClass('unsaved');
+        }
     }
 
     make_profile_config_ui() {
@@ -766,7 +803,7 @@ export class InputManager {
                     profile.driver = val;
                     that.init_profile(profile);
                     profile.driver_instances[profile.driver].setup_writer();
-                    that.check_profile_saved(that.edited_controller, that.current_profile, false);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile, false);
                     that.make_ui();
                 })
                 lines.push(line_driver);
@@ -859,23 +896,41 @@ export class InputManager {
                 that.edit_controller(c);
                 icon.addClass('editing');
             })
-            if (c.enabled)
+            if (c.enabled && c.connected)
                 icon.addClass('enabled');
+            if (c.transmitting)
+                icon.addClass('transmitting');
             if (c == that.edited_controller)
                 icon.addClass('editing');
+
+            c.icon = icon;
+
+            that.update_controller_icon(c);
         });
 
+        // tease other controller types (blurred)
         if (types_connected.indexOf('touch') < 0 && isTouchDevice())
             icons.push($('<span class="touch disabled"></span>'));
-
         if (types_connected.indexOf('keyboard') < 0)
             icons.push($('<span class="keyboard disabled"></span>'));
-
         if (types_connected.indexOf('gamepad') < 0)
             icons.push($('<span class="gamepad disabled"></span>'));
 
         $('#input-controller-selection')
             .empty().append(icons);
+    }
+
+    update_controller_icon(c) {
+        if (!c.icon)
+            return;
+
+        if (c.transmitted_last_frame && !c.icon_transmitting) {
+            c.icon_transmitting = true;
+            c.icon.addClass('transmitting');
+        } else if (!c.transmitted_last_frame && c.icon_transmitting) {
+            c.icon_transmitting = false;
+            c.icon.removeClass('transmitting');
+        }
     }
 
     make_ui() {
@@ -1023,12 +1078,12 @@ export class InputManager {
                 dead_zone_min_inp.change((ev)=>{
                     axis.dead_min = parseFloat($(ev.target).val());
                     delete axis.dead_val;
-                    that.check_profile_saved(that.edited_controller, that.current_profile);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                 });
                 dead_zone_max_inp.change((ev)=>{
                     axis.dead_max = parseFloat($(ev.target).val());
                     delete axis.dead_val;
-                    that.check_profile_saved(that.edited_controller, that.current_profile);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                 });
 
                 dead_zone_el.appendTo(config_details_el);
@@ -1040,7 +1095,7 @@ export class InputManager {
                 offset_inp.focus((ev)=>{ev.target.select();});
                 offset_inp.change((ev)=>{
                     axis.offset = parseFloat($(ev.target).val());
-                    that.check_profile_saved(that.edited_controller, that.current_profile);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                 });
                 offset_inp.appendTo(offset_el);
                 offset_el.appendTo(config_details_el);
@@ -1052,7 +1107,7 @@ export class InputManager {
                 scale_inp.focus((ev)=>{ev.target.select();});
                 scale_inp.change((ev)=>{
                     axis.scale = parseFloat($(ev.target).val());
-                    that.check_profile_saved(that.edited_controller, that.current_profile);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                 });
                 scale_inp.appendTo(scale_el);
                 scale_el.appendTo(config_details_el);
@@ -1086,7 +1141,7 @@ export class InputManager {
                             mod_func_config_els.push(multiply_lerp_input_el);
                             multiply_lerp_input_inp.change((ev)=>{
                                 axis.scale_by_velocity_src = $(ev.target).val();
-                                that.check_profile_saved(that.edited_controller, that.current_profile);
+                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                             });
                             
                             // multiplier min
@@ -1098,7 +1153,7 @@ export class InputManager {
                             multiply_lerp_min_inp.val(axis.scale_by_velocity_mult_min.toFixed(1));
                             multiply_lerp_min_inp.change((ev)=>{
                                 axis.scale_by_velocity_mult_min = parseFloat($(ev.target).val());
-                                that.check_profile_saved(that.edited_controller, that.current_profile);
+                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                             });
                             multiply_lerp_min_inp.appendTo(multiply_lerp_min_el);
                             mod_func_config_els.push(multiply_lerp_min_el);
@@ -1113,7 +1168,7 @@ export class InputManager {
                             multiply_lerp_max_inp.val(axis.scale_by_velocity_mult_max.toFixed(1));
                             multiply_lerp_max_inp.change((ev)=>{
                                 axis.scale_by_velocity_mult_max = parseFloat($(ev.target).val());
-                                that.check_profile_saved(that.edited_controller, that.current_profile);
+                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                             });
                             multiply_lerp_max_inp.appendTo(multiply_lerp_max_el);
                             mod_func_config_els.push(multiply_lerp_max_el);
@@ -1128,7 +1183,7 @@ export class InputManager {
                         }
                         mod_func_cont.empty().append(mod_func_config_els).css('display', 'block');
                     } else {
-                        delete axis.mod_func; // check_profile_saved expecs undefined (not null)
+                        delete axis.mod_func; // check_controller_profile_saved expecs undefined (not null)
                         mod_func_cont.empty().css('display', 'none');
                     }
                     
@@ -1136,7 +1191,7 @@ export class InputManager {
                 set_mod_funct(axis.mod_func);
                 mod_func_inp.change((ev)=>{
                     set_mod_funct($(ev.target).val());
-                    that.check_profile_saved(that.edited_controller, that.current_profile);
+                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                 });
                 
 
@@ -1208,7 +1263,7 @@ export class InputManager {
                                 } else {
                                     row_el.addClass('unused');
                                 }
-                                that.check_profile_saved(that.edited_controller, that.current_profile);
+                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                             });
                     });
                     return;
@@ -1216,7 +1271,6 @@ export class InputManager {
                     cancel_copy();
                 }
 
-                console.log('axis '+axis.i+' assigned to ', id_axis_assigned);
                 if (id_axis_assigned) {
                     axis.driver_axis = id_axis_assigned;
                     
@@ -1229,7 +1283,7 @@ export class InputManager {
                     row_el.addClass('unused');
                 }
 
-                that.check_profile_saved(that.edited_controller, that.current_profile);
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
             });
 
             render_axis_config();
@@ -1296,13 +1350,18 @@ export class InputManager {
         for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
             let axis = driver.axes[i_axis];
            
-            if (!axis.driver_axis)
-                continue;
-
             if (axis.dead_val === undefined) // unset on min/max change
                 axis.dead_val = (axis.dead_min+axis.dead_max) / 2.0;
 
-            let out = axis.raw;
+            if (axis.raw === null) {
+                axis.raw = axis.dead_val; //null => assign dead
+            }
+
+            if (!axis.driver_axis)
+                continue;
+
+            let out = axis.raw; 
+            
             let out_unscaled = axis.raw;
             let live = true;
             if (axis.raw > axis.dead_min && axis.raw < axis.dead_max) {
@@ -1396,12 +1455,14 @@ export class InputManager {
                 profiles: null,
                 saved_profiles: null,
                 initiated: false, //this will wait for config
+                connected: true,
             };
             this.controllers[id_gamepad] = gamepad;
             // this.save_gamepad_was_once_connected();
 
         } else {
             this.controllers[id_gamepad].gamepad = ev.gamepad;
+            this.controllers[id_gamepad].connected = true;
             console.info('Gamepad already connected:', id_gamepad);
         }
 
@@ -1419,11 +1480,14 @@ export class InputManager {
 
             console.log('Gamepad disconnected '+ev.gamepad.id);
             this.controllers[ev.gamepad.id].gamepad = null;
+            this.controllers[ev.gamepad.id].connected = false;
 
-            if (this.edited_controller.id == ev.gamepad.id) {
-                this.edited_controller = null;
-                this.make_ui();
-            }
+            // if (this.edited_controller.id == ev.gamepad.id) {
+            //     // this.edited_controller = null;
+            //     this.make_ui();
+            // } else {
+            this.make_controller_icons();
+            // }
         }
 
     }
@@ -1436,6 +1500,7 @@ export class InputManager {
                 profiles: null,
                 saved_profiles: null,                
                 initiated: false, //this will wait for config
+                connected: false,
             };
             this.controllers['touch'] = touch_gamepad;
             this.init_controller(touch_gamepad);
@@ -1450,6 +1515,7 @@ export class InputManager {
                 profiles: null,
                 saved_profiles: null,
                 initiated: false, //this will wait for config
+                connected: true,
             };
             this.controllers['keyboard'] = kb;
             this.init_controller(kb);
@@ -1459,6 +1525,7 @@ export class InputManager {
     set_touch(state) {
         
         this.touch_gamepad_on = state;
+        this.controllers['touch'].connected = state;
 
         if (state) {
 
@@ -1469,6 +1536,9 @@ export class InputManager {
             this.init_controller(this.controllers['touch']);
 
         } else {
+
+
+            this.make_controller_icons();        
 
             // this.current_gamepad = null; // kills the loop
             // console.log('Gamepad touch mode off')
@@ -1544,23 +1614,46 @@ export class InputManager {
                     driver.axes[i].raw = 0.0;
                 }
 
-            } else if (c.gamepad) {
+            } else if (c.type == 'gamepad') {
+                
+                if (c.gamepad) {
+                    try {
+                        const gp = navigator.getGamepads()[c.gamepad.index];
+                        if (!gp) {
+                            console.error('Error reading gp '+c.gamepad.index);
+                            // this.loop_running = false;
+                            return;
+                        }
+                        for (let i = 0; i < gp.axes.length; i++) {
+                            let read_val = gp.axes[i];
+                            if (driver.axes[i].needs_reset) {  
+                                if (read_val != 0.0) { // wait for first non-zero signal
+                                    delete driver.axes[i].needs_reset;
+                                    driver.axes[i].raw = read_val;
+                                    console.log('GP axis '+i+'; reset val='+read_val)
+                                } else {
+                                    driver.axes[i].raw = null;
+                                }
+                            } else {
+                                driver.axes[i].raw = read_val;
+                            }
+                        }
     
-                const gp = navigator.getGamepads()[c.gamepad.index];
-                if (!gp) {
-                    console.error('Error reading gp '+c.gamepad.index);
-                    // this.loop_running = false;
-                    return;
+                    } catch (e) {
+                        console.error('Error reading gp axes; c.gp=', c.gamepad);
+                        console.log(e);
+                        return;
+                    }
+                } else {
+                    for (let i = 0; i < driver.axes.length; i++) {
+                        driver.axes[i].raw = null;
+                        driver.axes[i].needs_reset = true;
+                    }
                 }
-    
-                for (let i = 0; i < gp.axes.length; i++) {
-                    driver.axes[i].raw = gp.axes[i];
-                }
-    
             } else
                 return; //nothing to do for this controller atm
     
-            let axes_alive = this.process_axes_input(c);
+            let axes_alive = this.process_axes_input(c) && c.connected;
     
             if (!axes_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
                 if (c.cooldown_started === undefined) {
@@ -1573,20 +1666,21 @@ export class InputManager {
                 delete c.cooldown_started; // some axes alive => reset cooldown
             }
     
-            let c_transmitting = c.enabled && axes_alive && driver.can_transmit();
+            let transmitting = c.enabled && axes_alive && driver.can_transmit();
     
             driver.generate();
             
             if (this.edited_controller == c) {
-                driver.display_output(this.debug_output_panel, c_transmitting);
+                driver.display_output(this.debug_output_panel, transmitting);
             }
     
-            if (c_transmitting) {
+            c.transmitted_last_frame = transmitting;
+
+            if (transmitting) {
                 driver.transmit();
-                c.transmitted_last_frame = true;
-            } else {
-                c.transmitted_last_frame = false;
             }
+
+            that.update_controller_icon(c);
 
         });
 
