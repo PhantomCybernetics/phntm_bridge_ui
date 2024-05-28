@@ -30,8 +30,9 @@ export class InputManager {
         
         // this.enabled = false; 
         this.loop_running = false;
-        $('#gamepad_enabled').prop('checked', false);
-        this.status_icon = $('#gamepad_status');
+        this.controller_enabled_cb = $('#controller-enabled-cb');
+        this.controller_enabled_cb.prop('checked', false);
+        this.input_status_icon = $('#input-status-icon');
         this.debug_output_panel = $('#gamepad-output-panel');
 
         let that = this;
@@ -49,7 +50,7 @@ export class InputManager {
         // client.on('touch_config', (drivers, defaults)=>{ that.set_config('touch', drivers, defaults); });
         // client.on('kb_config', (drivers, defaults)=>{ that.set_config('kb', drivers, defaults); });
 
-        $('#gamepad_status').click(() => {
+        this.input_status_icon.click(() => {
             // if (!that.initiated)
             //     return; //wait 
             $('#keyboard').removeClass('open');
@@ -66,7 +67,7 @@ export class InputManager {
                     .unbind()
                     .click((ev)=>{
                         $(ev.target).unbind();
-                        $('#gamepad_status').click();
+                        that.input_status_icon.click();
                     })
             } else {
                 $('#gamepad').removeClass('open');
@@ -114,7 +115,7 @@ export class InputManager {
             $('#gamepad-settings-tab').click();
         });
 
-        $('#gamepad_enabled').change((ev) => {
+        this.controller_enabled_cb.change((ev) => {
             that.edited_controller.enabled = $(ev.target).prop('checked');
             that.save_user_controller_enabled(that.edited_controller);
             that.make_controller_icons();
@@ -888,6 +889,7 @@ export class InputManager {
         let that = this;
 
         let types_connected = [];
+        
         Object.values(this.controllers).forEach((c)=>{
             let icon = $('<span class="'+c.type+'"></span>');
             types_connected.push(c.type);
@@ -896,17 +898,15 @@ export class InputManager {
                 that.edit_controller(c);
                 icon.addClass('editing');
             })
-            if (c.enabled && c.connected)
-                icon.addClass('enabled');
-            if (c.transmitting)
-                icon.addClass('transmitting');
-            if (c == that.edited_controller)
-                icon.addClass('editing');
-
+            c.icon_editing = false;
+            c.icon_enabled = false;
+            c.icon_transmitting = false;
             c.icon = icon;
 
             that.update_controller_icon(c);
         });
+
+        that.update_input_status_icon();
 
         // tease other controller types (blurred)
         if (types_connected.indexOf('touch') < 0 && isTouchDevice())
@@ -924,6 +924,22 @@ export class InputManager {
         if (!c.icon)
             return;
 
+        if (c.enabled && c.connected && !c.icon_enabled) {
+            c.icon_enabled = true;
+            c.icon.addClass('enabled');
+        } else if ((!c.enabled || !c.connected) && c.icon_enabled) {
+            c.icon_enabled = false;
+            c.icon.removeClass('enabled');
+        }
+
+        if (c == this.edited_controller && !c.icon_editing) {
+            c.icon_editing = true;
+            c.icon.addClass('editing');
+        } else if (c != this.edited_controller && c.icon_editing) {
+            c.icon_editing = false;
+            c.icon.removeClass('editing');
+        }
+
         if (c.transmitted_last_frame && !c.icon_transmitting) {
             c.icon_transmitting = true;
             c.icon.addClass('transmitting');
@@ -931,6 +947,34 @@ export class InputManager {
             c.icon_transmitting = false;
             c.icon.removeClass('transmitting');
         }
+    }
+
+    update_input_status_icon() {
+        let something_enabled = false;
+        let something_transmitting = false;
+        Object.values(this.controllers).forEach((c)=>{
+            if (c.icon_enabled)
+                something_enabled = true;
+            if (c.icon_transmitting)
+                something_transmitting = true;
+        });
+
+        if (something_enabled && !this.input_status_icon_enabled) {
+            this.input_status_icon_enabled = true;
+            this.input_status_icon.addClass('enabled');
+        } else if (!something_enabled && this.input_status_icon_enabled) {
+            this.input_status_icon_enabled = false;
+            this.input_status_icon.removeClass('enabled');
+        }
+
+        if (something_transmitting && !this.input_status_icon_transmitting) {
+            this.input_status_icon_transmitting = true;
+            this.input_status_icon.addClass('transmitting');
+        } else if (!something_transmitting && this.input_status_icon_transmitting) {
+            this.input_status_icon_transmitting = false;
+            this.input_status_icon.removeClass('transmitting');
+        }
+
     }
 
     make_ui() {
@@ -953,7 +997,7 @@ export class InputManager {
             $('#gamepad-axes-panel').html('Waiting for controllers...');    
             this.debug_output_panel.html('{}');
             // $('#gamepad-profile-config').css('display', 'none');
-            $('#gamepad_enabled').attr('disabled', true);
+            this.controller_enabled_cb.attr('disabled', true);
             $('#gamepad-profile-unsaved-warn').css('display', 'none');
             $('#save-gamepad-profile').addClass('saved');
             return;
@@ -964,7 +1008,7 @@ export class InputManager {
         // $('#gamepad').addClass('connected');
         console.log('Editing controller is ', this.edited_controller);
 
-        $('#gamepad_enabled')
+        this.controller_enabled_cb
             .attr('disabled', false)
             .prop('checked', this.edited_controller.enabled);
 
@@ -1686,6 +1730,7 @@ export class InputManager {
             }
 
             that.update_controller_icon(c);
+            that.update_input_status_icon();
 
         });
 

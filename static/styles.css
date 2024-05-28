@@ -2506,44 +2506,8 @@ BODY.desktop-ui #introspection_state:hover,
     background-image: url(/static/discovery.svg);
 }
 
-#gamepad.connected #gamepad_status {
-
-}
-
-/* Portrait orientation */
-@media screen and (orientation: portrait) {
-    /* #fixed-right {
-        width: 120px;
-    } */
-    /* #keyboard {
-        display: none;
-    }
-    #gamepad {
-        display: none;
-    } */
-}
-
-#gamepad {
-    /* right: 61px; */
-    /* background-color: lime; */
-}
-
-#keyboard {
-    /* right: 122px; */
-    /* width: 60px; */
-    /* background-color: cyan; */
-    border-radius: 10px 10px 0px 0px;
-}
-
-#touch_ui {
-    /* right: 0px; */
-    /* width: 60px; */
-   /* background-color: yellow; */
-}
-
-#keyboard_status,
 #touch_ui_status,
-#gamepad_status {
+#input-status-icon {
     background-repeat: no-repeat;
     cursor: pointer;
     filter: grayscale(1) opacity(.2);
@@ -2558,15 +2522,20 @@ BODY.desktop-ui #introspection_state:hover,
     margin-left: 0;
 }
 
-#gamepad_status {
+#input-status-icon {
     height: 55px;
-    background-image: url(/static/gamepad.png);
+    background-image: url(/static/user-input.png);
     background-size: 197px;
-    background-position: 6px 7px;
+    background-position: 0px 0px;
+    filter: unset;
 }
 
-#gamepad_status.transmitting {
-    background-position: -126px 7px !important;
+#input-status-icon.enabled {
+    background-position: -68px 0px !important;
+}
+
+#input-status-icon.transmitting {
+    background-position: -136px 0px !important;
 }
 
 #touch_ui_status {
@@ -2576,18 +2545,6 @@ BODY.desktop-ui #introspection_state:hover,
     background-position: 11px 9px;
 }
 
-#gamepad.connected #gamepad_status,
-#keyboard.open #keyboard_status,
-BODY.desktop-ui #keyboard_status:hover,
-BODY.desktop-ui #gamepad_status:hover,
-BODY.desktop-ui #touch_ui_status:hover,
-#keyboard.enabled #keyboard_status {
-    filter: grayscale(0);
-}
-
-#gamepad.connected.enabled #gamepad_status {
-    background-position: -59px 7px;
-}
 
 #keyboard.enabled #keyboard_status {
     background-position: -70px 17px;
@@ -3195,7 +3152,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     display: none;
 }
 
-#gamepad_enabled {
+#controller-enabled-cb {
     top: -40px;
     position: absolute;
     /* float: left; */
