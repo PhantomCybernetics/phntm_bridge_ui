@@ -1677,8 +1677,6 @@ export class InputManager {
                         let gps = navigator.getGamepads();
                         let gp = c.gamepad ? gps[c.gamepad.index] : null;
                         if (!gp) {
-                            console.error('Error reading gp ', c.gamepad);
-                            // this.loop_running = false;
                             return;
                         }
                         for (let i = 0; i < gp.axes.length; i++) {
