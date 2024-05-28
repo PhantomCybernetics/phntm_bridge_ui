@@ -15,6 +15,7 @@ export class InputDriver {
         this.error_message = null;
 
         this.saved_state = null;
+        this.inp_topic = null;
     }
 
     set_config(cfg) { // from cookie, robot, etc
@@ -56,18 +57,23 @@ export class InputDriver {
         }
         let err = {};
         this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, null, err);
-        this.handle_error_message(err.message);
+        this.error_message = err.message;
+        this.handle_error_message();
     }
 
-    handle_error_message(err_msg) {
-        if (err_msg && this.error_label) {
+    handle_error_message() {
+        if (this.error_message && this.error_label) {
             this.error_label
-                .html(err_msg)
+                .html(this.error_message)
                 .css('display', 'block');
-        } else if (!err_msg && this.error_label) {
+            if (this.inp_topic)
+                this.inp_topic.addClass('error');
+        } else if (!this.error_message && this.error_label) {
             this.error_label
                 .empty()
                 .css('display', 'none');
+            if (this.inp_topic)
+                this.inp_topic.removeClass('error');
         }
     }
 
@@ -91,15 +97,15 @@ export class InputDriver {
 
         // one output topic by default
         let line_topic = $('<div class="line"><span class="label">Output topic:</span></div>');
-        let inp_topic = $('<input type="text" inputmode="url" autocomplete="off" value="' + this.output_topic + '"/>');
+        this.inp_topic = $('<input type="text" inputmode="url" autocomplete="off" value="' + this.output_topic + '"/>');
         let msg_type_hint = $('<span class="comment">'+this.msg_type+'</span>');
         this.error_label = $('<span class="driver-error"></span>');
         
-        inp_topic.appendTo(line_topic);
+        this.inp_topic.appendTo(line_topic);
         msg_type_hint.appendTo(line_topic);
     
         let that = this;
-        inp_topic.change((ev)=>{
+        this.inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val();
             // console.log('Driver output topic is: '+that.output_topic);
             that.setup_writer();

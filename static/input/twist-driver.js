@@ -62,9 +62,9 @@ export class TwistInputDriver extends InputDriver {
 
         // one output topic 
         let line_topic = $('<div class="line"><span class="label">Output topic:</span></div>');
-        let inp_topic = $('<input type="text" inputmode="url" autocomplete="off" value="' + this.output_topic + '"/>');
-        inp_topic.appendTo(line_topic);
-        inp_topic.change((ev)=>{
+        this.inp_topic = $('<input type="text" inputmode="url" autocomplete="off" value="' + this.output_topic + '"/>');
+        this.inp_topic.appendTo(line_topic);
+        this.inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val();
             console.log('Driver output topic is: '+that.output_topic);
             that.setup_writer();

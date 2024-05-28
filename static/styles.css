@@ -3586,12 +3586,19 @@ BODY.desktop-ui #gamepad-profile-config {
     padding-left: 5px !important;   
 }
 
+#gamepad-profile-config .line INPUT.error {
+    background-color: #be1e1e !important;
+}
+
 #gamepad_settings #connected-gamepad {
     line-height: 30px;
     white-space: nowrap;
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-left: 10px;
+    font-size: 16px;
+    color: #a3a0bd;
 }
 
 BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON {
@@ -3664,6 +3671,7 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
 #gamepad-settings-panel .line .comment {
     margin-left: 40%;
     margin-top: 5px;
+    margin-bottom: 5px;
     font-size: 12px;
     padding-left: 10px;
     display: block;
@@ -3683,6 +3691,7 @@ BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON#delete-gamepad-pr
     padding: 5px;
     font-size: 14px;
     text-align: center;
+    clear: both;
 }
 
 #gamepad-buttons-panel BUTTON {

@@ -802,7 +802,7 @@ export class InputManager {
                     let val = $(ev.target).val();
                     console.log('profile driver changed to '+val);
                     profile.driver = val;
-                    that.init_profile(profile);
+                    that.init_profile(that.edited_controller, profile);
                     profile.driver_instances[profile.driver].setup_writer();
                     that.check_controller_profile_saved(that.edited_controller, that.current_profile, false);
                     that.make_ui();
@@ -1667,9 +1667,10 @@ export class InputManager {
                 
                 if (c.gamepad) {
                     try {
-                        const gp = navigator.getGamepads()[c.gamepad.index];
+                        let gps = navigator.getGamepads();
+                        let gp = c.gamepad ? gps[c.gamepad.index] : null;
                         if (!gp) {
-                            console.error('Error reading gp '+c.gamepad.index);
+                            console.error('Error reading gp ', c.gamepad);
                             // this.loop_running = false;
                             return;
                         }
