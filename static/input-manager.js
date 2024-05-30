@@ -127,24 +127,88 @@ export class InputManager {
             // }
         });
 
+        let close_profile_menu = () => {
+            $('#profile-buttons').removeClass('open');
+            $('#input-manager-overlay')
+                .css('display', 'none')
+                .unbind();
+        }
+
+        this.editing_profile_basics = false;
         $('#profile-buttons > .icon, #profile-unsaved-warn').click((ev)=>{
+            if (that.editing_profile_basics) {
+                that.close_profile_edit();
+                return;
+            }
+
             if ($('#profile-buttons').hasClass('open')) {
-                $('#profile-buttons').removeClass('open');
+                close_profile_menu();
             } else {
                 $('#profile-buttons').addClass('open');
+                $('#input-manager-overlay')
+                    .css('display', 'block')
+                    .unbind()
+                    .click((ev_u)=>{
+                        close_profile_menu();
+                    });
+            }
+        });
+
+        $('#save-input-profile').click((ev)=>{
+            close_profile_menu();
+            that.save_user_gamepad_profile_config(that.edited_controller, that.current_profile);
+        });
+
+       
+        $('#edit-input-profile').click(()=>{
+            close_profile_menu();
+            $('#gamepad-settings-container').addClass('editing_profile_basics');
+            that.editing_profile_basics = true;
+            $('#input-profile-edit-label')
+                .val(that.profiles[that.current_profile].label)
+                .unbind()
+                .change((ev)=>{
+                    that.profiles[that.current_profile].label = $('#input-profile-edit-label').val();
+                    that.check_profile_basics_saved(that.current_profile, false);
+                    that.make_profile_selector_ui();
+                });
+            $('#input-profile-edit-id')
+                .val(that.current_profile)
+                .unbind()
+                .change((ev)=>{
+                    let new_id = $('#input-profile-edit-id').val();
+                    let old_id = that.current_profile;
+                    that.profiles[new_id] = that.profiles[old_id];
+                    that.profiles[new_id].id = new_id;
+                    delete that.profiles[old_id];
+                    that.current_profile = new_id;
+                    Object.values(that.controllers).forEach((c)=>{
+                        c.profiles[new_id] = c.profiles[old_id];
+                        delete c.profiles[old_id];
+                    });
+                    that.check_profile_basics_saved(that.current_profile, false);
+                    that.make_ui();
+                });
+        });
+
+        $('#delete-input-profile')
+        .click((ev)=>{
+            if ($(ev.target).hasClass('warn')) {
+                that.delete_current_profile();
+                $(ev.target).removeClass('warn');
+                close_profile_menu();
+                return;
+            } else {
+                $(ev.target).addClass('warn');
             }
         })
+        .blur((ev)=>{
+            $(ev.target).removeClass('warn');
+         });
 
-        // $('#gamepad_shortcuts_listen').click((ev) => {
-        //     if (!$('#gamepad_shortcuts_listen').hasClass('listening')) {
-        //         $('#gamepad_shortcuts_listen').addClass('listening');
-        //         that.editor_listening = true;
-        //         $('#gamepad_shortcuts_input').focus();
-        //     } else {
-        //         $('#gamepad_shortcuts_listen').removeClass('listening');
-        //         that.editor_listening = false;
-        //     }
-        // });
+        $('#input-profile-json').click((ev)=>{
+            that.copy_gamepad_profile_json(that.edited_controller, that.current_gamepad.current_profile);
+        });
 
         if (isTouchDevice())
             this.make_touch_gamepad();
@@ -152,6 +216,13 @@ export class InputManager {
         this.make_keyboard();
             
         this.make_ui();
+    }
+
+    close_profile_edit() {
+        $('#gamepad-settings-container').removeClass('editing_profile_basics');
+        this.editing_profile_basics = false;
+        $('#input-profile-edit-label').unbind();
+        $('#input-profile-edit-id').unbind();
     }
 
     set_config(enabled_drivers, robot_defaults) {
@@ -177,7 +248,11 @@ export class InputManager {
                     let label = robot_defaults[id_profile].label ? robot_defaults[id_profile].label : id_profile;
                     this.profiles[id_profile] = {
                         label: label,
+                        id: id_profile,
+                        id_saved: id_profile,
+                        label_saved: label,
                         saved: true,
+                        basics_saved: true,
                     };
                 }
             });
@@ -278,7 +353,7 @@ export class InputManager {
                 c.profiles[id_profile] = profile;
 
                 this.init_profile(c, profile);
-                this.set_saved_profile_state(c, id_profile);
+                this.set_saved_controller_profile_state(c, id_profile);
                 c.profiles[id_profile].saved = true;
 
                 // if (profile_default_cfg.default) { // default profile by robot
@@ -345,7 +420,7 @@ export class InputManager {
         return data;
     }
 
-    set_saved_profile_state(c, id_profile) {
+    set_saved_controller_profile_state(c, id_profile) {
         let profile = c.profiles[id_profile];
         let driver = profile.driver_instances[profile.driver];
         driver.set_saved_state();
@@ -354,6 +429,21 @@ export class InputManager {
         profile.saved_state = saved_data;
     }
 
+    check_profile_basics_saved(id_profile, update_ui = true) {
+        
+        let profile = this.profiles[id_profile];
+        function compare() {
+            if (profile.id != profile.id_saved)
+                return false;
+            if (profile.label != profile.label_saved)
+                return false;
+            return true;
+        }
+        profile.basics_saved = compare();
+
+        if (update_ui)
+            this.make_profile_selector_ui();
+    }
     
     check_controller_profile_saved(c, id_profile, update_ui = true) {
 
@@ -477,6 +567,7 @@ export class InputManager {
 
                 let new_axis = { 
                     i: i_axis,
+                    raw: null,
                     driver_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
                     dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
                     dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
@@ -500,6 +591,20 @@ export class InputManager {
                 return new_axis;
             }
 
+            function make_button(i_btn) {
+                let new_btn = { 
+                    i: i_btn,
+                    id_src: null, // id on gamepad
+                    src_label: null, // hr key name
+                    pressed: false,
+                    touched: false,
+                    raw: null,
+                    driver_btn: null,
+                    driver_axis: null,
+                }
+                return new_btn;
+            }
+
             if (c.type == 'touch') {
                 for (let i_axis = 0; i_axis < 4; i_axis++) {
                     let new_axis = make_axis(i_axis, 0.01);
@@ -516,11 +621,19 @@ export class InputManager {
                 // }
             } else if (c.type == 'gamepad') {
                 const gp = navigator.getGamepads()[c.gamepad.index];
+                console.log('Making axes & buttons for gamepad', c.gamepad);
                 for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
                     let new_axis = make_axis(i_axis, 0.1); //default deadzone bigger than touch
                     if (new_axis) {
                         new_axis.needs_reset = true; //waits for 1st non-zero signals
                         driver.axes.push(new_axis);
+                    }
+                }
+                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
+                    let new_button = make_button(i_btn);
+                    if (new_button) {
+                        // new_button.needs_reset = true; //waits for 1st non-zero signals
+                        driver.buttons.push(new_button);
                     }
                 }
             }
@@ -634,7 +747,7 @@ export class InputManager {
         console.log('saving custom_profile_ids', custom_profile_ids); 
         localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
 
-        this.set_saved_profile_state(c, id_profile);
+        this.set_saved_controller_profile_state(c, id_profile);
         this.check_controller_profile_saved(c, id_profile);
     }
 
@@ -680,20 +793,24 @@ export class InputManager {
         for (let i = 0; i < profile_ids.length; i++) {
             let id_profile = profile_ids[i];
             let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
-            if (!this.profiles[id_profile].saved)
+            if (!this.profiles[id_profile].saved || !this.profiles[id_profile].basics_saved)
                  label = label + ' (edited)';
             profile_opts.push($('<option value="'+id_profile+'"' + (this.current_profile == id_profile ? ' selected' : '') + '>'+label+'</option>'));
         }
         profile_opts.push($('<option value="+">New profile...</option>'));
-        $('#gamepad-profile-select').empty().attr('disabled', false).append(profile_opts);
+        $('#input-profile-select').empty().attr('disabled', false).append(profile_opts);
         
-        $('#gamepad-profile-select').unbind().change((ev)=>{
+        $('#input-profile-select').unbind().change((ev)=>{
             let val = $(ev.target).val()
             console.log('Selected profile val '+val);
+            if (that.editing_profile_basics) {
+                that.close_profile_edit();
+            }
             // let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
             if (val != '+') {
                 let current_profile = that.profiles[that.current_profile];
-                current_profile.scroll_offset = $('#gamepad-axes-panel').scrollTop();
+                // current_profile.axes_scroll_offset = $('#gamepad-axes-panel').scrollTop();
+                // current_profile.buttons_scroll_offset = $('#gamepad-buttons-panel').scrollTop();
                 that.current_profile = $(ev.target).val();
                 that.make_ui();
             } else {
@@ -715,14 +832,14 @@ export class InputManager {
             // );
         });
 
-        if (this.profiles[this.current_profile].saved) {
+        if (this.profiles[this.current_profile].saved && this.profiles[this.current_profile].basics_saved) {
             $('#gamepad_settings').removeClass('unsaved');
         } else {
             $('#gamepad_settings').addClass('unsaved');
         }
     }
 
-    make_profile_config_ui() {
+    make_controller_config_ui() {
 
         let that = this;
 
@@ -828,54 +945,7 @@ export class InputManager {
             }
 
             $('#gamepad-profile-config').empty().append(lines);            
-        }             
-
-        $('#delete-gamepad-profile')
-            .unbind()
-            .click((ev)=>{
-                if ($(ev.target).hasClass('warn')) {
-                    that.delete_current_profile();
-                    $(ev.target).removeClass('warn');
-                    return;
-                } else {
-                    $(ev.target).addClass('warn');
-                }
-            })
-            .blur((ev)=>{
-                $(ev.target).removeClass('warn');
-            });
-
-        $('#save-gamepad-profile')
-            .unbind()
-            .click((ev)=>{
-                that.save_user_gamepad_profile_config(that.edited_controller, that.current_profile);
-            });
-
-        $('#gamepad-profile-json')
-            .unbind()
-            .click((ev)=>{
-                that.copy_gamepad_profile_json(that.edited_controller, that.current_gamepad.current_profile);
-            });
-    }
-
-    make_buttons_ui() {
-
-        // let touch_buttons = $('<div id="touch-buttons"></div>');
-        // let bottom_buttons = $('<div id="bottom-buttons"></div>');
-
-        let btn_els = [];
-
-        let add_btn = $('<button id="add-button-btn"></button>')
-        add_btn.click((ev)=>{
-
-        });
-        btn_els.push(add_btn);
-
-        if (this.current_gamepad) {
-
         }
-
-        $('#gamepad-buttons-panel').empty().append(btn_els);
     }
 
     edit_controller(c) {
@@ -884,11 +954,11 @@ export class InputManager {
         this.make_ui();
     }
 
-    collect_profiles() {
-        Object.values(this.controllers).forEach(c=>{
+    // collect_profiles() {
+    //     Object.values(this.controllers).forEach(c=>{
 
-        });
-    }
+    //     });
+    // }
 
     make_controller_icons() {
         let icons = [];
@@ -997,8 +1067,7 @@ export class InputManager {
 
         this.make_controller_icons();
 
-        this.make_profile_config_ui();
-        this.make_buttons_ui();
+        this.make_controller_config_ui();
 
         if (!this.edited_controller || !this.enabled_drivers || !this.current_profile) {
             $('#gamepad-axes-panel').html('Waiting for controllers...');    
@@ -1023,7 +1092,7 @@ export class InputManager {
 
         let profile = this.edited_controller.profiles[this.current_profile];
 
-        if (profile.saved) {
+        if (profile.saved && profile.basics_saved) {
             $('#gamepad-profile-unsaved-warn').css('display', 'none');
             $('#save-gamepad-profile').addClass('saved');
         } else {
@@ -1032,6 +1101,268 @@ export class InputManager {
         }
 
         let driver = profile.driver_instances[profile.driver];
+        this.make_axes_ui(driver);
+        this.make_buttons_ui(driver);
+    }
+
+    prevent_context_menu(ev) {
+        console.log('contex cancelled', ev.target);
+        ev.preventDefault();
+        ev.stopPropagation();
+    };
+
+    render_assign_button_input(driver, axis) {
+        let btn_el = $('<div class="config-row"><span class="label">Trigger button:</span></div>');
+        let btn_inp = $('<span class="btn-input">'+(axis.src_label?axis.src_label:'n/a')+'</span>');
+        if (axis.id_src!==null)
+            btn_inp.addClass('assigned');
+    
+        // btn_inp.html('N/A');
+
+        let close_listening = () => {
+            btn_inp.removeClass('listening');
+            btn_inp.html('listening...');
+            btn_inp.html(axis.src_label!==null?axis.src_label:'n/a');
+            if (axis.id_src!==null)
+                btn_inp.addClass('assigned');
+            $('#input-manager-overlay').unbind().css('display', 'none');
+        }
+        btn_inp.click(()=>{
+            if (!btn_inp.hasClass('listening')) {
+                btn_inp.removeClass('assigned').addClass('listening');
+                btn_inp.html('Press key...');
+                driver.on_button_press = (btn_id) => {
+                    axis.id_src = btn_id;
+                    axis.src_label = 'B'+btn_id;
+                    console.log('assigned ', btn_id);
+                    close_listening();
+                    delete driver.on_button_press;
+                };
+                $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
+                    close_listening();
+                });
+            } else {
+                close_listening();
+            }
+        });
+        // btn_inp.focus((ev)=>{ev.target.select();});
+        // offset_inp.change((ev)=>{
+        //     axis.offset = parseFloat($(ev.target).val());
+        //     that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        // });
+        btn_inp.appendTo(btn_el);
+        return btn_el;
+    }
+
+    render_axis_config (driver, axis, button_source = null) {
+    
+        let that = this;
+
+        axis.config_details_el.empty();
+        let driver_axis = axis.driver_axis;
+
+        if (!driver_axis) {
+            axis.conf_toggle_el.removeClass('open')
+            axis.config_details_el.removeClass('open')
+            return; 
+        }
+
+        // input offset
+        if (button_source) {
+            axis.config_details_el.append(this.render_assign_button_input(driver, axis));
+        }
+        
+        // let default_axis_conf = this.current_gamepad.current_profile[driver_axis];
+
+        // dead zone
+        let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
+        let dead_zone_wrapper_el = $('<div class="config-row2"></div>');
+        let dead_zone_min_inp = $('<input type="text" class="inp-val inp-val2"/>');
+        
+        dead_zone_min_inp.val(axis.dead_min.toFixed(2));
+        let dead_zone_max_label = $('<span class="label2">to</span>');
+        let dead_zone_max_inp = $('<input type="text" class="inp-val"/>');
+        dead_zone_max_inp.val(axis.dead_max.toFixed(2));
+        dead_zone_min_inp.appendTo(dead_zone_wrapper_el);
+        dead_zone_max_label.appendTo(dead_zone_wrapper_el);
+        dead_zone_max_inp.appendTo(dead_zone_wrapper_el);
+        dead_zone_wrapper_el.appendTo(dead_zone_el)
+
+        dead_zone_min_inp.focus((ev)=>{ev.target.select();});
+        dead_zone_max_inp.focus((ev)=>{ev.target.select();});
+
+        dead_zone_min_inp.change((ev)=>{
+            axis.dead_min = parseFloat($(ev.target).val());
+            delete axis.dead_val;
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        dead_zone_max_inp.change((ev)=>{
+            axis.dead_max = parseFloat($(ev.target).val());
+            delete axis.dead_val;
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+
+        dead_zone_el.appendTo(axis.config_details_el);
+
+        // input offset
+        let offset_el = $('<div class="config-row"><span class="label">Offset input:</span></div>');
+        let offset_inp = $('<input type="text" class="inp-val"/>');
+        offset_inp.val(axis.offset.toFixed(1));
+        offset_inp.focus((ev)=>{ev.target.select();});
+        offset_inp.change((ev)=>{
+            axis.offset = parseFloat($(ev.target).val());
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        offset_inp.appendTo(offset_el);
+        offset_el.appendTo(axis.config_details_el);
+
+        // input scale
+        let scale_el = $('<div class="config-row"><span class="label">Scale input:</span></div>');
+        let scale_inp = $('<input type="text" class="inp-val"/>');
+        scale_inp.val(axis.scale.toFixed(1));
+        scale_inp.focus((ev)=>{ev.target.select();});
+        scale_inp.change((ev)=>{
+            axis.scale = parseFloat($(ev.target).val());
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        scale_inp.appendTo(scale_el);
+        scale_el.appendTo(axis.config_details_el);
+
+        // modifier selection
+        let mod_func_el = $('<div class="config-row"><span class="label">Modifier:</span></div>');
+        let mod_func_opts = [ '<option value="">None</option>' ];
+        mod_func_opts.push('<option value="scale_by_velocity" '+(axis.mod_func=='scale_by_velocity'?' selected':'')+'>Scale by velocity</option>');  
+        let mod_func_inp = $('<select>'+mod_func_opts.join('')+'</select>');
+        mod_func_inp.appendTo(mod_func_el);
+        mod_func_el.appendTo(axis.config_details_el);
+        let mod_func_cont = $('<div></div>');
+        mod_func_cont.appendTo(axis.config_details_el);
+        
+        let set_mod_funct = (mod_func) => {
+            if (mod_func) {
+                axis.mod_func = mod_func;
+                let mod_func_config_els = [];
+                if (mod_func == 'scale_by_velocity') {
+
+                    let multiply_lerp_input_el = $('<div class="config-row"><span class="label sublabel">Velocity source:</span></div>');
+                    let multiply_lerp_input_opts = [ '<option value="">Select axis</option>' ];
+
+                    let dri_axes = driver.get_axes();
+                    let dri_axes_ids = Object.keys(dri_axes);
+                    for (let j = 0; j < dri_axes_ids.length; j++) {
+                        let id_axis = dri_axes_ids[j];
+                        multiply_lerp_input_opts.push('<option value="'+id_axis+'"' + (axis.scale_by_velocity_src == id_axis ? ' selected':'') +'>'+dri_axes[id_axis]+'</option>');
+                    }
+                    
+                    let multiply_lerp_input_inp = $('<select>'+multiply_lerp_input_opts.join('')+'</select>');
+                    multiply_lerp_input_inp.appendTo(multiply_lerp_input_el);
+                    mod_func_config_els.push(multiply_lerp_input_el);
+                    multiply_lerp_input_inp.change((ev)=>{
+                        axis.scale_by_velocity_src = $(ev.target).val();
+                        that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                    });
+                    
+                    // multiplier min
+                    let multiply_lerp_min_el = $('<div class="config-row"><span class="label sublabel">Slow multiplier:</span></div>');
+                    let multiply_lerp_min_inp = $('<input type="text" class="inp-val"/>');
+                    multiply_lerp_min_inp.focus((ev)=>{ev.target.select();});
+                    if (axis.scale_by_velocity_mult_min === undefined)
+                        axis.scale_by_velocity_mult_min = 1.0;
+                    multiply_lerp_min_inp.val(axis.scale_by_velocity_mult_min.toFixed(1));
+                    multiply_lerp_min_inp.change((ev)=>{
+                        axis.scale_by_velocity_mult_min = parseFloat($(ev.target).val());
+                        that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                    });
+                    multiply_lerp_min_inp.appendTo(multiply_lerp_min_el);
+                    mod_func_config_els.push(multiply_lerp_min_el);
+                    
+
+                    // multiplier max
+                    let multiply_lerp_max_el = $('<div class="config-row"><span class="label sublabel">Fast multiplier:</span></div>');
+                    let multiply_lerp_max_inp = $('<input type="text" class="inp-val"/>');
+                    multiply_lerp_max_inp.focus((ev)=>{ev.target.select();});
+                    if (axis.scale_by_velocity_mult_max === undefined)
+                        axis.scale_by_velocity_mult_max = 1.0;
+                    multiply_lerp_max_inp.val(axis.scale_by_velocity_mult_max.toFixed(1));
+                    multiply_lerp_max_inp.change((ev)=>{
+                        axis.scale_by_velocity_mult_max = parseFloat($(ev.target).val());
+                        that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                    });
+                    multiply_lerp_max_inp.appendTo(multiply_lerp_max_el);
+                    mod_func_config_els.push(multiply_lerp_max_el);
+
+                    if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
+                        multiply_lerp_min_inp.attr('inputmode', 'numeric');
+                        multiply_lerp_max_inp.attr('inputmode', 'numeric');
+                    }
+                    multiply_lerp_min_inp.on('contextmenu', that.prevent_context_menu);
+                    multiply_lerp_max_inp.on('contextmenu', that.prevent_context_menu);
+
+                }
+                mod_func_cont.empty().append(mod_func_config_els).css('display', 'block');
+            } else {
+                delete axis.mod_func; // check_controller_profile_saved expecs undefined (not null)
+                mod_func_cont.empty().css('display', 'none');
+            }
+            
+        }
+        set_mod_funct(axis.mod_func);
+        mod_func_inp.change((ev)=>{
+            set_mod_funct($(ev.target).val());
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        
+
+        if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
+            dead_zone_min_inp.attr('inputmode', 'numeric');
+            dead_zone_max_inp.attr('inputmode', 'numeric');
+            offset_inp.attr('inputmode', 'numeric');
+            scale_inp.attr('inputmode', 'numeric');
+        }
+
+        dead_zone_min_inp.on('contextmenu', that.prevent_context_menu);
+        dead_zone_max_inp.on('contextmenu', that.prevent_context_menu);
+        offset_inp.on('contextmenu', that.prevent_context_menu);
+        scale_inp.on('contextmenu', that.prevent_context_menu);
+
+    } 
+
+    render_driver_button_config (driver, btn) {
+    
+        let that = this;
+
+        btn.config_details_el.empty();
+        // let driver_axis = axis.driver_axis;
+
+        if (!btn.driver_btn) {
+            btn.conf_toggle_el.removeClass('open')
+            btn.config_details_el.removeClass('open')
+            return; 
+        }
+
+        btn.config_details_el.append(this.render_assign_button_input(driver, btn));
+
+        // modifier selection
+        let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
+        let trigger_opts = [
+            '<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>',
+            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>'
+        ];
+        
+        let trigger_inp = $('<select>'+trigger_opts.join('')+'</select>');
+        trigger_inp.appendTo(trigger_el);
+        trigger_el.appendTo(btn.config_details_el);
+        trigger_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.trigger = parseInt($(ev.target).val())
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });   
+    }
+
+    make_axes_ui(driver) {
+        
+        let that = this;
+        let profile = this.edited_controller.profiles[this.current_profile];
 
         // all gamepad axes
         let axes_els = [];
@@ -1070,195 +1401,26 @@ export class InputManager {
             
 
             // config toggle
-            let conf_toggle_el = $('<span class="conf-toggle'+(axis.edit_open?' open' : '')+'"></span>');
-            conf_toggle_el.click((ev)=>{
-                if (!conf_toggle_el.hasClass('open')) {
-                    conf_toggle_el.addClass('open')
-                    config_details_el.addClass('open')
+            axis.conf_toggle_el = $('<span class="conf-toggle'+(axis.edit_open?' open' : '')+'"></span>');
+            axis.conf_toggle_el.click((ev)=>{
+                if (!axis.conf_toggle_el.hasClass('open')) {
+                    axis.conf_toggle_el.addClass('open')
+                    axis.config_details_el.addClass('open')
                     axis.edit_open = true;
                 } else {
-                    conf_toggle_el.removeClass('open')
-                    config_details_el.removeClass('open')
+                    axis.conf_toggle_el.removeClass('open')
+                    axis.config_details_el.removeClass('open')
                     axis.edit_open = false;
                 }
             });
             out_val_el.click((ev)=>{
-                conf_toggle_el.click(); // because this happens a lot
+                axis.conf_toggle_el.click(); // because this happens a lot
             });
-            conf_toggle_el.appendTo(line_1_el);
+            axis.conf_toggle_el.appendTo(line_1_el);
 
             // collapsable details
-            let config_details_el = $('<div class="axis-config-details'+(axis.edit_open?' open' : '')+'"></div>');
+            axis.config_details_el = $('<div class="axis-config-details'+(axis.edit_open?' open' : '')+'"></div>');
 
-            let prevent_context_menu = (ev)=>{
-                console.log('contex cancelled', ev.target);
-                ev.preventDefault();
-                ev.stopPropagation();
-            };
-
-            let render_axis_config = () => {
-
-                config_details_el.empty();
-                let driver_axis = axis.driver_axis;
-
-                if (!driver_axis) {
-                    conf_toggle_el.removeClass('open')
-                    config_details_el.removeClass('open')
-                    return; 
-                }
-
-                // let default_axis_conf = this.current_gamepad.current_profile[driver_axis];
-
-                // dead zone
-                let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
-                let dead_zone_wrapper_el = $('<div class="config-row2"></div>');
-                let dead_zone_min_inp = $('<input type="text" class="inp-val inp-val2"/>');
-                
-                dead_zone_min_inp.val(axis.dead_min.toFixed(2));
-                let dead_zone_max_label = $('<span class="label2">to</span>');
-                let dead_zone_max_inp = $('<input type="text" class="inp-val"/>');
-                dead_zone_max_inp.val(axis.dead_max.toFixed(2));
-                dead_zone_min_inp.appendTo(dead_zone_wrapper_el);
-                dead_zone_max_label.appendTo(dead_zone_wrapper_el);
-                dead_zone_max_inp.appendTo(dead_zone_wrapper_el);
-                dead_zone_wrapper_el.appendTo(dead_zone_el)
-
-                dead_zone_min_inp.focus((ev)=>{ev.target.select();});
-                dead_zone_max_inp.focus((ev)=>{ev.target.select();});
-
-                dead_zone_min_inp.change((ev)=>{
-                    axis.dead_min = parseFloat($(ev.target).val());
-                    delete axis.dead_val;
-                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                });
-                dead_zone_max_inp.change((ev)=>{
-                    axis.dead_max = parseFloat($(ev.target).val());
-                    delete axis.dead_val;
-                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                });
-
-                dead_zone_el.appendTo(config_details_el);
-
-                // input offset
-                let offset_el = $('<div class="config-row"><span class="label">Offset input:</span></div>');
-                let offset_inp = $('<input type="text" class="inp-val"/>');
-                offset_inp.val(axis.offset.toFixed(1));
-                offset_inp.focus((ev)=>{ev.target.select();});
-                offset_inp.change((ev)=>{
-                    axis.offset = parseFloat($(ev.target).val());
-                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                });
-                offset_inp.appendTo(offset_el);
-                offset_el.appendTo(config_details_el);
-
-                // input scale
-                let scale_el = $('<div class="config-row"><span class="label">Scale input:</span></div>');
-                let scale_inp = $('<input type="text" class="inp-val"/>');
-                scale_inp.val(axis.scale.toFixed(1));
-                scale_inp.focus((ev)=>{ev.target.select();});
-                scale_inp.change((ev)=>{
-                    axis.scale = parseFloat($(ev.target).val());
-                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                });
-                scale_inp.appendTo(scale_el);
-                scale_el.appendTo(config_details_el);
-
-                // modifier selection
-                let mod_func_el = $('<div class="config-row"><span class="label">Modifier:</span></div>');
-                let mod_func_opts = [ '<option value="">None</option>' ];
-                mod_func_opts.push('<option value="scale_by_velocity" '+(axis.mod_func=='scale_by_velocity'?' selected':'')+'>Scale by velocity</option>');  
-                let mod_func_inp = $('<select>'+mod_func_opts.join('')+'</select>');
-                mod_func_inp.appendTo(mod_func_el);
-                mod_func_el.appendTo(config_details_el);
-                let mod_func_cont = $('<div></div>');
-                mod_func_cont.appendTo(config_details_el);
-                
-                let set_mod_funct = (mod_func) => {
-                    if (mod_func) {
-                        axis.mod_func = mod_func;
-                        let mod_func_config_els = [];
-                        if (mod_func == 'scale_by_velocity') {
-
-                            let multiply_lerp_input_el = $('<div class="config-row"><span class="label sublabel">Velocity source:</span></div>');
-                            let multiply_lerp_input_opts = [ '<option value="">Select axis</option>' ];
-
-                            for (let j = 0; j < dri_axes_ids.length; j++) {
-                                let id_axis = dri_axes_ids[j];
-                                multiply_lerp_input_opts.push('<option value="'+id_axis+'"' + (axis.scale_by_velocity_src == id_axis ? ' selected':'') +'>'+dri_axes[id_axis]+'</option>');
-                            }
-                            
-                            let multiply_lerp_input_inp = $('<select>'+multiply_lerp_input_opts.join('')+'</select>');
-                            multiply_lerp_input_inp.appendTo(multiply_lerp_input_el);
-                            mod_func_config_els.push(multiply_lerp_input_el);
-                            multiply_lerp_input_inp.change((ev)=>{
-                                axis.scale_by_velocity_src = $(ev.target).val();
-                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                            });
-                            
-                            // multiplier min
-                            let multiply_lerp_min_el = $('<div class="config-row"><span class="label sublabel">Slow multiplier:</span></div>');
-                            let multiply_lerp_min_inp = $('<input type="text" class="inp-val"/>');
-                            multiply_lerp_min_inp.focus((ev)=>{ev.target.select();});
-                            if (axis.scale_by_velocity_mult_min === undefined)
-                                axis.scale_by_velocity_mult_min = 1.0;
-                            multiply_lerp_min_inp.val(axis.scale_by_velocity_mult_min.toFixed(1));
-                            multiply_lerp_min_inp.change((ev)=>{
-                                axis.scale_by_velocity_mult_min = parseFloat($(ev.target).val());
-                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                            });
-                            multiply_lerp_min_inp.appendTo(multiply_lerp_min_el);
-                            mod_func_config_els.push(multiply_lerp_min_el);
-                            
-
-                            // multiplier max
-                            let multiply_lerp_max_el = $('<div class="config-row"><span class="label sublabel">Fast multiplier:</span></div>');
-                            let multiply_lerp_max_inp = $('<input type="text" class="inp-val"/>');
-                            multiply_lerp_max_inp.focus((ev)=>{ev.target.select();});
-                            if (axis.scale_by_velocity_mult_max === undefined)
-                                axis.scale_by_velocity_mult_max = 1.0;
-                            multiply_lerp_max_inp.val(axis.scale_by_velocity_mult_max.toFixed(1));
-                            multiply_lerp_max_inp.change((ev)=>{
-                                axis.scale_by_velocity_mult_max = parseFloat($(ev.target).val());
-                                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                            });
-                            multiply_lerp_max_inp.appendTo(multiply_lerp_max_el);
-                            mod_func_config_els.push(multiply_lerp_max_el);
-
-                            if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
-                                multiply_lerp_min_inp.attr('inputmode', 'numeric');
-                                multiply_lerp_max_inp.attr('inputmode', 'numeric');
-                            }
-                            multiply_lerp_min_inp.on('contextmenu', prevent_context_menu);
-                            multiply_lerp_max_inp.on('contextmenu', prevent_context_menu);
-
-                        }
-                        mod_func_cont.empty().append(mod_func_config_els).css('display', 'block');
-                    } else {
-                        delete axis.mod_func; // check_controller_profile_saved expecs undefined (not null)
-                        mod_func_cont.empty().css('display', 'none');
-                    }
-                    
-                }
-                set_mod_funct(axis.mod_func);
-                mod_func_inp.change((ev)=>{
-                    set_mod_funct($(ev.target).val());
-                    that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                });
-                
-
-                if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
-                    dead_zone_min_inp.attr('inputmode', 'numeric');
-                    dead_zone_max_inp.attr('inputmode', 'numeric');
-                    offset_inp.attr('inputmode', 'numeric');
-                    scale_inp.attr('inputmode', 'numeric');
-                }
-
-                dead_zone_min_inp.on('contextmenu', prevent_context_menu);
-                dead_zone_max_inp.on('contextmenu', prevent_context_menu);
-                offset_inp.on('contextmenu', prevent_context_menu);
-                scale_inp.on('contextmenu', prevent_context_menu);
-
-            } // render_axis_config
             // let that = this;
             assignment_sel_el.change((ev)=>{
                 let id_axis_assigned = $(ev.target).val();
@@ -1309,7 +1471,7 @@ export class InputManager {
                                     axis.scale_by_velocity_src = a.scale_by_velocity_src;
                                     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
                                     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
-                                    render_axis_config();
+                                    that.render_axis_config(driver, axis);
                                     row_el.removeClass('unused');
                                 } else {
                                     row_el.addClass('unused');
@@ -1325,20 +1487,20 @@ export class InputManager {
                 if (id_axis_assigned) {
                     axis.driver_axis = id_axis_assigned;
                     
-                    render_axis_config();
+                    that.render_axis_config(driver, axis);
                     row_el.removeClass('unused');
                 } else {
                     axis.driver_axis = null;                   
                     
-                    render_axis_config();
+                    that.render_axis_config(driver, axis);
                     row_el.addClass('unused');
                 }
 
                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
             });
 
-            render_axis_config();
-            console.log('axis '+i_axis+' assigned to ', axis.driver_axis);
+            that.render_axis_config(driver, axis);
+            // console.log('axis '+i_axis+' assigned to ', axis.driver_axis);
             if (axis.driver_axis) {
                 row_el.removeClass('unused');
             } else {
@@ -1346,7 +1508,7 @@ export class InputManager {
             }
 
             line_1_el.appendTo(row_el);
-            config_details_el.appendTo(row_el);
+            axis.config_details_el.appendTo(row_el);
 
             axis.row_el = row_el;
             axes_els.push(row_el);
@@ -1357,9 +1519,229 @@ export class InputManager {
             .empty()
             .append(axes_els);
 
-        if (driver.scroll_offset !== undefined) {
-            $('#gamepad-axes-panel').scrollTop(profile.scroll_offset);
-            delete profile.scroll_offset;
+        if (driver.axes_scroll_offset !== undefined) {
+            $('#gamepad-axes-panel').scrollTop(driver.axes_scroll_offset);
+            delete driver.axes_scroll_offset;
+        }
+    }
+
+    render_btn_config(driver, btn) {
+                
+        btn.config_details_el.empty();
+        
+        if (!btn.driver_axis && !btn.driver_btn) {
+            btn.conf_toggle_el.removeClass('open')
+            btn.config_details_el.removeClass('open')
+            return; 
+        } else if (btn.driver_axis) {
+
+            if (btn.dead_min === undefined) btn.dead_min = -0.01;
+            if (btn.dead_max === undefined) btn.dead_max = 0.01;
+            if (btn.offset === undefined) btn.offset = 0.0;
+            if (btn.scale === undefined) btn.scale = 1.0;
+            // dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
+            // dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
+            // offset: axis_cfg && axis_cfg.offset !== undefined ? axis_cfg.offset : 0.0,
+            // scale: axis_cfg && axis_cfg.scale !== undefined ? axis_cfg.scale : 1.0,                
+
+            this.render_axis_config(driver, btn, true); //render button as axis with input for trigger src
+        } else if (btn.driver_btn) {
+            if (btn.trigger === undefined) btn.trigger = 1; // press by default
+            this.render_driver_button_config(driver, btn); //render button as axis
+        }
+    };
+
+    make_buttons_ui(driver) {
+        
+        let that = this;
+
+        // all gamepad axes
+        let button_els = [];
+        for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
+
+            let btn = driver.buttons[i_btn];
+
+            let row_el = $('<div class="button-row unused"></div>');
+
+            // raw val
+            let raw_val_el = $('<span class="btn-val" title="Raw button value"></span>');
+            raw_val_el.appendTo(row_el);
+            btn.raw_val_el = raw_val_el;
+
+             // 1st line
+            let line_1_el = $('<div class="btn-config"></div>');
+
+            // btn assignment selection
+            let opts = [
+                '<option value="">Not in use</option>',
+                '<option value="ros-srv">Call ROS Service</option>',
+                '<option value="input-profile">Change Input Profile</option>',
+                '<option value="ui-profile">Change UI Layout</option>',
+                '<option value="ctrl-toggle">Toggle Controller Enabled</option>',
+            ];
+            // let dri = profile.driver_instance;
+            let dri_btns = driver.get_buttons();
+            let dri_btns_ids = Object.keys(dri_btns);
+            for (let j = 0; j < dri_btns_ids.length; j++) {
+                let id_btn = dri_btns_ids[j];
+                opts.push('<option value="btn:'+id_btn+'"'+(btn.driver_btn == id_btn ? ' selected' : '')+'>'+dri_btns[id_btn]+'</option>');
+            }
+            let dri_axes = driver.get_axes();
+            let dri_axes_ids = Object.keys(dri_axes);
+            for (let j = 0; j < dri_axes_ids.length; j++) {
+                let id_axis = dri_axes_ids[j];
+                opts.push('<option value="axis:'+id_axis+'"'+(btn.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
+            }
+            opts.push('<option value="=">Copy from button...</option>');
+            let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
+            assignment_sel_el.appendTo(line_1_el);
+            btn.assignment_sel_el = assignment_sel_el;
+
+            // output val
+            let out_val_el = $('<span class="btn-output-val" title="Button output"></span>');
+            out_val_el.appendTo(line_1_el);
+            btn.out_val_el = out_val_el;
+
+            // config toggle
+            btn.conf_toggle_el = $('<span class="conf-toggle'+(btn.edit_open?' open' : '')+'"></span>');
+            btn.conf_toggle_el.click((ev)=>{
+                if (!btn.conf_toggle_el.hasClass('open')) {
+                    btn.conf_toggle_el.addClass('open')
+                    btn.config_details_el.addClass('open')
+                    btn.edit_open = true;
+                } else {
+                    btn.conf_toggle_el.removeClass('open')
+                    btn.config_details_el.removeClass('open')
+                    btn.edit_open = false;
+                }
+            });
+            out_val_el.click((ev)=>{
+                btn.conf_toggle_el.click(); // because this happens a lot
+            });
+            btn.conf_toggle_el.appendTo(line_1_el);
+
+            // collapsable details
+            btn.config_details_el = $('<div class="btn-config-details'+(btn.edit_open?' open' : '')+'"></div>');
+
+            assignment_sel_el.change((ev)=>{
+                let val_btn_assigned = $(ev.target).val();
+
+                console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
+
+                // let cancel_copy = () => {
+                //     driver.axes.forEach((a)=>{
+                //         a.raw_val_el
+                //             .unbind()
+                //             .removeClass('copy-source');
+                //         if (profile.copying_into_axis === a) {
+                //             a.assignment_sel_el.val(''); //set not in use
+                //             a.row_el
+                //                 .removeClass('copy-destination')
+                //                 .addClass('unused');
+                //         }
+                //     });
+                //     delete profile.copying_into_axis;
+                // }
+
+                // if (id_axis_assigned == '=') {
+                //     if (profile.copying_into_axis) {
+                //         // another one is waiting for input, close first
+                //         cancel_copy();
+                //     }
+                //     //console.log('Copy config for axis '+axis.id)
+                //     profile.copying_into_axis = axis;
+                //     row_el.addClass('unused copy-destination');
+
+                //     // let axes_ids = Object.keys()
+                //     driver.axes.forEach((a)=>{
+                //         if (axis == a) //skip self
+                //             return;
+                //         a.raw_val_el.addClass('copy-source')
+                //             .unbind()
+                //             .click((ev)=>{
+                //                 cancel_copy();
+                //                 console.log('Copying axis '+a.i, a);
+                //                 axis.driver_axis = a.driver_axis;
+                //                 axis.assignment_sel_el.val(a.driver_axis);
+                //                 if (axis.driver_axis) {
+                //                     axis.dead_min = a.dead_min;
+                //                     axis.dead_max = a.dead_max;
+                //                     axis.offset = a.offset;
+                //                     axis.scale = a.scale;
+                //                     axis.mod_func = a.mod_func;
+                //                     axis.scale_by_velocity_src = a.scale_by_velocity_src;
+                //                     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
+                //                     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
+                //                     render_axis_config();
+                //                     row_el.removeClass('unused');
+                //                 } else {
+                //                     row_el.addClass('unused');
+                //                 }
+                //                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                //             });
+                //     });
+                //     return;
+                // } else if (profile.copying_into_axis) {
+                //     cancel_copy();
+                // }
+
+                if (val_btn_assigned) {
+
+                    if (val_btn_assigned.indexOf('axis:') === 0) {
+                        let id_axis_assigned = val_btn_assigned.substring(5);;
+                        console.log('btn '+ i_btn +' assigned axis: ', id_axis_assigned)
+                        btn.driver_axis = id_axis_assigned;
+                        btn.assigned = true;
+                    } else if (val_btn_assigned.indexOf('btn:') === 0) {
+                        let id_btn_assigned = val_btn_assigned.substring(4);;
+                        console.log('btn '+ i_btn +' assigned btn: ', id_btn_assigned)
+                        btn.driver_btn = id_btn_assigned;
+                        btn.assigned = true;
+                    }
+                    
+                    that.render_btn_config(driver, btn);
+                    row_el.removeClass('unused');
+
+                } else {
+                    btn.driver_axis = null;                   
+                    btn.driver_btn = null;
+                    btn.assigned = false;
+                    
+                    that.render_btn_config(driver, btn);
+                    row_el.addClass('unused');
+                }
+
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+            });
+
+            this.render_btn_config(driver, btn);
+
+            if (btn.driver_btn || btn.driver_axis) {
+                row_el.removeClass('unused');
+            } else {
+                row_el.addClass('unused');
+            }
+
+            line_1_el.appendTo(row_el);
+            btn.config_details_el.appendTo(row_el);
+
+            btn.row_el = row_el;
+            button_els.push(row_el);
+        }
+
+        // let add_btn = $('<button id="add-button-btn"></button>')
+        // add_btn.click((ev)=>{
+
+        // });
+        // button_els.push(add_btn);
+
+        $('#gamepad-buttons-panel')
+            .empty()
+            .append(button_els);
+
+        if (driver.buttons_scroll_offset !== undefined) {
+            $('#gamepad-buttons-panel').scrollTop(driver.buttons_scroll_offset);
+            delete driver.buttons_scroll_offset;
         }
     }
 
@@ -1393,6 +1775,62 @@ export class InputManager {
         }
     }
 
+    update_buttons_ui_values () {
+        if (!this.edited_controller)
+            return;
+        
+        let profile = this.edited_controller.profiles[this.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
+        for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
+
+            let btn = driver.buttons[i_btn];
+
+            if (btn.assigned) {
+
+                if (btn.driver_axis && (btn.pressed || btn.touched) && btn.raw !== null && btn.raw !== undefined) {
+                    btn.raw_val_el.html(btn.raw.toFixed(2));
+                } else if (btn.src_label) {
+                    btn.raw_val_el.html(btn.src_label);
+                } else {
+                    btn.raw_val_el.html('none');
+                }
+
+                if (btn.touched)
+                    btn.raw_val_el.addClass('touched');
+                else
+                    btn.raw_val_el.removeClass('touched');
+    
+                if (btn.pressed)
+                    btn.raw_val_el.addClass('pressed');
+                else
+                    btn.raw_val_el.removeClass('pressed');
+
+                if (btn.driver_btn && (btn.val === true || btn.val === false))
+                    btn.out_val_el.html(btn.val.toString());
+                else if (btn.driver_axis && btn.val !== null && btn.val !== undefined)
+                    btn.out_val_el.html(btn.val.toFixed(2));
+                else
+                    btn.out_val_el.html('n/a');
+    
+                if (btn.live) {
+                    btn.out_val_el.addClass('live');
+                } else {
+                    btn.out_val_el.removeClass('live');
+                }
+
+            } else {
+                btn.raw_val_el
+                    .html('none')
+                    .removeClass('pressed')
+                    .removeClass('touched');
+            }
+            
+            
+            
+        }
+    }
+
     process_axes_input(c) {
 
         let profile = c.profiles[this.current_profile];
@@ -1403,8 +1841,15 @@ export class InputManager {
 
         let some_axes_live = false;
 
-        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
-            let axis = driver.axes[i_axis];
+        let axes_to_process = [].concat(driver.axes);
+        for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
+            if (driver.buttons[i_btn].driver_axis) {
+                axes_to_process.push(driver.buttons[i_btn]); //button mapped as axis
+            }
+        }
+
+        for (let i = 0; i < axes_to_process.length; i++) {
+            let axis = axes_to_process[i];
            
             if (axis.dead_val === undefined) // unset on min/max change
                 axis.dead_val = (axis.dead_min+axis.dead_max) / 2.0;
@@ -1451,8 +1896,8 @@ export class InputManager {
         driver.axes_output = {}; // this goes to the driver
 
         // 2nd pass - modifiers that use base vals and split-axes added together
-        for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
-            let axis = driver.axes[i_axis];
+        for (let i = 0; i < axes_to_process.length; i++) {
+            let axis = axes_to_process[i];
 
             if (!axis.driver_axis || !axis.live) {
                 continue;
@@ -1495,6 +1940,38 @@ export class InputManager {
         }
 
         return some_axes_live;
+    }
+
+    process_buttons_input(c) {
+
+        let profile = c.profiles[this.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
+        let some_buttons_live = false;
+        driver.buttons_output = {}; // this goes to the drive
+
+        for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
+            let btn = driver.buttons[i_btn];
+    
+            if (!btn.driver_btn)
+                continue;
+            
+            btn.val = false;
+            if (btn.trigger === 0 && btn.touched) {
+                btn.val = true;
+            }
+            else if (btn.trigger === 1 && btn.pressed) {
+                btn.val = true;
+            }
+            btn.live = btn.val;
+
+            if (driver.buttons_output[btn.driver_btn] === undefined)
+                driver.buttons_output[btn.driver_btn] = btn.val;
+            else
+                driver.buttons_output[btn.driver_btn] = btn.val || driver.buttons_output[btn.driver_btn]; // allow triggering with multiiple btns
+        }
+
+        return some_buttons_live;
     }
 
     on_gamepad_connected(ev) {
@@ -1693,6 +2170,47 @@ export class InputManager {
                                 driver.axes[i].raw = read_val;
                             }
                         }
+                        // for (let i = 0; i < gp.buttons.length; i++) {
+                        
+                        if (driver.on_button_press) {
+                            for (let i = 0; i < gp.buttons.length; i++) {
+                                if (gp.buttons[i].pressed) {
+                                    driver.on_button_press(i);
+                                }
+                            }   
+                        } else {
+                            for (let j = 0; j < driver.buttons.length; j++) {
+                                let btn = driver.buttons[j];
+                                if (btn.id_src === null)
+                                    continue;
+    
+                                let gp_btn = gp.buttons[btn.id_src];
+                                if (!btn)
+                                    continue;
+    
+                                let read_val = gp_btn.value;
+                                if (btn.needs_reset) {  
+                                    if (read_val != 0.0) { // wait for first non-zero signal because some gamepads are weird
+                                        delete btn.needs_reset;
+                                        btn.raw = read_val;
+                                        btn.pressed = gp_btn.pressed;
+                                        btn.touched = gp_btn.touched;
+                                        // console.log('GP axis '+i+'; reset val='+read_val)
+                                    } else {
+                                        btn.raw = null;
+                                        btn.pressed = false;
+                                        btn.touched = false;
+                                    }
+                                } else {
+                                    btn.raw = read_val;
+                                    btn.pressed = gp_btn.pressed;
+                                    btn.touched = gp_btn.touched;
+                                }
+                                
+                            }
+                        }
+                            
+                        // }
     
                     } catch (e) {
                         console.error('Error reading gp axes; c.gp=', c.gamepad);
@@ -1704,24 +2222,32 @@ export class InputManager {
                         driver.axes[i].raw = null;
                         driver.axes[i].needs_reset = true;
                     }
+                    for (let i = 0; i < driver.buttons.length; i++) {
+                        driver.buttons[i].raw = null;
+                        driver.buttons[i].needs_reset = true;
+                        driver.buttons[i].pressed = false;
+                        driver.buttons[i].touched = false;
+                    }
                 }
             } else
                 return; //nothing to do for this controller atm
     
             let axes_alive = this.process_axes_input(c) && c.connected;
-    
-            if (!axes_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
+            let button_alive = this.process_buttons_input(c) && c.connected;
+            let cooldown = false;
+
+            if (!axes_alive && !button_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
                 if (c.cooldown_started === undefined) {
                     c.cooldown_started = Date.now();
-                    axes_alive = true;
+                    cooldown = true;
                 } else if (c.cooldown_started + 1000 > Date.now() ) {
-                    axes_alive = true;
+                    cooldown = true;
                 }
             } else if (c.cooldown_started !== undefined) {
                 delete c.cooldown_started; // some axes alive => reset cooldown
             }
     
-            let transmitting = c.enabled && axes_alive && driver.can_transmit();
+            let transmitting = c.enabled && (axes_alive || button_alive || cooldown) && driver.can_transmit();
     
             driver.generate();
             
@@ -1741,6 +2267,7 @@ export class InputManager {
         });
 
         this.update_axes_ui_values();
+        this.update_buttons_ui_values();
 
         // if (transmitting && !this.transmitting) {
         //     this.transmitting = true;

@@ -5,18 +5,30 @@
 
         <div class="touch-zone" id="gamepad-touch-left-zone"></div>
 
+        <div id="input-manager-overlay"></div>
+
         <div id="gamepad-settings-container">
 
-            <select id="gamepad-profile-select"></select>
-
+            <select id="input-profile-select"></select>
             <div id="profile-buttons">
                 <span class="icon"></span>
                 <span id="profile-unsaved-warn">*</span>
                 <div id="profile-menu">
                     <span class="arrow"></span>
-                    <button id="save-gamepad-profile" class="saved">Save Profile</button>
-                    <button id="gamepad-profile-json">Copy JSON <span id="gamepad-profile-json-bubble">Copied to clipboard</span></button>
-                    <button id="delete-gamepad-profile">Delete profile</button>
+                    <button id="save-input-profile" class="saved">Save Profile</button>
+                    <button id="edit-input-profile">Edit profile</button>
+                    <button id="input-profile-json">Copy JSON</button>
+                    <button id="delete-input-profile">Delete profile</button>
+                </div>
+            </div>
+            <div id="profile-edit-panel">
+                <div class="row">
+                    <span class="label">Label: </span>
+                    <input type="text" id="input-profile-edit-label"/>
+                </div>
+                <div class="row">
+                    <span class="label">Profile ID: </span>
+                    <input type="text" id="input-profile-edit-id"/>
                 </div>
             </div>
             

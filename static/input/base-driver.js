@@ -18,6 +18,14 @@ export class InputDriver {
         this.inp_topic = null;
     }
 
+    get_axes() {
+        return {}; // override
+    }
+
+    get_buttons() {
+        return {}; // override
+    }
+
     set_config(cfg) { // from cookie, robot, etc
         if (cfg && cfg.output_topic) {
             this.output_topic = cfg.output_topic;
