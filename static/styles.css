@@ -1050,6 +1050,25 @@ BODY.hamburger #docker_controls.active H3 {
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
+    width: 80px;
+}
+
+.service_inp {
+    background: white;
+    color: black;
+    /* font-weight: bold; */
+    border: 0px;
+    border-radius: 5px;
+    padding: 5px;
+    margin: 0px 6px 0px 0px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    width: 80px;
+    line-height: 24px;
+    height: 24px;
+    text-align: center;
+    outline: none;
 }
 
 .setting_shortcuts .service_button {
@@ -2998,7 +3017,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 
 #gamepad #gamepad_settings .axis-row .config-row,
 #gamepad #gamepad_settings .button-row .config-row {
-    height: 30px;
+    /* height: 30px; */
     margin-top: 2px;
     line-height: 30px;
 }
@@ -3056,6 +3075,10 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     font-size: 16px;
 }
 
+#gamepad #gamepad_settings .config-row INPUT.half {
+    width: 50%;
+}
+
 #gamepad #gamepad_settings .config-row SELECT {
     float: right;
     width: 50%;
@@ -3063,6 +3086,27 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     color: white;
     margin-right: 5px;
     text-align: center;
+}
+#gamepad #gamepad_settings .config-row SELECT.wide {
+    width: 75%;
+} 
+
+#gamepad #gamepad_settings .config-row TEXTAREA {
+    width: calc(50% - 20px);
+    float: right;
+    background: #26214b;
+    color: #fff;
+    font-size: 16px;
+    border: 0px;
+    border-radius: 5px;
+    margin-right: 5px;
+    padding: 5px 10px;
+    resize: vertical;
+    outline: none;
+}
+
+#gamepad #gamepad_settings .config-row TEXTAREA.wide {
+    width: calc(75% - 20px);
 }
 
 #gamepad #gamepad_settings .btn-val {    
@@ -3645,7 +3689,8 @@ BODY.desktop-ui #gamepad-profile-config {
     background-color: #be1e1e !important;
 }
 
-#gamepad_settings #connected-gamepad {
+#gamepad_settings .line .static_val,
+#gamepad_settings .config-row .static_val {
     line-height: 30px;
     white-space: nowrap;
     display: block;
@@ -3654,6 +3699,15 @@ BODY.desktop-ui #gamepad-profile-config {
     padding-left: 10px;
     font-size: 16px;
     color: #a3a0bd;
+}
+
+#gamepad_settings .config-row .static_val {
+    float: right;
+    width: 50%;
+}
+
+#gamepad_settings .config-row .static_val.wide {
+    width: 75%;
 }
 
 BODY.desktop-ui #gamepad-settings-panel .bottom-buttons BUTTON {

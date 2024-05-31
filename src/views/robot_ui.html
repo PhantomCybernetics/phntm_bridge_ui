@@ -167,6 +167,8 @@
     import { JoyInputDriver } from '/static/input/joy-driver.js';
     import { TwistInputDriver } from '/static/input/twist-driver.js';
 
+    import { ServiceInput_Empty, ServiceInput_Bool, ServiceInput_Int } from '/static/input-widgets.js'
+
     $(document).ready(function() {
 
         // function handlePermission() {
@@ -230,6 +232,20 @@
         panel_ui.add_widget(NavigationWidget);
         panel_ui.add_widget(DescriptionTFWidget);
         panel_ui.add_widget(LaserOdometryWidget);
+
+        panel_ui.add_service_type_widget('std_srvs/srv/Empty', ServiceInput_Empty);
+        panel_ui.add_service_type_widget('std_srvs/srv/Trigger', ServiceInput_Empty);
+        panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
+        panel_ui.add_service_type_widget('astra_camera_msgs/srv/SetInt32', ServiceInput_Int);
+
+        panel_ui.set_ignored_service_types([ //these will not be available in ui (?!)
+            'rcl_interfaces/srv/DescribeParameters',
+            'rcl_interfaces/srv/GetParameterTypes',
+            'rcl_interfaces/srv/GetParameters',
+            'rcl_interfaces/srv/ListParameters',
+            'rcl_interfaces/srv/SetParameters',
+            'rcl_interfaces/srv/SetParametersAtomically'
+        ]);
 
         //init panel setup from url
         //also subscribes to topics and cameras required by panel widgets

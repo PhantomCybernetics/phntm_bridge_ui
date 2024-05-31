@@ -7,7 +7,6 @@ import { ImuWidget } from '/static/widgets/imu.js';
 import { LogWidget } from '/static/widgets/log.js';
 import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
-import { ServiceCallInput_Empty, ServiceCallInput_Bool } from './input-widgets.js'
 import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
@@ -40,9 +39,13 @@ export class PanelUI {
     };
     widgets = {}; // custom and/or compound
 
-    input_widgets = {
-        'std_srvs/srv/Empty': ServiceCallInput_Empty,
-        'std_srvs/srv/SetBool': ServiceCallInput_Bool
+    input_widgets = {};
+    add_service_type_widget(srv_msg_type, widget_class) {
+        this.input_widgets[srv_msg_type] = widget_class;
+    }
+    ignored_service_types = [];
+    set_ignored_service_types(service_types) {
+        this.ignored_service_types = service_types;
     }
 
     constructor(client, grid_cell_height, input_manager) {
@@ -1264,13 +1267,7 @@ export class PanelUI {
                 let service = node.services[id_service];
                 let msg_type = node.services[id_service].msg_types[0];
 
-                if (['rcl_interfaces/srv/DescribeParameters',
-                    'rcl_interfaces/srv/GetParameterTypes',
-                    'rcl_interfaces/srv/GetParameters',
-                    'rcl_interfaces/srv/ListParameters',
-                    'rcl_interfaces/srv/SetParameters',
-                    'rcl_interfaces/srv/SetParametersAtomically'
-                ].includes(msg_type))
+                if (this.ignored_service_types.includes(msg_type))
                     continue; // not rendering internals (?!)
 
                 this.num_services++; // activates menu
@@ -1293,7 +1290,7 @@ export class PanelUI {
 
 
                 if (service.ui_handled) {
-                    this.input_widgets[msg_type](service_input, service, this.client);
+                    this.input_widgets[msg_type].MakeMenuControls(service_input, service, this.client);
                 }
 
                 service_content.append(service_input);

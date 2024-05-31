@@ -8,6 +8,7 @@ export class InputManager {
     constructor(client) {
 
         this.client = client;
+        this.ui = null; // ui constructor assigms ref
 
         this.registered_drivers = {}; // id => class; all available
         this.enabled_drivers = {}; // gp_type => driver[]; enabled by robot
@@ -599,8 +600,9 @@ export class InputManager {
                     pressed: false,
                     touched: false,
                     raw: null,
-                    driver_btn: null,
-                    driver_axis: null,
+                    driver_btn: null, // output as diver button
+                    driver_axis: null, // output as driver axis
+                    action: null, // performs all other actions
                 }
                 return new_btn;
             }
@@ -844,7 +846,7 @@ export class InputManager {
         let that = this;
 
         if (!this.edited_controller || !this.enabled_drivers) {
-            $('#gamepad-profile-config').html('<div class="line"><span class="label">Input source:</span><span id="connected-gamepad">N/A</span></div>');
+            $('#gamepad-profile-config').html('<div class="line"><span class="label">Input source:</span><span class="static_val">N/A</span></div>');
             // $('#gamepad-settings-panel').removeClass('has-buttons');
         } else {
             
@@ -856,7 +858,7 @@ export class InputManager {
             if (this.edited_controller.type == 'keyboard')
                 label = 'Keyboard';
 
-            let line_source = $('<div class="line"><span class="label">Input source:</span><span id="connected-gamepad">'
+            let line_source = $('<div class="line"><span class="label">Input source:</span><span class="static_val">'
                             + label
                             + '</span></div>');
             lines.push(line_source);
@@ -1327,6 +1329,25 @@ export class InputManager {
 
     } 
 
+    make_btn_trigger_sel (btn) {
+        // modifier selection
+        let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
+        let trigger_opts = [
+            '<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>',
+            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>'
+        ];
+
+        let trigger_inp = $('<select>'+trigger_opts.join('')+'</select>');
+        trigger_inp.appendTo(trigger_el);
+        let that = this;
+        trigger_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.trigger = parseInt($(ev.target).val())
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        return trigger_el;
+    }
+
     render_driver_button_config (driver, btn) {
     
         let that = this;
@@ -1335,28 +1356,186 @@ export class InputManager {
         // let driver_axis = axis.driver_axis;
 
         if (!btn.driver_btn) {
-            btn.conf_toggle_el.removeClass('open')
-            btn.config_details_el.removeClass('open')
-            return; 
+           
         }
 
         // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
 
-        // modifier selection
-        let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
-        let trigger_opts = [
-            '<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>',
-            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>'
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+    }
+
+    render_ros_srv_button_config (driver, btn) {
+    
+        let that = this;
+
+        btn.config_details_el.empty();
+        // let driver_axis = axis.driver_axis;
+
+        // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
+
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+
+        let srv_el = $('<div class="config-row"><span class="label">Service:</span></div>');
+        let srv_opts = [
+            '<option value="">Select service...</option>'
         ];
         
-        let trigger_inp = $('<select>'+trigger_opts.join('')+'</select>');
-        trigger_inp.appendTo(trigger_el);
-        trigger_el.appendTo(btn.config_details_el);
-        trigger_inp.change((ev)=>{
-            // set_mod_funct();
-            btn.trigger = parseInt($(ev.target).val())
+        // TODO: would be nice to reload this on introspection update when already rendered
+        Object.values(this.client.discovered_nodes).forEach((node)=>{
+            let service_ids = Object.keys(node.services);
+            if (!service_ids.length)
+                return;
+            
+            let node_opts = [];
+            service_ids.forEach((id_srv)=>{
+                let msg_type = node.services[id_srv].msg_types[0];
+                if (that.ui.ignored_service_types.includes(msg_type))
+                    return; // not rendering ignored
+
+                node_opts.push('<option value="'+id_srv+':'+msg_type+'"'+(btn.ros_srv_id == id_srv?' selected':'')+'>'+id_srv+'</option>');
+            });
+
+            if (node_opts.length) {
+                srv_opts.push('<optgroup label="'+node.node+'"></optgroup>');   
+                srv_opts = srv_opts.concat(node_opts);
+                srv_opts.push('</optgroup>');
+            }
+        });
+        
+        let srv_inp = $('<select>'+srv_opts.join('')+'</select>');
+        srv_inp.appendTo(srv_el);
+        
+        let srv_details_el = $('<div></div>');
+        let rener_srv_details = () => {
+            srv_details_el.empty();
+            if (btn.ros_srv_msg_type) {
+                srv_details_el.append($('<div class="config-row">' +
+                                        '<span class="label">Message type:</span>' +
+                                        '<span class="static_val">' + btn.ros_srv_msg_type + '</span>' +
+                                        '</div>'));
+                
+                let srv_val_el = $('<div class="config-row"><span class="label">Send value:</span></div>');
+
+                if (that.ui.input_widgets[btn.ros_srv_msg_type]) {
+                    let srv_val_inp = that.ui.input_widgets[btn.ros_srv_msg_type].MakeInputConfigControls(btn, (val)=>{
+                        console.log('btn service val set to ', val);
+                        btn.ros_srv_val = val;
+                        that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                    });
+                    srv_val_el.append(srv_val_inp);
+                } else {
+                    let srv_val_inp = $('<textarea>{json}</textarea>');
+                    srv_val_el.append(srv_val_inp);
+                    srv_val_el.append($('<div class="cleaner"></div>'));
+                }
+
+                srv_details_el.append(srv_val_el);
+            }
+        };
+        rener_srv_details();
+
+        srv_inp.change((ev)=>{
+            let val = $(ev.target).val();
+            if (val) {
+                let vals = val.split(':');
+                btn.ros_srv_id = vals[0];
+                btn.ros_srv_msg_type = vals[1];
+            } else {
+                btn.ros_srv_id = null;
+                btn.ros_srv_msg_type = null;
+            }
+            console.log('btn set to ros rv '+btn.ros_srv_id+' msg type='+btn.ros_srv_msg_type);
+            rener_srv_details();
             that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-        });   
+        });
+
+        btn.config_details_el.append(srv_el);
+        btn.config_details_el.append(srv_details_el);
+    }
+
+    render_ctrl_enabled_button_config (driver, btn) {
+    
+        let that = this;
+
+        btn.config_details_el.empty();
+        // let driver_axis = axis.driver_axis;
+
+        // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
+
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+
+        // modifier selection
+        let state_el = $('<div class="config-row"><span class="label">Set state:</span></div>');
+        let state_opts = [
+            '<option value="2"'+(btn.set_ctrl_state===2?' selected':'')+'>Toggle</option>',
+            '<option value="1"'+(btn.set_ctrl_state===1?' selected':'')+'>Enabled</option>',
+            '<option value="0"'+(btn.set_ctrl_state===0?' selected':'')+'>Disabled</option>',
+        ];
+
+        let state_inp = $('<select>'+state_opts.join('')+'</select>');
+        state_inp.appendTo(state_el);
+        
+        state_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.set_ctrl_state = parseInt($(ev.target).val())
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+
+        btn.config_details_el.append(state_el);
+    }
+
+    render_input_profile_button_config (driver, btn) {
+    
+        let that = this;
+
+        btn.config_details_el.empty();
+      
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+
+        // profile selection
+        let profile_el = $('<div class="config-row"><span class="label">Set profile:</span></div>');
+        let profile_opts = [];
+        Object.keys(this.profiles).forEach((id_profile)=>{
+            let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
+            profile_opts.push('<option value="'+id_profile+'"'+(btn.set_ctrl_profile==id_profile?' selected':'')+'>'+label+'</option>')
+        })
+        let profile_inp = $('<select>'+profile_opts.join('')+'</select>');
+        profile_inp.appendTo(profile_el);
+        
+        profile_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.set_ctrl_profile = $(ev.target).val();
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+
+        btn.config_details_el.append(profile_el);
+    }
+
+    render_ui_profile_button_config (driver, btn) {
+    
+        let that = this;
+
+        btn.config_details_el.empty();
+      
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+
+        // profile selection
+        let profile_el = $('<div class="config-row"><span class="label">Set profile:</span></div>');
+        let profile_opts = [];
+        [].forEach((id_profile)=>{ // TODO
+            let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
+            profile_opts.push('<option value="'+id_profile+'"'+(btn.set_ui_profile==id_profile?' selected':'')+'>'+label+'</option>')
+        })
+        let profile_inp = $('<select>'+profile_opts.join('')+'</select>');
+        profile_inp.appendTo(profile_el);
+        
+        profile_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.set_ui_profile = $(ev.target).val();
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+
+        btn.config_details_el.append(profile_el);
     }
 
     make_axes_ui(driver) {
@@ -1399,7 +1578,6 @@ export class InputManager {
             out_val_el.appendTo(line_1_el);
             axis.out_val_el = out_val_el;
             
-
             // config toggle
             axis.conf_toggle_el = $('<span class="conf-toggle'+(axis.edit_open?' open' : '')+'"></span>');
             axis.conf_toggle_el.click((ev)=>{
@@ -1489,6 +1667,10 @@ export class InputManager {
                     
                     that.render_axis_config(driver, axis);
                     row_el.removeClass('unused');
+
+                    axis.conf_toggle_el.addClass('open');
+                    axis.config_details_el.addClass('open');
+
                 } else {
                     axis.driver_axis = null;                   
                     
@@ -1529,11 +1711,7 @@ export class InputManager {
                 
         btn.config_details_el.empty();
         
-        if (!btn.driver_axis && !btn.driver_btn) {
-            btn.conf_toggle_el.removeClass('open')
-            btn.config_details_el.removeClass('open')
-            return; 
-        } else if (btn.driver_axis) {
+        if (btn.driver_axis) {
 
             if (btn.dead_min === undefined) btn.dead_min = -0.01;
             if (btn.dead_max === undefined) btn.dead_max = 0.01;
@@ -1546,8 +1724,36 @@ export class InputManager {
 
             this.render_axis_config(driver, btn, true); //render button as axis with input for trigger src
         } else if (btn.driver_btn) {
+
             if (btn.trigger === undefined) btn.trigger = 1; // press by default
             this.render_driver_button_config(driver, btn); //render button as axis
+
+        } else if (btn.action) {
+
+            switch (btn.action) {
+                case 'ros-srv':
+                    this.render_ros_srv_button_config(driver, btn);
+                    break;
+                case 'ctrl-enabled': 
+                    this.render_ctrl_enabled_button_config(driver, btn);
+                    break;
+                case 'input-profile': 
+                    this.render_input_profile_button_config(driver, btn);
+                    break;
+                case 'ui-profile': 
+                    this.render_ui_profile_button_config(driver, btn);
+                    break;
+                default: 
+                    console.error('Button action type not supported: ', btn.action)
+                    btn.conf_toggle_el.removeClass('open');
+                    btn.config_details_el.removeClass('open');
+                    return; 
+            }
+
+        } else {
+            btn.conf_toggle_el.removeClass('open')
+            btn.config_details_el.removeClass('open')
+            return; 
         }
     };
 
@@ -1604,10 +1810,10 @@ export class InputManager {
             // btn assignment selection
             let opts = [
                 '<option value="">Not in use</option>',
+                '<option value="ctrl-enabled">Set Controller Enabled</option>',
                 '<option value="ros-srv">Call ROS Service</option>',
-                '<option value="input-profile">Change Input Profile</option>',
-                '<option value="ui-profile">Change UI Layout</option>',
-                '<option value="ctrl-toggle">Toggle Controller Enabled</option>',
+                '<option value="input-profile">Set Input Profile</option>',
+                '<option value="ui-profile">Set UI Layout Profile</option>',
             ];
             // let dri = profile.driver_instance;
             let dri_btns = driver.get_buttons();
@@ -1720,21 +1926,47 @@ export class InputManager {
                     if (val_btn_assigned.indexOf('axis:') === 0) {
                         let id_axis_assigned = val_btn_assigned.substring(5);;
                         console.log('btn '+ i_btn +' assigned axis: ', id_axis_assigned)
+                        btn.driver_btn = null;
+                        btn.action = null;
                         btn.driver_axis = id_axis_assigned;
                         btn.assigned = true;
                     } else if (val_btn_assigned.indexOf('btn:') === 0) {
                         let id_btn_assigned = val_btn_assigned.substring(4);;
                         console.log('btn '+ i_btn +' assigned btn: ', id_btn_assigned)
+                        btn.driver_axis = null;
+                        btn.action = null;
                         btn.driver_btn = id_btn_assigned;
+                        if (btn.trigger === undefined || btn.trigger === null)
+                            btn.trigger = 1; // press by default
+                        btn.assigned = true;
+                    } else { // actions
+                        console.log('btn '+ i_btn +' assigned action: ', val_btn_assigned)
+                        btn.driver_axis = null;
+                        btn.driver_btn = null;
+                        btn.action = val_btn_assigned;
+                        if (btn.trigger === undefined || btn.trigger === null)
+                            btn.trigger = 1; // press by default
+                        switch (btn.action) {
+                            case 'ctrl-enabled': 
+                                if (btn.set_ctrl_state === undefined || btn.set_ctrl_state === null)
+                                    btn.set_ctrl_state = 2; //toggle by default
+                                
+                                break;
+                            default: break;
+                        }
                         btn.assigned = true;
                     }
                     
                     that.render_btn_config(driver, btn);
                     row_el.removeClass('unused');
 
+                    btn.conf_toggle_el.addClass('open');
+                    btn.config_details_el.addClass('open');
+
                 } else {
                     btn.driver_axis = null;                   
                     btn.driver_btn = null;
+                    btn.action = null;
                     btn.assigned = false;
                     
                     that.render_btn_config(driver, btn);
@@ -1820,7 +2052,7 @@ export class InputManager {
 
             if (Number.isInteger(btn.id_src)) {
 
-                if (btn.driver_axis && (btn.pressed || btn.touched) && !Number.isNaN(btn.raw)) {
+                if (btn.driver_axis && (btn.pressed || btn.touched) && !(btn.raw === undefined || btn.raw === null)) {
                     btn.raw_val_el.html(btn.raw.toFixed(2));
                 } else if (btn.src_label) {
                     btn.raw_val_el.html(btn.src_label);
