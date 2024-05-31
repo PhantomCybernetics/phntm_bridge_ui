@@ -1111,48 +1111,48 @@ export class InputManager {
         ev.stopPropagation();
     };
 
-    render_assign_button_input(driver, axis) {
-        let btn_el = $('<div class="config-row"><span class="label">Trigger button:</span></div>');
-        let btn_inp = $('<span class="btn-input">'+(axis.src_label?axis.src_label:'n/a')+'</span>');
-        if (axis.id_src!==null)
-            btn_inp.addClass('assigned');
+    // render_assign_button_input(driver, axis) {
+    //     let btn_el = $('<div class="config-row"><span class="label">Trigger button:</span></div>');
+    //     let btn_inp = $('<span class="btn-input">'+(axis.src_label?axis.src_label:'n/a')+'</span>');
+    //     if (axis.id_src!==null)
+    //         btn_inp.addClass('assigned');
     
-        // btn_inp.html('N/A');
+    //     // btn_inp.html('N/A');
 
-        let close_listening = () => {
-            btn_inp.removeClass('listening');
-            btn_inp.html('listening...');
-            btn_inp.html(axis.src_label!==null?axis.src_label:'n/a');
-            if (axis.id_src!==null)
-                btn_inp.addClass('assigned');
-            $('#input-manager-overlay').unbind().css('display', 'none');
-        }
-        btn_inp.click(()=>{
-            if (!btn_inp.hasClass('listening')) {
-                btn_inp.removeClass('assigned').addClass('listening');
-                btn_inp.html('Press key...');
-                driver.on_button_press = (btn_id) => {
-                    axis.id_src = btn_id;
-                    axis.src_label = 'B'+btn_id;
-                    console.log('assigned ', btn_id);
-                    close_listening();
-                    delete driver.on_button_press;
-                };
-                $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
-                    close_listening();
-                });
-            } else {
-                close_listening();
-            }
-        });
-        // btn_inp.focus((ev)=>{ev.target.select();});
-        // offset_inp.change((ev)=>{
-        //     axis.offset = parseFloat($(ev.target).val());
-        //     that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-        // });
-        btn_inp.appendTo(btn_el);
-        return btn_el;
-    }
+    //     let close_listening = () => {
+    //         btn_inp.removeClass('listening');
+    //         btn_inp.html('listening...');
+    //         btn_inp.html(axis.src_label!==null?axis.src_label:'n/a');
+    //         if (axis.id_src!==null)
+    //             btn_inp.addClass('assigned');
+    //         $('#input-manager-overlay').unbind().css('display', 'none');
+    //     }
+    //     btn_inp.click(()=>{
+    //         if (!btn_inp.hasClass('listening')) {
+    //             btn_inp.removeClass('assigned').addClass('listening');
+    //             btn_inp.html('Press key...');
+    //             driver.on_button_press = (btn_id) => {
+    //                 axis.id_src = btn_id;
+    //                 axis.src_label = 'B'+btn_id;
+    //                 console.log('assigned ', btn_id);
+    //                 close_listening();
+    //                 delete driver.on_button_press;
+    //             };
+    //             $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
+    //                 close_listening();
+    //             });
+    //         } else {
+    //             close_listening();
+    //         }
+    //     });
+    //     // btn_inp.focus((ev)=>{ev.target.select();});
+    //     // offset_inp.change((ev)=>{
+    //     //     axis.offset = parseFloat($(ev.target).val());
+    //     //     that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+    //     // });
+    //     btn_inp.appendTo(btn_el);
+    //     return btn_el;
+    // }
 
     render_axis_config (driver, axis, button_source = null) {
     
@@ -1168,9 +1168,9 @@ export class InputManager {
         }
 
         // input offset
-        if (button_source) {
-            axis.config_details_el.append(this.render_assign_button_input(driver, axis));
-        }
+        // if (button_source) {
+        //     axis.config_details_el.append(this.render_assign_button_input(driver, axis));
+        // }
         
         // let default_axis_conf = this.current_gamepad.current_profile[driver_axis];
 
@@ -1340,7 +1340,7 @@ export class InputManager {
             return; 
         }
 
-        btn.config_details_el.append(this.render_assign_button_input(driver, btn));
+        // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
 
         // modifier selection
         let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
@@ -1564,8 +1564,38 @@ export class InputManager {
             let row_el = $('<div class="button-row unused"></div>');
 
             // raw val
-            let raw_val_el = $('<span class="btn-val" title="Raw button value"></span>');
+            let raw_val_el = $('<span class="btn-val" title="Button input"></span>');
             raw_val_el.appendTo(row_el);
+
+            let close_listening = () => {
+                btn.listening = false;
+                raw_val_el.removeClass('listening');
+                raw_val_el.html(btn.src_label!==null?btn.src_label:'n/a');
+                if (btn.id_src!==null)
+                    raw_val_el.addClass('assigned');
+                $('#input-manager-overlay').unbind().css('display', 'none');
+                delete driver.on_button_press;
+            };
+            raw_val_el.click(()=>{
+                if (!raw_val_el.hasClass('listening')) {
+                    raw_val_el.removeClass('assigned').addClass('listening');
+                    raw_val_el.html('?');
+                    $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
+                        close_listening();
+                    });
+                    btn.listening = true;
+                    driver.on_button_press = (key_id) => {
+                        btn.id_src = key_id;
+                        btn.src_label = 'B'+key_id;
+                        console.log('assigned ', key_id);
+                        close_listening();
+                    };
+                } else {
+                    close_listening();
+                }
+            });
+
+
             btn.raw_val_el = raw_val_el;
 
              // 1st line
@@ -1785,10 +1815,12 @@ export class InputManager {
         for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
 
             let btn = driver.buttons[i_btn];
+            if (btn.listening)
+                continue;
 
-            if (btn.assigned) {
+            if (Number.isInteger(btn.id_src)) {
 
-                if (btn.driver_axis && (btn.pressed || btn.touched) && btn.raw !== null && btn.raw !== undefined) {
+                if (btn.driver_axis && (btn.pressed || btn.touched) && !Number.isNaN(btn.raw)) {
                     btn.raw_val_el.html(btn.raw.toFixed(2));
                 } else if (btn.src_label) {
                     btn.raw_val_el.html(btn.src_label);
@@ -1806,6 +1838,14 @@ export class InputManager {
                 else
                     btn.raw_val_el.removeClass('pressed');
 
+            } else {
+                btn.raw_val_el.removeClass('touched');
+                btn.raw_val_el.removeClass('pressed');
+                btn.raw_val_el.html('none');
+            }
+
+            if (btn.assigned) {
+
                 if (btn.driver_btn && (btn.val === true || btn.val === false))
                     btn.out_val_el.html(btn.val.toString());
                 else if (btn.driver_axis && btn.val !== null && btn.val !== undefined)
@@ -1819,14 +1859,7 @@ export class InputManager {
                     btn.out_val_el.removeClass('live');
                 }
 
-            } else {
-                btn.raw_val_el
-                    .html('none')
-                    .removeClass('pressed')
-                    .removeClass('touched');
             }
-            
-            
             
         }
     }

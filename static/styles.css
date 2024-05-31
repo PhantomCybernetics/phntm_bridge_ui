@@ -3065,35 +3065,26 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     text-align: center;
 }
 
-#gamepad #gamepad_settings .config-row .btn-input {
-    float: right;
-    width: 50%;
-    background-color: #26214b;
-    color: #ffffff75;
-    margin-right: 5px;
-    text-align: center;
-    border-radius: 6px;
-    font-size: 16px;
-    border: 2px dashed #e90fe9;
+#gamepad #gamepad_settings .btn-val {    
+    /* border: 2px dashed #e90fe9; */
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
-    height: 30px;
-    line-height: 28px;
     cursor: pointer;
-}
-
-#gamepad #gamepad_settings .config-row .btn-input.listening {
-    z-index: 3;
-    color: #fff;
-    border-color: cyan;
     position: relative;
 }
 
-#gamepad #gamepad_settings .config-row .btn-input.assigned {
-    color: #fff;
-    border: 2px solid #e90fe9;
-    background-color: #e90fe9;
+#gamepad #gamepad_settings .btn-val.listening {
+    z-index: 3;
+    border: 2px dashed #e90fe9;
+    height: 30px;
+    line-height: 28px;
+}
+
+#gamepad #gamepad_settings .btn-val.assigned {
+    /* color: #fff; */
+    border: 0px;
+    /* background-color: #e90fe9; */
 }
 
 #gamepad_settings #gamepad-output-panel {
