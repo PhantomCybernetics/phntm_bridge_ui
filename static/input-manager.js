@@ -532,6 +532,25 @@ export class InputManager {
         }
     }
 
+    make_button(driver) {
+        if (driver.i_btn === undefined)
+            driver.i_btn = -1;
+        driver.i_btn++;
+        let new_btn = { 
+            i: driver.i_btn,
+            id_src: null, // id on gamepad
+            src_label: null, // hr key name
+            pressed: false,
+            touched: false,
+            raw: null,
+            driver_btn: null, // output as diver button
+            driver_axis: null, // output as driver axis
+            action: null, // performs all other actions
+        }
+        driver.buttons.push(new_btn);
+        return new_btn;
+    }
+
     init_profile(c, profile) {
 
         if (!profile.driver_instances) {
@@ -592,21 +611,6 @@ export class InputManager {
                 return new_axis;
             }
 
-            function make_button(i_btn) {
-                let new_btn = { 
-                    i: i_btn,
-                    id_src: null, // id on gamepad
-                    src_label: null, // hr key name
-                    pressed: false,
-                    touched: false,
-                    raw: null,
-                    driver_btn: null, // output as diver button
-                    driver_axis: null, // output as driver axis
-                    action: null, // performs all other actions
-                }
-                return new_btn;
-            }
-
             if (c.type == 'touch') {
                 for (let i_axis = 0; i_axis < 4; i_axis++) {
                     let new_axis = make_axis(i_axis, 0.01);
@@ -614,13 +618,13 @@ export class InputManager {
                         driver.axes.push(new_axis);
                     }
                 }
+                for (let i_btn = 0; i_btn < 3; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
+                    let new_button = this.make_button(driver);
+                }
             } else if (c.type == 'keyboard') {
-                // for (let i_axis = 0; i_axis < 4; i_axis++) {
-                //     let new_axis = make_axis(i_axis, 0.01);
-                //     if (new_axis) {
-                //         driver.axes.push(new_axis);
-                //     }
-                // }
+                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
+                    let new_button = this.make_button(driver);
+                }
             } else if (c.type == 'gamepad') {
                 const gp = navigator.getGamepads()[c.gamepad.index];
                 console.log('Making axes & buttons for gamepad', c.gamepad);
@@ -632,11 +636,7 @@ export class InputManager {
                     }
                 }
                 for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
-                    let new_button = make_button(i_btn);
-                    if (new_button) {
-                        // new_button.needs_reset = true; //waits for 1st non-zero signals
-                        driver.buttons.push(new_button);
-                    }
+                    let new_button = this.make_button(driver);
                 }
             }
         }
@@ -800,7 +800,12 @@ export class InputManager {
             profile_opts.push($('<option value="'+id_profile+'"' + (this.current_profile == id_profile ? ' selected' : '') + '>'+label+'</option>'));
         }
         profile_opts.push($('<option value="+">New profile...</option>'));
-        $('#input-profile-select').empty().attr('disabled', false).append(profile_opts);
+        $('#input-profile-select')
+            .empty().attr({
+                'disabled': false,
+                'autocomplete': 'off'
+            })
+            .append(profile_opts);
         
         $('#input-profile-select').unbind().change((ev)=>{
             let val = $(ev.target).val()
@@ -1081,8 +1086,6 @@ export class InputManager {
             return;
         }
 
-        $('#gamepad-buttons-tab').html(this.edited_controller.type == 'keyboard' ? 'Keys' : 'Buttons');
-
         // $('#gamepad').addClass('connected');
         console.log('Editing controller is ', this.edited_controller);
 
@@ -1103,8 +1106,28 @@ export class InputManager {
         }
 
         let driver = profile.driver_instances[profile.driver];
-        this.make_axes_ui(driver);
-        this.make_buttons_ui(driver);
+
+        if (this.edited_controller.type == 'keyboard') {
+            $('#gamepad-buttons-tab').html('Key mapping');
+            $('#gamepad-axes-tab').css('display', 'none'); // no separate axes for kb
+            $('#gamepad-axes-panel').css('display', 'none');
+            if ($('#gamepad-axes-panel').hasClass('active')) { // switch to buttons tab
+                $('#gamepad-axes-panel').removeClass('active');
+                $('#gamepad-axes-tab').removeClass('active');
+                $('#gamepad-buttons-panel').addClass('active');
+                $('#gamepad-buttons-tab').addClass('active');
+            }
+            this.make_buttons_ui(driver);
+        } else {
+            // if (this.edited_controller.type == 'touch')
+            //     $('#gamepad-buttons-tab').html('UI buttons');
+            // else
+            $('#gamepad-buttons-tab').html('Buttons');
+            $('#gamepad-axes-tab').css('display', ''); //unset
+            $('#gamepad-axes-panel').css('display', '');
+            this.make_axes_ui(driver);
+            this.make_buttons_ui(driver);
+        }
     }
 
     prevent_context_menu(ev) {
@@ -1334,7 +1357,8 @@ export class InputManager {
         let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
         let trigger_opts = [
             '<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>',
-            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>'
+            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>',
+            '<option value="2"'+(btn.trigger===2?' selected':'')+'>Release</option>'
         ];
 
         let trigger_inp = $('<select>'+trigger_opts.join('')+'</select>');
@@ -1757,6 +1781,236 @@ export class InputManager {
         }
     };
 
+    make_btn_row(driver, btn) {
+
+        let that = this;
+
+        let row_el = $('<div class="button-row unused"></div>');
+        btn.row_el = row_el;
+
+        // raw val
+        let raw_val_el = $('<span class="btn-val" title="Button input"></span>');
+        raw_val_el.appendTo(row_el);
+
+        let close_listening = () => {
+            btn.listening = false;
+            raw_val_el.removeClass('listening');
+            raw_val_el.html(btn.src_label!==null?btn.src_label:'n/a');
+            if (btn.id_src!==null)
+                raw_val_el.addClass('assigned');
+            $('#input-manager-overlay').unbind().css('display', 'none');
+            delete driver.on_button_press;
+        };
+        raw_val_el.click(()=>{
+            if (!raw_val_el.hasClass('listening')) {
+                raw_val_el.removeClass('assigned').addClass('listening');
+                raw_val_el.html('?');
+                $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
+                    close_listening();
+                });
+                btn.listening = true;
+                driver.on_button_press = (key_id) => {
+                    btn.id_src = key_id;
+                    btn.src_label = 'B'+key_id;
+                    console.log('assigned ', key_id);
+                    close_listening();
+                };
+            } else {
+                close_listening();
+            }
+        });
+
+
+        btn.raw_val_el = raw_val_el;
+
+         // 1st line
+        let line_1_el = $('<div class="btn-config"></div>');
+
+        // btn assignment selection
+        let opts = [
+            '<option value="">Not in use</option>',
+            '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
+            '<option value="ros-srv"'+(btn.action == 'ros-srv' ? ' selected': '')+'>Call ROS Service</option>',
+            '<option value="input-profile"'+(btn.action == 'input-profile' ? ' selected': '')+'>Set Input Profile</option>',
+            '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
+        ];
+        // let dri = profile.driver_instance;
+        let dri_btns = driver.get_buttons();
+        let dri_btns_ids = Object.keys(dri_btns);
+        for (let j = 0; j < dri_btns_ids.length; j++) {
+            let id_btn = dri_btns_ids[j];
+            opts.push('<option value="btn:'+id_btn+'"'+(btn.driver_btn == id_btn ? ' selected' : '')+'>'+dri_btns[id_btn]+'</option>');
+        }
+        let dri_axes = driver.get_axes();
+        let dri_axes_ids = Object.keys(dri_axes);
+        for (let j = 0; j < dri_axes_ids.length; j++) {
+            let id_axis = dri_axes_ids[j];
+            opts.push('<option value="axis:'+id_axis+'"'+(btn.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
+        }
+        opts.push('<option value="=">Copy from button...</option>');
+        let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
+        assignment_sel_el.appendTo(line_1_el);
+        btn.assignment_sel_el = assignment_sel_el;
+
+        // output val
+        let out_val_el = $('<span class="btn-output-val" title="Button output"></span>');
+        out_val_el.appendTo(line_1_el);
+        btn.out_val_el = out_val_el;
+
+        // config toggle
+        btn.conf_toggle_el = $('<span class="conf-toggle'+(btn.edit_open?' open' : '')+'"></span>');
+        btn.conf_toggle_el.click((ev)=>{
+            if (!btn.conf_toggle_el.hasClass('open')) {
+                btn.conf_toggle_el.addClass('open')
+                btn.config_details_el.addClass('open')
+                btn.edit_open = true;
+            } else {
+                btn.conf_toggle_el.removeClass('open')
+                btn.config_details_el.removeClass('open')
+                btn.edit_open = false;
+            }
+        });
+        out_val_el.click((ev)=>{
+            btn.conf_toggle_el.click(); // because this happens a lot
+        });
+        btn.conf_toggle_el.appendTo(line_1_el);
+
+        // collapsable details
+        btn.config_details_el = $('<div class="btn-config-details'+(btn.edit_open?' open' : '')+'"></div>');
+
+        assignment_sel_el.change((ev)=>{
+            let val_btn_assigned = $(ev.target).val();
+
+            console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
+
+            // let cancel_copy = () => {
+            //     driver.axes.forEach((a)=>{
+            //         a.raw_val_el
+            //             .unbind()
+            //             .removeClass('copy-source');
+            //         if (profile.copying_into_axis === a) {
+            //             a.assignment_sel_el.val(''); //set not in use
+            //             a.row_el
+            //                 .removeClass('copy-destination')
+            //                 .addClass('unused');
+            //         }
+            //     });
+            //     delete profile.copying_into_axis;
+            // }
+
+            // if (id_axis_assigned == '=') {
+            //     if (profile.copying_into_axis) {
+            //         // another one is waiting for input, close first
+            //         cancel_copy();
+            //     }
+            //     //console.log('Copy config for axis '+axis.id)
+            //     profile.copying_into_axis = axis;
+            //     row_el.addClass('unused copy-destination');
+
+            //     // let axes_ids = Object.keys()
+            //     driver.axes.forEach((a)=>{
+            //         if (axis == a) //skip self
+            //             return;
+            //         a.raw_val_el.addClass('copy-source')
+            //             .unbind()
+            //             .click((ev)=>{
+            //                 cancel_copy();
+            //                 console.log('Copying axis '+a.i, a);
+            //                 axis.driver_axis = a.driver_axis;
+            //                 axis.assignment_sel_el.val(a.driver_axis);
+            //                 if (axis.driver_axis) {
+            //                     axis.dead_min = a.dead_min;
+            //                     axis.dead_max = a.dead_max;
+            //                     axis.offset = a.offset;
+            //                     axis.scale = a.scale;
+            //                     axis.mod_func = a.mod_func;
+            //                     axis.scale_by_velocity_src = a.scale_by_velocity_src;
+            //                     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
+            //                     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
+            //                     render_axis_config();
+            //                     row_el.removeClass('unused');
+            //                 } else {
+            //                     row_el.addClass('unused');
+            //                 }
+            //                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+            //             });
+            //     });
+            //     return;
+            // } else if (profile.copying_into_axis) {
+            //     cancel_copy();
+            // }
+
+            if (val_btn_assigned) {
+
+                if (val_btn_assigned.indexOf('axis:') === 0) {
+                    let id_axis_assigned = val_btn_assigned.substring(5);;
+                    console.log('btn '+ btn.i +' assigned axis: ', id_axis_assigned)
+                    btn.driver_btn = null;
+                    btn.action = null;
+                    btn.driver_axis = id_axis_assigned;
+                    btn.assigned = true;
+                } else if (val_btn_assigned.indexOf('btn:') === 0) {
+                    let id_btn_assigned = val_btn_assigned.substring(4);;
+                    console.log('btn '+ btn.i +' assigned btn: ', id_btn_assigned)
+                    btn.driver_axis = null;
+                    btn.action = null;
+                    btn.driver_btn = id_btn_assigned;
+                    if (btn.trigger === undefined || btn.trigger === null)
+                        btn.trigger = 1; // press by default
+                    btn.assigned = true;
+                } else { // actions
+                    console.log('btn '+ btn.i +' assigned action: ', val_btn_assigned)
+                    btn.driver_axis = null;
+                    btn.driver_btn = null;
+                    btn.action = val_btn_assigned;
+                    if (btn.trigger === undefined || btn.trigger === null)
+                        btn.trigger = 1; // press by default
+                    switch (btn.action) {
+                        case 'ctrl-enabled': 
+                            if (btn.set_ctrl_state === undefined || btn.set_ctrl_state === null)
+                                btn.set_ctrl_state = 2; //toggle by default
+                            
+                            break;
+                        default: break;
+                    }
+                    btn.assigned = true;
+                }
+                
+                that.render_btn_config(driver, btn);
+                row_el.removeClass('unused');
+
+                btn.conf_toggle_el.addClass('open');
+                btn.config_details_el.addClass('open');
+                btn.edit_open = true;
+
+            } else {
+                btn.driver_axis = null;                   
+                btn.driver_btn = null;
+                btn.action = null;
+                btn.assigned = false;
+                btn.edit_open = false;
+                
+                that.render_btn_config(driver, btn);
+                row_el.addClass('unused');
+            }
+
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+
+        this.render_btn_config(driver, btn);
+
+        if (btn.driver_btn || btn.driver_axis || btn.action) {
+            row_el.removeClass('unused');
+        } else {
+            row_el.addClass('unused');
+        }
+
+        line_1_el.appendTo(row_el);
+        btn.config_details_el.appendTo(row_el);
+
+        return row_el;
+    }
+
     make_buttons_ui(driver) {
         
         let that = this;
@@ -1764,238 +2018,31 @@ export class InputManager {
         // all gamepad axes
         let button_els = [];
         for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
-
             let btn = driver.buttons[i_btn];
-
-            let row_el = $('<div class="button-row unused"></div>');
-
-            // raw val
-            let raw_val_el = $('<span class="btn-val" title="Button input"></span>');
-            raw_val_el.appendTo(row_el);
-
-            let close_listening = () => {
-                btn.listening = false;
-                raw_val_el.removeClass('listening');
-                raw_val_el.html(btn.src_label!==null?btn.src_label:'n/a');
-                if (btn.id_src!==null)
-                    raw_val_el.addClass('assigned');
-                $('#input-manager-overlay').unbind().css('display', 'none');
-                delete driver.on_button_press;
-            };
-            raw_val_el.click(()=>{
-                if (!raw_val_el.hasClass('listening')) {
-                    raw_val_el.removeClass('assigned').addClass('listening');
-                    raw_val_el.html('?');
-                    $('#input-manager-overlay').unbind().css('display', 'block').click(()=>{
-                        close_listening();
-                    });
-                    btn.listening = true;
-                    driver.on_button_press = (key_id) => {
-                        btn.id_src = key_id;
-                        btn.src_label = 'B'+key_id;
-                        console.log('assigned ', key_id);
-                        close_listening();
-                    };
-                } else {
-                    close_listening();
-                }
-            });
-
-
-            btn.raw_val_el = raw_val_el;
-
-             // 1st line
-            let line_1_el = $('<div class="btn-config"></div>');
-
-            // btn assignment selection
-            let opts = [
-                '<option value="">Not in use</option>',
-                '<option value="ctrl-enabled">Set Controller Enabled</option>',
-                '<option value="ros-srv">Call ROS Service</option>',
-                '<option value="input-profile">Set Input Profile</option>',
-                '<option value="ui-profile">Set UI Layout Profile</option>',
-            ];
-            // let dri = profile.driver_instance;
-            let dri_btns = driver.get_buttons();
-            let dri_btns_ids = Object.keys(dri_btns);
-            for (let j = 0; j < dri_btns_ids.length; j++) {
-                let id_btn = dri_btns_ids[j];
-                opts.push('<option value="btn:'+id_btn+'"'+(btn.driver_btn == id_btn ? ' selected' : '')+'>'+dri_btns[id_btn]+'</option>');
-            }
-            let dri_axes = driver.get_axes();
-            let dri_axes_ids = Object.keys(dri_axes);
-            for (let j = 0; j < dri_axes_ids.length; j++) {
-                let id_axis = dri_axes_ids[j];
-                opts.push('<option value="axis:'+id_axis+'"'+(btn.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
-            }
-            opts.push('<option value="=">Copy from button...</option>');
-            let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
-            assignment_sel_el.appendTo(line_1_el);
-            btn.assignment_sel_el = assignment_sel_el;
-
-            // output val
-            let out_val_el = $('<span class="btn-output-val" title="Button output"></span>');
-            out_val_el.appendTo(line_1_el);
-            btn.out_val_el = out_val_el;
-
-            // config toggle
-            btn.conf_toggle_el = $('<span class="conf-toggle'+(btn.edit_open?' open' : '')+'"></span>');
-            btn.conf_toggle_el.click((ev)=>{
-                if (!btn.conf_toggle_el.hasClass('open')) {
-                    btn.conf_toggle_el.addClass('open')
-                    btn.config_details_el.addClass('open')
-                    btn.edit_open = true;
-                } else {
-                    btn.conf_toggle_el.removeClass('open')
-                    btn.config_details_el.removeClass('open')
-                    btn.edit_open = false;
-                }
-            });
-            out_val_el.click((ev)=>{
-                btn.conf_toggle_el.click(); // because this happens a lot
-            });
-            btn.conf_toggle_el.appendTo(line_1_el);
-
-            // collapsable details
-            btn.config_details_el = $('<div class="btn-config-details'+(btn.edit_open?' open' : '')+'"></div>');
-
-            assignment_sel_el.change((ev)=>{
-                let val_btn_assigned = $(ev.target).val();
-
-                console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
-
-                // let cancel_copy = () => {
-                //     driver.axes.forEach((a)=>{
-                //         a.raw_val_el
-                //             .unbind()
-                //             .removeClass('copy-source');
-                //         if (profile.copying_into_axis === a) {
-                //             a.assignment_sel_el.val(''); //set not in use
-                //             a.row_el
-                //                 .removeClass('copy-destination')
-                //                 .addClass('unused');
-                //         }
-                //     });
-                //     delete profile.copying_into_axis;
-                // }
-
-                // if (id_axis_assigned == '=') {
-                //     if (profile.copying_into_axis) {
-                //         // another one is waiting for input, close first
-                //         cancel_copy();
-                //     }
-                //     //console.log('Copy config for axis '+axis.id)
-                //     profile.copying_into_axis = axis;
-                //     row_el.addClass('unused copy-destination');
-
-                //     // let axes_ids = Object.keys()
-                //     driver.axes.forEach((a)=>{
-                //         if (axis == a) //skip self
-                //             return;
-                //         a.raw_val_el.addClass('copy-source')
-                //             .unbind()
-                //             .click((ev)=>{
-                //                 cancel_copy();
-                //                 console.log('Copying axis '+a.i, a);
-                //                 axis.driver_axis = a.driver_axis;
-                //                 axis.assignment_sel_el.val(a.driver_axis);
-                //                 if (axis.driver_axis) {
-                //                     axis.dead_min = a.dead_min;
-                //                     axis.dead_max = a.dead_max;
-                //                     axis.offset = a.offset;
-                //                     axis.scale = a.scale;
-                //                     axis.mod_func = a.mod_func;
-                //                     axis.scale_by_velocity_src = a.scale_by_velocity_src;
-                //                     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
-                //                     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
-                //                     render_axis_config();
-                //                     row_el.removeClass('unused');
-                //                 } else {
-                //                     row_el.addClass('unused');
-                //                 }
-                //                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-                //             });
-                //     });
-                //     return;
-                // } else if (profile.copying_into_axis) {
-                //     cancel_copy();
-                // }
-
-                if (val_btn_assigned) {
-
-                    if (val_btn_assigned.indexOf('axis:') === 0) {
-                        let id_axis_assigned = val_btn_assigned.substring(5);;
-                        console.log('btn '+ i_btn +' assigned axis: ', id_axis_assigned)
-                        btn.driver_btn = null;
-                        btn.action = null;
-                        btn.driver_axis = id_axis_assigned;
-                        btn.assigned = true;
-                    } else if (val_btn_assigned.indexOf('btn:') === 0) {
-                        let id_btn_assigned = val_btn_assigned.substring(4);;
-                        console.log('btn '+ i_btn +' assigned btn: ', id_btn_assigned)
-                        btn.driver_axis = null;
-                        btn.action = null;
-                        btn.driver_btn = id_btn_assigned;
-                        if (btn.trigger === undefined || btn.trigger === null)
-                            btn.trigger = 1; // press by default
-                        btn.assigned = true;
-                    } else { // actions
-                        console.log('btn '+ i_btn +' assigned action: ', val_btn_assigned)
-                        btn.driver_axis = null;
-                        btn.driver_btn = null;
-                        btn.action = val_btn_assigned;
-                        if (btn.trigger === undefined || btn.trigger === null)
-                            btn.trigger = 1; // press by default
-                        switch (btn.action) {
-                            case 'ctrl-enabled': 
-                                if (btn.set_ctrl_state === undefined || btn.set_ctrl_state === null)
-                                    btn.set_ctrl_state = 2; //toggle by default
-                                
-                                break;
-                            default: break;
-                        }
-                        btn.assigned = true;
-                    }
-                    
-                    that.render_btn_config(driver, btn);
-                    row_el.removeClass('unused');
-
-                    btn.conf_toggle_el.addClass('open');
-                    btn.config_details_el.addClass('open');
-
-                } else {
-                    btn.driver_axis = null;                   
-                    btn.driver_btn = null;
-                    btn.action = null;
-                    btn.assigned = false;
-                    
-                    that.render_btn_config(driver, btn);
-                    row_el.addClass('unused');
-                }
-
-                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-            });
-
-            this.render_btn_config(driver, btn);
-
-            if (btn.driver_btn || btn.driver_axis) {
-                row_el.removeClass('unused');
-            } else {
-                row_el.addClass('unused');
-            }
-
-            line_1_el.appendTo(row_el);
-            btn.config_details_el.appendTo(row_el);
-
-            btn.row_el = row_el;
+            let row_el = this.make_btn_row(driver, btn);
             button_els.push(row_el);
         }
 
-        // let add_btn = $('<button id="add-button-btn"></button>')
-        // add_btn.click((ev)=>{
+        let add_btn = null;
+        if (this.edited_controller.type == 'keyboard') {
+            add_btn = $('<button id="add-button-btn"><span class="icon"></span>Add key mapping</button>')
+        }
+        else if (this.edited_controller.type == 'touch') {
+            add_btn = $('<button id="add-button-btn"><span class="icon"></span>Add UI button</button>')
+        }
+        else if (this.edited_controller.type == 'gamepad') {
+            add_btn = $('<button id="add-button-btn"><span class="icon"></span>Add button</button>')
+        }
 
-        // });
-        // button_els.push(add_btn);
+        if (add_btn) {
+            add_btn.click((ev)=>{
+                let new_btn = that.make_button(driver);
+                let row_el = this.make_btn_row(driver, new_btn);
+                row_el.insertBefore($('#add-button-btn'));
+                $('#gamepad-buttons-panel').scrollTop($('#gamepad-buttons-panel').prop('scrollHeight'));
+            });
+            button_els.push(add_btn);
+        }
 
         $('#gamepad-buttons-panel')
             .empty()
