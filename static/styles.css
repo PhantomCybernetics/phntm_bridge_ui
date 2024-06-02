@@ -2784,12 +2784,6 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
 
 
 
-
-
-
-
-
-
 #gamepad_settings .tab {
     display: block;
     float: left;
@@ -2801,7 +2795,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     cursor: pointer;
     border-radius: 5px 5px 0px 0px;
     font-size: 18px;
-    margin-right: 5px;
+    margin-left: 5px;
     height: 29px;
 }
 
@@ -2812,7 +2806,7 @@ BODY.desktop-ui #gamepad_settings .tab {
 #gamepad_settings .tab#gamepad-settings-tab {
     float: right;
     width: 25px;
-    margin-right: 0px;
+    margin-right: 5px;
     background-image: url(/static/icon-settings.png);
     background-size: 21px;
     background-repeat: no-repeat;
@@ -2830,7 +2824,7 @@ BODY.desktop-ui #gamepad_settings .tab {
 
 #gamepad_settings .panel {
     display: none;
-    padding: 10px 0px 5px 0px;
+    padding: 10px 5px 5px 5px;
     border-top: 3px solid rgb(233 15 233);
     /* border-radius: 0px 0px 5px 5px; */
     /* background-color: rgb(233 15 233); */
@@ -3841,7 +3835,7 @@ BUTTON#delete-input-profile:hover {
 
 #input-controller-config {
     background-color: #3A3376;
-    padding: 5px 5px 0px 5px;
+    padding: 5px 0px 0px 0px;
     border-radius: 0px 0px 5px 5px;
     position: relative;
 }

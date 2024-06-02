@@ -1550,7 +1550,8 @@ export class InputManager {
             let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
             profile_opts.push('<option value="'+id_profile+'"'+(btn.set_ui_profile==id_profile?' selected':'')+'>'+label+'</option>')
         })
-        let profile_inp = $('<select>'+profile_opts.join('')+'</select>');
+        profile_opts.push('<option>N/A</option>')
+        let profile_inp = $('<select disabled>'+profile_opts.join('')+'</select>');
         profile_inp.appendTo(profile_el);
         
         profile_inp.change((ev)=>{
