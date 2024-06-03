@@ -215,7 +215,15 @@ export class InputManager {
             this.make_touch_gamepad();
         
         this.make_keyboard();
-            
+        this.last_keyboard_input = {};
+        document.addEventListener('keydown', (ev) => that.on_keyboard_key_down(ev, that.controllers['keyboard']));
+        document.addEventListener('keyup', (ev) => that.on_keyboard_key_up(ev, that.controllers['keyboard']));
+        window.addEventListener("blur", (event) => {
+            // console.warn('Window lost focus');
+            that.last_keyboard_input = {};
+            // that.update_input_ui();
+        });
+
         this.make_ui();
     }
 
@@ -1355,13 +1363,14 @@ export class InputManager {
     make_btn_trigger_sel (btn) {
         // modifier selection
         let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
-        let trigger_opts = [
-            '<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>',
-            '<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>',
-            '<option value="2"'+(btn.trigger===2?' selected':'')+'>Release</option>'
-        ];
+        let trigger_opts = [];
+        if (this.edited_controller.type == 'gamepad') // gamepad has touch
+            trigger_opts.push('<option value="0"'+(btn.trigger===0?' selected':'')+'>Touch</option>');
+        trigger_opts.push('<option value="1"'+(btn.trigger===1?' selected':'')+'>Press</option>');
+        if (!btn.driver_btn) // driver btn only trigerred by touch or press
+            trigger_opts.push('<option value="2"'+(btn.trigger===2?' selected':'')+'>Release</option>')
 
-        let trigger_inp = $('<select>'+trigger_opts.join('')+'</select>');
+        let trigger_inp = $('<select'+(trigger_opts.length < 2 ? ' disabled' : '')+'>'+trigger_opts.join('')+'</select>');
         trigger_inp.appendTo(trigger_el);
         let that = this;
         trigger_inp.change((ev)=>{
@@ -1550,7 +1559,7 @@ export class InputManager {
             let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
             profile_opts.push('<option value="'+id_profile+'"'+(btn.set_ui_profile==id_profile?' selected':'')+'>'+label+'</option>')
         })
-        profile_opts.push('<option>N/A</option>')
+        profile_opts.push('<option>N/A (yet)</option>')
         let profile_inp = $('<select disabled>'+profile_opts.join('')+'</select>');
         profile_inp.appendTo(profile_el);
         
@@ -1810,10 +1819,57 @@ export class InputManager {
                     close_listening();
                 });
                 btn.listening = true;
-                driver.on_button_press = (key_id) => {
+                driver.on_button_press = (key_id, kb_ev) => {
+                
+                    if (that.edited_controller.type == 'keyboard') {
+
+                        if (key_id == 'Escape') { // cancel 
+                            close_listening();
+                            return;
+                        }
+                        else if (key_id == 'Delete' || key_id == 'Backspace') { // clear
+                            btn.id_src = null;
+                            btn.src_label = null;
+                            btn.key_mod = null;
+                            close_listening();
+                            return;
+                        }
+                        // else if (key_id == )
+                        let label = kb_ev.key;
+                        switch (label) {
+                            case ' ': label = '␣'; break;
+                            case 'ArrowLeft': label = '←'; break; // &#8592;
+                            case 'ArrowRight': label = '→'; break; //&#8594;
+                            case 'ArrowUp': label = '↑'; break; // &#8593;
+                            case 'ArrowDown': label = '↓'; break; // &#8595;
+                        }
+                        if (kb_ev.altKey) {
+                            label = 'Alt+'+label;
+                            btn.key_mod = 'alt';
+                        }
+                        else if (kb_ev.ctrlKey) {
+                            label = 'Ctrl+'+label;
+                            btn.key_mod = 'ctrl';
+                        }
+                        else if (kb_ev.metaKey) {
+                            label = 'Meta+'+label;
+                            btn.key_mod = 'meta';
+                        }
+                        else if (kb_ev.shiftKey) {
+                            label = 'Shift+'+label;
+                            btn.key_mod = 'shift';
+                        } else {
+                            btn.key_mod = null;
+                        }
+                        btn.src_label = label;
+
+                    } else { // touch or gamepad
+                        btn.src_label = 'B'+key_id;
+                    }
+                        
                     btn.id_src = key_id;
-                    btn.src_label = 'B'+key_id;
-                    console.log('assigned ', key_id);
+                    // console.log('assigned ', key_id);
+
                     close_listening();
                 };
             } else {
@@ -1882,7 +1938,7 @@ export class InputManager {
         assignment_sel_el.change((ev)=>{
             let val_btn_assigned = $(ev.target).val();
 
-            console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
+            // console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
 
             // let cancel_copy = () => {
             //     driver.axes.forEach((a)=>{
@@ -2098,7 +2154,16 @@ export class InputManager {
             if (btn.listening)
                 continue;
 
-            if (Number.isInteger(btn.id_src)) {
+            if (this.edited_controller.type == 'keyboard' && btn.id_src) {
+
+                btn.raw_val_el.html(btn.src_label);
+
+                if (btn.pressed)
+                    btn.raw_val_el.addClass('pressed');
+                else
+                    btn.raw_val_el.removeClass('pressed');
+
+            } else if (Number.isInteger(btn.id_src)) {
 
                 if (btn.driver_axis && (btn.pressed || btn.touched) && !(btn.raw === undefined || btn.raw === null)) {
                     btn.raw_val_el.html(btn.raw.toFixed(2));
@@ -2277,6 +2342,7 @@ export class InputManager {
                 btn.val = true;
             }
             btn.live = btn.val;
+            some_buttons_live = btn.live || some_buttons_live;
 
             if (driver.buttons_output[btn.driver_btn] === undefined)
                 driver.buttons_output[btn.driver_btn] = btn.val;
@@ -2455,10 +2521,8 @@ export class InputManager {
                 }
 
             } else if (c.type == 'keyboard') {
-    
-                for (let i = 0; i < driver.axes.length; i++) {
-                    driver.axes[i].raw = 0.0;
-                }
+
+               // handle in on_keyboard_key_down/up
 
             } else if (c.type == 'gamepad') {
                 
@@ -2546,10 +2610,10 @@ export class InputManager {
                 return; //nothing to do for this controller atm
     
             let axes_alive = this.process_axes_input(c) && c.connected;
-            let button_alive = this.process_buttons_input(c) && c.connected;
+            let buttons_alive = this.process_buttons_input(c) && c.connected;
             let cooldown = false;
 
-            if (!axes_alive && !button_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
+            if (!axes_alive && !buttons_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
                 if (c.cooldown_started === undefined) {
                     c.cooldown_started = Date.now();
                     cooldown = true;
@@ -2560,7 +2624,7 @@ export class InputManager {
                 delete c.cooldown_started; // some axes alive => reset cooldown
             }
     
-            let transmitting = c.enabled && (axes_alive || button_alive || cooldown) && driver.can_transmit();
+            let transmitting = c.enabled && (axes_alive || buttons_alive || cooldown) && driver.can_transmit();
     
             driver.generate();
             
@@ -2598,8 +2662,72 @@ export class InputManager {
 
 
 
+    on_keyboard_key_down(ev, c) {
+        // console.log('Down: '+ev.code, ev);
 
+        let profile = c.profiles[this.current_profile];
+        let driver = profile.driver_instances[profile.driver];
 
+        if (driver.on_button_press) {
+            if (['Shift', 'Control', 'Alt', 'Meta'].indexOf(ev.key) > -1) {
+                return; // ignore single modifiers here
+            }
+            driver.on_button_press(ev.code, ev);
+            return;
+        }
+
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (btn.pressed)
+                continue;
+
+            if (btn.id_src == ev.code) {
+                if (btn.key_mod == 'shift' && !ev.shiftKey)
+                    continue;
+                if (btn.key_mod == 'meta' && !ev.metaKey)
+                    continue;
+                if (btn.key_mod == 'ctrl' && !ev.ctrlKey)
+                    continue;
+                if (btn.key_mod == 't' && !ev.altKey)
+                    continue;
+
+                btn.pressed = true;
+                btn.raw = 1.0;
+
+                //TODO down handlers go here
+            }
+        }
+    }
+
+    on_keyboard_key_up(ev, c) {
+        // console.log('Up: '+ev.code, ev);
+
+        let profile = c.profiles[this.current_profile];
+        let driver = profile.driver_instances[profile.driver];
+
+        if (driver.on_button_press) { // if still listening, thus must be a single modifier
+            driver.on_button_press(ev.code, ev); 
+            return; //assign
+        }
+
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (!btn.pressed)
+                continue;
+
+            if (btn.id_src == ev.code || 
+                (ev.key == 'Shift' && btn.key_mod == 'shift') ||
+                (ev.key == 'Alt' && btn.key_mod == 'alt') ||
+                (ev.key == 'Ctrl' && btn.key_mod == 'ctrl') ||
+                (ev.key == 'Meta' && btn.key_mod == 'meta')
+            ) {
+                btn.pressed = false;
+                btn.raw = 0.0;
+
+                //TODO up handlers go here
+            }
+        }
+    }
 
 
     save_user_controller_enabled(c) {

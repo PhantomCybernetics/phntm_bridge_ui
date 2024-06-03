@@ -2867,6 +2867,7 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     font-size: 16px;
     line-height: 30px;
     float: left;
+    overflow: hidden;
 
 }
 
