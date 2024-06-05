@@ -1,7 +1,7 @@
 
 import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari, openFullscreen, closeFullscreen } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
 
 export class Panel {
 
@@ -551,7 +551,7 @@ export class Panel {
         if (state) {
 
             if (isTouchDevice())
-                openFullscreen();
+                this.ui.openFullscreen();
 
             let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
             if (isTouchDevice() && isSafari()) {
@@ -588,8 +588,8 @@ export class Panel {
                 this.ui.grid.movable(this.grid_widget, true);
             }
 
-            if (isTouchDevice())
-                closeFullscreen();
+            // if (isTouchDevice())
+            //     this.ui.closeFullscreen();
 
         }
         this.maximized = state;

@@ -91,7 +91,8 @@ h3 {
     display: none;
 }
 
-.prevent-select {
+.prevent-select,
+.touch_buttons .btn {
     user-select: none; /* Standard syntax */
     -webkit-user-select: none; /* Safari */
     -webkit-text-select: none;
@@ -172,8 +173,8 @@ BODY.desktop-ui.menu-cancels-scroll {
     /* background: cyan; */
     top: 0px;
     left: 50%;
-    width: 705px;
-    margin-left: -341px;
+    width: 650px;
+    margin-left: -325px;
     display: none;
 }
 
@@ -419,13 +420,13 @@ BODY.hamburger.menu-overlay #menubar_content:hover #menubar_items {
 }
 
 BODY.narrow #menubar {
-    width: 575px;
-    margin-left: -287px;
+    width: 512px;
+    margin-left: -256px;
 }
 
 BODY.narrower #menubar{
-    width: 535px;
-    margin-left: -267px;
+    width: 470px;
+    margin-left: -235px;
 }
 
 .full-w { display: none; }
@@ -1178,11 +1179,11 @@ BODY.hamburger #docker_controls.active H3 {
 #network-info {
     display: block;
     float: left;
-    width: 60px;
+    width: 65px;
     height: 50px;
     /* background: red; */
     position: absolute;
-    right: -60px;
+    right: -65px;
     top: 0px;
 }
 
@@ -2585,8 +2586,7 @@ BODY.desktop-ui #introspection_state:hover,
     /* border-radius: 5px 5px 0px 0px; */
 }
 
-#gamepad #gamepad_settings,
-#keyboard #keyboard_settings {
+#gamepad #gamepad_settings {
     position: fixed;
     right: 10px;
     font-size: 12px;
@@ -2601,6 +2601,10 @@ BODY.desktop-ui #introspection_state:hover,
     min-width: 350px;
 }
 
+BODY.desktop-ui #gamepad #gamepad_settings {
+    right: 0px;
+}
+
 #gamepad #gamepad_settings #gamepad-settings-container {
     overflow-x: hidden;
     overflow-y: hidden;
@@ -2610,16 +2614,24 @@ BODY.desktop-ui #introspection_state:hover,
     position: relative;
 }
 
+BODY.desktop-ui #gamepad #gamepad_settings #gamepad-settings-container {
+    border-radius: 5px 0px 5px 5px;
+}
+
 BODY.gamepad-editing.touch-gamepad #gamepad #gamepad_settings #gamepad-settings-container {
     width: 40%;
     min-width: 300px;
-    height: calc(100% - 15px);
+    height: calc(100% - 20px);
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     z-index: 2;
     top: 0px;
     border-radius: 0px;
+}
+
+BODY.gamepad-editing.touch-gamepad.touch-bottom-buttons #gamepad #gamepad_settings #gamepad-settings-container{
+    height: calc(100% - 70px); /* room for bottom touch buttons */
 }
 
 BODY.gamepad-editing.touch-gamepad #gamepad_settings {
@@ -2647,6 +2659,10 @@ BODY.touch-gamepad #gamepad #gamepad_settings .touch-zone {
     position: absolute;
     top: 0px;
     z-index: 3; /* above central panel so that we can see the joysticks at all time */
+} 
+
+BODY.touch-gamepad.touch-bottom-buttons #gamepad #gamepad_settings .touch-zone {
+    height: calc(100% - 58px);
 }
 
 BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-left-zone {
@@ -2657,6 +2673,9 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
     right: 0px;
     border-radius: 0px 10px 10px 0px;
 }
+
+
+
 
 #gamepad #gamepad_settings #input-profile-select {
     position: relative;
@@ -2814,9 +2833,6 @@ BODY.desktop-ui #gamepad_settings .tab {
     position: relative;
 }
 
-
-
-
 #gamepad_settings .tab.active {
     background-color: rgb(233 15 233);
     cursor: default;
@@ -2829,9 +2845,13 @@ BODY.desktop-ui #gamepad_settings .tab {
     /* border-radius: 0px 0px 5px 5px; */
     /* background-color: rgb(233 15 233); */
     clear: left;
-    max-height: calc(100dvh - 220px);
+    max-height: calc(100dvh - 230px);
     overflow-x: hidden;
     overflow-y: scroll;
+}
+
+BODY.touch-gamepad.touch-bottom-buttons #gamepad_settings .panel {
+    max-height: calc(100dvh - 270px);
 }
 
 #gamepad_settings .panel.active {
@@ -2920,11 +2940,11 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 }
 
 #gamepad_settings .conf-toggle.open {
-    background-color: #5d53b0;
+    background-color: #5d53b0ba;
     background-position: -34px 5px;
     height: 33px;
     border-radius: 5px 5px 0px 0px;
-    border-top: 3px solid #5d53b0;
+    border-top: 3px solid #5d53b0ba;
     margin-top: -3px;
 }
 
@@ -2957,7 +2977,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
 #gamepad_settings .axis-config-details,
 #gamepad_settings .btn-config-details {
     display: none;
-    background-color: #5d53b0;
+    background-color: #5d53b0ba;
     border-radius: 5px;
     margin-top: 3px;
     padding: 5px 0px 5px 10px;
@@ -3015,6 +3035,13 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     /* height: 30px; */
     margin-top: 2px;
     line-height: 30px;
+}
+
+#gamepad #gamepad_settings .button-row .separator {
+    display: block;
+    height: 1px;
+    margin: 5px 5px 5px -5px;
+    border-top: 1px solid #7166cf;
 }
 
 #gamepad #gamepad_settings .axis-row .config-row2,
@@ -3111,6 +3138,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     -webkit-box-sizing: border-box;
     cursor: pointer;
     position: relative;
+    padding: 0px 2px;
 }
 
 #gamepad #gamepad_settings .btn-val.listening {
@@ -3538,10 +3566,33 @@ BODY.hamburger  #bottom-links SPAN {
     margin-top: 5px;
 }
 
+BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
+    display: block;
+    position: absolute;
+    width: 40px;
+    height: 36px;
+   
+    right: 0px;
+    bottom: 0px;
+    margin: 0px;
+    padding: 0px;
+    background-image: url(/static/icon-fullscreen.png);
+    background-size: 36px;
+    background-repeat: no-repeat;
+    background-position: 2px 4px;
+    border-radius: 5px;
+}
+
+BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle:active,
+BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle.enabled {
+    background-color: #013669;
+}
+
 BODY.hamburger  #bottom-links {
     text-align: left;
     position: absolute;
     left: 20px;
+    width: 245px;
     bottom: 10px;
     padding: 7px 10px 7px 0px;
     color: #ffffff23;
@@ -3930,4 +3981,193 @@ BUTTON#delete-input-profile:hover {
     border-radius: 5px;
     outline: none;
     font-size: 16px;
+}
+
+.touch_buttons {
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    list-style-type: none;
+    margin: 0px;
+    padding: 0px;
+}
+.touch_buttons.ui-sortable {
+    /* background-color: darkmagenta;
+    border-radius: 5px; */
+}
+.touch_buttons  LI {
+    list-style-type: none;
+    margin: 0px;
+    padding: 6px 0px 5px 0px;
+    display: inline-block;
+    /* background-color: blue;; */
+}
+
+
+.touch_buttons#touch-ui-top-buttons {
+    
+}
+
+.touch_buttons#touch-ui-bottom-buttons {
+    display: none;
+    position: absolute;
+    left: 0px;
+    bottom: 5px;
+    width: 100%;
+    overflow: unset;
+    height: 50px;
+    z-index: 16; /* above touch gamepad */
+    overflow: unset;
+    overflow-x: clip;
+}
+
+.touch_buttons#touch-ui-bottom-buttons LI {
+    padding: 0px;
+    
+}
+
+/* BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-bottom-buttons {
+    z-index: 16;
+} */
+
+BODY.touch-bottom-buttons.touch-gamepad #touch-ui-bottom-buttons.touch_buttons {
+    display: block;
+    position: fixed;
+    bottom: -50px;
+}
+
+BODY.touch-bottom-buttons.touch-gamepad #touch-ui-bottom-buttons.touch_buttons.ui-sortable {
+    background-color: #00000099;
+    height: 70px;
+    bottom: 0px;
+}
+
+BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing #touch-ui-bottom-buttons.touch_buttons {
+    background-color: #00000099;
+    height: 50px;
+    bottom: 0px;
+}
+
+.touch_buttons .btn {
+    height: 40px;
+    border: 0px;
+    outline: 0px;
+    border-radius: 10px;
+    margin: 0px 2px 0px 2px;
+    padding: 0px 10px;
+    background-color: #000000bf;
+    color: #fff;
+    border: 2px solid #033669;
+    font-size: 14px;
+    line-height: 40px;
+    position: relative;
+}
+
+@keyframes sorting_wobble {
+    0%   {rotate: 3deg;}
+    /* 25%  {rotate: -5deg} */
+    50%  {rotate: -3deg}
+    /* 75%  {rotate: -5deg} */
+    100% {rotate: 3deg}
+  }
+
+.touch_buttons.ui-sortable .btn {
+    border-style: dotted;
+    /* animation-name: sorting_wobble;
+    animation-duration: .2s;
+    animation-iteration-count: infinite; */
+    /* color: yellow; */
+}
+
+.touch_buttons .btn:active {
+    background-color: #033669;
+}
+
+.ui-sortable-helper {
+    /* background:red; */
+}
+
+.ui-sortable-placeholder {
+    /* background:blue; */
+    display: inline-block !important;
+    padding: 0px;
+    margin: 0px;
+    height: 20px !important;
+    /* visibility: visible !important; */
+}
+
+BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons .btn {
+    top: -65px;
+    margin-top: 0px;
+    line-height: 50px;
+    height: 50px;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: 20px;
+}
+
+BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons.ui-sortable .btn {
+    top: 5px;
+}
+
+BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-bottom-buttons .btn {    
+    top: 4px;
+    height: 38px;
+    font-size: 14px;
+    line-height: 38px;
+}
+
+.touch_buttons .btn.red {
+    border-color: red;;
+}
+.touch_buttons .btn.red:active {
+    background-color: red;
+}
+
+.touch_buttons .btn.green {
+    border-color: lime;;
+}
+.touch_buttons .btn.green:active {
+    background-color: lime;
+    color: black;
+}
+
+.touch_buttons .btn.blue {
+    border-color: blue;;
+}
+.touch_buttons .btn.blue:active {
+    background-color: blue;
+}
+
+.touch_buttons .btn.yellow {
+    border-color: yellow;;
+}
+.touch_buttons .btn.yellow:active {
+    background-color: yellow;
+    color: black;
+}
+
+.touch_buttons .btn.orange {
+    border-color: orange;;
+}
+.touch_buttons .btn.orange:active {
+    background-color: orange;
+    color: black;
+}
+
+.touch_buttons .btn.magenta {
+    border-color: magenta;
+}
+.touch_buttons .btn.magenta:active {
+    background-color: magenta;
+    color: black;
+}
+
+.touch_buttons .btn.cyan {
+    border-color: cyan;
+}
+
+.touch_buttons .btn.cyan:active {
+    background-color: cyan;
+    color: black;
 }

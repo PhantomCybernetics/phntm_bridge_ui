@@ -11,7 +11,7 @@ import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari, detectHWKeyboard } from "./lib.js";
+import { isPortraitMode, isTouchDevice, isSafari } from "./lib.js";
 
 export class PanelUI {
 
@@ -400,6 +400,13 @@ export class PanelUI {
             }
         });
 
+        $('#fullscreen-toggle').click(()=>{
+            if (that.fullscreen_mode) {
+                that.closeFullscreen();
+            } else {
+                that.openFullscreen();   
+            }
+        });
 
         $('#trigger_wifi_scan').click(() => {
             that.trigger_wifi_scan();
@@ -1759,6 +1766,10 @@ export class PanelUI {
         
         if (!this.input_manager.touch_gamepad_on) {
             
+            // if (!this.maximized_panel) {
+            this.openFullscreen();
+            // }
+
             this.update_input_buttons();
             $('#touch_ui').addClass('enabled');
             $('BODY').addClass('touch-gamepad');
@@ -1811,6 +1822,10 @@ export class PanelUI {
             
         } else {
 
+            // if (!this.maximized_panel) {
+            //     closeFullscreen();
+            // }
+
             this.input_manager.set_touch(false);
             this.touch_gamepad.destroy();
             $('#touch_ui').removeClass('enabled');
@@ -1828,40 +1843,35 @@ export class PanelUI {
 
         let min_only = w_body < 600 && isTouchDevice();
         
-        if (detectHWKeyboard() && !min_only) { // TODO (??)
-            $('#keyboard').css('display', 'block');
-            // console.log('keyboard is on', navigator.keyboard, navigator.keyboard.getLayoutMap());
-            // num_btns++;
-        } else {
-            $('#keyboard').css('display', 'none');
-        }
         if (!min_only) {
             $('#gamepad').css('display', 'block');
+            $('#touch-ui-top-buttons').css('display', 'block');
             // num_btns++;
         } else {
             $('#gamepad').css('display', 'none');
+            $('#touch-ui-top-buttons').css('display', 'none');
         }
 
         if (isTouchDevice()) {
             $('#touch_ui').css('display', 'block');
+            
             // num_btns++;
         } else {
             $('#touch_ui').css('display', 'none');
         }
 
         $('#fixed-right')
-            .removeClass(['btns-4', 'btns-2'])
-            .addClass('btns-'+(min_only ? 2 : 4));
+            .removeClass(['btns-4', 'btns-3', 'btns-2'])
+            .addClass('btns-'+(min_only ? 2 : isTouchDevice() ? 3 : 2));
     }
 
     //on resize, robot name update
     update_layout() {
 
         let k = 0;
-        const full_menubar_w = 705-k;
-        const narrow_menubar_w = 575-k;
-        const narrower_menubar_w = 535-k;
-
+        const full_menubar_w = 650-k;
+        const narrow_menubar_w = 512-k;
+        const narrower_menubar_w = 470-k;
 
         let w_body = $('body').innerWidth();
 
@@ -2258,6 +2268,45 @@ export class PanelUI {
             .css('display', 'block');
     }
 
+    /* View in fullscreen */
+    openFullscreen() {
 
+        if (this.fullscreen_mode)
+            return;
 
+        /* Get the documentElement (<html>) to display the page in fullscreen */
+        let elem = document.documentElement;
+        
+        try {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().then(
+                ()=>{
+                    console.log('Cool opening full screen');
+                }, () => {
+                    console.log('Err opening full screen?');
+                })
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+            this.fullscreen_mode = true;
+            $('#fullscreen-toggle').addClass('enabled');
+        } catch (e) {
+            console.log('Err caught while opening full screen')
+        }
+    }
+  
+    /* Close fullscreen */
+    closeFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+        this.fullscreen_mode = false;
+        $('#fullscreen-toggle').removeClass('enabled');
+    }
 }

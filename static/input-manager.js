@@ -51,11 +51,14 @@ export class InputManager {
         // client.on('touch_config', (drivers, defaults)=>{ that.set_config('touch', drivers, defaults); });
         // client.on('kb_config', (drivers, defaults)=>{ that.set_config('kb', drivers, defaults); });
 
+        this.open = false;
+
         this.input_status_icon.click(() => {
             // if (!that.initiated)
             //     return; //wait 
             $('#keyboard').removeClass('open');
             if (!$('#gamepad').hasClass('open')) {
+                that.open = true;
                 $('#gamepad').addClass('open');
                 $('BODY').addClass('gamepad-editing');
                 if (this.edited_controller && this.edited_controller.type == 'touch') {
@@ -71,6 +74,7 @@ export class InputManager {
                         that.input_status_icon.click();
                     })
             } else {
+                that.open = false;
                 $('#gamepad').removeClass('open');
                 $('BODY').removeClass('gamepad-editing');
                 if (this.edited_controller && this.edited_controller.type == 'touch') {
@@ -81,6 +85,8 @@ export class InputManager {
                 }
                 $('#input-underlay').css('display', '').unbind();
             }
+
+            that.make_touch_buttons_editable();
         });
 
         window.addEventListener('gamepadconnected', (ev) => this.on_gamepad_connected(ev));
@@ -111,6 +117,8 @@ export class InputManager {
                 .addClass('active')
             $(open)
                 .addClass('active');
+
+            that.make_touch_buttons_editable();
         });
         $('#gamepad-profile-unsaved-warn').click((ev)=>{
             $('#gamepad-settings-tab').click();
@@ -211,8 +219,11 @@ export class InputManager {
             that.copy_gamepad_profile_json(that.edited_controller, that.current_gamepad.current_profile);
         });
 
-        if (isTouchDevice())
+        if (isTouchDevice()) {
             this.make_touch_gamepad();
+            this.render_touch_buttons();
+        }
+            
         
         this.make_keyboard();
         this.last_keyboard_input = {};
@@ -627,11 +638,12 @@ export class InputManager {
                     }
                 }
                 for (let i_btn = 0; i_btn < 3; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
-                    let new_button = this.make_button(driver);
+                    let new_btn = this.make_button(driver);
+                    new_btn.src_label = 'Aux ' + new_btn.i; // init label
                 }
             } else if (c.type == 'keyboard') {
                 for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
-                    let new_button = this.make_button(driver);
+                    let new_btn = this.make_button(driver);
                 }
             } else if (c.type == 'gamepad') {
                 const gp = navigator.getGamepads()[c.gamepad.index];
@@ -644,7 +656,7 @@ export class InputManager {
                     }
                 }
                 for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
-                    let new_button = this.make_button(driver);
+                    let new_btn = this.make_button(driver);
                 }
             }
         }
@@ -828,6 +840,7 @@ export class InputManager {
                 // current_profile.buttons_scroll_offset = $('#gamepad-buttons-panel').scrollTop();
                 that.current_profile = $(ev.target).val();
                 that.make_ui();
+                that.render_touch_buttons();
             } else {
                 let id_new_profile = 'Profile-'+Date.now();
                 that.profiles[id_new_profile] = {
@@ -838,6 +851,7 @@ export class InputManager {
                 that.init_profile(that.edited_controller, that.profiles[id_new_profile]);
                 that.current_profile = id_new_profile;
                 that.make_ui();
+                that.render_touch_buttons();
                 $('#gamepad_settings #gamepad-settings-tab').click();
                 // that.save_user_gamepad_config(); // save the new profile right away
             }
@@ -944,6 +958,7 @@ export class InputManager {
                     profile.driver_instances[profile.driver].setup_writer();
                     that.check_controller_profile_saved(that.edited_controller, that.current_profile, false);
                     that.make_ui();
+                    that.render_touch_buttons();
                 })
                 lines.push(line_driver);
                 
@@ -967,6 +982,7 @@ export class InputManager {
         this.edited_controller = c;
         console.log('Editing controller '+c.id);
         this.make_ui();
+        this.make_touch_buttons_editable();
     }
 
     // collect_profiles() {
@@ -1187,11 +1203,13 @@ export class InputManager {
     //     return btn_el;
     // }
 
-    render_axis_config (driver, axis, button_source = null) {
+    render_axis_config (driver, axis, is_btn = false) {
     
         let that = this;
 
-        axis.config_details_el.empty();
+        if (!is_btn)
+            axis.config_details_el.empty();
+
         let driver_axis = axis.driver_axis;
 
         if (!driver_axis) {
@@ -1385,15 +1403,6 @@ export class InputManager {
     
         let that = this;
 
-        btn.config_details_el.empty();
-        // let driver_axis = axis.driver_axis;
-
-        if (!btn.driver_btn) {
-           
-        }
-
-        // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
-
         btn.config_details_el.append(this.make_btn_trigger_sel(btn));
     }
 
@@ -1401,7 +1410,6 @@ export class InputManager {
     
         let that = this;
 
-        btn.config_details_el.empty();
         // let driver_axis = axis.driver_axis;
 
         // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
@@ -1490,7 +1498,6 @@ export class InputManager {
     
         let that = this;
 
-        btn.config_details_el.empty();
         // let driver_axis = axis.driver_axis;
 
         // btn.config_details_el.append(this.render_assign_button_input(driver, btn));
@@ -1520,8 +1527,6 @@ export class InputManager {
     render_input_profile_button_config (driver, btn) {
     
         let that = this;
-
-        btn.config_details_el.empty();
       
         btn.config_details_el.append(this.make_btn_trigger_sel(btn));
 
@@ -1547,8 +1552,6 @@ export class InputManager {
     render_ui_profile_button_config (driver, btn) {
     
         let that = this;
-
-        btn.config_details_el.empty();
       
         btn.config_details_el.append(this.make_btn_trigger_sel(btn));
 
@@ -1741,10 +1744,187 @@ export class InputManager {
         }
     }
 
+    make_touch_buttons_row_editable(cont) {
+        cont.sortable({
+            axis: "x",
+            handle: '.btn',
+            cursor: "move",
+            start: (event, ui) => {
+                console.log('what');
+            },
+            stop: (event, ui) => {
+                console.log('stop');
+            },
+            beforeStop: (event, ui) => {
+                console.log('beforeStop');
+            }
+        });
+    }
+
+    make_touch_buttons_editable() {
+
+        if (!isTouchDevice())
+            return;
+
+        let buttons_editable = this.open && this.edited_controller &&
+                               this.edited_controller.type == 'touch' &&
+                                $('#gamepad-buttons-panel').hasClass('active')
+                                ;
+
+        this.touch_buttons_editable = buttons_editable;
+
+        let top_btns_cont = $('#touch-ui-top-buttons');
+        let bottom_btns_cont = $('#touch-ui-bottom-buttons');
+        if (buttons_editable) {
+            [ top_btns_cont, bottom_btns_cont].forEach((cont)=>{
+                this.make_touch_buttons_row_editable(cont);
+            })
+
+        } else {
+            [ top_btns_cont, bottom_btns_cont].forEach((cont)=>{
+                if (cont.hasClass('ui-sortable'))
+                    cont.sortable('destroy');
+            });
+        }
+    }
+
+    render_touch_buttons() {
+        let c = this.controllers['touch'];
+        if (!c || !c.profiles) return;
+        let profile = c.profiles[this.current_profile];
+        let driver = profile.driver_instances[profile.driver]
+        
+        let top_btns_cont = $('#touch-ui-top-buttons');
+        top_btns_cont.empty();//.removeClass('ui-sortable');
+
+        let bottom_btns_cont = $('#touch-ui-bottom-buttons');
+        bottom_btns_cont.empty();//.removeClass('ui-sortable');
+
+        let has_top_buttons = false;
+        let has_bottom_buttons = false;
+
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (!btn.touch_ui_placement || !btn.assigned)
+                continue;
+
+            let wrap_el = $('<li></li>'); 
+            let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'">'+btn.src_label+'</span>')
+            let cont = null;
+            
+            if (btn.touch_ui_placement == 1) {
+                cont = top_btns_cont;
+                has_top_buttons = true;
+            } else { // bottom
+                cont = bottom_btns_cont;
+                has_bottom_buttons = true;
+            }
+            btn_el.appendTo(wrap_el);
+            wrap_el.appendTo(cont);
+            btn.touch_btn_el = btn_el;
+            
+            btn_el[0].addEventListener('touchstart', (ev) => {
+                btn.touch_started = Date.now();
+                btn.pressed = true;
+                btn.raw = 1.0;
+
+                //TODO down handlers go here
+                
+            }, {'passive':true});
+    
+            btn_el[0].addEventListener('touchend', () => {
+                btn.pressed = false;
+                btn.raw = 0.0;
+
+                //TODO up handlers go here
+
+            }, {'passive':true});
+        }
+
+        if (has_top_buttons && this.touch_buttons_editable) {
+            this.make_touch_buttons_row_editable(top_btns_cont);
+        }
+
+        if (has_bottom_buttons) {
+            $('BODY').addClass('touch-bottom-buttons');
+            if (this.touch_buttons_editable) {
+                this.make_touch_buttons_row_editable(bottom_btns_cont);
+            }
+        } else {
+            $('BODY').removeClass('touch-bottom-buttons');
+        }
+    }
+
+    render_touch_btn_config(driver, btn) {
+        
+        let that = this;
+
+        // ui placement
+        let placement_el = $('<div class="config-row"><span class="label">Placement:</span></div>');
+        let placement_opts = [];
+        placement_opts.push('<option value="">None</option>');
+        placement_opts.push('<option value="1"'+(btn.touch_ui_placement===1?' selected':'')+'>Top menu</option>');
+        placement_opts.push('<option value="2"'+(btn.touch_ui_placement===2?' selected':'')+'>Bottom overlay</option>');
+        let placement_inp = $('<select>'+placement_opts.join('')+'</select>');
+        placement_inp.appendTo(placement_el);
+        
+        placement_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.touch_ui_placement = parseInt($(ev.target).val())
+            that.render_touch_buttons();
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        btn.config_details_el.append(placement_el);
+
+        let label_el = $('<div class="config-row"><span class="label">Label:</span></div>');
+        let label_inp = $('<input type="text" value="'+btn.src_label+'" class="half"/>');
+        label_inp.appendTo(label_el);
+        label_inp.change((ev)=>{
+            btn.src_label = $(ev.target).val();
+            //btn.raw_val_el.html(btn.src_label);
+            that.render_touch_buttons();
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        btn.config_details_el.append(label_el);
+
+        // color placement
+        let color_el = $('<div class="config-row"><span class="label">Style:</span></div>');
+        let color_opts = [];
+        color_opts.push('<option value="">Default</option>');
+        let styles = {
+            'red': 'Red',
+            'green': 'Green',
+            'blue': 'Blue',
+            'yellow': 'Yellow',
+            'orange': 'Orange',
+            'magenta': 'Magenta',
+            'cyan': 'Cyan',
+        }
+        Object.keys(styles).forEach((style)=>{
+            color_opts.push('<option value="'+style+'" '+(btn.touch_ui_style==style?'selected':'')+'>'+styles[style]+'</option>');
+        })
+        let color_inp = $('<select>'+color_opts.join('')+'</select>');
+        color_inp.appendTo(color_el);
+        
+        color_inp.change((ev)=>{
+            // set_mod_funct();
+            btn.touch_ui_style = $(ev.target).val();
+            that.render_touch_buttons();
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+        });
+        btn.config_details_el.append(color_el);
+
+        btn.config_details_el.append($('<span class="separator"></span>'));
+    }
+
     render_btn_config(driver, btn) {
                 
         btn.config_details_el.empty();
         
+        if (this.edited_controller.type == 'touch') {
+            this.render_touch_btn_config(driver, btn);
+        }
+
         if (btn.driver_axis) {
 
             if (btn.dead_min === undefined) btn.dead_min = -0.01;
@@ -1812,6 +1992,14 @@ export class InputManager {
             delete driver.on_button_press;
         };
         raw_val_el.click(()=>{
+            if (that.edited_controller.type == 'touch') {
+                // console.log('drag mode toggle');
+                // $('#gamepad-buttons-panel .button-row').sortable({
+                //     handle: ".button-row"
+                // });
+                return;
+            }
+
             if (!raw_val_el.hasClass('listening')) {
                 raw_val_el.removeClass('assigned').addClass('listening');
                 raw_val_el.html('?');
@@ -1886,8 +2074,8 @@ export class InputManager {
         // btn assignment selection
         let opts = [
             '<option value="">Not in use</option>',
-            '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
             '<option value="ros-srv"'+(btn.action == 'ros-srv' ? ' selected': '')+'>Call ROS Service</option>',
+            '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
             '<option value="input-profile"'+(btn.action == 'input-profile' ? ' selected': '')+'>Set Input Profile</option>',
             '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
         ];
@@ -2094,7 +2282,10 @@ export class InputManager {
         if (add_btn) {
             add_btn.click((ev)=>{
                 let new_btn = that.make_button(driver);
-                let row_el = this.make_btn_row(driver, new_btn);
+                if (that.edited_controller.type == 'touch') {
+                    new_btn.src_label = 'Aux ' + new_btn.i ; // init label
+                }
+                let row_el = this.make_btn_row(driver, new_btn); 
                 row_el.insertBefore($('#add-button-btn'));
                 $('#gamepad-buttons-panel').scrollTop($('#gamepad-buttons-panel').prop('scrollHeight'));
             });
@@ -2155,6 +2346,15 @@ export class InputManager {
                 continue;
 
             if (this.edited_controller.type == 'keyboard' && btn.id_src) {
+
+                btn.raw_val_el.html(btn.src_label);
+
+                if (btn.pressed)
+                    btn.raw_val_el.addClass('pressed');
+                else
+                    btn.raw_val_el.removeClass('pressed');
+
+            } else if (this.edited_controller.type == 'touch' && btn.src_label) {
 
                 btn.raw_val_el.html(btn.src_label);
 
@@ -2412,7 +2612,7 @@ export class InputManager {
                 profiles: null,
                 saved_profiles: null,                
                 initiated: false, //this will wait for config
-                connected: false,
+                connected: true,
             };
             this.controllers['touch'] = touch_gamepad;
             this.init_controller(touch_gamepad);
@@ -2437,7 +2637,7 @@ export class InputManager {
     set_touch(state) {
         
         this.touch_gamepad_on = state;
-        this.controllers['touch'].connected = state;
+        // this.controllers['touch'].connected = state;
 
         if (state) {
 
@@ -2665,6 +2865,9 @@ export class InputManager {
     on_keyboard_key_down(ev, c) {
         // console.log('Down: '+ev.code, ev);
 
+        if (!c || !c.profiles)
+            return;
+
         let profile = c.profiles[this.current_profile];
         let driver = profile.driver_instances[profile.driver];
 
@@ -2701,6 +2904,9 @@ export class InputManager {
 
     on_keyboard_key_up(ev, c) {
         // console.log('Up: '+ev.code, ev);
+
+        if (!c || !c.profiles)
+            return;
 
         let profile = c.profiles[this.current_profile];
         let driver = profile.driver_instances[profile.driver];
