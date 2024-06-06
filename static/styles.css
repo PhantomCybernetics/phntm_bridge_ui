@@ -4171,3 +4171,19 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     background-color: cyan;
     color: black;
 }
+
+#gamepad #gamepad_settings .config-row .small-settings-cb {
+    padding: 0px;
+    margin: 6px 6px 0px 0px;
+    float: left;
+    margin-left: calc(50% - -5px);
+    height: 20px;
+    width: 20px;
+}
+
+#gamepad #gamepad_settings .config-row .small-settings-cb-label {
+    margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    position: relative;
+    top: 1px;
+}

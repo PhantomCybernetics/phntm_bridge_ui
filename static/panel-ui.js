@@ -1792,16 +1792,8 @@ export class PanelUI {
                         left: "50%",
                         top: "60%",
                     },
-                    onInput() { // Triggered on angle or value change.
-                        // // If you update your Player position and angle continuosly inside a
-                        // // requestAnimationFrame you're good to go with i.e:
-                        // Player.controller.value = this.value;
-                        // Player.controller.angle = this.angle;
-                        //
-                        // // otherwise use here something like:
-                        // Player.move(this.value, this.angle);
-                        // to update your player position when the Controller triggers onInput
-                        that.input_manager.touch_input('left', this.value, this.angle);
+                    onInput() { // triggered on angle or value change.
+                        that.input_manager.set_touch_gamepad_input('left', this.value, this.angle);
                     }
                 }, { 
                     id: "touch-right-stick", // MANDATORY
@@ -1813,12 +1805,12 @@ export class PanelUI {
                         top: "60%",
                     },
                     onInput() {
-                        that.input_manager.touch_input('right', this.value, this.angle);
+                        that.input_manager.set_touch_gamepad_input('right', this.value, this.angle);
                     }
                 }
             ]);
             
-            this.input_manager.set_touch(true);
+            this.input_manager.set_touch_gamepad_on(true);
             
         } else {
 
@@ -1826,7 +1818,7 @@ export class PanelUI {
             //     closeFullscreen();
             // }
 
-            this.input_manager.set_touch(false);
+            this.input_manager.set_touch_gamepad_on(false);
             this.touch_gamepad.destroy();
             $('#touch_ui').removeClass('enabled');
             console.log('Touch Gamepad off');
