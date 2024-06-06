@@ -1046,12 +1046,14 @@ BODY.hamburger #docker_controls.active H3 {
     font-weight: bold;
     border: 0px;
     border-radius: 5px;
-    padding: 5px 20px;
-    margin: 12px 5px 0px 1px;
+    padding: 0px 0px;
+    margin: 9px 5px 0px 1px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
-    width: 80px;
+    width: 65px;
+    height: 35px;
+    line-height: 35px;
 }
 
 .service_inp {
@@ -1060,14 +1062,14 @@ BODY.hamburger #docker_controls.active H3 {
     /* font-weight: bold; */
     border: 0px;
     border-radius: 5px;
-    padding: 5px;
-    margin: 0px 6px 0px 0px;
+    padding: 0px 0px;
+    margin: 0px 5px 0px 0px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
-    width: 80px;
-    line-height: 28px;
-    height: 28px;
+    width: 65px;
+    line-height: 35px;
+    height: 35px;
     text-align: center;
     outline: none;
 }

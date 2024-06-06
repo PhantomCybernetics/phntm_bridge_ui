@@ -1,6 +1,4 @@
-import { cos } from 'three/examples/jsm/nodes/Nodes.js';
 import { isIOS, lerp, isTouchDevice } from './lib.js';
-import { Handle_Shortcut } from '/static/input-drivers.js';
 import * as THREE from 'three';
 
 export class InputManager {
@@ -2353,15 +2351,42 @@ export class InputManager {
         // btn.out_val_el.html('false').addClass('live');
         btn.val = true;
         btn.live = true;
-        if (btn.reset_timer) {
+        if (btn.reset_timer)
             clearTimeout(btn.reset_timer);
-            btn.reset_timer = null;
-        }
         btn.reset_timer = setTimeout(()=>{
             btn.reset_timer = null;
             btn.val = false;
             btn.live = false;
-        }, 100);
+        }, 100); // short flash
+
+        switch (btn.action) {
+            case 'ros-srv':
+                //TODO
+                if (!btn.ros_srv_id) { console.warn('Service ID not set'); return; }
+                if (!btn.ros_srv_msg_type) { console.warn('Service msg_type not set'); return; }
+                
+                let call_args = btn.ros_srv_val; // from widget or parsed json
+
+                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
+                    console.log('service handled');
+                });
+                
+                break;
+            case 'ctrl-enabled': 
+                //TODO
+                break;
+            case 'input-profile': 
+                //TODO
+                break;
+            case 'ui-profile': 
+                //TODO
+                break;
+            case 'wifi-scan': 
+                //TODO
+                break;
+            default: 
+                break; 
+        }
     }
 
     update_axes_ui_values () {

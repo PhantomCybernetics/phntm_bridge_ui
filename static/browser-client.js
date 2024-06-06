@@ -1463,11 +1463,11 @@ export class PhntmBridgeClient extends EventTarget {
             });
     }
 
-    service_call(service, data, cb) {
+    service_call(service, data, cb) { 
         let req = {
             id_robot: this.id_robot,
             service: service,
-            msg: data
+            msg: data // data undefined => no msg
         }
         console.warn('Service call request', req);
         this.socket.emit('service', req, (reply)=> {
