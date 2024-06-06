@@ -1568,6 +1568,10 @@ export class InputManager {
         btn.config_details_el.append(profile_el);
     }
 
+    render_wifi_scan_button_config (driver, btn) {      
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+    }
+
     make_axes_ui(driver) {
         
         let that = this;
@@ -1990,6 +1994,9 @@ export class InputManager {
                 case 'ui-profile': 
                     this.render_ui_profile_button_config(driver, btn);
                     break;
+                case 'wifi-scan': 
+                    this.render_wifi_scan_button_config(driver, btn);
+                    break;
                 default: 
                     console.error('Button action type not supported: ', btn.action)
                     btn.conf_toggle_el.removeClass('open');
@@ -2111,6 +2118,7 @@ export class InputManager {
             '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
             '<option value="input-profile"'+(btn.action == 'input-profile' ? ' selected': '')+'>Set Input Profile</option>',
             '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
+            '<option value="wifi-scan"'+(btn.action == 'wifi-scan' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>',
         ];
         // let dri = profile.driver_instance;
         let dri_btns = driver.get_buttons();
