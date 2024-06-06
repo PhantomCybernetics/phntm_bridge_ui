@@ -1040,10 +1040,10 @@ export class InputManager {
             c.icon.removeClass('enabled');
         }
 
-        if (c.transmitted_last_frame && !c.icon_transmitting) {
+        if (c.transmitting_user_input && !c.icon_transmitting) {
             c.icon_transmitting = true;
             c.icon.addClass('transmitting');
-        } else if (!c.transmitted_last_frame && c.icon_transmitting) {
+        } else if (!c.transmitting_user_input && c.icon_transmitting) {
             c.icon_transmitting = false;
             c.icon.removeClass('transmitting');
         }
@@ -1744,19 +1744,28 @@ export class InputManager {
         }
     }
 
-    make_touch_buttons_row_editable(cont) {
+    make_touch_buttons_row_editable(cont, btn_placement) {
+
+        let that = this;
         cont.sortable({
             axis: "x",
             handle: '.btn',
             cursor: "move",
-            start: (event, ui) => {
-                console.log('what');
-            },
-            stop: (event, ui) => {
-                console.log('stop');
-            },
-            beforeStop: (event, ui) => {
-                console.log('beforeStop');
+            stop: () => {
+                let c = that.controllers['touch'];
+                if (!c || !c.profiles) return;
+                let profile = c.profiles[that.current_profile];
+                let driver = profile.driver_instances[profile.driver]
+
+                for (let i = 0; i < driver.buttons.length; i++) {
+                    let btn = driver.buttons[i];
+                    if (btn.touch_ui_placement != btn_placement)
+                        continue;
+                    let index = btn.touch_btn_el.parent().index();
+                    btn.sort_index = index;
+                    console.log(btn.src_label+' => '+index);   
+                }
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
             }
         });
     }
@@ -1776,10 +1785,8 @@ export class InputManager {
         let top_btns_cont = $('#touch-ui-top-buttons');
         let bottom_btns_cont = $('#touch-ui-bottom-buttons');
         if (buttons_editable) {
-            [ top_btns_cont, bottom_btns_cont].forEach((cont)=>{
-                this.make_touch_buttons_row_editable(cont);
-            })
-
+            this.make_touch_buttons_row_editable(top_btns_cont, 1);
+            this.make_touch_buttons_row_editable(bottom_btns_cont, 2);
         } else {
             [ top_btns_cont, bottom_btns_cont].forEach((cont)=>{
                 if (cont.hasClass('ui-sortable'))
@@ -1800,55 +1807,68 @@ export class InputManager {
         let bottom_btns_cont = $('#touch-ui-bottom-buttons');
         bottom_btns_cont.empty();//.removeClass('ui-sortable');
 
-        let has_top_buttons = false;
-        let has_bottom_buttons = false;
+        let top_btns = [];
+        let bottom_btns = [];
 
         for (let i = 0; i < driver.buttons.length; i++) {
             let btn = driver.buttons[i];
             if (!btn.touch_ui_placement || !btn.assigned)
                 continue;
+            if (btn.touch_ui_placement === 1)
+                top_btns.push(btn);
+            else if (btn.touch_ui_placement === 2)
+                bottom_btns.push(btn);
+        }
 
-            let wrap_el = $('<li></li>'); 
-            let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'">'+btn.src_label+'</span>')
-            let cont = null;
-            
-            if (btn.touch_ui_placement == 1) {
-                cont = top_btns_cont;
-                has_top_buttons = true;
-            } else { // bottom
-                cont = bottom_btns_cont;
-                has_bottom_buttons = true;
-            }
-            btn_el.appendTo(wrap_el);
-            wrap_el.appendTo(cont);
-            btn.touch_btn_el = btn_el;
-            
-            btn_el[0].addEventListener('touchstart', (ev) => {
-                btn.touch_started = Date.now();
-                btn.pressed = true;
-                btn.raw = 1.0;
+        [ top_btns, bottom_btns ].forEach((btns)=>{
 
-                //TODO down handlers go here
+            btns.sort((a, b) => {
+                return a.sort_index - b.sort_index;
+            });
+
+            btns.forEach((btn)=> {
+                let wrap_el = $('<li></li>'); 
+                let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'">'+btn.src_label+'</span>')
+                let cont = null;
+            
+                if (btn.touch_ui_placement == 1) {
+                    cont = top_btns_cont;
+                } else { // bottom
+                    cont = bottom_btns_cont;
+                }
+                btn_el.appendTo(wrap_el);
+                wrap_el.appendTo(cont);
+                btn.touch_btn_el = btn_el;
                 
-            }, {'passive':true});
-    
-            btn_el[0].addEventListener('touchend', () => {
-                btn.pressed = false;
-                btn.raw = 0.0;
+                btn_el[0].addEventListener('touchstart', (ev) => {
+                    btn.touch_started = Date.now();
+                    btn.pressed = true;
+                    btn.raw = 1.0;
 
-                //TODO up handlers go here
+                    //TODO down handlers go here
+                    
+                }, {'passive':true});
+        
+                btn_el[0].addEventListener('touchend', () => {
+                    btn.pressed = false;
+                    btn.raw = 0.0;
 
-            }, {'passive':true});
+                    //TODO up handlers go here
+
+                }, {'passive':true});
+
+            });
+
+        });
+
+        if (top_btns.length && this.touch_buttons_editable) {
+            this.make_touch_buttons_row_editable(top_btns_cont, 1);
         }
 
-        if (has_top_buttons && this.touch_buttons_editable) {
-            this.make_touch_buttons_row_editable(top_btns_cont);
-        }
-
-        if (has_bottom_buttons) {
+        if (bottom_btns.length) {
             $('BODY').addClass('touch-bottom-buttons');
             if (this.touch_buttons_editable) {
-                this.make_touch_buttons_row_editable(bottom_btns_cont);
+                this.make_touch_buttons_row_editable(bottom_btns_cont, 2);
             }
         } else {
             $('BODY').removeClass('touch-bottom-buttons');
@@ -1869,8 +1889,16 @@ export class InputManager {
         placement_inp.appendTo(placement_el);
         
         placement_inp.change((ev)=>{
-            // set_mod_funct();
-            btn.touch_ui_placement = parseInt($(ev.target).val())
+            let placement = parseInt($(ev.target).val());
+            // set max sort index 
+            let max_sort_index = -1;
+            for (let i = 0; i < driver.buttons.length; i++) {
+                if (driver.buttons[i].touch_ui_placement == placement && btn != driver.buttons[i]
+                    && driver.buttons[i].touch_ui_placement > max_sort_index)
+                    max_sort_index = driver.buttons[i].touch_ui_placement;
+            }
+            btn.touch_ui_placement = placement;
+            btn.sort_index = max_sort_index+1;
             that.render_touch_buttons();
             that.check_controller_profile_saved(that.edited_controller, that.current_profile);
         });
@@ -2833,6 +2861,7 @@ export class InputManager {
             }
     
             c.transmitted_last_frame = transmitting;
+            c.transmitting_user_input = transmitting && !cooldown; // more intuitive user feedback
 
             if (transmitting) {
                 driver.transmit();
