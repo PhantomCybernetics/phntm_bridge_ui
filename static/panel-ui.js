@@ -2127,6 +2127,27 @@ export class PanelUI {
 
     }
 
+    show_notification(msg, style) {
+
+        let msg_el = $('<span class="msg'+(style?' '+style:'')+'">'+msg+'</span>');
+        
+        $('#notifications').append(msg_el);
+
+        let timer = setTimeout(()=>{
+            msg_el.remove();
+        }, 5000);
+
+        msg_el.click((ev0)=>{
+            clearTimeout(timer);
+            msg_el.addClass('open');
+            let closeEl = $('<span class="close"></span>');
+            msg_el.append(closeEl);
+            closeEl.click((ev1)=>{
+                msg_el.remove();
+            })
+        });
+    }  
+
     update_battery_status(msg) {
         
         let topic = this.battery_topic;

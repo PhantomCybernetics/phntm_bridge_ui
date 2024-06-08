@@ -3572,22 +3572,23 @@ BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
     display: block;
     position: absolute;
     width: 40px;
-    height: 36px;
-   
-    right: 0px;
-    bottom: 0px;
+    height: 40px;
+    right: 10px;
+    bottom: 8px;
     margin: 0px;
     padding: 0px;
     background-image: url(/static/icon-fullscreen.png);
-    background-size: 36px;
+    background-size: 80px;
     background-repeat: no-repeat;
-    background-position: 2px 4px;
-    border-radius: 5px;
+    background-position: 0px 0px;
 }
 
-BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle:active,
-BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle.enabled {
+BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle:active {
     background-color: #013669;
+}
+
+BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle.enabled {
+    background-position: -40px 0px;
 }
 
 BODY.hamburger  #bottom-links {
@@ -4188,4 +4189,78 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     padding: 0px 0px 0px 0px;
     position: relative;
     top: 1px;
+}
+
+#notifications {
+    display: block;
+    position: fixed;
+    z-index: 200;
+    width: calc(100% - 20px);
+    left: 10px;
+    top: 60px;
+    z-index: 16; /* above maxed panel & touch gamepad, under all overlays and input panel */
+}
+
+
+@keyframes msg_fade_in_out {
+    0%   {opacity: 0;}
+    0.04%  {opacity: 1;}
+    95% {opacity: 1;}
+    100% {opacity: 0;}
+  }
+
+#notifications .msg {
+    display: block;
+    position: relative;
+    padding: 10px;
+    background-color: yellow;
+    color: black;
+    border-radius: 5px;
+    overflow: hidden;
+    max-width: 30%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 2px;
+    width: max-content;
+
+    animation-name: msg_fade_in_out;
+    animation-duration: 5s;
+    animation-iteration-count: 1;
+}
+
+
+#notifications .msg.open {
+    white-space: unset;
+    overflow: scroll;
+    padding: 10px 40px 10px 10px;
+    max-height: 300px;
+    max-width: 70%;
+
+    animation-name: unset;
+    animation-duration: unset;
+    animation-iteration-count: unset;
+}
+
+#notifications .msg.error {
+    background-color: red;
+    color: white;
+}
+
+#notifications .msg.open .close {
+    display: block;
+    width: 30px;
+    height: 30px;
+    /* background-color: blue; */
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    background-image: url(/static/remove.png);
+    background-size: 20px;
+    background-repeat: no-repeat;
+    background-position: 5px 5px;
+    filter: invert(1);
+}
+
+#notifications .msg.error.open .close {
+    filter: unset;
 }

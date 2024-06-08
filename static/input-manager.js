@@ -1460,9 +1460,16 @@ export class InputManager {
                     });
                     srv_val_el.append(srv_val_inp);
                 } else {
-                    let srv_val_inp = $('<textarea>{json}</textarea>');
+                    let val_json = JSON.stringify(btn.ros_srv_val === undefined ? {} : btn.ros_srv_val);
+                    let srv_val_inp = $('<textarea>'+val_json+'</textarea>');
                     srv_val_el.append(srv_val_inp);
                     srv_val_el.append($('<div class="cleaner"></div>'));
+                    srv_val_inp.change((ev) => {
+                        let val = JSON.parse($(ev.target).val());
+                        console.log('Service input json val parsed: ', val);
+                        btn.ros_srv_val = val;
+                        that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+                    });
                 }
 
                 srv_details_el.append(srv_val_el);
@@ -2358,6 +2365,7 @@ export class InputManager {
             btn.val = false;
             btn.live = false;
         }, 100); // short flash
+        let that = this;
 
         switch (btn.action) {
             case 'ros-srv':
@@ -2368,7 +2376,21 @@ export class InputManager {
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
                 this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
-                    console.log('service handled');
+
+                    let id_parts = btn.ros_srv_id.split('/');
+                    let short_id = id_parts[id_parts.length-1];
+                    console.log('service handled w reply', reply);
+                    if (reply.err) {
+                        that.ui.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
+                    } else {
+                        if (reply.message) {
+                            that.ui.show_notification(short_id+': '+reply.message);
+                        }
+                        else /*if (reply.success) */ {
+                            that.ui.show_notification(short_id+': Ok');    
+                        }
+                    }
+                        
                 });
                 
                 break;
