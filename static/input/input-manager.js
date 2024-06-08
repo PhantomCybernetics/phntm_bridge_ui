@@ -1,4 +1,4 @@
-import { isIOS, lerp, isTouchDevice } from './lib.js';
+import { isIOS, lerp, isTouchDevice } from '../lib.js';
 import * as THREE from 'three';
 
 export class InputManager {
@@ -2375,22 +2375,10 @@ export class InputManager {
                 
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
+                btn.touch_btn_el.addClass('working');
                 this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
-
-                    let id_parts = btn.ros_srv_id.split('/');
-                    let short_id = id_parts[id_parts.length-1];
-                    console.log('service handled w reply', reply);
-                    if (reply.err) {
-                        that.ui.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
-                    } else {
-                        if (reply.message) {
-                            that.ui.show_notification(short_id+': '+reply.message);
-                        }
-                        else /*if (reply.success) */ {
-                            that.ui.show_notification(short_id+': Ok');    
-                        }
-                    }
-                        
+                    btn.touch_btn_el.removeClass('working');
+                    that.ui.service_reply_notification(btn.ros_srv_id, reply);    
                 });
                 
                 break;

@@ -1,6 +1,6 @@
 
 
-export function Handle_Shortcut(cfg, client) {
+export function ___old_Handle_Shortcut(cfg, client) {
         
     let kb = client.ui.keyboard;
     let gp = client.ui.gamepad;
@@ -13,17 +13,17 @@ export function Handle_Shortcut(cfg, client) {
     // {
     //    service: [ "/start_motor", data ]
     // }
-    if (cfg['service']) {
-        if (typeof cfg['service'] === 'string' || cfg['service'] instanceof String) {
-            console.log('Calling service '+cfg['service']);
-            client.service_call(cfg['service']);
-        } else if (Array.isArray(cfg['service']) && cfg['service'].length == 2) {
-            console.log('Calling service '+cfg['service'][0]+' with data: ', cfg['service'][1]);
-            client.service_call(cfg['service'][0], cfg['service'][1]);
-        } else {
-            console.error('Invalid service shortcut configuration', cfg['service']);
-        }
-    }
+    // if (cfg['service']) {
+    //     if (typeof cfg['service'] === 'string' || cfg['service'] instanceof String) {
+    //         console.log('Calling service '+cfg['service']);
+    //         client.service_call(cfg['service']);
+    //     } else if (Array.isArray(cfg['service']) && cfg['service'].length == 2) {
+    //         console.log('Calling service '+cfg['service'][0]+' with data: ', cfg['service'][1]);
+    //         client.service_call(cfg['service'][0], cfg['service'][1]);
+    //     } else {
+    //         console.error('Invalid service shortcut configuration', cfg['service']);
+    //     }
+    // }
 
     // Call multiple ROS services:
     // {
@@ -36,23 +36,23 @@ export function Handle_Shortcut(cfg, client) {
     //          [ "/stop_motor", data ]
     //    ]
     // }
-    if (cfg['services']) {
-        if (Array.isArray(cfg['services'])) {
-            cfg['services'].forEach((one_cfg)=>{
-                if (typeof one_cfg === 'string' || one_cfg instanceof String) {
-                    console.log('Calling service '+one_cfg);
-                    client.service_call(one_cfg);
-                } else if (Array.isArray(one_cfg) && one_cfg.length == 2) {
-                    console.log('Calling service '+one_cfg[0]+' with data: ', one_cfg[1]);
-                    client.service_call(one_cfg[0], one_cfg[1]);
-                } else {
-                    console.error('Invalid service shortcut configuration', one_cfg);
-                }
-            });
-        } else {
-            console.error('Invalid services shortcut configuration', cfg['service']);
-        }
-    }
+    // if (cfg['services']) {
+    //     if (Array.isArray(cfg['services'])) {
+    //         cfg['services'].forEach((one_cfg)=>{
+    //             if (typeof one_cfg === 'string' || one_cfg instanceof String) {
+    //                 console.log('Calling service '+one_cfg);
+    //                 client.service_call(one_cfg);
+    //             } else if (Array.isArray(one_cfg) && one_cfg.length == 2) {
+    //                 console.log('Calling service '+one_cfg[0]+' with data: ', one_cfg[1]);
+    //                 client.service_call(one_cfg[0], one_cfg[1]);
+    //             } else {
+    //                 console.error('Invalid service shortcut configuration', one_cfg);
+    //             }
+    //         });
+    //     } else {
+    //         console.error('Invalid services shortcut configuration', cfg['service']);
+    //     }
+    // }
 
     // Click UI elements
     // {
@@ -62,16 +62,16 @@ export function Handle_Shortcut(cfg, client) {
     // {
     //    click: [ "#element1_id", "#element2_id" ]
     // }
-    if (cfg['click']) {
-        if (!Array.isArray()) { //one el
-            console.log('Calling click '+cfg['click']);
-            $(cfg['click']).click()
-        } else { // multiple
-            cfg['click'].forEach((el_id)=>{
-                $(el_id).click();
-            })
-        }
-    }
+    // if (cfg['click']) {
+    //     if (!Array.isArray()) { //one el
+    //         console.log('Calling click '+cfg['click']);
+    //         $(cfg['click']).click()
+    //     } else { // multiple
+    //         cfg['click'].forEach((el_id)=>{
+    //             $(el_id).click();
+    //         })
+    //     }
+    // }
 
     // Set keyboard driver
     // {

@@ -652,10 +652,15 @@ export class PanelUI {
             // move in menu bg
             $('#menubar_items')
                 .css({
-                    left: -this.small_menu_width + 'px' //starting pos off screen
+                    left: -this.small_menu_width + 'px' // starting pos off screen
                 })
                 .stop().animate({
                     left: '-16px' /* slide in from the left */
+                }, 200);
+            $('#notifications')
+                .css({left: '10px'})
+                .stop().animate({
+                    left: (50+this.small_menu_width)+'px' /* slide in from the left */
                 }, 200);
 
         }
@@ -675,7 +680,7 @@ export class PanelUI {
                 let open_el = $(this.burger_menu_open_item);
 
                 if (animate) {
-                    // move the opened item all the way out
+                    // move the opened items all the way out
 
                     this.set_burger_menu_width(this.small_menu_width, true); // animates
                     open_el.stop();
@@ -725,6 +730,10 @@ export class PanelUI {
                             left: '' //unset 
                         });
                     });
+                    $('#notifications')
+                        .stop().animate({
+                            left: '10px'
+                        }, 200);
             } else {
                 $('#menubar_items')
                     .stop().css({
@@ -735,6 +744,10 @@ export class PanelUI {
                 $('#menubar_items > DIV').stop().css({
                     left: '', //unset
                 });
+                $('#notifications')
+                    .stop().css({
+                        left: '10px'
+                    }, 200);
             }
 
             if (!this.body_scroll_was_disabled_before_burger_menu) {
@@ -919,11 +932,21 @@ export class PanelUI {
                     }, 200, () => {
                         // console.warn('set_min_burger_menu_width DONE');
                     });
+                $('#notifications')
+                    .stop()
+                    .animate({
+                        left: (w+50)+'px'
+                    });
             } else {
                 $('#menubar_items')
                     .stop()
                     .css({
                         width: w + 'px'
+                    });
+                $('#notifications')
+                    .stop()
+                    .css({
+                        left: (w+50)+'px'
                     });
             }
         }
@@ -2127,6 +2150,22 @@ export class PanelUI {
 
     }
 
+    service_reply_notification(id_service, reply) {
+        let id_parts = id_service.split('/');
+        let short_id = id_parts[id_parts.length-1];
+        console.log('service handled w reply', reply);
+        if (reply.err) {
+            this.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
+        } else {
+            if (reply.message) {
+                this.show_notification(short_id+': '+reply.message);
+            }
+            else /*if (reply.success) */ {
+                this.show_notification(short_id+': Ok');    
+            }
+        }
+    }
+ 
     show_notification(msg, style) {
 
         let msg_el = $('<span class="msg'+(style?' '+style:'')+'">'+msg+'</span>');

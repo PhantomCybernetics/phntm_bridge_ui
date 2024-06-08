@@ -4082,7 +4082,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing #touch-ui-bottom-buttons
     /* color: yellow; */
 }
 
-.touch_buttons .btn:active {
+.touch_buttons .btn:active,
+.touch_buttons .btn.working {
     background-color: #033669;
 }
 
@@ -4123,14 +4124,16 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 .touch_buttons .btn.red {
     border-color: red;;
 }
-.touch_buttons .btn.red:active {
+.touch_buttons .btn.red:active,
+.touch_buttons .btn.red.working {
     background-color: red;
 }
 
 .touch_buttons .btn.green {
     border-color: lime;;
 }
-.touch_buttons .btn.green:active {
+.touch_buttons .btn.green:active,
+.touch_buttons .btn.green.working {
     background-color: lime;
     color: black;
 }
@@ -4138,14 +4141,16 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 .touch_buttons .btn.blue {
     border-color: blue;;
 }
-.touch_buttons .btn.blue:active {
+.touch_buttons .btn.blue:active,
+.touch_buttons .btn.blue.working {
     background-color: blue;
 }
 
 .touch_buttons .btn.yellow {
     border-color: yellow;;
 }
-.touch_buttons .btn.yellow:active {
+.touch_buttons .btn.yellow:active,
+.touch_buttons .btn.yellow.working {
     background-color: yellow;
     color: black;
 }
@@ -4153,7 +4158,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 .touch_buttons .btn.orange {
     border-color: orange;;
 }
-.touch_buttons .btn.orange:active {
+.touch_buttons .btn.orange:active,
+.touch_buttons .btn.orange.working {
     background-color: orange;
     color: black;
 }
@@ -4161,7 +4167,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 .touch_buttons .btn.magenta {
     border-color: magenta;
 }
-.touch_buttons .btn.magenta:active {
+.touch_buttons .btn.magenta:active,
+.touch_buttons .btn.magenta.working {
     background-color: magenta;
     color: black;
 }
@@ -4170,7 +4177,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     border-color: cyan;
 }
 
-.touch_buttons .btn.cyan:active {
+.touch_buttons .btn.cyan:active,
+.touch_buttons .btn.cyan.working {
     background-color: cyan;
     color: black;
 }
