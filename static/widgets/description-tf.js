@@ -667,22 +667,52 @@ export class DescriptionTFWidget extends EventTarget {
     init_camera(robot) {
         let wp = new Vector3();
         let farthest_pt_dist = 0;
-        let ji = 0;
+        
         let that = this;
 
+        let joints_avg = new Vector3();
+        let joints_num = 0;
         Object.keys(robot.joints).forEach((key)=>{
             robot.joints[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
 
-            if (ji == 0) {
-                console.log('Focusing cam on 1st joint: '+key);      
-                that.camera_anchor_joint = robot.joints[key];
-                that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
-            }
-            ji++;
+            joints_avg.add(wp);
+            joints_num++;
+            // if (ji == 0) {
+            //     console.log('Focusing cam on 1st joint: '+key);      
+            //     that.camera_anchor_joint = robot.joints[key];
+            //     that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
+            // }
+            // ji++;
         });
+
+        console.log('num joints', joints_num);
+
+        if (joints_num) {
+            // find the joint closest to avg center
+            joints_avg.divideScalar(joints_num);
+            console.log('joints_avg', joints_avg);
+            let closest_joint_dist = Number.POSITIVE_INFINITY;
+            let focus_joint = null;
+            let focus_joint_key = null;
+            Object.keys(robot.joints).forEach((key)=>{
+                robot.joints[key].getWorldPosition(wp);
+                let d = wp.distanceTo(joints_avg);
+                console.log('d['+key+']', d);
+                if (d < closest_joint_dist) {
+                    closest_joint_dist = d;
+                    focus_joint = robot.joints[key];
+                    focus_joint_key = key;
+                }        
+            });
+
+            console.log('Focusing cam on joint: '+focus_joint_key);      
+            that.camera_anchor_joint = focus_joint;
+            that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
+        }
+        
 
          Object.keys(robot.links).forEach((key)=>{
             robot.links[key].getWorldPosition(wp);
@@ -814,6 +844,12 @@ export class DescriptionTFWidget extends EventTarget {
         this.controls.update();
 
         if (this.robot && this.robot.links) {
+
+            if (this.follow_target && this.camera_anchor_joint) {
+                this.scene.attach(this.camera);
+                this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
+            }
+
             for (let i = 0; i < this.transforms_queue.length; i++) {
                 this.renderDirty();
                 let id_parent = this.transforms_queue[i].header.frame_id;
@@ -835,14 +871,14 @@ export class DescriptionTFWidget extends EventTarget {
                 if (id_child == this.robot.urdfName) {
                         
                     if (!this.fix_base) {
-                        if (this.follow_target)
-                            ch.attach(this.camera);
+                        // if (this.follow_target)
+                        //     ch.attach(this.camera);
 
                         ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
-                        if (this.follow_target && this.camera_anchor_joint) {
-                            this.scene.attach(this.camera);
-                            this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
-                        }
+                        // if (this.follow_target && this.camera_anchor_joint) {
+                        //     this.scene.attach(this.camera);
+                        //     this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
+                        // }
                     }
                         
                     ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always

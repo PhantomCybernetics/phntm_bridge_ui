@@ -2150,31 +2150,38 @@ export class PanelUI {
 
     }
 
-    service_reply_notification(id_service, reply) {
+    service_reply_notification(btn_el, id_service, reply) {
         let id_parts = id_service.split('/');
         let short_id = id_parts[id_parts.length-1];
         console.log('service handled w reply', reply);
         if (reply.err) {
+            btn_el.addClass('btn_err');
+            setTimeout(()=>{
+                btn_el
+                    .removeClass('btn_err')
+                    .removeClass('working');
+            }, 600); 
             this.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
         } else {
+            btn_el.removeClass('working');
             if (reply.message) {
                 this.show_notification(short_id+': '+reply.message);
             }
-            else /*if (reply.success) */ {
-                this.show_notification(short_id+': Ok');    
-            }
+            // else /*if (reply.success) */ {
+            //     this.show_notification(short_id, 'success');    
+            // }
         }
     }
  
     show_notification(msg, style) {
 
-        let msg_el = $('<span class="msg'+(style?' '+style:'')+'">'+msg+'</span>');
+        let msg_el = $('<span class="msg'+(style?' '+style:'')+'"><span class="icon"></span>'+msg+'</span>');
         
-        $('#notifications').append(msg_el);
+        $('#notifications').prepend(msg_el);
 
         let timer = setTimeout(()=>{
             msg_el.remove();
-        }, 5000);
+        }, 3000);
 
         msg_el.click((ev0)=>{
             clearTimeout(timer);

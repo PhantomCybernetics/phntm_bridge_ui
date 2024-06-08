@@ -2377,8 +2377,7 @@ export class InputManager {
 
                 btn.touch_btn_el.addClass('working');
                 this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
-                    btn.touch_btn_el.removeClass('working');
-                    that.ui.service_reply_notification(btn.ros_srv_id, reply);    
+                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, reply);    
                 });
                 
                 break;

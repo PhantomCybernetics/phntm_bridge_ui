@@ -1054,6 +1054,7 @@ BODY.hamburger #docker_controls.active H3 {
     width: 65px;
     height: 35px;
     line-height: 35px;
+    position: relative;
 }
 
 .service_inp {
@@ -3401,6 +3402,10 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     padding: 9px 5px 5px 5px;
 }
 
+BODY.touch-gamepad .grid-stack-item-content {
+    background: #52555954;
+}
+
   .grid-stack-item-removing {
     opacity: 0.5;
   }
@@ -4209,10 +4214,22 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     z-index: 16; /* above maxed panel & touch gamepad, under all overlays and input panel */
 }
 
+@keyframes msg_err_shake {
+    0%   {left: 0px;}
+    25%   {left: 3px;}    
+    75%   {left: -3px;}
+    100% {opacity: 0px;}
+  }
+
+.btn_err {
+    animation-name: msg_err_shake;
+    animation-duration: .2s;
+    animation-iteration-count: 3;
+}
 
 @keyframes msg_fade_in_out {
     0%   {opacity: 0;}
-    0.04%  {opacity: 1;}
+    0.06%  {opacity: 1;}
     95% {opacity: 1;}
     100% {opacity: 0;}
   }
@@ -4232,17 +4249,35 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     width: max-content;
 
     animation-name: msg_fade_in_out;
-    animation-duration: 5s;
+    animation-duration: 3s;
     animation-iteration-count: 1;
 }
 
+#notifications .msg.success {
+    padding-left: 30px;
+}
+
+#notifications .msg.success .icon {
+    display: block;
+    width: 30px;
+    height: 30px;
+    /* background-color: blue; */
+    position: absolute;
+    left: 3px;
+    top: 4px;
+    background-image: url(/static/icon-check.png);
+    background-size: 20px;
+    background-repeat: no-repeat;
+    background-position: 5px 5px;
+    filter: invert(1);
+}
 
 #notifications .msg.open {
     white-space: unset;
     overflow: scroll;
-    padding: 10px 40px 10px 10px;
+    padding-right: 40px;
     max-height: 300px;
-    max-width: 70%;
+    max-width: 80%;
 
     animation-name: unset;
     animation-duration: unset;
@@ -4261,7 +4296,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     /* background-color: blue; */
     position: absolute;
     right: 5px;
-    top: 5px;
+    top: 4px;
     background-image: url(/static/remove.png);
     background-size: 20px;
     background-repeat: no-repeat;
