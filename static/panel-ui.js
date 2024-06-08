@@ -592,6 +592,7 @@ export class PanelUI {
                 });
         } else {
             panel.menu_el.removeClass('open');
+            panel.close_el.removeClass('warn');
             // $('BODY').removeClass('no-scroll');
             panel.menu_content_el
                 .removeClass('floating')

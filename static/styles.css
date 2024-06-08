@@ -1650,6 +1650,14 @@ BODY.touch-ui .monitor_menu_content .menu_line.panel_msg_types_line
     border-bottom: 0px;
 }
 
+BODY.touch-ui .monitor_menu_content .menu_line.warn {
+    background: red;
+    border-radius: 5px;
+}
+
+BODY.desktop-ui .monitor_menu_content .menu_line.close_panel:hover {
+    background: red;
+}
 /* .monitor_menu_content  .panel_msg_types_line.nospace {
     padding-bottom: 0px;
 } */

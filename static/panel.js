@@ -428,17 +428,24 @@ export class Panel {
             els.push(msgTypesEl);
         }
 
-        let closeEl = $('<div class="menu_line" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel</a></div>');
+        let closeEl = $('<div class="menu_line close_panel" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel</a></div>');
         closeEl.click(function(ev) {
-            that.close();
-            if (that.ui.widgets[that.id_source])
-                that.ui.widgets_menu();
+
+            if (!isTouchDevice() || closeEl.hasClass('warn')) {
+                that.close();
+                if (that.ui.widgets[that.id_source])
+                    that.ui.widgets_menu();    
+            } else {
+                closeEl.addClass('warn');
+            }
+            
             ev.cancelBubble = true;
             ev.preventDefault();
         });
         if (els.length == 0)
             closeEl.addClass('solo');
         els.push(closeEl);
+        this.close_el = closeEl;
 
         $('#monitor_menu_content_'+this.n).empty();
         $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
@@ -703,6 +710,10 @@ export class Panel {
     }
 
     close() { // remove panel
+
+        if (this.maximized) {
+            this.maximize(false);
+        }
 
         if (this.ui.panel_menu_on === this)
             this.ui.panel_menu_touch_toggle();  //remove open menu
