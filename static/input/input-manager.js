@@ -2372,12 +2372,15 @@ export class InputManager {
                 //TODO
                 if (!btn.ros_srv_id) { console.warn('Service ID not set'); return; }
                 if (!btn.ros_srv_msg_type) { console.warn('Service msg_type not set'); return; }
-                
+                if (btn.service_blocked) { console.warn('Service skipping call (previous unfinished)'); return; }
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
                 btn.touch_btn_el.addClass('working');
+
+                btn.service_blocked = true;
                 this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
-                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, reply);    
+                    btn.service_blocked = false;
+                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, reply);
                 });
                 
                 break;

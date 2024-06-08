@@ -9,7 +9,7 @@
 
         <div id="gamepad-settings-container">
 
-            <select id="input-profile-select"></select>
+            <select id="input-profile-select" autocomplete="false"></select>
             <div id="profile-buttons">
                 <span class="icon"></span>
                 <span id="profile-unsaved-warn">*</span>
@@ -24,18 +24,18 @@
             <div id="profile-edit-panel">
                 <div class="row">
                     <span class="label">Label: </span>
-                    <input type="text" id="input-profile-edit-label"/>
+                    <input type="text" autocomplete="false" id="input-profile-edit-label"/>
                 </div>
                 <div class="row">
                     <span class="label">Profile ID: </span>
-                    <input type="text" id="input-profile-edit-id"/>
+                    <input type="text" autocomplete="false" id="input-profile-edit-id"/>
                 </div>
             </div>
             
             <div id="input-controller-selection"></div>
 
             <div id="input-controller-config">
-                <input type="checkbox" id="controller-enabled-cb"/>
+                <input type="checkbox" autocomplete="false" id="controller-enabled-cb"/>
 
                 <span id="gamepad-axes-tab" class="tab active">Axes</span>
                 <span id="gamepad-buttons-tab" class="tab">Buttons</span>
