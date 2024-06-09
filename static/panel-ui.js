@@ -1884,10 +1884,43 @@ export class PanelUI {
     //on resize, robot name update
     update_layout() {
 
-        let k = 0;
-        const full_menubar_w = 650-k;
-        const narrow_menubar_w = 512-k;
-        const narrower_menubar_w = 470-k;
+        let h_extra = 10 + 10 + 5; // 2x padding + margin right
+        let menu_item_widths = {
+            'full': {
+                'graph_controls':  210,
+                'service_controls':  105,
+                'camera_controls':  95,
+                'docker_controls':  115,
+                'widget_controls':  10,
+            },
+            'narrow': {
+                'graph_controls':  210,
+                'service_controls':  65,
+                'camera_controls':  60,
+                'docker_controls':  65,
+                'widget_controls':  10,
+            },
+            'narrower' : {
+                'graph_controls':  170,
+                'service_controls':  65,
+                'camera_controls':  60,
+                'docker_controls':  65,
+                'widget_controls':  10,
+            }
+        }
+
+        function sum (what) {
+            let keys = Object.keys(menu_item_widths[what]);
+            let res = 0;
+            keys.forEach((key)=>{
+                res += menu_item_widths[what][key] + h_extra;
+            });
+            return res;
+        }
+
+        const full_menubar_w = sum('full');
+        const narrow_menubar_w = sum('narrow');
+        const narrower_menubar_w = sum('narrower');
 
         let w_body = $('body').innerWidth();
 
@@ -1974,14 +2007,15 @@ export class PanelUI {
             $('#menubar_scrollable').css('height', h-74);
             //  let graph_w = $('#graph_display').innerWidth();
             
-            $('#service_list').css('height', h-100);
-            $('#cameras_list').css('height', h-100);
-            $('#docker_list').css('height', h-100);
-            $('#widget_list').css('height', h-100);
-            $('#graph_display').css('height', h-100);
+            let hh = h - 95;
+            $('#service_list').css('height', hh);
+            $('#cameras_list').css('height', hh);
+            $('#docker_list').css('height', hh);
+            $('#widget_list').css('height', hh);
+            $('#graph_display').css('height', hh);
 
             if (this.burger_menu_open_item) {
-                this.burger_menu_action(this.burger_menu_open_item, h-100); // only update
+                this.burger_menu_action(this.burger_menu_open_item, hh); // only update
             }
 
             if (!$('BODY').hasClass('hamburger') || $('#bottom-links').hasClass('hidden')) { // switched

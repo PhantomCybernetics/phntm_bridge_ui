@@ -168,14 +168,12 @@ BODY.desktop-ui.menu-cancels-scroll {
 
 
 #menubar {
-    position: absolute;
+    position: relative;
     z-index: 35;
-    /* background: cyan; */
     top: 0px;
-    left: 50%;
-    width: 650px;
-    margin-left: -325px;
     display: none;
+    height: 50px;
+    text-align: center;
 }
 
 BODY.initiated #menubar,
@@ -194,6 +192,8 @@ BODY.hamburger #menubar {
     margin-left: 0px;
     z-index: 81;
     width: 100%;
+    height: auto;
+    text-align: left;
 }
 
 BODY.hamburger #menubar_content {
@@ -419,16 +419,6 @@ BODY.hamburger.menu-overlay #menubar_content:hover #menubar_items {
     display: none;
 }
 
-BODY.narrow #menubar {
-    width: 512px;
-    margin-left: -256px;
-}
-
-BODY.narrower #menubar{
-    width: 470px;
-    margin-left: -235px;
-}
-
 .full-w { display: none; }
 .narrow-w { display: none; }
 .narrower-w { display: none; }
@@ -447,13 +437,10 @@ BODY.narrower .narrower-w { display: inline; }
 #graph_display {
     width: 785px;
     height: 600px;
-    position: absolute;
     left: 0px;
-    top: 46px;
     background-color: white;
     padding: 10px;
     border-radius: 0px 5px 5px 5px;
-    display: none;
 }
 
 #graph_display svg {
@@ -593,10 +580,11 @@ BODY.top-menu #graph_controls.active.hover_waiting #graph_display {
     padding: 10px;
     border-radius: 0px 0px 5px 5px;
     position: relative;
-    float: left;
+    display: inline-block;
     margin: 0px 5px 5px 0px;
     z-index: 1;
     white-space: nowrap;
+    height: 20px;
 }
 
 BODY.hamburger #graph_controls,
@@ -611,6 +599,9 @@ BODY.hamburger #docker_controls {
     clear: both;
     width: 245px;
     margin: 1px 0px 0px 0px;
+    display: block;
+    height: 50px;
+    text-align: left;
 }
 
 BODY.hamburger #graph_controls #graph_nodes_label {
@@ -634,46 +625,40 @@ BODY.hamburger #graph_controls #graph_topics_label {
 }
 
 #graph_controls {
-    background: white;
+    
     background-image: url(/static/graph.png);
     background-position: center 7px;
     background-repeat: no-repeat;
     background-size: 25px 25px;
-    width: 210px;
+    
 }
 
 BODY.hamburger #graph_controls {
     background-position: 102px 12px;
 }
 
-.narrower #graph_controls {
-    width: 170px;
-}
+
+
+
 
 #topic_controls {
     /* width: 150px; */
 }
 
-#widget_controls {
-    /* width: 80px; */
-    background: #112fb3;
-}
+#graph_controls { width: 210px; background-color: white; }
+#service_controls { width: 105px; background-color: #b311a3; }
+#camera_controls { width: 95px; background-color: #82b727; }
+#docker_controls { width: 115px; background-color: #de5a30; }
+#widget_controls { width: 10px; background-color: #112fb3; }
 
-#service_controls {
-    /* width: 180px; */
-    background: #b311a3;
-}
+BODY.narrow #service_controls { width: 65px;}
+BODY.narrow #camera_controls { width: 60px;}
+BODY.narrow #docker_controls { width: 65px;}
 
-#camera_controls {
-    /* width: 170px; */
-    background: #82b727;
-}
-
-#docker_controls {
-    /* width: 190px; */
-    background: #de5a30;
-}
-
+BODY.narrower #graph_controls { width: 170px; }
+BODY.narrower #service_controls { width: 65px;}
+BODY.narrower #camera_controls { width: 60px;}
+BODY.narrower #docker_controls { width: 65px;}
 
 #topic_list {
     overflow-x: hidden;
@@ -692,12 +677,9 @@ BODY.hamburger #graph_controls {
     overflow-x: hidden;
     width: 400px;
     padding: 5px 10px 5px 10px;
-    display: none;
     max-height: 520px;
     overflow: scroll;
-    position: absolute;
     right: 0px;
-    top: 46px;
     background: #deeeff;
     border-radius: 5px 0px 5px 5px;
 }
@@ -710,9 +692,15 @@ BODY.hamburger #graph_controls {
 #topic_controls H3 {
     color: #fff;
     cursor: default;
-    line-height: 21px;
-    height: 21px;
+    line-height: 22px;
+    height: 22px;
     display: block;
+    position: absolute;
+    text-align: center;
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
+    left: 0px;
 }
 
 #graph_controls H3 {
@@ -741,42 +729,14 @@ BODY.narrower #graph_controls #graph_topics_label {
 
 
 
-/* #graph_controls,
-#service_controls,
-#camera_controls,
-#docker_controls,
-#topic_controls,
-#widget_controls,
-#service_controls {
-    margin-top: 2px;
-    margin-bottom: 5px;
-} */
-
 BODY.top-menu #graph_controls.active:hover,
-BODY.top-menu #graph_controls.active.hover_waiting {
-    border-bottom: 7px solid white;
-}
-
-BODY.top-menu #topic_controls.active:hover {
-    border-bottom: 5px solid #6f98c4;
-}
-
-BODY.top-menu #widget_controls.active:hover {
-    border-bottom: 5px solid #112fb3;
-}
-
-BODY.top-menu #camera_controls.active:hover {
-    border-bottom: 5px solid #82b727;
-}
-
-BODY.top-menu #docker_controls.active:hover {
-    border-bottom: 5px solid #de5a30;
-}
-
+BODY.top-menu #graph_controls.active.hover_waiting { border-color: white !important; }
+BODY.top-menu #topic_controls.active:hover { border-color: #6f98c4  !important; }
+BODY.top-menu #widget_controls.active:hover { border-color: #112fb3  !important; }
+BODY.top-menu #camera_controls.active:hover { border-color: #82b727  !important; }
+BODY.top-menu #docker_controls.active:hover { border-color: #de5a30  !important; }
 BODY.top-menu #service_controls.active:hover,
-BODY.top-menu #service_controls.active.setting_shortcuts {
-    border-bottom: 5px solid #b311a3;
-}
+BODY.top-menu #service_controls.active.setting_shortcuts { border-color: #b311a3 !important; }
 
 BODY.top-menu #graph_controls.active:hover,
 BODY.top-menu #graph_controls.active.hover_waiting,
@@ -789,16 +749,25 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     border-radius: 0px;
     margin-top: 0px;
     margin-bottom: 0px;
+    border-bottom: 5px solid;
+}
+
+#cameras_list,
+#docker_list,
+#service_list,
+#widget_list,
+#graph_display {
+    display: none;
+    position: absolute;
+    top: 45px;
+    text-align: left;
 }
 
 #cameras_list {
-    display: none;
-    position: absolute;
     overflow-x: hidden;
     overflow: scroll;
     background: #9ec65a;
     right: 0px;
-    top: 46px;
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
@@ -806,19 +775,19 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 }
 
 #docker_list {
-    display: none;
-    position: absolute;
     overflow-x: hidden;
     overflow: scroll;
     background: #000000e6;
     right: 0px;
-    top: 46px;
     width: 360px;
     max-height: 520px;
     padding: 10px 5px 0px 10px;
     border-radius: 0px 0px 5px 5px;
     border-top: 3px solid #de5a30;
 }
+
+
+
 
 #docker_list .docker_cont {
     color: #fff;
@@ -858,6 +827,7 @@ BODY.hamburger #docker_list .docker_cont {
 BODY.hamburger .docker_btns {
     top: 8px;
     width: 135px;
+    right: -10px;
 }
 
 .docker_btns button {
@@ -904,13 +874,10 @@ BODY.desktop-ui .docker_btns button:hover,
 }
 
 #service_list {
-    display: none;
-    position: absolute;
     overflow-x: hidden;
     overflow: scroll;
     background: #ecafed;
     left: 0px;
-    top: 46px;
     width: 510px;
     max-height: 520px;
     padding: 5px 10px 5px 10px;
@@ -945,13 +912,14 @@ BODY.hamburger #docker_controls H3 {
     padding: 15px 10px;
 }
 
-BODY.hamburger #graph_controls.active H3,
-BODY.hamburger #service_controls.active H3,
-BODY.hamburger #topic_controls.active H3,
-BODY.hamburger #widget_controls.active H3,
-BODY.hamburger #camera_controls.active H3,
-BODY.hamburger #docker_controls.active H3 {
+BODY.hamburger #graph_controls H3,
+BODY.hamburger #service_controls H3,
+BODY.hamburger #topic_controls H3,
+BODY.hamburger #widget_controls H3,
+BODY.hamburger #camera_controls H3,
+BODY.hamburger #docker_controls H3 {
     cursor: pointer;
+    text-align: left;
     /* display: block; */
 }
 
