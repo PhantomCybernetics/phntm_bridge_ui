@@ -806,6 +806,8 @@ export class PanelUI {
         this.set_burger_menu_width(menu_w);
 
         let el_w = menu_w - 20;
+        if (what == '#cameras_list' || what == '#widget_list')
+            el_w += 20; // these have less padding
 
         if (now_opening) {
             // console.log('Now opening '+what);
@@ -844,9 +846,9 @@ export class PanelUI {
             let t = ((el.parent().parent().children().index(el.parent())) * -(15 + 15 + 21 + 1));
             t += $('#menubar_scrollable').scrollTop();
             el.css({
-                width: el_w + 'px', //10 is padding
-                left: (this.small_menu_width + 20) + 'px', // top right of the parent (moving) item
-                top: t + 'px'
+                    width: el_w + 'px', //10 is padding
+                    left: (this.small_menu_width + 20) + 'px', // top right of the parent (moving) item
+                    top: t + 'px'
                 })
                 .addClass('hamburger-open')
                 .stop();
@@ -1016,40 +1018,39 @@ export class PanelUI {
         for (let i = 0; i < cameras.length; i++) {
             let camera = cameras[i];
 
-            $('#cameras_list').append('<div class="camera" data-src="' + camera.src_id + '" data-msg-type="' + camera.msg_type + '">'
-                + '<input type="checkbox" class="enabled" id="cb_camera_' + i + '"'
-                + (this.panels[camera.src_id] ? ' checked' : '')
-                + '/> '
-                + '<span '
-                + 'class="camera" '
-                + '>'
-                + '<label for="cb_camera_' + i + '" class="prevent-select">' + camera.src_id + '</label>'
-                + '</span>'
-                + '</div>'
+            let row_el = $('<label for="cb_camera_' + i + '" class="prevent-select camera">'
+                            + camera.src_id + '</label>'
             );
+
+            let cam_cb = $('<input type="checkbox" class="enabled" id="cb_camera_' + i + '"'
+                            + (this.panels[camera.src_id] ? ' checked' : '')
+                            + '/>');
+
+            let that = this;
+            cam_cb.change((ev) => {
+                // let id_cam = $(this).parent('DIV.camera').data('src');
+                // let msg_type = $(this).parent('DIV.camera').data('msg-type');
+                // data-src="' + camera.src_id + '" data-msg-type="' + camera.msg_type + '"
+                let state = $(ev.target).prop('checked');
+    
+                let w = that.type_widgets[camera.msg_type].w;
+                let h = that.type_widgets[camera.msg_type].h;
+    
+                that.toggle_panel(camera.src_id, camera.msg_type, state, w, h);
+    
+                if (state && $('BODY').hasClass('hamburger')) {
+                    //close burger menu
+                    that.set_burger_menu_state(false, false);
+                }
+            });
+
+            row_el.append(cam_cb);
+            $('#cameras_list').append(row_el);
 
             if (this.panels[camera.src_id]) {
                 this.panels[camera.src_id].init(camera.msg_type);
             }
         }
-
-        let that = this;
-        $('#cameras_list INPUT.enabled:checkbox').change(function (event) {
-            let id_cam = $(this).parent('DIV.camera').data('src');
-            let msg_type = $(this).parent('DIV.camera').data('msg-type');
-            let state = this.checked;
-
-            let w = that.type_widgets[msg_type].w;
-            let h = that.type_widgets[msg_type].h;
-
-            that.toggle_panel(id_cam, msg_type, state, w, h);
-
-            if (state && $('BODY').hasClass('hamburger')) {
-                //close burger menu
-                that.set_burger_menu_state(false, false);
-            }
-        });
-
     }
 
     graph_from_nodes(nodes) {
@@ -1220,60 +1221,36 @@ export class PanelUI {
         // let subscribe_cameras = [];
         Object.keys(this.widgets).forEach((widget_class) => {
             let w = that.widgets[widget_class];
-            $('#widget_list').append('<div class="widget" data-class="' + widget_class + '">'
-                + '<input type="checkbox" class="enabled" id="cb_widget_' + i + '"'
-                //+ (!topic.robotTubscribed?' disabled':'')
-                + (that.panels[widget_class] ? ' checked' : '')
-                + '/> '
-                + '<span '
-                + 'class="custom_widget" '
-                + '>'
-                + '<label for="cb_widget_' + i + '" class="prevent-select">' + w.label + '</label>'
-                + '</span>'
-                + '</div>'
+
+            let row_el = $('<label for="cb_widget_' + i + '" class="prevent-select widget">'
+                            + w.label + '</label>'
             );
 
-            // let subscribe = $('#cb_camera_'+i).is(':checked');
+            let w_cb = $('<input type="checkbox" class="enabled" id="cb_widget_' + i + '"'
+                        + (that.panels[widget_class] ? ' checked' : '')
+                        + '/>');
 
-            // if (that.panels[widget_class]) {
-            //     that.panels[widget_class].init(widget_class);
-            // }
+            w_cb.change((ev) => {
+             
+                let state = $(ev.target).prop('checked');
+    
+                let w = that.widgets[widget_class].class.default_width;
+                let h = that.widgets[widget_class].class.default_height;
+    
+                that.toggle_panel(widget_class, widget_class, state, w, h);
+                // client.SetCameraSubscription(id_robot, [ cam ], state);
+    
+                if (state && $('BODY').hasClass('hamburger')) {
+                    //close burger menu
+                    that.set_burger_menu_state(false, false);
+                }
+            });
 
-            //if (!old_topics[topic.topic]) {
-
-            // if (subscribe) {
-            //     //console.warn('New topic: '+topic.topic+'; subscribe='+subscribe);
-            //     subscribe_cameras.push(camera_data.id);
-            // } else {
-            //     //console.info('New topic: '+topic.topic+'; subscribe='+subscribe);
-            // }
-
-            //TogglePanel(topic.topic, true);
-            //}
+            row_el.append(w_cb);
+            $('#widget_list').append(row_el);
 
             i++;
         });
-
-
-        // if (subscribe_cameras.length)
-        //     SetCameraSubscription(id_robot, subscribe_cameras, true);
-
-        $('#widget_list INPUT.enabled:checkbox').change(function (event) {
-            let widget_class = $(this).parent('DIV.widget').data('class');
-            let state = this.checked;
-
-            let w = that.widgets[widget_class].class.default_width;
-            let h = that.widgets[widget_class].class.default_height;
-
-            that.toggle_panel(widget_class, widget_class, state, w, h);
-            // client.SetCameraSubscription(id_robot, [ cam ], state);
-
-            if (state && $('BODY').hasClass('hamburger')) {
-                //close burger menu
-                that.set_burger_menu_state(false, false);
-            }
-        });
-
     }
 
     services_menu_from_nodes(nodes) {
@@ -1918,9 +1895,10 @@ export class PanelUI {
             return res;
         }
 
-        const full_menubar_w = sum('full');
-        const narrow_menubar_w = sum('narrow');
-        const narrower_menubar_w = sum('narrower');
+        let switch_margin = 20; // force switching to smaller variant this many px sooner
+        const full_menubar_w = sum('full') + switch_margin;
+        const narrow_menubar_w = sum('narrow') + switch_margin;
+        const narrower_menubar_w = sum('narrower') + switch_margin;
 
         let w_body = $('body').innerWidth();
 
@@ -2009,9 +1987,9 @@ export class PanelUI {
             
             let hh = h - 95;
             $('#service_list').css('height', hh);
-            $('#cameras_list').css('height', hh);
+            $('#cameras_list').css('height', hh+10); // less padding
             $('#docker_list').css('height', hh);
-            $('#widget_list').css('height', hh);
+            $('#widget_list').css('height', hh+10); // less padding
             $('#graph_display').css('height', hh);
 
             if (this.burger_menu_open_item) {

@@ -268,6 +268,7 @@ BODY.hamburger #menubar_items #service_list {
 }
 BODY.hamburger #menubar_items #cameras_list {
     max-height: unset;
+    max-width: unset;
 }
 BODY.hamburger #menubar_items #docker_list {
     max-height: unset;
@@ -275,6 +276,7 @@ BODY.hamburger #menubar_items #docker_list {
 }
 BODY.hamburger #menubar_items #widget_list {
     max-height: unset;
+    max-width: unset;
 }
 
 BODY.hamburger #menubar_items #widget_list .widget LABEL,
@@ -292,6 +294,8 @@ BODY.hamburger #menubar_items #cameras_list .camera {
     border-bottom: 1px solid #3d52c7;
     display: block;
     position: relative;
+    height: 50px;
+    line-height: 50px;
 }
 
 BODY.hamburger #menubar_items #cameras_list .camera {
@@ -604,16 +608,6 @@ BODY.hamburger #docker_controls {
     text-align: left;
 }
 
-BODY.hamburger #graph_controls #graph_nodes_label {
-    left: 10px;
-    top: 15px;
-}
-
-BODY.hamburger #graph_controls #graph_topics_label {
-    left: 137px;
-    top: 15px;
-}
-
 #graph_controls:hover,
 #graph_controls.hover_waiting,
 #topic_controls:hover,
@@ -675,13 +669,14 @@ BODY.narrower #docker_controls { width: 65px;}
 
 #widget_list {
     overflow-x: hidden;
-    width: 400px;
-    padding: 5px 10px 5px 10px;
+    max-width: 420px;
+    padding: 0px;
     max-height: 520px;
     overflow: scroll;
     right: 0px;
     background: #deeeff;
     border-radius: 5px 0px 5px 5px;
+    border-top: 3px solid #112eb3;
 }
 
 #graph_controls H3,
@@ -715,24 +710,35 @@ BODY.narrower #docker_controls { width: 65px;}
     position: absolute;
     left: 0px;
     top: 0px;
+    text-align: center;
+    width: 43%;
 }
 
 #graph_controls #graph_topics_label {
     position: absolute;
-    left: 126px;
+    left: 58%;
     top: 0px;
+    text-align: center;
+    width: 42%;
 }
 
-BODY.narrower #graph_controls #graph_topics_label {
-    left: 101px;
+BODY.hamburger #graph_controls #graph_nodes_label {
+    left: 10px;
+    top: 15px;
+    width: auto;
 }
 
+BODY.hamburger #graph_controls #graph_topics_label {
+    left: 137px;
+    top: 15px;
+    width: auto;
+}
 
 
 BODY.top-menu #graph_controls.active:hover,
 BODY.top-menu #graph_controls.active.hover_waiting { border-color: white !important; }
 BODY.top-menu #topic_controls.active:hover { border-color: #6f98c4  !important; }
-BODY.top-menu #widget_controls.active:hover { border-color: #112fb3  !important; }
+BODY.top-menu #widget_controls.active:hover { border-color: #112eb3 !important }
 BODY.top-menu #camera_controls.active:hover { border-color: #82b727  !important; }
 BODY.top-menu #docker_controls.active:hover { border-color: #de5a30  !important; }
 BODY.top-menu #service_controls.active:hover,
@@ -768,10 +774,12 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     overflow: scroll;
     background: #9ec65a;
     right: 0px;
-    width: 510px;
+    /* width: 510px; */
     max-height: 520px;
-    padding: 5px 10px 5px 10px;
+    padding: 0px;
     border-radius: 5px 0px 5px 5px;
+    border-top: 3px solid #82b727;
+    max-width: 420px;
 }
 
 #docker_list {
@@ -782,12 +790,48 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     width: 360px;
     max-height: 520px;
     padding: 10px 5px 0px 10px;
-    border-radius: 0px 0px 5px 5px;
+    border-radius: 5px 0px 5px 5px;
     border-top: 3px solid #de5a30;
 }
 
 
+#cameras_list LABEL.camera,
+#widget_list LABEL.widget {
+    position: relative;
+    display: block;
+    display: block;
+    height: 40px;
+    margin-top: 1px;
+    line-height: 40px;
+    padding-left: 30px;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 40px);
+    padding-right: 10px;
+    overflow: hidden;
+    cursor: pointer;
+}
 
+#cameras_list LABEL.camera:first-of-type,
+#widget_list LABEL.widget:first-of-type {
+    margin-top: 0px;
+}
+
+BODY.desktop-ui #cameras_list .camera:hover {
+    background-color:#82b727;
+    color: #fff;
+}
+
+BODY.desktop-ui #widget_list .widget:hover {
+    background-color: #112eb3;
+    color: #fff;
+}
+
+#cameras_list .camera INPUT,
+#widget_list .widget INPUT  {
+    position: absolute;
+    left: 10px;
+    top: 13px;
+}
 
 #docker_list .docker_cont {
     color: #fff;
@@ -801,6 +845,7 @@ BODY.hamburger #docker_list {
 
 BODY.hamburger #docker_list .docker_cont {
     line-height: 50px;
+    padding-left: 10px;
 }
 
 #docker_list .docker_cont_name {
@@ -882,6 +927,7 @@ BODY.desktop-ui .docker_btns button:hover,
     max-height: 520px;
     padding: 5px 10px 5px 10px;
     border-radius: 0px 5px 5px 5px;
+    border-top: 3px solid #b311a3;
 }
 
 #topic_list .node,
@@ -1618,7 +1664,7 @@ BODY.touch-ui .monitor_menu_content .menu_line.panel_msg_types_line
     border-bottom: 0px;
 }
 
-BODY.touch-ui .monitor_menu_content .menu_line.warn {
+BODY.touch-ui .monitor_menu_content .menu_line.warn A {
     background: red;
     border-radius: 5px;
 }
@@ -1935,9 +1981,7 @@ SPAN.error {
     cursor: pointer;
 }
 
-#cameras_list .camera label {
-    line-height: 30px;
-}
+
 
 .grid_panel .panel_source {
     min-height: 1em;
