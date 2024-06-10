@@ -3976,11 +3976,11 @@ BUTTON#delete-input-profile:hover {
 }
 
 .editing_profile_basics #profile-buttons > .icon {
-    background-image: url(/static/icon-edit.png);
-    background-size: 92px;
-    background-position: -36px 9px;
     background-color: #e90fe9;
     border-radius: 0px 5px 0px 0px;
+    background-image: url(/static/icon-check.png);
+    background-size: 32px;
+    background-position: 7px 6px;
 }
 .editing_profile_basics  #input-profile-select {
     border-radius: 10px 0px 0px 0px !important;

@@ -10,7 +10,7 @@ export class JoyInputDriver extends InputDriver {
         // makes 10 axes
         let axes = {};
         for (let i = 0; i < this.num_axes; i++) {
-            axes[`${i}`] = 'Joy: Axis '+i
+            axes[`axis.${i}`] = 'Joy: Axis '+i
         }
         return axes;
     }
@@ -19,7 +19,7 @@ export class JoyInputDriver extends InputDriver {
         // makes 10 axes
         let buttons = {};
         for (let i = 0; i < this.num_buttons; i++) {
-            buttons[`${i}`] = 'Joy: Button '+i
+            buttons[`btn.${i}`] = 'Joy: Button '+i
         }
         return buttons;
     }
@@ -33,7 +33,7 @@ export class JoyInputDriver extends InputDriver {
         }
 
         for (let i = 0; i < this.num_axes; i++) {
-            let id_axis = `${i}`;
+            let id_axis = `axis.${i}`;
             if (!this.axes_output[id_axis])
                 msg.axes[i] = null;
             else
@@ -41,7 +41,7 @@ export class JoyInputDriver extends InputDriver {
         }
 
         for (let i = 0; i < this.num_buttons; i++) {
-            let id_btn = `${i}`;
+            let id_btn = `btn.${i}`;
             if (this.buttons_output[id_btn] === undefined)
                 msg.buttons[i] = null;
             else

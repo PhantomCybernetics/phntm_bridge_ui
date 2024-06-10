@@ -204,7 +204,7 @@ export class InputManager {
             });
 
         $('#input-profile-json').click((ev)=>{
-            that.copy_gamepad_profile_json(that.edited_controller, that.current_gamepad.current_profile);
+            that.profile_json_to_clipboard(that.edited_controller, that.current_gamepad.current_profile);
         });
 
         if (isTouchDevice()) {
@@ -217,6 +217,7 @@ export class InputManager {
         document.addEventListener('keydown', (ev) => that.on_keyboard_key_down(ev, that.controllers['keyboard']));
         document.addEventListener('keyup', (ev) => that.on_keyboard_key_up(ev, that.controllers['keyboard']));
         window.addEventListener("blur", (event) => {
+            // TODO reset keyboard?
             // console.warn('Window lost focus');
             // that.last_keyboard_input = {};
             // that.update_input_ui();
@@ -228,16 +229,24 @@ export class InputManager {
     set_config(enabled_drivers, robot_defaults) {
         console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}]:`, robot_defaults);
 
-        this.enabled_drivers = enabled_drivers;
+        this.enabled_drivers = enabled_drivers; // input_drivers array from the robot's config
 
-        this.robot_defaults = robot_defaults;
+        this.robot_defaults = robot_defaults; // json from the 'input_defaults' file on the robot
         
-        let user_defaults = localStorage.getItem('user-input-config:'+this.client.id_robot);
-        this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
+        if (!this.enabled_drivers || !this.enabled_drivers.length) { // no drivers allowed => no input
+            console.log('Input is disabled by the robot');
+            // TODO: hide monkey and touch icon from UI
+            return;
+        }
+
+        // this.user_defaults = {};
+       
+        //let user_defaults = {};
+        //this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
 
         console.log('Loaded user input defaults: ', this.user_defaults);
 
-        if (!this.profiles) {
+        if (!this.profiles) { // only once 
             this.profiles = {};
 
             // robot defined profiles
@@ -257,17 +266,28 @@ export class InputManager {
                 }
             });
 
-            // override with local cookies
-            Object.keys(this.user_defaults).forEach((id_profile)=>{
-                if (!this.profiles[id_profile]) {
-                    let label = this.user_defaults[id_profile].label ? this.user_defaults[id_profile].label : id_profile;
-                    this.profiles[id_profile] = {
+            // overwrite with local
+            let user_profiles = this.load_user_profiles();
+            user_profiles.forEach((user_profile)=>{
+                // let user_profile = this.load_user_profile(id_profile);
+                if (!user_profile)
+                    return;
+                let id_profile = user_profile.id;
+                if (!this.profiles[id_profile]) { // user's own profile
+                    let label = user_profile.label ? user_profile.label : id_profile;
+                    this.profiles[id_profile] = { 
                         label: label,
                         saved: true,
+                        id_saved: id_profile,
+                        label_saved: label,
+                        saved: true,
+                        basics_saved: true,
                     };
                 } else {
-                    if (this.user_defaults[id_profile].label) 
-                        this.profiles[id_profile].label = this.user_defaults[id_profile].label;
+                    if (user_profile.label) {
+                        this.profiles[id_profile].label = user_profile.label;
+                        this.profiles[id_profile].label_saved = user_profile.label;
+                    }
                 }
             });
 
@@ -325,11 +345,18 @@ export class InputManager {
 
             Object.keys(this.profiles).forEach((id_profile)=>{
 
-                // let id_profile = profile_default_cfg.id;
+                // robot defaults
                 let profile_default_cfg = {};
-                if (this.robot_defaults[id_profile] && this.robot_defaults[id_profile][c.type])
-                    profile_default_cfg = this.robot_defaults[id_profile][c.type];
-                let user_defaults = this.load_user_controller_profile_config(c, id_profile);
+                if (this.robot_defaults[id_profile]) {
+                    if (this.robot_defaults[id_profile][c.type]) // robot defaults per type
+                        profile_default_cfg = this.robot_defaults[id_profile][c.type];
+                    if (this.robot_defaults[id_profile][c.id]) { // robot defaults per controller id
+                        profile_default_cfg = this.robot_defaults[id_profile][c.id];
+                    }
+                }
+
+                // overwrite with user defaults
+                let user_defaults = this.load_user_controller_profile_config(c.id, id_profile);
                 if (user_defaults) {
                     console.log(c.id+' loaded user defults for '+id_profile, user_defaults);
                     profile_default_cfg = user_defaults;
@@ -343,7 +370,8 @@ export class InputManager {
                 let profile = {
                     driver: profile_default_cfg.driver,
                     default_driver_config: {},
-                    default_axes_config: profile_default_cfg.axes
+                    default_axes_config: profile_default_cfg.axes ? profile_default_cfg.axes : [],
+                    default_buttons_config: profile_default_cfg.buttons ? profile_default_cfg.buttons : []
                 }
                 
                 if (profile_default_cfg.driver_config) {
@@ -352,7 +380,7 @@ export class InputManager {
 
                 c.profiles[id_profile] = profile;
 
-                this.init_profile(c, profile);
+                this.init_controller_profile(c, profile);
                 this.set_saved_controller_profile_state(c, id_profile);
                 c.profiles[id_profile].saved = true;
 
@@ -375,10 +403,238 @@ export class InputManager {
             this.make_ui();
         }
 
+        if (c.type == 'touch') {
+            this.render_touch_buttons();
+        }
+
         if (!this.loop_running) {
             this.loop_running = true;
             this.run_loop();
         }
+    }
+
+    init_controller_profile(c, profile) {
+
+        if (!profile.driver_instances) {
+            profile.driver_instances = {};
+        }
+
+        if (!profile.driver_instances[profile.driver]) {
+
+            //init driver
+            profile.driver_instances[profile.driver] = new this.registered_drivers[profile.driver](this);
+            if (profile.default_driver_config && profile.default_driver_config[profile.driver]) {
+                profile.driver_instances[profile.driver].set_config(profile.default_driver_config[profile.driver]);
+            } else {
+                profile.driver_instances[profile.driver].set_config({}); // init writer
+            }
+
+            let driver = profile.driver_instances[profile.driver];
+            let driver_axes_ids = Object.keys(driver.get_axes());
+
+            driver.buttons = [];
+            driver.axes = [];
+
+            if (c.type == 'touch') {
+                for (let i_axis = 0; i_axis < 4; i_axis++) {
+                    let new_axis = this.make_axis(profile, i_axis, driver_axes_ids, 0.01);
+                    if (new_axis) {
+                        driver.axes.push(new_axis);
+                    }
+                }
+                let empty_buttons_to_make = 3;
+                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                    empty_buttons_to_make = 0
+                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    }
+                }
+                for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
+                    let new_btn = this.make_button(driver, c.type);
+                    new_btn.src_label = 'Aux ' + new_btn.i; // init label
+                }
+            } else if (c.type == 'keyboard') {
+
+                let empty_buttons_to_make = 5;
+                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                    empty_buttons_to_make = 0
+                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    }
+                }
+                for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { // make some more
+                    let new_btn = this.make_button(driver, c.type);
+                }
+
+
+            } else if (c.type == 'gamepad') {
+                const gp = navigator.getGamepads()[c.gamepad.index];
+                console.log('Making axes & buttons for gamepad', c.gamepad);
+                for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
+                    let new_axis = this.make_axis(profile, i_axis, driver_axes_ids, 0.1); //default deadzone bigger than touch
+                    if (new_axis) {
+                        new_axis.needs_reset = true; //waits for 1st non-zero signals
+                        driver.axes.push(new_axis);
+                    }
+                }
+
+                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
+                    let new_btn = this.make_button(driver, c.type);
+                }
+            }
+        }
+
+    }
+
+    make_axis(profile, i_axis, driver_axes_ids, default_dead_zone) {
+        let axis_cfg = null;
+        if (profile.default_axes_config) {
+            profile.default_axes_config.forEach((cfg)=>{
+                if (cfg.axis === i_axis && driver_axes_ids.indexOf(cfg.driver_axis) > -1) {
+                    axis_cfg = cfg;
+                    return;
+                }
+            });
+        }
+
+        let new_axis = { 
+            i: i_axis,
+            raw: null,
+            driver_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
+            dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
+            dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
+            offset: axis_cfg && axis_cfg.offset !== undefined ? axis_cfg.offset : 0.0,
+            scale: axis_cfg && axis_cfg.scale !== undefined ? axis_cfg.scale : 1.0,                
+        }
+
+        if (axis_cfg && axis_cfg.mod_func && axis_cfg.mod_func.type) {
+            switch (axis_cfg.mod_func.type) {
+                case 'scale_by_velocity':
+                    new_axis.mod_func = axis_cfg.mod_func.type;
+                    new_axis.scale_by_velocity_src = axis_cfg.mod_func.velocity_src;
+                    new_axis.scale_by_velocity_mult_min = axis_cfg.mod_func.slow_multiplier !== undefined ? axis_cfg.mod_func.slow_multiplier : 1.0;
+                    new_axis.scale_by_velocity_mult_max = axis_cfg.mod_func.fast_multiplier !== undefined ? axis_cfg.mod_func.fast_multiplier : 1.0;
+                    break;
+                default:
+                    break
+            }
+        }
+
+        return new_axis;
+    }
+    
+    make_button(driver, c_type, default_config = null, default_axis_dead_zone = 0.01) {
+        if (driver.i_btn === undefined)
+            driver.i_btn = -1;
+        driver.i_btn++;
+
+        let new_btn = { 
+            i: driver.i_btn,
+
+            id_src: null, // btn id on gamepad, key code on kb, null on touch
+            src_label: null, // hr key name on kb, button label on touch, unused on gp
+            driver_btn: null, // map output as diver button
+            driver_axis: null, // map output as driver axis
+            action: null, // maps all other actions
+            assigned: false,
+            trigger: 1, // 0=touch (gp only), 1=press, 2=release
+            touch_ui_placement: null, // 1=top, 2=bottom in touch gamepad overlay
+            
+            pressed: false,
+            touched: false, // gamepad only
+            raw: null,
+        }
+
+        if (default_config) {
+            if (default_config.key !== undefined)
+                new_btn.id_src = default_config.key;
+            if (default_config.btn !== undefined)
+                new_btn.id_src = parseInt(default_config.btn);
+            if (default_config.key !== undefined) {
+                new_btn.id_src = default_config.key.toLowerCase();
+                if (default_config.key_mod !== undefined) {
+                    new_btn.key_mod = default_config.key_mod.toLowerCase();
+                }
+                new_btn.src_label = this.button_label_from_key(new_btn.id_src, new_btn.key_mod);
+            }
+            if (default_config.label)
+                new_btn.src_label = default_config.label;
+            if (default_config.driver_axis) {
+                new_btn.driver_axis = default_config.driver_axis;
+                new_btn.assigned = true;
+
+                new_btn.dead_min = default_config.dead_min !== undefined ? parseFloat(default_config.dead_min) : -default_axis_dead_zone;
+                new_btn.dead_max = default_config.dead_max !== undefined ? parseFloat(default_config.dead_max) : default_axis_dead_zone;
+                new_btn.offset = default_config.offset !== undefined ? parseFloat(default_config.offset) : 0.0;
+                new_btn.scale = default_config.scale !== undefined ? parseFloat(default_config.scale) : 1.0;  
+
+                if (default_config.mod_func) {
+                    switch (default_config.mod_func.type) {
+                        case 'scale_by_velocity':
+                            new_btn.mod_func = default_config.mod_func.type;
+                            new_btn.scale_by_velocity_src = default_config.mod_func.velocity_src;
+                            new_btn.scale_by_velocity_mult_min = default_config.mod_func.slow_multiplier !== undefined ? default_config.mod_func.slow_multiplier : 1.0;
+                            new_btn.scale_by_velocity_mult_max = default_config.mod_func.fast_multiplier !== undefined ? default_config.mod_func.fast_multiplier : 1.0;
+                            break;
+                    }
+                }
+                
+            }
+            if (default_config.driver_btn) {
+                new_btn.driver_btn = default_config.driver_btn;
+                new_btn.assigned = true;
+            }
+            if (default_config.trigger) {
+                switch (default_config.trigger) {
+                    case 'touch': new_btn.trigger = 0; break;
+                    case 'press': new_btn.trigger = 1; break;
+                    case 'release': new_btn.trigger = 2; break;
+                }
+            }
+            if (default_config.action) {
+                new_btn.action = default_config.action;
+                new_btn.assigned = true;
+
+                if (default_config.action == 'ros-srv') {
+                    if (default_config.ros_srv_id) {
+                        new_btn.ros_srv_id = default_config.ros_srv_id;
+                    }
+
+                    new_btn.ros_srv_msg_type = null;
+
+
+
+                    if (default_config.ros_srv_val) {
+                        new_btn.ros_srv_val = default_config.ros_srv_val;
+                    }
+                        
+                }
+            }
+            if (default_config.placement) {
+                switch (default_config.placement) {
+                    case 'top': new_btn.touch_ui_placement = 1; break;
+                    case 'overlay':
+                    case 'bottom': new_btn.touch_ui_placement = 2; break;
+                }
+            }
+            if (default_config.style) {
+                new_btn.touch_ui_style = default_config.style;
+            }
+            if (default_config.repeat !== undefined) {
+                new_btn.repeat = default_config.repeat ? true : false;
+            }
+
+
+            //TODO validate?
+
+        }
+
+        if (c_type == 'touch' && !new_btn.src_label) {
+            new_btn.src_label = 'Aux ' + new_btn.i; // init label
+        }
+        
+        driver.buttons.push(new_btn);
+        return new_btn;
     }
 
     get_profile_config(c, id_profile, only_assigned=false) {
@@ -531,118 +787,9 @@ export class InputManager {
         }
     }
 
-    make_button(driver) {
-        if (driver.i_btn === undefined)
-            driver.i_btn = -1;
-        driver.i_btn++;
-        let new_btn = { 
-            i: driver.i_btn,
-            id_src: null, // id on gamepad
-            src_label: null, // hr key name
-            pressed: false,
-            touched: false,
-            raw: null,
-            driver_btn: null, // output as diver button
-            driver_axis: null, // output as driver axis
-            action: null, // performs all other actions
-            trigger: 1, // press by default
-        }
-        driver.buttons.push(new_btn);
-        return new_btn;
-    }
+    
 
-    init_profile(c, profile) {
-
-        if (!profile.driver_instances) {
-            profile.driver_instances = {};
-        }
-
-        if (!profile.driver_instances[profile.driver]) {
-
-            //init driver
-            profile.driver_instances[profile.driver] = new this.registered_drivers[profile.driver](this);
-            if (profile.default_driver_config && profile.default_driver_config[profile.driver]) {
-                profile.driver_instances[profile.driver].set_config(profile.default_driver_config[profile.driver]);
-            } else {
-                profile.driver_instances[profile.driver].set_config({}); // init writer
-            }
-
-            let driver = profile.driver_instances[profile.driver];
-            let driver_axes_ids = Object.keys(driver.get_axes());
-
-            profile.buttons = []; 
-            driver.buttons = []; // driver independent buttons
-            driver.axes = [];
-
-            function make_axis(i_axis, default_dead_zone) {
-                let axis_cfg = null;
-                if (profile.default_axes_config) {
-                    profile.default_axes_config.forEach((cfg)=>{
-                        if (cfg.axis === i_axis && driver_axes_ids.indexOf(cfg.driver_axis) > -1) {
-                            axis_cfg = cfg;
-                            return;
-                        }
-                    });
-                }
-
-                let new_axis = { 
-                    i: i_axis,
-                    raw: null,
-                    driver_axis: axis_cfg && axis_cfg.driver_axis ? axis_cfg.driver_axis : null,
-                    dead_min: axis_cfg && axis_cfg.dead_min !== undefined ? axis_cfg.dead_min : -default_dead_zone,
-                    dead_max: axis_cfg && axis_cfg.dead_max !== undefined ? axis_cfg.dead_max : default_dead_zone,
-                    offset: axis_cfg && axis_cfg.offset !== undefined ? axis_cfg.offset : 0.0,
-                    scale: axis_cfg && axis_cfg.scale !== undefined ? axis_cfg.scale : 1.0,                
-                }
-
-                if (axis_cfg && axis_cfg.mod_func && axis_cfg.mod_func.type) {
-                    switch (axis_cfg.mod_func.type) {
-                        case 'scale_by_velocity':
-                            new_axis.mod_func = axis_cfg.mod_func.type;
-                            new_axis.scale_by_velocity_src = axis_cfg.mod_func.velocity_src;
-                            new_axis.scale_by_velocity_mult_min = axis_cfg.mod_func.slow_multiplier !== undefined ? axis_cfg.mod_func.slow_multiplier : 1.0;
-                            new_axis.scale_by_velocity_mult_max = axis_cfg.mod_func.fast_multiplier !== undefined ? axis_cfg.mod_func.fast_multiplier : 1.0;
-                            break;
-                        default:
-                            break
-                    }
-                }
-
-                return new_axis;
-            }
-
-            if (c.type == 'touch') {
-                for (let i_axis = 0; i_axis < 4; i_axis++) {
-                    let new_axis = make_axis(i_axis, 0.01);
-                    if (new_axis) {
-                        driver.axes.push(new_axis);
-                    }
-                }
-                for (let i_btn = 0; i_btn < 3; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
-                    let new_btn = this.make_button(driver);
-                    new_btn.src_label = 'Aux ' + new_btn.i; // init label
-                }
-            } else if (c.type == 'keyboard') {
-                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
-                    let new_btn = this.make_button(driver);
-                }
-            } else if (c.type == 'gamepad') {
-                const gp = navigator.getGamepads()[c.gamepad.index];
-                console.log('Making axes & buttons for gamepad', c.gamepad);
-                for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
-                    let new_axis = make_axis(i_axis, 0.1); //default deadzone bigger than touch
-                    if (new_axis) {
-                        new_axis.needs_reset = true; //waits for 1st non-zero signals
-                        driver.axes.push(new_axis);
-                    }
-                }
-                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
-                    let new_btn = this.make_button(driver);
-                }
-            }
-        }
-
-    }
+    
     
     close_profile_basics_edit() {
         $('#gamepad-settings-container').removeClass('editing_profile_basics');
@@ -688,7 +835,7 @@ export class InputManager {
                 driver: this.enabled_drivers[this.current_gamepad.type][0], // copy current as default
                 // label: id_new_profile,
             }
-            this.init_profile(this.current_gamepad.profiles[id_new_profile]);
+            this.init_controller_profile(this.current_gamepad.profiles[id_new_profile]);
             this.current_gamepad.current_profile = id_new_profile;
 
         } else {
@@ -711,26 +858,29 @@ export class InputManager {
         return localStorage.getItem('last-input-profile:' + this.client.id_robot);
     }
 
-    copy_gamepad_profile_json(gamepad, id_profile) {
-        let profile_data = this.get_profile_config(gamepad, id_profile, true);
-        navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
-        console.log('Copied json:', profile_data);
-        $('#gamepad-profile-json-bubble').css('display', 'block');
-        window.setTimeout(()=>{
-            $('#gamepad-profile-json-bubble').css('display', 'none');
-        }, 3000);
+    load_user_profiles() {
+        let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
+        return val ? JSON.parse(val) : [];
     }
 
-    save_edited_profile_ids() {
-        
-        //TODO
-        let cookie_conf_list = 'user-input-profiles:'+this.client.id_robot;
-        let custom_profile_ids = localStorage.getItem(cookie_conf_list);
-        // if (!custom_profile_ids) {
-        //     custom_profile_ids = [];
-        // } else {
-        //     custom_profile_ids = JSON.parse(custom_profile_ids)
-        // }
+    save_user_profiles(user_profiles) { //[ { id: 'id_profile', label: 'label'}, ... ]
+        let val = localStorage.setItem('input-profiles:' + this.client.id_robot, JSON.stringify(user_profiles));
+        return val ? JSON.parse(val) : [];
+    }
+
+    //ok
+    save_user_controller_enabled(c) {
+        if (c.type == 'touch')  return; // touch ui starts always on
+        localStorage.setItem('controller-enabled:' + this.client.id_robot+ ':' + c.id, c.enabled);
+        console.log('Saved controller enabled for robot '+this.client.id_robot+', id="'+c.id+'": '+c.enabled);
+    }
+
+    //ok
+    load_user_controller_enabled(id_controller) {
+        let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);
+        state = state === 'true';
+        console.log('Loaded controller enabled for robot '+this.client.id_robot+', id="'+id_controller+'": '+state);
+        return state;
     }
 
     save_user_controller_profile_config(c, id_profile) {
@@ -761,8 +911,8 @@ export class InputManager {
         this.check_controller_profile_saved(c, id_profile);
     }
 
-    load_user_controller_profile_config(c, id_profile) {
-        let cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+c.id+':'+id_profile;
+    load_user_controller_profile_config(id_controller, id_profile) {
+        let cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+id_controller+':'+id_profile;
         let val = localStorage.getItem(cookie_conf);
 
         if (val)
@@ -770,6 +920,31 @@ export class InputManager {
         else
             return null;
     }
+
+    // save_edited_profile_ids() {
+        
+    //     //TODO
+    //     let cookie_conf_list = 'user-input-profiles:'+this.client.id_robot;
+    //     let custom_profile_ids = localStorage.getItem(cookie_conf_list);
+    //     // if (!custom_profile_ids) {
+    //     //     custom_profile_ids = [];
+    //     // } else {
+    //     //     custom_profile_ids = JSON.parse(custom_profile_ids)
+    //     // }
+    // }
+
+
+
+    profile_json_to_clipboard(gamepad, id_profile) {
+        let profile_data = this.get_profile_config(gamepad, id_profile, true);
+        navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
+        console.log('Copied json:', profile_data);
+        $('#gamepad-profile-json-bubble').css('display', 'block');
+        window.setTimeout(()=>{
+            $('#gamepad-profile-json-bubble').css('display', 'none');
+        }, 3000);
+    }
+    
 
     disable_kb_on_conflict() {
 
@@ -836,7 +1011,7 @@ export class InputManager {
                     // driver: current_profile.driver, // copy current as default
                     // label: id_new_profile,
                 }
-                that.init_profile(that.edited_controller, that.profiles[id_new_profile]);
+                that.init_controller_profile(that.edited_controller, that.profiles[id_new_profile]);
                 that.current_profile = id_new_profile;
                 that.make_ui();
                 that.render_touch_buttons();
@@ -942,7 +1117,7 @@ export class InputManager {
                     let val = $(ev.target).val();
                     console.log('profile driver changed to '+val);
                     profile.driver = val;
-                    that.init_profile(that.edited_controller, profile);
+                    that.init_controller_profile(that.edited_controller, profile);
                     profile.driver_instances[profile.driver].setup_writer();
                     that.check_controller_profile_saved(that.edited_controller, that.current_profile, false);
                     that.make_ui();
@@ -1141,7 +1316,6 @@ export class InputManager {
     }
 
     prevent_context_menu(ev) {
-        console.log('contex cancelled', ev.target);
         ev.preventDefault();
         ev.stopPropagation();
     };
@@ -1162,34 +1336,44 @@ export class InputManager {
         }
 
         // dead zone
-        let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
-        let dead_zone_wrapper_el = $('<div class="config-row2"></div>');
-        let dead_zone_min_inp = $('<input type="text" class="inp-val inp-val2"/>');
-        
-        dead_zone_min_inp.val(axis.dead_min.toFixed(2));
-        let dead_zone_max_label = $('<span class="label2">to</span>');
-        let dead_zone_max_inp = $('<input type="text" class="inp-val"/>');
-        dead_zone_max_inp.val(axis.dead_max.toFixed(2));
-        dead_zone_min_inp.appendTo(dead_zone_wrapper_el);
-        dead_zone_max_label.appendTo(dead_zone_wrapper_el);
-        dead_zone_max_inp.appendTo(dead_zone_wrapper_el);
-        dead_zone_wrapper_el.appendTo(dead_zone_el)
+        if (!is_btn || this.edited_controller.type == 'gamepad') {
+            let dead_zone_el = $('<div class="config-row"><span class="label">Dead zone:</span></div>');
+            let dead_zone_wrapper_el = $('<div class="config-row2"></div>');
+            let dead_zone_min_inp = $('<input type="text" class="inp-val inp-val2"/>');
+            
+            dead_zone_min_inp.val(axis.dead_min.toFixed(2));
+            let dead_zone_max_label = $('<span class="label2">to</span>');
+            let dead_zone_max_inp = $('<input type="text" class="inp-val"/>');
+            dead_zone_max_inp.val(axis.dead_max.toFixed(2));
+            dead_zone_min_inp.appendTo(dead_zone_wrapper_el);
+            dead_zone_max_label.appendTo(dead_zone_wrapper_el);
+            dead_zone_max_inp.appendTo(dead_zone_wrapper_el);
+            dead_zone_wrapper_el.appendTo(dead_zone_el)
 
-        dead_zone_min_inp.focus((ev)=>{ev.target.select();});
-        dead_zone_max_inp.focus((ev)=>{ev.target.select();});
+            dead_zone_min_inp.focus((ev)=>{ev.target.select();});
+            dead_zone_max_inp.focus((ev)=>{ev.target.select();});
 
-        dead_zone_min_inp.change((ev)=>{
-            axis.dead_min = parseFloat($(ev.target).val());
-            delete axis.dead_val;
-            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-        });
-        dead_zone_max_inp.change((ev)=>{
-            axis.dead_max = parseFloat($(ev.target).val());
-            delete axis.dead_val;
-            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-        });
+            dead_zone_min_inp.change((ev)=>{
+                axis.dead_min = parseFloat($(ev.target).val());
+                delete axis.dead_val;
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+            });
+            dead_zone_max_inp.change((ev)=>{
+                axis.dead_max = parseFloat($(ev.target).val());
+                delete axis.dead_val;
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
+            });
 
-        dead_zone_el.appendTo(axis.config_details_el);
+            dead_zone_el.appendTo(axis.config_details_el);
+
+            if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
+                dead_zone_min_inp.attr('inputmode', 'numeric');                
+                dead_zone_max_inp.attr('inputmode', 'numeric');
+            }
+            
+            dead_zone_min_inp.on('contextmenu', that.prevent_context_menu);
+            dead_zone_max_inp.on('contextmenu', that.prevent_context_menu);
+        }
 
         // input offset
         let offset_el = $('<div class="config-row"><span class="label">Offset input:</span></div>');
@@ -1301,14 +1485,10 @@ export class InputManager {
         
 
         if (!isIOS()) { // ios can't do numberic keyboard with decimal and minus signs => so default it is
-            dead_zone_min_inp.attr('inputmode', 'numeric');
-            dead_zone_max_inp.attr('inputmode', 'numeric');
             offset_inp.attr('inputmode', 'numeric');
             scale_inp.attr('inputmode', 'numeric');
         }
 
-        dead_zone_min_inp.on('contextmenu', that.prevent_context_menu);
-        dead_zone_max_inp.on('contextmenu', that.prevent_context_menu);
         offset_inp.on('contextmenu', that.prevent_context_menu);
         scale_inp.on('contextmenu', that.prevent_context_menu);
 
@@ -1338,6 +1518,8 @@ export class InputManager {
         let trigger_opts = [];
         vals.forEach((val)=>{
             let val_int = parseInt(val);
+            if (val_int === 2 && btn.driver_btn)
+                return;
             trigger_opts.push('<option value="'+val+'"'+(btn.trigger===val_int?' selected':'')+'>'+c_opts[val]+'</option>');
         });
 
@@ -1484,7 +1666,7 @@ export class InputManager {
                 btn.ros_srv_id = null;
                 btn.ros_srv_msg_type = null;
             }
-            console.log('btn set to ros rv '+btn.ros_srv_id+' msg type='+btn.ros_srv_msg_type);
+            console.log('btn set to ros srv '+btn.ros_srv_id+' msg type='+btn.ros_srv_msg_type);
             rener_srv_details();
             that.check_controller_profile_saved(that.edited_controller, that.current_profile);
         });
@@ -1881,6 +2063,9 @@ export class InputManager {
 
                 }, {'passive':true});
 
+                btn_el.on('contextmenu', that.prevent_context_menu);
+                btn_el.on('contextmenu', that.prevent_context_menu);
+
             });
 
         });
@@ -2022,6 +2207,31 @@ export class InputManager {
         }
     };
 
+    button_label_from_key(key, mod) {
+        let label = key.toUpperCase();
+        switch (label) {
+            case ' ': label = '␣'; break;
+            case 'ARROWLEFT': label = '←'; break; // &#8592;
+            case 'ARROWRIGHT': label = '→'; break; //&#8594;
+            case 'ARROWUP': label = '↑'; break; // &#8593;
+            case 'ARROWDOWN': label = '↓'; break; // &#8595;
+            case 'TAB': label = 'Tab'; break;
+            case 'ENTER': label = 'Enter'; break;
+            case 'SHIFT': label = 'Shift'; break;
+            case 'CONTROL': label = 'Ctrl'; break;
+            case 'META': label = 'Meta'; break;
+            case 'ALT': label = 'Alt'; break;
+        }
+
+        switch (mod) {
+            case 'alt': label = 'Alt+'+label; break;
+            case 'ctrl': label = 'Ctrl+'+label; break;
+            case 'meta': label = 'Meta+'+label; break;
+            case 'shift': label = 'Shift+'+label; break;
+        }
+        return label;
+    }
+
     make_btn_row(driver, btn) {
 
         let that = this;
@@ -2058,15 +2268,15 @@ export class InputManager {
                     close_listening();
                 });
                 btn.listening = true;
-                driver.on_button_press = (key_id, kb_ev) => {
-                
+                driver.on_button_press = (key_code, kb_ev) => {
+                    
                     if (that.edited_controller.type == 'keyboard') {
 
-                        if (key_id == 'Escape') { // cancel 
+                        if (key_code == 'Escape') { // cancel 
                             close_listening();
                             return;
                         }
-                        else if (key_id == 'Delete' || key_id == 'Backspace') { // clear
+                        else if (key_code == 'Delete' || key_code == 'Backspace') { // clear
                             btn.id_src = null;
                             btn.src_label = null;
                             btn.key_mod = null;
@@ -2074,40 +2284,26 @@ export class InputManager {
                             return;
                         }
                         // else if (key_id == )
-                        let label = kb_ev.key;
-                        switch (label) {
-                            case ' ': label = '␣'; break;
-                            case 'ArrowLeft': label = '←'; break; // &#8592;
-                            case 'ArrowRight': label = '→'; break; //&#8594;
-                            case 'ArrowUp': label = '↑'; break; // &#8593;
-                            case 'ArrowDown': label = '↓'; break; // &#8595;
-                        }
-                        if (kb_ev.altKey) {
-                            label = 'Alt+'+label;
+                        
+                        btn.key_mod = null;
+                        if (kb_ev.altKey)
                             btn.key_mod = 'alt';
-                        }
-                        else if (kb_ev.ctrlKey) {
-                            label = 'Ctrl+'+label;
+                        else if (kb_ev.ctrlKey)
                             btn.key_mod = 'ctrl';
-                        }
-                        else if (kb_ev.metaKey) {
-                            label = 'Meta+'+label;
+                        else if (kb_ev.metaKey)
                             btn.key_mod = 'meta';
-                        }
-                        else if (kb_ev.shiftKey) {
-                            label = 'Shift+'+label;
+                        else if (kb_ev.shiftKey)
                             btn.key_mod = 'shift';
-                        } else {
-                            btn.key_mod = null;
-                        }
-                        btn.src_label = label;
 
+                        btn.id_src = kb_ev.key.toLowerCase(); // comparing lower cases
+                        btn.src_label = that.button_label_from_key(btn.id_src, btn.key_mod);
+                        
                     } else { // touch or gamepad
-                        btn.src_label = 'B'+key_id;
+                        btn.src_label = 'B'+key_code;
+                        btn.id_src = key_id;
                     }
                         
-                    btn.id_src = key_id;
-                    // console.log('assigned ', key_id);
+                    console.log('Assigned: '+btn.id_src+(btn.key_mod?'+'+btn.key_mod:''));
 
                     close_listening();
                 };
@@ -2291,6 +2487,10 @@ export class InputManager {
                 row_el.addClass('unused');
             }
 
+            if (that.edited_controller.type == 'touch') {
+                that.render_touch_buttons();
+            }
+
             that.check_controller_profile_saved(that.edited_controller, that.current_profile);
         });
 
@@ -2333,7 +2533,7 @@ export class InputManager {
 
         if (add_btn) {
             add_btn.click((ev)=>{
-                let new_btn = that.make_button(driver);
+                let new_btn = that.make_button(driver, this.edited_controller.type);
                 if (that.edited_controller.type == 'touch') {
                     new_btn.src_label = 'Aux ' + new_btn.i ; // init label
                 }
@@ -2377,7 +2577,9 @@ export class InputManager {
             case 'ros-srv':
                 //TODO
                 if (!btn.ros_srv_id) { console.warn('Service ID not set'); return; }
-                if (!btn.ros_srv_msg_type) { console.warn('Service msg_type not set'); return; }
+                if (!btn.ros_srv_msg_type) {
+                    console.error('Service msg_type not set'); return;
+                }
                 if (btn.service_blocked) { console.warn('Service skipping call (previous unfinished)'); return; }
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
@@ -2981,14 +3183,14 @@ export class InputManager {
             if (btn.pressed)
                 continue;
 
-            if (btn.id_src == ev.code) {
+            if (btn.id_src == ev.key.toLowerCase()) {
                 if (btn.key_mod == 'shift' && !ev.shiftKey)
                     continue;
                 if (btn.key_mod == 'meta' && !ev.metaKey)
                     continue;
                 if (btn.key_mod == 'ctrl' && !ev.ctrlKey)
                     continue;
-                if (btn.key_mod == 't' && !ev.altKey)
+                if (btn.key_mod == 'alt' && !ev.altKey)
                     continue;
 
                 btn.pressed = true;
@@ -3028,7 +3230,7 @@ export class InputManager {
             if (!btn.pressed)
                 continue;
 
-            if (btn.id_src == ev.code || 
+            if (btn.id_src == ev.key.toLowerCase() || 
                 (ev.key == 'Shift' && btn.key_mod == 'shift') ||
                 (ev.key == 'Alt' && btn.key_mod == 'alt') ||
                 (ev.key == 'Ctrl' && btn.key_mod == 'ctrl') ||
@@ -3050,20 +3252,6 @@ export class InputManager {
         }
     }
 
-    save_user_controller_enabled(c) {
-        if (c.type == 'touch')
-            return; // touch ui starts always on
-
-        localStorage.setItem('controller-enabled:' + this.client.id_robot+ ':' + c.id,
-                            c.enabled);
-        console.log('Saved controller enabled for robot '+this.client.id_robot+', gamepad "'+c.id+'":', c.enabled);
-    }
-
-    load_user_controller_enabled(id_controller) {
-        let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);
-        state = state === 'true';
-        console.log('Loaded controller enabled for robot '+this.client.id_robot+', gamepad "'+id_controller+'":', state);
-        return state;
-    }
+   
 
 }
