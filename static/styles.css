@@ -3775,6 +3775,14 @@ BODY.desktop-ui #gamepad-profile-config {
     color: #a3a0bd;
 }
 
+#gamepad_settings .config-row .static_val.msg_type {
+    font-size: 12px;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    cursor: help;
+}
+
+
 #gamepad_settings .config-row .static_val {
     float: right;
     width: 50%;
@@ -3830,6 +3838,7 @@ BUTTON#delete-input-profile:hover {
     text-decoration-style: dashed;
     cursor: help;
 }
+
 
 #gamepad-settings-panel .driver-error {
     background: #be1e1e;

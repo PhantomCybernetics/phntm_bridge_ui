@@ -498,8 +498,6 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-
-
     create_subscriber(id_source) {
 
         if (this.subscribers[id_source]) {
@@ -1500,6 +1498,17 @@ export class PhntmBridgeClient extends EventTarget {
             console.log('Docker reply', reply);
             if (cb)
                 cb(reply);
+        });
+    }
+
+    run_introspection(state=true) {
+        if (this.introspection == state)
+            return;
+        this.socket.emit('introspection', { id_robot: this.id_robot, state: state }, (res) => {
+            if (!res || !res['success']) {
+                console.error('Introspection start err: ', res);
+                return;
+            }
         });
     }
 

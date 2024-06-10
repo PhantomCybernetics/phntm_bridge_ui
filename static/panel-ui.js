@@ -381,12 +381,7 @@ export class PanelUI {
                 $('#introspection_state').addClass('active');
             }
 
-            client.socket.emit('introspection', { id_robot: client.id_robot, state: !is_active }, (res) => {
-                if (!res || !res['success']) {
-                    console.error('Introspection start err: ', res);
-                    return;
-                }
-            });
+            client.run_introspection(!is_active);
         });
 
         $('#services_gamepad_mapping_toggle').click(function (event) {

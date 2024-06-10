@@ -36,6 +36,7 @@ export class InputManager {
         this.last_touch_input = {};
        
         client.on('input_config', (drivers, defaults)=>{ that.set_config(drivers, defaults); });
+        client.on('services', (discovered_services)=>{ that.on_services_updated(discovered_services); });
 
         this.open = false;
         this.open_panel = 'axes'; // axes, buttons, output, settings
@@ -598,16 +599,19 @@ export class InputManager {
                 if (default_config.action == 'ros-srv') {
                     if (default_config.ros_srv_id) {
                         new_btn.ros_srv_id = default_config.ros_srv_id;
+
+                        new_btn.ros_srv_msg_type = null;
+                        if (this.client.discovered_services[new_btn.ros_srv_id]) {
+                            new_btn.ros_srv_msg_type = this.client.discovered_services[new_btn.ros_srv_id].msg_type;
+                        } else { // otherwise checked on services update
+                            console.log('ros-srv btn action missing message type, service '+new_btn.ros_srv_id+' not discovered yet?');
+                            // this.client.run_introspection();
+                        }
+
+                        if (default_config.ros_srv_val) {
+                            new_btn.ros_srv_val = default_config.ros_srv_val;
+                        }
                     }
-
-                    new_btn.ros_srv_msg_type = null;
-
-
-
-                    if (default_config.ros_srv_val) {
-                        new_btn.ros_srv_val = default_config.ros_srv_val;
-                    }
-                        
                 }
             }
             if (default_config.placement) {
@@ -624,9 +628,7 @@ export class InputManager {
                 new_btn.repeat = default_config.repeat ? true : false;
             }
 
-
-            //TODO validate?
-
+            //TODO validate something maybe?
         }
 
         if (c_type == 'touch' && !new_btn.src_label) {
@@ -635,6 +637,25 @@ export class InputManager {
         
         driver.buttons.push(new_btn);
         return new_btn;
+    }
+
+    on_services_updated(discovered_services) {
+        console.log('input manager got services', discovered_services);
+
+        Object.values(this.controllers).forEach((c)=>{
+            Object.values(c.profiles).forEach((p)=>{
+                Object.values(p.driver_instances).forEach((d)=>{
+                    d.buttons.forEach((btn)=>{
+                        if (btn.action == 'ros-srv' && btn.ros_srv_id && !btn.ros_srv_msg_type
+                            && discovered_services[btn.ros_srv_id])
+                        {
+                            btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+                            console.log('message type identigied for '+btn.ros_srv_id)+': '+btn.ros_srv_msg_type;
+                        }
+                    });
+                });
+            });
+        });
     }
 
     get_profile_config(c, id_profile, only_assigned=false) {
@@ -1626,7 +1647,7 @@ export class InputManager {
             if (btn.ros_srv_msg_type) {
                 srv_details_el.append($('<div class="config-row">' +
                                         '<span class="label">Message type:</span>' +
-                                        '<span class="static_val">' + btn.ros_srv_msg_type + '</span>' +
+                                        '<span class="static_val msg_type">' + btn.ros_srv_msg_type + '</span>' +
                                         '</div>'));
                 
                 let srv_val_el = $('<div class="config-row"><span class="label">Send value:</span></div>');
@@ -2578,7 +2599,10 @@ export class InputManager {
                 //TODO
                 if (!btn.ros_srv_id) { console.warn('Service ID not set'); return; }
                 if (!btn.ros_srv_msg_type) {
-                    console.error('Service msg_type not set'); return;
+                    console.error('Service msg_type not set');
+                    if (btn.touch_btn_el)
+                        this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, { err: 1, msg: 'Service not yet discovered, missing message type'});
+                    return;
                 }
                 if (btn.service_blocked) { console.warn('Service skipping call (previous unfinished)'); return; }
                 let call_args = btn.ros_srv_val; // from widget or parsed json
