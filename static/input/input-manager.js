@@ -641,16 +641,28 @@ export class InputManager {
 
     on_services_updated(discovered_services) {
         console.log('input manager got services', discovered_services);
-
+        let that = this;
         Object.values(this.controllers).forEach((c)=>{
-            Object.values(c.profiles).forEach((p)=>{
+            if (!c.profiles)
+                return;
+            Object.keys(c.profiles).forEach((id_profile)=>{
+                let p = c.profiles[id_profile];
                 Object.values(p.driver_instances).forEach((d)=>{
                     d.buttons.forEach((btn)=>{
-                        if (btn.action == 'ros-srv' && btn.ros_srv_id && !btn.ros_srv_msg_type
-                            && discovered_services[btn.ros_srv_id])
-                        {
-                            btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
-                            console.log('message type identigied for '+btn.ros_srv_id)+': '+btn.ros_srv_msg_type;
+                        if (btn.action == 'ros-srv') {
+
+                            // update missing message type
+                            if (btn.ros_srv_id && !btn.ros_srv_msg_type
+                                && discovered_services[btn.ros_srv_id]) {
+                                btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+                                console.log('message type identigied for '+btn.ros_srv_id)+': '+btn.ros_srv_msg_type;
+                            }
+
+                            // update ros-srv btn config ui
+                            if (that.edited_controller == c && that.current_profile == id_profile) {
+                                console.log('Updating btn confid ui (services changed)', btn);
+                                that.render_btn_config(d, btn);
+                            }
                         }
                     });
                 });
@@ -1232,6 +1244,14 @@ export class InputManager {
             c.icon.removeClass('transmitting');
         }
 
+        if (c.has_error && !c.icon_error) {
+            c.icon_error = true;
+            c.icon.addClass('error');
+        } else if (!c.has_error && c.icon_error) {
+            c.icon_error = false;
+            c.icon.removeClass('error');
+        }
+
         if (c == this.edited_controller && !c.icon_editing) {
             c.icon_editing = true;
             c.icon.addClass('editing');
@@ -1244,11 +1264,15 @@ export class InputManager {
     update_input_status_icon() {
         let something_enabled = false;
         let something_transmitting = false;
+        let error = false;
+
         Object.values(this.controllers).forEach((c)=>{
             if (c.icon_enabled)
                 something_enabled = true;
             if (c.icon_transmitting)
                 something_transmitting = true;
+            if (c.icon_error)
+                error = true;
         });
 
         if (something_enabled && !this.input_status_icon_enabled) {
@@ -1265,6 +1289,14 @@ export class InputManager {
         } else if (!something_transmitting && this.input_status_icon_transmitting) {
             this.input_status_icon_transmitting = false;
             this.input_status_icon.removeClass('transmitting');
+        }
+
+        if (error && !this.input_status_icon_error) {
+            this.input_status_icon_error = true;
+            this.input_status_icon.addClass('error');
+        } else if (!error && this.input_status_icon_error) {
+            this.input_status_icon_error = false;
+            this.input_status_icon.removeClass('error');
         }
     }
 
@@ -1616,7 +1648,6 @@ export class InputManager {
             '<option value="">Select service...</option>'
         ];
         
-        // TODO: would be nice to reload this on introspection update when already shown
         Object.values(this.client.discovered_nodes).forEach((node)=>{
             let service_ids = Object.keys(node.services);
             if (!service_ids.length)
@@ -2029,7 +2060,7 @@ export class InputManager {
 
             btns.forEach((btn)=> {
                 let wrap_el = $('<li></li>'); 
-                let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'">'+btn.src_label+'</span>')
+                let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'" tabindex="-1">'+btn.src_label+'</span>')
                 let cont = null;
                 
                 if (btn.repeat_timer) {
@@ -3165,8 +3196,9 @@ export class InputManager {
             c.transmitted_last_frame = transmitting;
             c.transmitting_user_input = transmitting && !cooldown; // more intuitive user feedback
 
+            c.has_error = false;
             if (transmitting) {
-                driver.transmit();
+                c.has_error = !driver.transmit();
             }
 
             that.update_controller_icon(c);

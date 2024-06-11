@@ -2573,33 +2573,31 @@ BODY.desktop-ui #introspection_state:hover,
 #input-status-icon {
     height: 55px;
     background-image: url(/static/user-input.png);
-    background-size: 197px;
+    background-size: 261px;
     background-position: 0px 0px;
     filter: unset;
 }
-
-#input-status-icon.enabled {
-    background-position: -68px 0px !important;
+#input-status-icon.enabled { background-position: -68px 0px !important; }
+#input-status-icon.transmitting { background-position: -136px 0px !important; }
+@keyframes error_flash {
+    0%   {opacity: 1.0;}
+    100% {opacity: 0.8; }
 }
-
-#input-status-icon.transmitting {
-    background-position: -136px 0px !important;
+#input-status-icon.error {
+    background-position: -201px 0px !important;
+    animation-name: error_flash;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
 }
 
 #touch_ui_status {
     height: 55px;
-    background-image: url(/static/touch-input.png);
-    background-size: 165px;
-    background-position: 11px 9px;
+    background-image: url(/static/touch-input-black.png);
+    background-size: 105px;
+    background-position: 10px 8px;
 }
-
-
-#keyboard.enabled #keyboard_status {
-    background-position: -70px 17px;
-}
-
 #touch_ui.enabled #touch_ui_status {
-    background-position: -47px 9px;
+    background-position: -46px 9px;
     filter: grayscale(0) opacity(1);
 }
 
@@ -3932,45 +3930,31 @@ BUTTON#delete-input-profile:hover {
 
 #input-controller-selection span.touch {
     background-image: url(/static/touch-input.png);
-    background-size: 160px;
-    background-position: 11px 6px;
+    background-size: 200px;
+    background-position: 10px 6px;
 }
-
-#input-controller-selection span.touch.enabled {
-    background-position: -46px 6px; /* green */
-}
-
-#input-controller-selection span.touch.transmitting {
-    background-position: -105px 6px !important; /* green */
-}
+#input-controller-selection span.touch.enabled { background-position: -41px 6px; /* green */ }
+#input-controller-selection span.touch.transmitting { background-position: -92px 6px !important; /* yelow */ }
+#input-controller-selection span.touch.error { background-position: -142px 6px !important; /* red */ }
 
 #input-controller-selection span.keyboard {
     background-image: url(/static/keyboard.png);
-    background-size: 182px;
-    background-position: 8px 12px;
+    background-size: 255px;
+    background-position: 7px 12px;
 }
-
-#input-controller-selection span.keyboard.enabled {
-    background-position: -64px 12px;
-}
-
-#input-controller-selection span.keyboard.transmitting {
-    background-position: -130px 12px !important;
-}
+#input-controller-selection span.keyboard.enabled { background-position: -67px 12px; }
+#input-controller-selection span.keyboard.transmitting { background-position: -136px 12px !important; }
+#input-controller-selection span.keyboard.error { background-position: -203px 12px !important; }
 
 #input-controller-selection span.gamepad {
     background-image: url(/static/gamepad.png);
-    background-size: 180px;
-    background-position: 5px 4px;
+    background-size: 246px;
+    background-position: 5px 5px;
 }
 
-#input-controller-selection span.gamepad.enabled {
-    background-position: -55px 4px;
-}
-
-#input-controller-selection span.gamepad.transmitting {
-    background-position: -116px 4px !important;
-}
+#input-controller-selection span.gamepad.enabled { background-position: -59px 5px; }
+#input-controller-selection span.gamepad.transmitting { background-position: -123px 5px !important; }
+#input-controller-selection span.gamepad.error { background-position: -188px 5px !important; }
 
 #profile-edit-panel {
     display: none;

@@ -142,13 +142,21 @@ export class InputDriver {
 
     transmit() {
         if (!this.output)
-            return;
+            return false;
         if (!this.topic_writer) {
             // console.log('driver writer not ready for '+this.output_topic)
-            return;
+            return false;
         }
         if (!this.topic_writer.send(this.output)) { // true when ready and written
-            console.warn('Input driver\'s topic writer failed writing (warming up?)');
+            if (!this.error_logged) {
+                console.error('Input driver\'s topic writer failed writing (warming up?)');
+                this.error_logged = true; 
+            }
+            return false;
+        } else {
+            this.error_logged = false;
         }
+
+        return true;
     }
 }
