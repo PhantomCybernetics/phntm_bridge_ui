@@ -175,6 +175,7 @@ export class InputManager {
                 .unbind()
                 .change((ev)=>{
                     let new_id = $('#input-profile-edit-id').val();
+                    that.reset_all();
                     let old_id = that.current_profile;
                     that.profiles[new_id] = that.profiles[old_id];
                     that.profiles[new_id].id = new_id;
@@ -184,6 +185,7 @@ export class InputManager {
                         c.profiles[new_id] = c.profiles[old_id];
                         delete c.profiles[old_id];
                     });
+                    that.reset_all();
                     that.check_profile_basics_saved(that.current_profile, false);
                     that.make_ui();
                 });
@@ -593,12 +595,13 @@ export class InputManager {
                 }
             }
             if (default_config.action) {
-                new_btn.action = default_config.action;
-                new_btn.assigned = true;
-
-                if (default_config.action == 'ros-srv') {
-                    if (default_config.ros_srv_id) {
+                
+                
+                switch (default_config.action) {
+                    case 'ros-srv':
+                        new_btn.action = default_config.action;
                         new_btn.ros_srv_id = default_config.ros_srv_id;
+                        new_btn.assigned = true;
 
                         new_btn.ros_srv_msg_type = null;
                         if (this.client.discovered_services[new_btn.ros_srv_id]) {
@@ -611,8 +614,37 @@ export class InputManager {
                         if (default_config.ros_srv_val) {
                             new_btn.ros_srv_val = default_config.ros_srv_val;
                         }
-                    }
-                }
+                        break;
+                    case 'ctrl-enabled':
+                        new_btn.action = default_config.action;
+                        new_btn.assigned = true;
+
+                        switch (default_config.ctrl_state) {
+                            case 'on':
+                            case 'true':
+                            case true:
+                                new_btn.set_ctrl_state = 1;
+                                break;
+                            case 'off':
+                            case 'false':
+                            case false:
+                                new_btn.set_ctrl_state = 0;
+                                break;
+                            default:
+                                new_btn.set_ctrl_state = 2; //toggle
+                            break;
+                        }
+                        break;
+                    case 'input-profile':
+                        new_btn.action = default_config.action;
+                        new_btn.assigned = true;
+                        new_btn.set_ctrl_profile = default_config.profile;
+                        break;
+                    case 'wifi-roam':
+                        new_btn.action = default_config.action;
+                        new_btn.assigned = true;
+                        break;
+                } 
             }
             if (default_config.placement) {
                 switch (default_config.placement) {
@@ -667,6 +699,29 @@ export class InputManager {
                     });
                 });
             });
+        });
+    }
+
+    reset_all() {
+        let that = this;
+        Object.values(this.controllers).forEach((c)=>{
+            if (!c.profiles || !that.current_profile)
+                return;
+            // Object.keys(c.profiles).forEach((id_profile)=>{
+            let p = c.profiles[that.current_profile];
+            Object.values(p.driver_instances).forEach((d)=>{
+                d.axes.forEach((axis)=>{
+                    axis.needs_reset = true; // (this probably does nothing
+                    axis.raw = 0.0;
+                });
+                d.buttons.forEach((btn)=>{
+                    btn.pressed = false;
+                    btn.raw = 0.0;
+                    clearInterval(btn.repeat_timer);
+                    delete btn.repeat_timer;
+                });
+            });
+            // });
         });
     }
 
@@ -880,6 +935,7 @@ export class InputManager {
             this.current_gamepad.current_profile = id_select;
         }
 
+        this.reset_all();
         this.make_ui();
     }
 
@@ -1034,7 +1090,9 @@ export class InputManager {
                 let current_profile = that.profiles[that.current_profile];
                 // current_profile.axes_scroll_offset = $('#gamepad-axes-panel').scrollTop();
                 // current_profile.buttons_scroll_offset = $('#gamepad-buttons-panel').scrollTop();
+                that.reset_all();
                 that.current_profile = $(ev.target).val();
+                that.reset_all();
                 that.make_ui();
                 that.render_touch_buttons();
             } else {
@@ -1044,8 +1102,10 @@ export class InputManager {
                     // driver: current_profile.driver, // copy current as default
                     // label: id_new_profile,
                 }
+                that.reset_all();
                 that.init_controller_profile(that.edited_controller, that.profiles[id_new_profile]);
                 that.current_profile = id_new_profile;
+                that.reset_all();
                 that.make_ui();
                 that.render_touch_buttons();
                 $('#gamepad_settings #gamepad-settings-tab').click();
@@ -1763,6 +1823,8 @@ export class InputManager {
         let profile_el = $('<div class="config-row"><span class="label">Set profile:</span></div>');
         let profile_opts = [];
         Object.keys(this.profiles).forEach((id_profile)=>{
+            if (!btn.set_ctrl_profile)
+                btn.set_ctrl_profile = id_profile;
             let label = this.profiles[id_profile].label ? this.profiles[id_profile].label : id_profile;
             profile_opts.push('<option value="'+id_profile+'"'+(btn.set_ctrl_profile==id_profile?' selected':'')+'>'+label+'</option>')
         })
@@ -1804,7 +1866,7 @@ export class InputManager {
         btn.config_details_el.append(profile_el);
     }
 
-    render_wifi_scan_button_config (driver, btn) {      
+    render_wifi_roam_button_config (driver, btn) {      
         btn.config_details_el.append(this.make_btn_trigger_sel(btn));
     }
 
@@ -2089,10 +2151,10 @@ export class InputManager {
 
                     // down handlers & repeat
                     if (btn.trigger == 1) {
-                        that.trigger_btn_action(btn);
+                        that.trigger_btn_action(c, btn);
                         if (btn.repeat) {
                             btn.repeat_timer = setInterval(
-                                () => { that.trigger_btn_action(btn); }, that.input_repeat_delay
+                                () => { that.trigger_btn_action(c, btn); }, that.input_repeat_delay
                             );
                         }
                     }
@@ -2110,7 +2172,7 @@ export class InputManager {
 
                     // up handlers
                     if (btn.trigger == 2) {
-                        that.trigger_btn_action(btn);
+                        that.trigger_btn_action(c, btn);
                     }
 
                 }, {'passive':true});
@@ -2242,8 +2304,8 @@ export class InputManager {
                 case 'ui-profile': 
                     this.render_ui_profile_button_config(driver, btn);
                     break;
-                case 'wifi-scan': 
-                    this.render_wifi_scan_button_config(driver, btn);
+                case 'wifi-roam': 
+                    this.render_wifi_roam_button_config(driver, btn);
                     break;
                 default: 
                     console.error('Button action type not supported: ', btn.action)
@@ -2377,7 +2439,7 @@ export class InputManager {
             '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
             '<option value="input-profile"'+(btn.action == 'input-profile' ? ' selected': '')+'>Set Input Profile</option>',
             '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
-            '<option value="wifi-scan"'+(btn.action == 'wifi-scan' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>',
+            '<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>',
         ];
         // let dri = profile.driver_instance;
         let dri_btns = driver.get_buttons();
@@ -2606,7 +2668,7 @@ export class InputManager {
         }
     }
 
-    trigger_btn_action(btn) {
+    trigger_btn_action(c, btn) {
 
         if (!btn.assigned || btn.driver_axis || btn.driver_btn)
             return;
@@ -2638,7 +2700,8 @@ export class InputManager {
                 if (btn.service_blocked) { console.warn('Service skipping call (previous unfinished)'); return; }
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
-                btn.touch_btn_el.addClass('working');
+                if (btn.touch_btn_el)
+                    btn.touch_btn_el.addClass('working');
 
                 btn.service_blocked = true;
                 this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
@@ -2648,16 +2711,37 @@ export class InputManager {
                 
                 break;
             case 'ctrl-enabled': 
-                //TODO
+                switch (btn.set_ctrl_state) {
+                    case 0: c.enabled = false; break;
+                    case 1: c.enabled = true; break;
+                    case 2: c.enabled = !c.enabled; break;
+                }
+                if (c === that.edited_controller) {
+                    this.controller_enabled_cb.prop('checked', c.enabled);
+                }
+                that.save_user_controller_enabled(c);
+                that.make_controller_icons();
                 break;
             case 'input-profile': 
-                //TODO
+                if (btn.set_ctrl_profile) {
+                    if (!that.profiles[btn.set_ctrl_profile]) {
+                        console.error('Ignoring invalid input profile "'+btn.set_ctrl_profile+'"');
+                        return;
+                    }
+                    console.log('Setting input profile to '+btn.set_ctrl_profile);
+                    that.reset_all();
+                    that.current_profile = btn.set_ctrl_profile;
+                    that.reset_all();
+                    that.make_ui();
+                    that.render_touch_buttons();
+                }
                 break;
             case 'ui-profile': 
                 //TODO
                 break;
-            case 'wifi-scan': 
-                //TODO
+            case 'wifi-roam': 
+                console.log('WIFI SCAN & ROAM');
+                that.ui.trigger_wifi_scan();
                 break;
             default: 
                 break; 
@@ -3113,12 +3197,12 @@ export class InputManager {
                                  // down handlers & repeat
                                  if (btn.trigger == 0) { // touch
                                     if (btn.touched && !was_touched) {
-                                        that.trigger_btn_action(btn);
+                                        that.trigger_btn_action(c, btn);
                                         if (btn.repeat) {
                                             if (btn.repeat_timer)
                                                 clearInterval(btn.repeat_timer);
                                             btn.repeat_timer = setInterval(
-                                                () => { that.trigger_btn_action(btn); }, that.input_repeat_delay
+                                                () => { that.trigger_btn_action(c, btn); }, that.input_repeat_delay
                                             );
                                         }
                                     } else if (!btn.touched && was_touched && btn.repeat_timer) {
@@ -3129,12 +3213,12 @@ export class InputManager {
 
                                 else if (btn.trigger == 1) { // press
                                     if (btn.pressed && !was_pressed) {
-                                        that.trigger_btn_action(btn);
+                                        that.trigger_btn_action(c, btn);
                                         if (btn.repeat) {
                                             if (btn.repeat_timer)
                                                 clearInterval(btn.repeat_timer);
                                             btn.repeat_timer = setInterval(
-                                                () => { that.trigger_btn_action(btn); }, that.input_repeat_delay
+                                                () => { that.trigger_btn_action(c, btn); }, that.input_repeat_delay
                                             );
                                         }
                                     } else if (!btn.pressed && was_pressed && btn.repeat_timer) {
@@ -3144,7 +3228,7 @@ export class InputManager {
                                 }
 
                                 else if (btn.trigger == 2 && !btn.pressed && !btn.touched && (was_pressed || was_touched)) { // release
-                                    that.trigger_btn_action(btn);
+                                    that.trigger_btn_action(c, btn);
                                 }
 
                             }
@@ -3254,14 +3338,13 @@ export class InputManager {
 
                 // down handlers & repeat
                 if (btn.trigger == 1) {
-                    that.trigger_btn_action(btn);
+                    that.trigger_btn_action(c, btn);
                     if (btn.repeat) {
                         btn.repeat_timer = setInterval(
-                            () => { that.trigger_btn_action(btn); }, that.input_repeat_delay
+                            () => { that.trigger_btn_action(c, btn); }, that.input_repeat_delay
                         );
                     }
                 }
-
             }
         }
     }
@@ -3302,7 +3385,7 @@ export class InputManager {
 
                 // up handlers
                 if (btn.trigger == 2) {
-                    that.trigger_btn_action(btn);
+                    that.trigger_btn_action(c, btn);
                 }
             }
         }

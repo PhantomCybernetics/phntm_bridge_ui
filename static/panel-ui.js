@@ -12,6 +12,7 @@ import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
 import { isPortraitMode, isTouchDevice, isSafari } from "./lib.js";
+import { call } from 'three/examples/jsm/nodes/Nodes.js';
 
 export class PanelUI {
 
@@ -1319,12 +1320,15 @@ export class PanelUI {
         //     this.gamepad.MarkMappedServiceButtons();
     }
 
-    trigger_wifi_scan() {
+    trigger_wifi_scan(callback=null) {
         if ($('#trigger_wifi_scan').hasClass('working'))
             return;
         $('#trigger_wifi_scan').addClass('working');
         this.client.wifi_scan(true, (res) => {
             $('#trigger_wifi_scan').removeClass('working');
+            if (callback) {
+                callback(res);
+            }
         })
     }
 
@@ -2163,15 +2167,19 @@ export class PanelUI {
         let short_id = id_parts[id_parts.length-1];
         console.log('service handled w reply', reply);
         if (reply.err) {
-            btn_el.addClass('btn_err');
-            setTimeout(()=>{
-                btn_el
-                    .removeClass('btn_err')
-                    .removeClass('working');
-            }, 600); 
+            if (btn_el) {
+                btn_el.addClass('btn_err');
+                setTimeout(()=>{
+                    btn_el
+                        .removeClass('btn_err')
+                        .removeClass('working');
+                }, 600); 
+            }
             this.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
         } else {
-            btn_el.removeClass('working');
+            if (btn_el) {
+                btn_el.removeClass('working');
+            }
             if (reply.message) {
                 this.show_notification(short_id+': '+reply.message);
             }
