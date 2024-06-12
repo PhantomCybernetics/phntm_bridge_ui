@@ -92,7 +92,8 @@ h3 {
 }
 
 .prevent-select,
-.touch_buttons .btn {
+.touch_buttons .btn,
+#gamepad_settings .tab {
     user-select: none; /* Standard syntax */
     -webkit-user-select: none; /* Safari */
     -webkit-text-select: none;

@@ -55,7 +55,7 @@ export class TwistInputDriver extends InputDriver {
             console.log('Driver msg type is: '+that.msg_type);
             that.setup_writer();
             that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
-            that.input_manager.make_controller_config_ui(); // redraw
+            that.input_manager.make_controller_driver_config_ui(); // redraw
         });
 
         lines.push(line_msg_type);

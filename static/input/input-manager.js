@@ -321,6 +321,7 @@ export class InputManager {
         if (!c.profiles) { // only once
 
             // let robot_defaults = this.robot_defaults[c.type];
+            this.edited_controller = c; // autofocus latest
 
             c.profiles = {};
             // c.current_profile = null;
@@ -370,7 +371,7 @@ export class InputManager {
                     console.warn('Controller profile '+id_profile+' for '+c.type+' missing driver, fallback='+profile_default_cfg.driver+'; config=', profile_default_cfg)
                 }
 
-                let profile = {
+                let c_profile = {
                     driver: profile_default_cfg.driver,
                     default_driver_config: {},
                     default_axes_config: profile_default_cfg.axes ? profile_default_cfg.axes : [],
@@ -378,12 +379,12 @@ export class InputManager {
                 }
                 
                 if (profile_default_cfg.driver_config) {
-                    profile.default_driver_config[profile_default_cfg.driver] = profile_default_cfg.driver_config;
+                    c_profile.default_driver_config[profile_default_cfg.driver] = profile_default_cfg.driver_config;
                 }
 
-                c.profiles[id_profile] = profile;
+                c.profiles[id_profile] = c_profile;
 
-                this.init_controller_profile(c, profile);
+                this.init_controller_profile(c, c_profile);
                 this.set_saved_controller_profile_state(c, id_profile);
                 c.profiles[id_profile].saved = true;
 
@@ -416,23 +417,52 @@ export class InputManager {
         }
     }
 
-    init_controller_profile(c, profile) {
+    make_new_profile() {
+        this.reset_all(); // reset current input
 
-        if (!profile.driver_instances) {
-            profile.driver_instances = {};
+        let id_new_profile = 'Profile-'+Date.now();
+        console.log('Making '+id_new_profile);
+        this.profiles[id_new_profile] = {
+            id: id_new_profile,
+            label: id_new_profile,
+        }
+        Object.values(this.controllers).forEach((c)=>{
+            let c_profile = {
+                driver: c.profiles[this.current_profile].driver,
+                default_driver_config: Object.assign({}, c.profiles[this.current_profile].driver_config),
+            }
+            c.profiles[id_new_profile] = c_profile;
+            this.init_controller_profile(c, c_profile);
+        });
+
+        this.current_profile = id_new_profile;
+        this.reset_all(); // new profile needs reset before triggering
+        this.make_ui();
+        this.render_touch_buttons();
+
+        // focus driver options first
+        $('#gamepad_settings #gamepad-settings-tab').click();
+        // that.save_user_gamepad_config(); // save the new profile right away
+    }
+    
+
+    init_controller_profile(c, c_profile) {
+
+        if (!c_profile.driver_instances) {
+            c_profile.driver_instances = {};
         }
 
-        if (!profile.driver_instances[profile.driver]) {
+        if (!c_profile.driver_instances[c_profile.driver]) {
 
             //init driver
-            profile.driver_instances[profile.driver] = new this.registered_drivers[profile.driver](this);
-            if (profile.default_driver_config && profile.default_driver_config[profile.driver]) {
-                profile.driver_instances[profile.driver].set_config(profile.default_driver_config[profile.driver]);
+            c_profile.driver_instances[c_profile.driver] = new this.registered_drivers[c_profile.driver](this);
+            if (c_profile.default_driver_config && c_profile.default_driver_config[c_profile.driver]) {
+                c_profile.driver_instances[c_profile.driver].set_config(c_profile.default_driver_config[c_profile.driver]);
             } else {
-                profile.driver_instances[profile.driver].set_config({}); // init writer
+                c_profile.driver_instances[c_profile.driver].set_config({}); // init writer
             }
 
-            let driver = profile.driver_instances[profile.driver];
+            let driver = c_profile.driver_instances[c_profile.driver];
             let driver_axes_ids = Object.keys(driver.get_axes());
 
             driver.buttons = [];
@@ -440,16 +470,16 @@ export class InputManager {
 
             if (c.type == 'touch') {
                 for (let i_axis = 0; i_axis < 4; i_axis++) {
-                    let new_axis = this.make_axis(profile, i_axis, driver_axes_ids, 0.01);
+                    let new_axis = this.make_axis(c_profile, i_axis, driver_axes_ids, 0.01);
                     if (new_axis) {
                         driver.axes.push(new_axis);
                     }
                 }
                 let empty_buttons_to_make = 3;
-                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                if (c_profile.default_buttons_config && c_profile.default_buttons_config.length) {
                     empty_buttons_to_make = 0
-                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
-                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, c_profile.default_buttons_config[i]);
                     }
                 }
                 for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
@@ -459,10 +489,10 @@ export class InputManager {
             } else if (c.type == 'keyboard') {
 
                 let empty_buttons_to_make = 5;
-                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                if (c_profile.default_buttons_config && c_profile.default_buttons_config.length) {
                     empty_buttons_to_make = 0
-                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
-                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, c_profile.default_buttons_config[i]);
                     }
                 }
                 for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { // make some more
@@ -474,7 +504,7 @@ export class InputManager {
                 const gp = navigator.getGamepads()[c.gamepad.index];
             
                 for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
-                    let new_axis = this.make_axis(profile, i_axis, driver_axes_ids, 0.1); //default deadzone bigger than touch
+                    let new_axis = this.make_axis(c_profile, i_axis, driver_axes_ids, 0.1); //default deadzone bigger than touch
                     if (new_axis) {
                         new_axis.needs_reset = true; //waits for 1st non-zero signals
                         driver.axes.push(new_axis);
@@ -482,10 +512,10 @@ export class InputManager {
                 }
 
                 let empty_buttons_to_make = 5;
-                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                if (c_profile.default_buttons_config && c_profile.default_buttons_config.length) {
                     empty_buttons_to_make = 0
-                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
-                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, c_profile.default_buttons_config[i]);
                     }
                 }
                 for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 5, users can add more
@@ -496,10 +526,10 @@ export class InputManager {
 
     }
 
-    make_axis(profile, i_axis, driver_axes_ids, default_dead_zone) {
+    make_axis(c_profile, i_axis, driver_axes_ids, default_dead_zone) {
         let axis_cfg = null;
-        if (profile.default_axes_config) {
-            profile.default_axes_config.forEach((cfg)=>{
+        if (c_profile.default_axes_config) {
+            c_profile.default_axes_config.forEach((cfg)=>{
                 if (cfg.axis === i_axis && driver_axes_ids.indexOf(cfg.driver_axis) > -1) {
                     axis_cfg = cfg;
                     return;
@@ -574,8 +604,11 @@ export class InputManager {
             if (default_config.label)
                 new_btn.src_label = default_config.label;
             if (default_config.driver_axis) {
-                new_btn.driver_axis = default_config.driver_axis;
-                new_btn.assigned = true;
+                let dri_axes_ids = Object.keys(driver.get_axes());
+                if (dri_axes_ids.indexOf(default_config.driver_axis) > -1) {
+                    new_btn.driver_axis = default_config.driver_axis;
+                    new_btn.assigned = true;
+                }
 
                 new_btn.dead_min = default_config.dead_min !== undefined ? parseFloat(default_config.dead_min) : -default_axis_dead_zone;
                 new_btn.dead_max = default_config.dead_max !== undefined ? parseFloat(default_config.dead_max) : default_axis_dead_zone;
@@ -897,6 +930,7 @@ export class InputManager {
         this.editing_profile_basics = false;
         $('#input-profile-edit-label').unbind();
         $('#input-profile-edit-id').unbind();
+        this.check_controller_profile_saved(this.edited_controller, this.current_profile, true);
     }
 
     delete_current_profile() {
@@ -1102,30 +1136,14 @@ export class InputManager {
                 that.close_profile_basics_edit();
             }
             // let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
-            if (val != '+') {
-                let current_profile = that.profiles[that.current_profile];
-                // current_profile.axes_scroll_offset = $('#gamepad-axes-panel').scrollTop();
-                // current_profile.buttons_scroll_offset = $('#gamepad-buttons-panel').scrollTop();
-                that.reset_all();
-                that.current_profile = $(ev.target).val();
-                that.reset_all();
-                that.make_ui();
-                that.render_touch_buttons();
+            if (val == '+') {
+                that.make_new_profile();
             } else {
-                let id_new_profile = 'Profile-'+Date.now();
-                that.profiles[id_new_profile] = {
-                    // id: id_new_profile,
-                    // driver: current_profile.driver, // copy current as default
-                    // label: id_new_profile,
-                }
-                that.reset_all();
-                that.init_controller_profile(that.edited_controller, that.profiles[id_new_profile]);
-                that.current_profile = id_new_profile;
-                that.reset_all();
+                that.reset_all(); //reset old
+                that.current_profile = $(ev.target).val();
+                that.reset_all(); //reset new
                 that.make_ui();
                 that.render_touch_buttons();
-                $('#gamepad_settings #gamepad-settings-tab').click();
-                // that.save_user_gamepad_config(); // save the new profile right away
             }
             // that.save_last_user_gamepad_profile(
             //     that.current_gamepad.id,
@@ -1163,7 +1181,7 @@ export class InputManager {
             lines.push(line_source);
 
             if (this.current_profile) {
-                let profile = this.edited_controller.profiles[this.current_profile];
+                let c_profile = this.edited_controller.profiles[this.current_profile];
 
                 //profile id
                 // let line_id = $('<div class="line"><span class="label">Profile ID:</span></div>');
@@ -1214,7 +1232,7 @@ export class InputManager {
                 for (let i = 0; i < this.enabled_drivers.length; i++) {
                     let id_driver = this.enabled_drivers[i];
                     driver_opts.push('<option value="'+id_driver+'"'
-                                      + (profile.driver == id_driver ? ' selected' : '')
+                                      + (c_profile.driver == id_driver ? ' selected' : '')
                                       + '>'+id_driver+'</option>')
                 }
                 let inp_driver = $('<select id="gamepad-profile-driver-select">'
@@ -1224,17 +1242,18 @@ export class InputManager {
                 inp_driver.appendTo(line_driver);
                 inp_driver.change((ev)=>{
                     let val = $(ev.target).val();
-                    console.log('profile driver changed to '+val);
-                    profile.driver = val;
-                    that.init_controller_profile(that.edited_controller, profile);
-                    profile.driver_instances[profile.driver].setup_writer();
+                    console.log('Controller driver changed to '+val);
+                    c_profile.driver = val;
+                    that.init_controller_profile(that.edited_controller, c_profile);
+                    
+                    c_profile.driver_instances[c_profile.driver].setup_writer();
                     that.check_controller_profile_saved(that.edited_controller, that.current_profile, false);
                     that.make_ui();
                     that.render_touch_buttons();
                 })
                 lines.push(line_driver);
                 
-                let driver = profile.driver_instances[profile.driver];
+                let driver = c_profile.driver_instances[c_profile.driver];
                 if (driver) {
                     let driver_lines = driver.make_cofig_inputs();
                     lines = lines.concat(driver_lines);
@@ -1320,10 +1339,10 @@ export class InputManager {
             c.icon.removeClass('transmitting');
         }
 
-        if (c.has_error && !c.icon_error) {
+        if (c.show_error && !c.icon_error) {
             c.icon_error = true;
             c.icon.addClass('error');
-        } else if (!c.has_error && c.icon_error) {
+        } else if (!c.show_error && c.icon_error) {
             c.icon_error = false;
             c.icon.removeClass('error');
         }
@@ -1402,13 +1421,14 @@ export class InputManager {
             return;
         }
 
-        console.log('Editing controller is ', this.edited_controller);
+        // console.log('Editing controller is ', this.edited_controller);
 
         this.controller_enabled_cb
             .attr('disabled', false)
             .prop('checked', this.edited_controller.enabled);
 
-        let profile = this.edited_controller.profiles[this.current_profile];
+        let profile = this.profiles[this.current_profile];
+        let c_profile = this.edited_controller.profiles[this.current_profile];
 
         if (profile.saved && profile.basics_saved) {
             $('#gamepad-profile-unsaved-warn').css('display', 'none');
@@ -1418,10 +1438,10 @@ export class InputManager {
             $('#save-gamepad-profile').removeClass('saved');
         }
 
-        let driver = profile.driver_instances[profile.driver];
+        let driver = c_profile.driver_instances[c_profile.driver];
 
         if (this.edited_controller.type == 'keyboard') {
-            $('#gamepad-buttons-tab').html('Key mapping');
+            $('#gamepad-buttons-tab').html('Key Mapping');
             $('#gamepad-axes-tab').css('display', 'none'); // no separate axes for kb
             $('#gamepad-axes-panel').css('display', 'none');
             if (this.open_panel == 'axes') { // switch to buttons tab
@@ -1433,9 +1453,6 @@ export class InputManager {
             }
             this.make_buttons_ui(driver);
         } else {
-            // if (this.edited_controller.type == 'touch')
-            //     $('#gamepad-buttons-tab').html('UI buttons');
-            // else
             $('#gamepad-buttons-tab').html('Buttons');
             $('#gamepad-axes-tab').css('display', ''); //unset
             $('#gamepad-axes-panel').css('display', '');
@@ -1443,11 +1460,6 @@ export class InputManager {
             this.make_buttons_ui(driver);
         }
     }
-
-    prevent_context_menu(ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-    };
 
     render_axis_config (driver, axis, is_btn = false) {
     
@@ -1889,7 +1901,7 @@ export class InputManager {
     make_axes_ui(driver) {
         
         let that = this;
-        let profile = this.edited_controller.profiles[this.current_profile];
+        let c_profile = this.edited_controller.profiles[this.current_profile];
 
         // all gamepad axes
         let axes_els = [];
@@ -1958,23 +1970,23 @@ export class InputManager {
                         a.raw_val_el
                             .unbind()
                             .removeClass('copy-source');
-                        if (profile.copying_into_axis === a) {
+                        if (c_profile.copying_into_axis === a) {
                             a.assignment_sel_el.val(''); //set not in use
                             a.row_el
                                 .removeClass('copy-destination')
                                 .addClass('unused');
                         }
                     });
-                    delete profile.copying_into_axis;
+                    delete c_profile.copying_into_axis;
                 }
 
                 if (id_axis_assigned == '=') {
-                    if (profile.copying_into_axis) {
+                    if (c_profile.copying_into_axis) {
                         // another one is waiting for input, close first
                         cancel_copy();
                     }
                     //console.log('Copy config for axis '+axis.id)
-                    profile.copying_into_axis = axis;
+                    c_profile.copying_into_axis = axis;
                     row_el.addClass('unused copy-destination');
 
                     // let axes_ids = Object.keys()
@@ -2006,7 +2018,7 @@ export class InputManager {
                             });
                     });
                     return;
-                } else if (profile.copying_into_axis) {
+                } else if (c_profile.copying_into_axis) {
                     cancel_copy();
                 }
 
@@ -2285,7 +2297,9 @@ export class InputManager {
     }
 
     render_btn_config(driver, btn) {
-                
+        
+        if (!btn.config_details_el)
+            return;
         btn.config_details_el.empty();
         
         if (this.edited_controller.type == 'touch') {
@@ -3294,9 +3308,27 @@ export class InputManager {
             c.transmitted_last_frame = transmitting;
             c.transmitting_user_input = transmitting && !cooldown; // more intuitive user feedback
 
+            let had_error = c.has_error;
             c.has_error = false;
+            c.show_error = false;
+
             if (transmitting) {
                 c.has_error = !driver.transmit();
+            }
+            if (c.has_error && !cooldown) {
+
+                if (!had_error) {
+                    driver.write_error_started = Date.now();
+                }
+
+                if (!driver.first_write_error_resolved && Date.now() > driver.write_error_started+1000) {
+                    c.show_error = true;
+                } else if (driver.first_write_error_resolved) {
+                    c.show_error = true;
+                }
+                
+            } else if (!c.has_error && had_error) {
+                driver.first_write_error_resolved = true;
             }
 
             that.update_controller_icon(c);
