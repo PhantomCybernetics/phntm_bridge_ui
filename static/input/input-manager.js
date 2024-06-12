@@ -3314,10 +3314,15 @@ export class InputManager {
     }
 
     on_keyboard_key_down(ev, c) {
-        // console.log('Down: '+ev.code, ev);
+        
+        //console.log('Down: '+ev.code, ev);
 
         if (ev.repeat)
             return;
+
+        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
+            return; // ignore input fields
+        }
 
         if (['Escape', 'Delete', 'Backspace'].indexOf(ev.code) > -1) { // kb cancel / del work for all controllers
             let that = this;
@@ -3381,7 +3386,11 @@ export class InputManager {
     }
 
     on_keyboard_key_up(ev, c) {
-        // console.log('Up: '+ev.code, ev);
+        //console.log('Up: '+ev.code, ev);
+
+        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
+            return; // ignore input fields
+        }
 
         if (!c || !c.profiles)
             return;

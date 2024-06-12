@@ -2740,6 +2740,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     background-position: center 9px;
     /* background-color: red; */
     left: 0px;
+    cursor: pointer;
 }
 
 #profile-buttons #profile-menu {
@@ -2790,6 +2791,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     display: none;
     font-size: 25px;
     padding-top: 3px;
+    cursor: pointer;
 }
 
 #gamepad #gamepad_settings.unsaved #profile-unsaved-warn {
@@ -2814,15 +2816,11 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     position: relative;
 } 
 
-#profile-buttons BUTTON#save-input-profile {
-    background-color: green;
-    display: none;
-}
+BODY.desktop-ui #profile-buttons BUTTON:hover {  background-color: #083471; }
 
-#gamepad #gamepad_settings.unsaved #profile-buttons BUTTON#save-input-profile {
-    display: block;
-}
-
+#profile-buttons BUTTON#save-input-profile { background-color: green; display: none; }
+BODY.desktop-ui #profile-buttons BUTTON#save-input-profile:hover { background-color: rgb(6, 160, 6); }
+#gamepad #gamepad_settings.unsaved #profile-buttons BUTTON#save-input-profile { display: block; }
 
 
 #gamepad_settings .tab {
@@ -2958,6 +2956,7 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     background-repeat: no-repeat;
     background-position: 17px 5px;
     background-size: 128px;
+    cursor: pointer;
 
 }
 
@@ -3808,12 +3807,8 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     margin-right: 0px;
 }
 
-BUTTON#delete-input-profile {
-   
-} 
-
 BUTTON#delete-input-profile.warn,
-BUTTON#delete-input-profile:hover {
+BODY.desktop-ui BUTTON#delete-input-profile:hover {
     background-color: rgb(173, 0, 0);
 }
 
@@ -3913,12 +3908,14 @@ BUTTON#delete-input-profile:hover {
     opacity: 0.25;
     background-color: transparent;
     filter: blur(1.5px);
+    cursor: default;
 }
 
 #input-controller-selection span.editing {
     background-color: #3A3376;
     height: 50px;
     border-radius: 5px 5px 0px 0px;
+    cursor: default;
 }
 
 #input-controller-config {
@@ -3975,7 +3972,12 @@ BUTTON#delete-input-profile:hover {
     background-image: url(/static/icon-check.png);
     background-size: 32px;
     background-position: 7px 6px;
+    cursor: pointer;
 }
+BODY.desktop-ui .editing_profile_basics #profile-buttons > .icon:hover {
+    background-color: #fb1ffb;
+}
+
 .editing_profile_basics  #input-profile-select {
     border-radius: 10px 0px 0px 0px !important;
 }
