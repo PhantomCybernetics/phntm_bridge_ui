@@ -99,7 +99,7 @@ export class TwistInputDriver extends InputDriver {
         Object.keys(msg).forEach ((grp) => {
             Object.keys(msg[grp]).forEach((axis) => {
                 let id_axis = grp+'.'+axis;
-                if (!this.axes_output[id_axis])
+                if (!this.axes_output || !this.axes_output[id_axis])
                     return;
                 msg[grp][axis] = this.axes_output[id_axis];
             });

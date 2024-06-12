@@ -2620,6 +2620,7 @@ BODY.desktop-ui #introspection_state:hover,
     max-height: calc(100dvh - 80px);
     width: 40%;
     min-width: 350px;
+    max-width: 480px;
 }
 
 BODY.desktop-ui #gamepad #gamepad_settings {

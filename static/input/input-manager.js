@@ -324,7 +324,7 @@ export class InputManager {
 
             c.profiles = {};
             // c.current_profile = null;
-            c.enabled = c.type == 'touch' ? true : this.load_user_controller_enabled(c.id);
+            c.enabled = this.load_user_controller_enabled(c.id);
 
             // let all_profile_ids = [].concat(this.saved_profile_ids); // shallow copy
 
@@ -472,7 +472,7 @@ export class InputManager {
 
             } else if (c.type == 'gamepad') {
                 const gp = navigator.getGamepads()[c.gamepad.index];
-                console.log('Making axes & buttons for gamepad', c.gamepad);
+            
                 for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
                     let new_axis = this.make_axis(profile, i_axis, driver_axes_ids, 0.1); //default deadzone bigger than touch
                     if (new_axis) {
@@ -481,7 +481,14 @@ export class InputManager {
                     }
                 }
 
-                for (let i_btn = 0; i_btn < 5; i_btn++) { //start with 5, users can add more
+                let empty_buttons_to_make = 5;
+                if (profile.default_buttons_config && profile.default_buttons_config.length) {
+                    empty_buttons_to_make = 0
+                    for (let i = 0; i < profile.default_buttons_config.length; i++) {
+                        let new_btn = this.make_button(driver, c.type, profile.default_buttons_config[i]);
+                    }
+                }
+                for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 5, users can add more
                     let new_btn = this.make_button(driver, c.type);
                 }
             }
@@ -546,19 +553,23 @@ export class InputManager {
             pressed: false,
             touched: false, // gamepad only
             raw: null,
+            needs_reset: true,
         }
 
         if (default_config) {
             if (default_config.key !== undefined)
                 new_btn.id_src = default_config.key;
-            if (default_config.btn !== undefined)
+            if (default_config.btn !== undefined) {
                 new_btn.id_src = parseInt(default_config.btn);
+                new_btn.src_label = this.gamepad_button_label(new_btn.id_src);
+            }
+                
             if (default_config.key !== undefined) {
                 new_btn.id_src = default_config.key.toLowerCase();
                 if (default_config.key_mod !== undefined) {
                     new_btn.key_mod = default_config.key_mod.toLowerCase();
                 }
-                new_btn.src_label = this.button_label_from_key(new_btn.id_src, new_btn.key_mod);
+                new_btn.src_label = this.keyboard_key_label(new_btn.id_src, new_btn.key_mod);
             }
             if (default_config.label)
                 new_btn.src_label = default_config.label;
@@ -711,12 +722,14 @@ export class InputManager {
             let p = c.profiles[that.current_profile];
             Object.values(p.driver_instances).forEach((d)=>{
                 d.axes.forEach((axis)=>{
-                    axis.needs_reset = true; // (this probably does nothing
+                    axis.needs_reset = true; // (TODO: this does nothing, should we )
                     axis.raw = 0.0;
                 });
                 d.buttons.forEach((btn)=>{
                     btn.pressed = false;
+                    btn.touched = false;
                     btn.raw = 0.0;
+                    btn.needs_reset = true;
                     clearInterval(btn.repeat_timer);
                     delete btn.repeat_timer;
                 });
@@ -959,7 +972,6 @@ export class InputManager {
 
     //ok
     save_user_controller_enabled(c) {
-        if (c.type == 'touch')  return; // touch ui starts always on
         localStorage.setItem('controller-enabled:' + this.client.id_robot+ ':' + c.id, c.enabled);
         console.log('Saved controller enabled for robot '+this.client.id_robot+', id="'+c.id+'": '+c.enabled);
     }
@@ -967,6 +979,10 @@ export class InputManager {
     //ok
     load_user_controller_enabled(id_controller) {
         let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);
+        if (id_controller == 'touch' && state === null) {
+            return true;
+        }
+        
         state = state === 'true';
         console.log('Loaded controller enabled for robot '+this.client.id_robot+', id="'+id_controller+'": '+state);
         return state;
@@ -2321,7 +2337,11 @@ export class InputManager {
         }
     };
 
-    button_label_from_key(key, mod) {
+    gamepad_button_label(btn_code) {
+        return 'B' + btn_code;
+    }
+
+    keyboard_key_label(key, mod) {
         let label = key.toUpperCase();
         switch (label) {
             case ' ': label = '␣'; break;
@@ -2367,13 +2387,8 @@ export class InputManager {
             delete driver.on_button_press;
         };
         raw_val_el.click(()=>{
-            if (that.edited_controller.type == 'touch') {
-                // console.log('drag mode toggle');
-                // $('#gamepad-buttons-panel .button-row').sortable({
-                //     handle: ".button-row"
-                // });
+            if (that.edited_controller.type == 'touch')
                 return;
-            }
 
             if (!raw_val_el.hasClass('listening')) {
                 raw_val_el.removeClass('assigned').addClass('listening');
@@ -2384,21 +2399,19 @@ export class InputManager {
                 btn.listening = true;
                 driver.on_button_press = (key_code, kb_ev) => {
                     
-                    if (that.edited_controller.type == 'keyboard') {
+                    if (key_code == 'Escape') { // cancel 
+                        close_listening();
+                        return;
+                    }
+                    else if (key_code == 'Delete' || key_code == 'Backspace') { // clear
+                        btn.id_src = null;
+                        btn.src_label = null;
+                        btn.key_mod = null;
+                        close_listening();
+                        return;
+                    }
 
-                        if (key_code == 'Escape') { // cancel 
-                            close_listening();
-                            return;
-                        }
-                        else if (key_code == 'Delete' || key_code == 'Backspace') { // clear
-                            btn.id_src = null;
-                            btn.src_label = null;
-                            btn.key_mod = null;
-                            close_listening();
-                            return;
-                        }
-                        // else if (key_id == )
-                        
+                    if (that.edited_controller.type == 'keyboard') {
                         btn.key_mod = null;
                         if (kb_ev.altKey)
                             btn.key_mod = 'alt';
@@ -2410,11 +2423,11 @@ export class InputManager {
                             btn.key_mod = 'shift';
 
                         btn.id_src = kb_ev.key.toLowerCase(); // comparing lower cases
-                        btn.src_label = that.button_label_from_key(btn.id_src, btn.key_mod);
+                        btn.src_label = that.keyboard_key_label(btn.id_src, btn.key_mod);
                         
-                    } else { // touch or gamepad
-                        btn.src_label = 'B'+key_code;
-                        btn.id_src = key_id;
+                    } else if (that.edited_controller.type == 'gamepad') {
+                        btn.src_label = that.gamepad_button_label(key_code);
+                        btn.id_src = key_code;
                     }
                         
                     console.log('Assigned: '+btn.id_src+(btn.key_mod?'+'+btn.key_mod:''));
@@ -2738,6 +2751,7 @@ export class InputManager {
                 break;
             case 'ui-profile': 
                 //TODO
+                console.error('UI profiles TBD')
                 break;
             case 'wifi-roam': 
                 console.log('WIFI SCAN & ROAM');
@@ -3177,7 +3191,7 @@ export class InputManager {
                                 let was_pressed = btn.pressed;
                                 let was_touched = btn.touched;
                                 if (btn.needs_reset) {  
-                                    if (read_val != 0.0) { // wait for first non-zero signal because some gamepads are weird
+                                    if (!gp_btn.pressed && !gp_btn.touched) { // wait for first non-zero signal because some gamepads are weird
                                         delete btn.needs_reset;
                                         btn.raw = read_val;
                                         btn.pressed = gp_btn.pressed;
@@ -3301,6 +3315,23 @@ export class InputManager {
 
     on_keyboard_key_down(ev, c) {
         // console.log('Down: '+ev.code, ev);
+
+        if (ev.repeat)
+            return;
+
+        if (['Escape', 'Delete', 'Backspace'].indexOf(ev.code) > -1) { // kb cancel / del work for all controllers
+            let that = this;
+            Object.values(this.controllers).forEach((c)=>{
+                if (!c.profiles)
+                    return;
+                let p = c.profiles[that.current_profile];
+                let d = p.driver_instances[p.driver];
+                if (d.on_button_press) {
+                    d.on_button_press(ev.code, ev);
+                }
+            });
+            return;
+        }
 
         if (!c || !c.profiles)
             return;
