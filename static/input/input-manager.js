@@ -3321,10 +3321,10 @@ export class InputManager {
                     driver.write_error_started = Date.now();
                 }
 
-                if (!driver.first_write_error_resolved && Date.now() > driver.write_error_started+1000) {
-                    c.show_error = true;
+                if (!driver.first_write_error_resolved && Date.now() > driver.write_error_started+3000) { 
+                    c.show_error = true; // wait 3s in case of the 1st error before reporting problem (writer needs to set up)
                 } else if (driver.first_write_error_resolved) {
-                    c.show_error = true;
+                    c.show_error = true; // all further errors report immediately
                 }
                 
             } else if (!c.has_error && had_error) {
