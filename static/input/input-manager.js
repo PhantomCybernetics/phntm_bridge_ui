@@ -963,9 +963,9 @@ export class InputManager {
                 let btn_saved = saved.buttons[i];
 
                 if (!btn_live.assigned && !btn_saved)
-                    return true;
+                    continue;
 
-                if (btn_live.assigned && !btn_saved)
+                if (!btn_saved)
                     return false;
 
                 if (btn_live.driver_axis != btn_saved.driver_axis) {
