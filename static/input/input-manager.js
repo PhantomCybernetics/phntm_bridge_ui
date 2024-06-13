@@ -478,8 +478,17 @@ export class InputManager {
                 let empty_buttons_to_make = 3;
                 if (c_profile.default_buttons_config && c_profile.default_buttons_config.length) {
                     empty_buttons_to_make = 0
+                    let sort_indexes = []; // by placmenet
                     for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
                         let new_btn = this.make_button(driver, c.type, c_profile.default_buttons_config[i]);
+                        if (new_btn.touch_ui_placement) {
+                            if (sort_indexes[new_btn.touch_ui_placement] === undefined)
+                                sort_indexes[new_btn.touch_ui_placement] = 0;
+                            else
+                                sort_indexes[new_btn.touch_ui_placement]++;
+                            new_btn.sort_index = sort_indexes[new_btn.touch_ui_placement];
+                        }
+                        
                     }
                 }
                 for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
@@ -501,9 +510,7 @@ export class InputManager {
 
 
             } else if (c.type == 'gamepad') {
-                const gp = navigator.getGamepads()[c.gamepad.index];
-            
-                for (let i_axis = 0; i_axis < gp.axes.length; i_axis++) {
+                for (let i_axis = 0; i_axis < c.num_gamepad_axes; i_axis++) {
                     let new_axis = this.make_axis(c_profile, i_axis, driver_axes_ids, 0.1); //default deadzone bigger than touch
                     if (new_axis) {
                         new_axis.needs_reset = true; //waits for 1st non-zero signals
@@ -578,6 +585,7 @@ export class InputManager {
             action: null, // maps all other actions
             assigned: false,
             trigger: 1, // 0=touch (gp only), 1=press, 2=release
+            repeat: undefined,
             touch_ui_placement: null, // 1=top, 2=bottom in touch gamepad overlay
             
             pressed: false,
@@ -587,14 +595,11 @@ export class InputManager {
         }
 
         if (default_config) {
-            if (default_config.key !== undefined)
-                new_btn.id_src = default_config.key;
-            if (default_config.btn !== undefined) {
+            if (default_config.btn !== undefined) { //gp
                 new_btn.id_src = parseInt(default_config.btn);
                 new_btn.src_label = this.gamepad_button_label(new_btn.id_src);
             }
-                
-            if (default_config.key !== undefined) {
+            if (default_config.key !== undefined) { //kb
                 new_btn.id_src = default_config.key.toLowerCase();
                 if (default_config.key_mod !== undefined) {
                     new_btn.key_mod = default_config.key_mod.toLowerCase();
@@ -640,7 +645,6 @@ export class InputManager {
             }
             if (default_config.action) {
                 
-                
                 switch (default_config.action) {
                     case 'ros-srv':
                         new_btn.action = default_config.action;
@@ -655,7 +659,7 @@ export class InputManager {
                             // this.client.run_introspection();
                         }
 
-                        if (default_config.ros_srv_val) {
+                        if (default_config.ros_srv_val !== undefined) {
                             new_btn.ros_srv_val = default_config.ros_srv_val;
                         }
                         break;
@@ -807,16 +811,87 @@ export class InputManager {
             data.axes.push(axis_data);
         }
 
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (only_assigned && !btn.assigned) {
+                continue;
+            }
+            
+            let btn_data = {
+                driver_axis: btn.driver_axis ? btn.driver_axis : undefined,
+                driver_btn: btn.driver_btn ? btn.driver_btn : undefined,
+                action: btn.action ? btn.action : undefined,
+                repeat: btn.repeat ? true : undefined,
+            }
+
+            if (c.type == 'keyboard') {
+                btn_data['key'] = btn.id_src;
+                btn_data['key_mod'] = btn.key_mod ? btn.key_mod : undefined;
+            } else if (c.type == 'gamepad') {
+                btn_data['btn'] = btn.id_src;
+            } else if (c.type == 'touch') {
+                btn_data['style'] = btn.touch_ui_style ? btn.touch_ui_style : undefined;
+                switch (btn.touch_ui_placement) {
+                    case 1: btn_data['placement'] = 'top'; break;
+                    case 2: btn_data['placement'] = 'overlay'; break;
+                }
+                btn_data['label'] = btn.src_label;
+                btn_data['sort_index'] = btn.sort_index;
+            }
+
+            switch (btn.trigger) {
+                case 0: btn_data.trigger = 'touch'; break;
+                case 1: btn_data.trigger = 'press'; break;
+                case 2: btn_data.trigger = 'release'; break;
+            }
+
+            
+            if (btn.driver_axis) {
+                btn_data['dead_min'] = btn.dead_min;
+                btn_data['dead_max'] = btn.dead_max;
+                btn_data['offset'] = btn.offset;
+                btn_data['scale'] = btn.scale;
+
+                if (btn.mod_func) {
+                    btn_data['mod_func'] = {
+                        type: btn.mod_func,
+                        velocity_src: btn.scale_by_velocity_src,
+                        slow_multiplier: btn.scale_by_velocity_mult_min,
+                        fast_multiplier: btn.scale_by_velocity_mult_max,
+                    }
+                }
+            }
+
+            switch (btn.action) {
+                case 'ros-srv':
+                    btn_data['ros_srv_id'] = btn.ros_srv_id;
+                    btn_data['ros_srv_val'] = btn.ros_srv_val;
+                    break;
+                case 'ctrl-enabled':
+                    switch (btn.set_ctrl_state) {
+                        case 1: btn_data['ctrl_state'] = true; break;
+                        case 0: btn_data['ctrl_state'] = false; break;
+                        case 2: btn_data['ctrl_state'] = "toggle"; break;
+                    }
+                    break;
+                case 'input-profile':
+                    btn_data['profile'] = btn.set_ctrl_profile;
+                    break;
+            }
+
+            data.buttons.push(btn_data);
+        }
+
         return data;
     }
 
     set_saved_controller_profile_state(c, id_profile) {
-        let profile = c.profiles[id_profile];
-        let driver = profile.driver_instances[profile.driver];
+        let c_profile = c.profiles[id_profile];
+        let driver = c_profile.driver_instances[c_profile.driver];
         driver.set_saved_state();
         
         let saved_data = this.get_profile_config(c, id_profile, false);
-        profile.saved_state = saved_data;
+        c_profile.saved_state = saved_data;
     }
 
     check_profile_basics_saved(id_profile, update_ui = true) {
@@ -837,19 +912,16 @@ export class InputManager {
     
     check_controller_profile_saved(c, id_profile, update_ui = true) {
 
-        let live_profile = c.profiles[id_profile];
-        let saved_profile = live_profile.saved_state;
-
-        function compare(profile, saved) {
-            if (!profile || !saved)
+        function compare(live, saved) {
+            if (!live || !saved)
                 return false;
             // if (profile.id != saved.id)
             //     return false;
             // if (profile.label != saved.label)
             //     return false;
-            if (profile.driver != saved.driver)
+            if (live.driver != saved.driver)
                 return false;
-            let driver = profile.driver_instances[profile.driver];
+            let driver = live.driver_instances[live.driver];
             if (!driver.check_saved())
                 return false;
             
@@ -884,25 +956,131 @@ export class InputManager {
                     if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].mod_func.fast_multiplier) 
                         return false;
                 }
-                
+            }
+
+            for (let i = 0; i < driver.buttons.length; i++) {
+                let btn_live = driver.buttons[i];
+                let btn_saved = saved.buttons[i];
+
+                if (!btn_live.assigned && !btn_saved)
+                    return true;
+
+                if (btn_live.assigned && !btn_saved)
+                    return false;
+
+                if (btn_live.driver_axis != btn_saved.driver_axis) {
+                    // console.log('axes diff:', btn_live.driver_axis, btn_saved.driver_axis);
+                    return false;
+                }
+                    
+                if (btn_live.driver_btn != btn_saved.driver_btn)
+                    return false;
+                if (btn_live.action != btn_saved.action)
+                    return false;
+
+                if (btn_live.driver_axis) {
+                    if (btn_live.dead_min != btn_saved.dead_min)
+                        return false;
+                    if (btn_live.dead_max != btn_saved.dead_max)
+                        return false;
+                    if (btn_live.offset != btn_saved.offset)
+                        return false;
+                    if (btn_live.scale != btn_saved.scale)
+                        return false;
+
+                    let has_mod_func = btn_live.mod_func !== null && btn_live.mod_func !== undefined && btn_live.mod_func !== false && btn_live.mod_func !== "";
+                    let has_saved_mod_func = btn_saved.mod_func !== null && btn_saved.mod_func !== undefined; //obj
+    
+                    if (has_mod_func != has_saved_mod_func) { 
+                        return false;
+                    }
+                    if (btn_live.mod_func && btn_saved.mod_func) {
+                        if (btn_live.mod_func != btn_saved.mod_func.type) 
+                            return false;
+                        if (btn_live.scale_by_velocity_src != btn_saved.mod_func.velocity_src) 
+                            return false;
+                        if (btn_live.scale_by_velocity_mult_min != btn_saved.mod_func.slow_multiplier) 
+                            return false;
+                        if (btn_live.scale_by_velocity_mult_max != btn_saved.mod_func.fast_multiplier) 
+                            return false;
+                    }
+                }
+
+                if (c.type == 'keyboard') {
+                    if (btn_live.id_src != btn_saved.key)
+                        return false;
+                    if (btn_live.key_mod != btn_saved.key_mod)
+                        return false;
+                } else if (c.type == 'gamepad') {
+                    if (btn_live.id_src != btn_saved.btn) 
+                        return false;
+                } if (c.type == 'touch') {
+                    if (btn_live.touch_ui_style != btn_saved.style) 
+                        return false;
+                    if (btn_live.touch_ui_placement == 1 && btn_saved.placement != 'top') 
+                        return false;
+                    if (btn_live.touch_ui_placement == 2 && btn_saved.placement != 'overlay') 
+                        return false;
+                    if (btn_live.src_label != btn_saved.label)
+                        return false;
+                    if (btn_live.sort_index != btn_saved.sort_index)
+                        return false;
+                }
+
+                if (btn_live.trigger === 0 && btn_saved.trigger != 'touch')
+                    return false;
+                if (btn_live.trigger === 1 && btn_saved.trigger != 'press')
+                    return false;
+                if (btn_live.trigger === 2 && btn_saved.trigger != 'release')
+                    return false;
+
+                if ((!btn_live.repeat && btn_saved.repeat) || (btn_live.repeat && !btn_saved.repeat))
+                    return false;
+
+                switch (btn_live.action) {
+                    case 'ros-srv':
+                        if (btn_live.ros_srv_id != btn_saved.ros_srv_id)
+                            return false;
+                        if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val)) {
+                            console.log('Serv vals differ:', btn_live.ros_srv_val, btn_saved.ros_srv_val);
+                            return false;
+                        }
+                        break;
+                    case 'ctrl-enabled':
+                        if (btn_live.set_ctrl_state == 1 && btn_saved.ctrl_state != true)
+                            return false;
+                        if (btn_live.set_ctrl_state == 0 && btn_saved.ctrl_state != false)
+                            return false;
+                        if (btn_live.set_ctrl_state == 2 && btn_saved.ctrl_state != 'toggle')
+                            return false;
+                        break;
+                    case 'input-profile':
+                        if (btn_live.set_ctrl_profile != btn_saved.profile)
+                            return false;
+                        break;
+                }
+              
             }
 
             return true; // all checks up 
         }
 
-        let match = compare(live_profile, saved_profile);
+        let live_c_profile = c.profiles[id_profile];
+        let saved_c_profile = live_c_profile.saved_state;
+
+        let match = compare(live_c_profile, saved_c_profile);
 
         // console.info(`Profile ${id_profile} saved: `, match, live_profile, saved_profile);
 
-        if (!match && live_profile.saved) {
-            live_profile.saved = false;
+        if (!match && live_c_profile.saved) {
+            live_c_profile.saved = false;
             this.profiles[id_profile].saved = false;
             console.log('Profile '+id_profile+' not saved');
             if (update_ui)
                 this.make_profile_selector_ui();
            
-        } else if (match && !live_profile.saved) {
-            live_profile.saved = true;
+        } else if (match && !live_c_profile.saved) {
+            live_c_profile.saved = true;
             if (!this.profiles[id_profile].saved) {
                 let all_saved = true;
                 Object.values(this.controllers).forEach((cc)=>{
@@ -916,7 +1094,6 @@ export class InputManager {
             console.log('Profile '+id_profile+' saved: '+this.profiles[id_profile].saved);
             if (update_ui)
                 this.make_profile_selector_ui();
-
           
         }
     }
@@ -1024,7 +1201,7 @@ export class InputManager {
 
     save_user_controller_profile_config(c, id_profile) {
         let profile = c.profiles[id_profile];
-        let profile_data = this.get_profile_config(c, id_profile, true); //filters assigned axes
+        let profile_data = this.get_profile_config(c, id_profile, true); // filters assigned axes & buttons
 
         console.log('Saving profile '+id_profile+' for '+c.id, profile_data);
         let cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+c.id+':'+id_profile;
@@ -1163,7 +1340,7 @@ export class InputManager {
         let that = this;
 
         if (!this.edited_controller || !this.enabled_drivers) {
-            $('#gamepad-profile-config').html('<div class="line"><span class="label">Input source:</span><span class="static_val">N/A</span></div>');
+            $('#gamepad-settings-panel').html('<div class="line"><span class="label">Input source:</span><span class="static_val">N/A</span></div>');
             // $('#gamepad-settings-panel').removeClass('has-buttons');
         } else {
             
@@ -1265,7 +1442,7 @@ export class InputManager {
                 // $('#gamepad-settings-panel').removeClass('has-buttons');
             }
 
-            $('#gamepad-profile-config').empty().append(lines);            
+            $('#gamepad-settings-panel').empty().append(lines);            
         }
     }
 
@@ -1635,6 +1812,11 @@ export class InputManager {
 
     } 
 
+    prevent_context_menu(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+
     make_btn_trigger_sel (btn, allows_repeat) {
         // modifier selection
         let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
@@ -1784,8 +1966,15 @@ export class InputManager {
                     srv_val_el.append(srv_val_inp);
                     srv_val_el.append($('<div class="cleaner"></div>'));
                     srv_val_inp.change((ev) => {
-                        let val = JSON.parse($(ev.target).val());
-                        console.log('Service input json val parsed: ', val);
+                        let val = null;
+                        try {
+                            val = JSON.parse($(ev.target).val());
+                        } catch (e) {
+                            console.error('Failed parsing json val: ', $(ev.target).val());
+                            srv_val_inp.addClass('error')
+                            return;
+                        }
+                        srv_val_inp.removeClass('error');
                         btn.ros_srv_val = val;
                         that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                     });
@@ -2674,13 +2863,14 @@ export class InputManager {
 
         if (add_btn) {
             add_btn.click((ev)=>{
-                let new_btn = that.make_button(driver, this.edited_controller.type);
+                let new_btn = that.make_button(driver, that.edited_controller.type);
                 if (that.edited_controller.type == 'touch') {
                     new_btn.src_label = 'Aux ' + new_btn.i ; // init label
                 }
-                let row_el = this.make_btn_row(driver, new_btn); 
+                let row_el = that.make_btn_row(driver, new_btn); 
                 row_el.insertBefore($('#add-button-btn'));
                 $('#gamepad-buttons-panel').scrollTop($('#gamepad-buttons-panel').prop('scrollHeight'));
+                that.check_controller_profile_saved(that.edited_controller, that.current_profile);
             });
             button_els.push(add_btn);
         }
@@ -2756,6 +2946,9 @@ export class InputManager {
                         return;
                     }
                     console.log('Setting input profile to '+btn.set_ctrl_profile);
+                    if (that.editing_profile_basics) {
+                        that.close_profile_basics_edit();
+                    }
                     that.reset_all();
                     that.current_profile = btn.set_ctrl_profile;
                     that.reset_all();
@@ -3029,6 +3222,12 @@ export class InputManager {
     on_gamepad_connected(ev) {
             
         let id_gamepad = ev.gamepad.id;
+        const gp = navigator.getGamepads()[ev.gamepad.index];
+
+        if (!gp) {
+            console.warn('Error initiating gamepad', ev.gamepad);
+            return;
+        }
 
         if (!this.controllers[id_gamepad]) {
 
@@ -3037,6 +3236,7 @@ export class InputManager {
                 type: 'gamepad',
                 id: id_gamepad,
                 gamepad: ev.gamepad,
+                num_gamepad_axes: gp.axes.length,
                 profiles: null,
                 saved_profiles: null,
                 initiated: false, //this will wait for config
@@ -3047,6 +3247,7 @@ export class InputManager {
 
         } else {
             this.controllers[id_gamepad].gamepad = ev.gamepad;
+            this.controllers[id_gamepad].num_gamepad_axes = gp.axes.length;
             this.controllers[id_gamepad].connected = true;
             console.info('Gamepad was already connected:', id_gamepad);
         }

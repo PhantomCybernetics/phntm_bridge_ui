@@ -2624,6 +2624,10 @@ BODY.desktop-ui #introspection_state:hover,
     max-width: 480px;
 }
 
+BODY.touch-ui.touch-gamepad #gamepad #gamepad_settings {
+    max-width: unset;
+}
+
 BODY.desktop-ui #gamepad #gamepad_settings {
     right: 0px;
 }
@@ -3710,18 +3714,18 @@ BODY.touch-gamepad.gamepad-editing #touch-gamepad-right {
     z-index: 1 !important; /* under the gamepad editing central panel */
 }
 
-#gamepad-profile-config {
+#gamepad-settings-panel {
     font-size: 16px;
     /* background: magenta; */
-    max-height: calc(100dvh - 220px);
-    overflow-y: scroll;
+    /* max-height: calc(100dvh - 220px); */
+    /* overflow-y: scroll; */
 }
 
-BODY.desktop-ui #gamepad-profile-config {
+BODY.desktop-ui #gamepad-settings-panel {
     font-size: 14px;
 }
 
-#gamepad-profile-config .line {
+#gamepad-settings-panel .line {
     position: relative;
     margin-bottom: 5px;
     clear: both;
@@ -3729,7 +3733,7 @@ BODY.desktop-ui #gamepad-profile-config {
     height: 30px;
 }
 
-#gamepad-profile-config .line .label {
+#gamepad-settings-panel .line .label {
     height: 30px;
     width: 40%;
     float: left;
@@ -3739,8 +3743,8 @@ BODY.desktop-ui #gamepad-profile-config {
     /* background: lime; */
 }
 
-#gamepad-profile-config .line INPUT,
-#gamepad-profile-config .line SELECT {
+#gamepad-settings-panel .line INPUT,
+#gamepad-settings-panel .line SELECT {
     width: calc(60% - 10px) !important;
     float: left;
     margin: 0px;
@@ -3753,13 +3757,15 @@ BODY.desktop-ui #gamepad-profile-config {
     outline: none;
     font-size: 16px;
 }
-#gamepad-profile-config .line SELECT {
+#gamepad-settings-panel .line SELECT {
     width: 60% !important;
     padding-left: 5px !important;   
 }
 
-#gamepad-profile-config .line INPUT.error {
+#gamepad-settings-panel .line INPUT.error,
+#gamepad-settings-container TEXTAREA.error  {
     background-color: #be1e1e !important;
+    color: #fff;
 }
 
 #gamepad_settings .line .static_val,
