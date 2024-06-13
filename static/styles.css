@@ -2577,6 +2577,7 @@ BODY.desktop-ui #introspection_state:hover,
     background-size: 261px;
     background-position: 0px 0px;
     filter: unset;
+    position: relative;
 }
 #input-status-icon.enabled { background-position: -68px 0px !important; }
 #input-status-icon.transmitting { background-position: -136px 0px !important; }
@@ -2777,7 +2778,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     z-index: 1;
 }
 
-#profile-unsaved-warn {
+#profile-unsaved-warn, #input-unsaved-warn {
     position: absolute;
     background: magenta;
     color: #ffffff;
@@ -2799,7 +2800,16 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     cursor: pointer;
 }
 
+#input-unsaved-warn {
+    right: 5px;
+    top: 5px;
+}
+
 #gamepad #gamepad_settings.unsaved #profile-unsaved-warn {
+    display: block;
+}
+
+#gamepad #input-unsaved-warn.unsaved {
     display: block;
 }
 

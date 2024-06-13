@@ -95,7 +95,7 @@ export class InputManager {
                 case 'gamepad-buttons-tab': id_open_panel = '#gamepad-buttons-panel'; that.open_panel = 'buttons'; break;
                 case 'gamepad-output-tab': id_open_panel = '#gamepad-output-panel'; that.open_panel = 'output'; break;
                 case 'gamepad-settings-tab':
-                case 'gamepad-profile-unsaved-warn':
+                case 'profile-unsaved-warn':
                     id_open_panel = '#gamepad-settings-panel';
                     open_tab = '#gamepad-settings-tab';
                     that.open_panel = 'settings';
@@ -109,7 +109,7 @@ export class InputManager {
 
             that.make_touch_buttons_editable();
         });
-        $('#gamepad-profile-unsaved-warn').click((ev)=>{
+        $('#profile-unsaved-warn').click((ev)=>{
             $('#gamepad-settings-tab').click();
         });
 
@@ -1096,11 +1096,24 @@ export class InputManager {
                 this.make_profile_selector_ui();
           
         }
+
+        this.check_all_controller_profiles_saved();
     }
 
-    
+    check_all_controller_profiles_saved() {
 
-    
+        let all_saved = true;
+        Object.values(this.profiles).forEach((p)=>{
+            if (!p.saved)
+                all_saved = false
+        });
+
+        if (all_saved) {
+            $('#input-unsaved-warn').removeClass('unsaved');
+        } else {
+            $('#input-unsaved-warn').addClass('unsaved');
+        }
+    }
     
     close_profile_basics_edit() {
         $('#gamepad-settings-container').removeClass('editing_profile_basics');
@@ -1593,7 +1606,7 @@ export class InputManager {
             this.debug_output_panel.html('{}');
             // $('#gamepad-profile-config').css('display', 'none');
             this.controller_enabled_cb.attr('disabled', true);
-            $('#gamepad-profile-unsaved-warn').css('display', 'none');
+            $('#gamepad_settings').removeClass('unsaved');
             $('#save-gamepad-profile').addClass('saved');
             return;
         }
@@ -1608,10 +1621,10 @@ export class InputManager {
         let c_profile = this.edited_controller.profiles[this.current_profile];
 
         if (profile.saved && profile.basics_saved) {
-            $('#gamepad-profile-unsaved-warn').css('display', 'none');
+            $('#gamepad_settings').removeClass('unsaved');
             $('#save-gamepad-profile').addClass('saved');
         } else {
-            $('#gamepad-profile-unsaved-warn').css('display', 'block');
+            $('#gamepad_settings').addClass('unsaved');
             $('#save-gamepad-profile').removeClass('saved');
         }
 
