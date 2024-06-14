@@ -2596,10 +2596,15 @@ BODY.desktop-ui #introspection_state:hover,
     height: 55px;
     background-image: url(/static/touch-input-black.png);
     background-size: 105px;
-    background-position: 10px 8px;
+    background-position: 10px 9px;
 }
 #touch_ui.enabled #touch_ui_status {
     background-position: -46px 9px;
+    filter: grayscale(0) opacity(1);
+}
+
+#touch_ui.active_disabled #touch_ui_status {
+    background-position: 10px 9px;
     filter: grayscale(0) opacity(1);
 }
 
@@ -4109,6 +4114,10 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing #touch-ui-bottom-buttons
     font-size: 14px;
     line-height: 40px;
     position: relative;
+}
+
+.touch_buttons .btn.disabled { 
+    opacity: 0.2;
 }
 
 @keyframes sorting_wobble {

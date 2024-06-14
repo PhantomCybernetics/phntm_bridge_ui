@@ -117,6 +117,15 @@ export class InputManager {
             that.edited_controller.enabled = $(ev.target).prop('checked');
             that.save_user_controller_enabled(that.edited_controller);
             that.make_controller_icons();
+            if (that.edited_controller.type == 'touch') {
+
+                if (that.edited_controller.enabled && !that.touch_gamepad_on) {
+                    that.ui.toggleTouchGamepad();
+                } else {
+                    that.ui.update_touch_gamepad_icon();
+                }
+                that.render_touch_buttons();
+            }
             // if (that.edited_controller.enabled) {
             //     // $('#gamepad').addClass('enabled');
             //     // that.disable_kb_on_conflict();
@@ -318,7 +327,7 @@ export class InputManager {
 
             c.profiles = {};
             // c.current_profile = null;
-            c.enabled = this.load_user_controller_enabled(c.id);
+            c.enabled = c.type == 'touch' ? false : this.load_user_controller_enabled(c.id);
 
             // let all_profile_ids = [].concat(this.saved_profile_ids); // shallow copy
 
@@ -1193,11 +1202,7 @@ export class InputManager {
 
     //ok
     load_user_controller_enabled(id_controller) {
-        let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);
-        if (id_controller == 'touch' && state === null) {
-            return true;
-        }
-        
+        let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);    
         state = state === 'true';
         console.log('Loaded controller enabled for robot '+this.client.id_robot+', id="'+id_controller+'": '+state);
         return state;
@@ -2450,7 +2455,10 @@ export class InputManager {
                     label = '&nbsp;';
                 let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'" tabindex="-1">'+label+'</span>')
                 let cont = null;
-                
+
+                if ((btn.driver_axis || btn.driver_btn) && !c.enabled)
+                    btn_el.addClass('disabled');
+
                 if (btn.repeat_timer) {
                     clearInterval(btn.repeat_timer);
                     btn.repeat_timer = null;
@@ -3048,6 +3056,8 @@ export class InputManager {
                 }
                 that.save_user_controller_enabled(c);
                 that.make_controller_icons();
+                if (c.type == 'touch')
+                    that.render_touch_buttons();
                 break;
             case 'input-profile': 
                 if (btn.set_ctrl_profile) {

@@ -487,7 +487,6 @@ export class PanelUI {
                 that.toggleTouchGamepad();
             });
 
-
             // The wake lock sentinel.
             let wakeLock = null;
 
@@ -1761,17 +1760,32 @@ export class PanelUI {
        
     }
 
+    update_touch_gamepad_icon() {
+        if (this.input_manager.touch_gamepad_on) {
+            if (this.input_manager.controllers['touch'] && this.input_manager.controllers['touch'].enabled) {
+                $('#touch_ui')
+                    .addClass('enabled')
+                    .removeClass('active_disabled');
+            } else {
+                $('#touch_ui')
+                    .removeClass('enabled')
+                    .addClass('active_disabled');  
+            }
+        } else {
+            $('#touch_ui')
+                .removeClass('enabled')
+                .removeClass('active_disabled');
+        }
+    }
 
     toggleTouchGamepad() {
         
         if (!this.input_manager.touch_gamepad_on) {
-            
-            // if (!this.maximized_panel) {
-            this.openFullscreen();
-            // }
 
-            this.update_input_buttons();
-            $('#touch_ui').addClass('enabled');
+            this.openFullscreen();
+
+            // this.update_input_buttons();
+            
             $('BODY').addClass('touch-gamepad');
             console.log('Touch Gamepad on');
             let that = this;
@@ -1811,6 +1825,16 @@ export class PanelUI {
             ]);
             
             this.input_manager.set_touch_gamepad_on(true);
+            if (this.input_manager.controllers['touch'] && !this.input_manager.controllers['touch'].enabled) {
+                this.input_manager.controllers['touch'].enabled = true;
+                
+                if (this.input_manager.edited_controller == this.input_manager.controllers['touch']) {
+                    this.input_manager.controller_enabled_cb.prop('checked', true);
+                }
+                this.input_manager.make_controller_icons();
+                this.input_manager.render_touch_buttons();
+            }
+            this.update_touch_gamepad_icon();
             
         } else {
 
@@ -1819,8 +1843,18 @@ export class PanelUI {
             // }
 
             this.input_manager.set_touch_gamepad_on(false);
+            if (this.input_manager.controllers['touch'] && this.input_manager.controllers['touch'].enabled) {
+                this.input_manager.controllers['touch'].enabled = false;
+                
+                if (this.input_manager.edited_controller == this.input_manager.controllers['touch']) {
+                    this.input_manager.controller_enabled_cb.prop('checked', false);
+                }
+                this.input_manager.make_controller_icons();
+                this.input_manager.render_touch_buttons();
+            }
+            this.update_touch_gamepad_icon();
+
             this.touch_gamepad.destroy();
-            $('#touch_ui').removeClass('enabled');
             console.log('Touch Gamepad off');
             $('BODY').removeClass('touch-gamepad');
 
