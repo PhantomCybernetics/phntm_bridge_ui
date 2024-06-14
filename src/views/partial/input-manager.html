@@ -1,6 +1,6 @@
 <div id="gamepad">
     <div id="input-status-icon" title="Input Settings">
-        <span id="input-unsaved-warn">*</span>
+        <span id="input-unsaved-warn" title="Unsaved changes">*</span>
     </div>
 
     <div id="gamepad_settings">
@@ -14,14 +14,16 @@
             <select id="input-profile-select" autocomplete="false"></select>
             <div id="profile-buttons">
                 <span class="icon"></span>
-                <span id="profile-unsaved-warn">*</span>
+                <span id="profile-unsaved-warn" title="Unsaved changes">*</span>
                 <div id="profile-menu">
                     <span class="arrow"></span>
-                    <button id="save-input-profile" class="saved">Save Profile</button>
+                    <button id="save-input-profile" class="save_btn saved">Save Profile</button>
+                    <!-- <button id="save-all-input-profiles" class="save_btn saved">Save All</button> -->
                     <button id="edit-input-profile">Edit Profile</button>
                     <button id="duplicate-input-profile">Duplicate Profile</button>
-                    <button id="input-profile-json">Copy as JSON</button>
-                    <button id="delete-input-profile">Delete</button>
+                    <button id="input-profile-json">Copy Profile as JSON</button>
+                    <button id="full-input-json">Copy Full Config as JSON</button>
+                    <button id="delete-input-profile">Delete Profile</button>
                 </div>
             </div>
             <div id="profile-edit-panel">

@@ -2832,10 +2832,18 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
 } 
 
 BODY.desktop-ui #profile-buttons BUTTON:hover {  background-color: #083471; }
+BODY.desktop-ui #profile-buttons BUTTON:active {  background-color: #58BBF2; }
 
-#profile-buttons BUTTON#save-input-profile { background-color: green; display: none; }
-BODY.desktop-ui #profile-buttons BUTTON#save-input-profile:hover { background-color: rgb(6, 160, 6); }
+#profile-buttons BUTTON.save_btn { background-color: green; display: none; }
+BODY.desktop-ui #profile-buttons BUTTON.save_btn:hover { background-color: rgb(6, 160, 6); }
+BODY.desktop-ui #profile-buttons BUTTON.save_btn:active { background-color: rgb(12, 186, 12); }
 #gamepad #gamepad_settings.unsaved #profile-buttons BUTTON#save-input-profile { display: block; }
+
+BUTTON#delete-input-profile.warn,
+BODY.desktop-ui BUTTON#delete-input-profile:hover,
+BODY.desktop-ui BUTTON#delete-input-profile:active {
+    background-color: rgb(173, 0, 0);
+}
 
 
 #gamepad_settings .tab {
@@ -3824,11 +3832,6 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     margin-right: 0px;
 }
 
-BUTTON#delete-input-profile.warn,
-BODY.desktop-ui BUTTON#delete-input-profile:hover {
-    background-color: rgb(173, 0, 0);
-}
-
 #gamepad-settings-panel .bottom-buttons BUTTON#save-input-profile {
     background-color: #e90fe9;
     color: white;
@@ -3990,6 +3993,10 @@ BODY.desktop-ui BUTTON#delete-input-profile:hover {
     background-size: 32px;
     background-position: 7px 6px;
     cursor: pointer;
+}
+BODY.desktop-ui .editing_profile_basics #profile-buttons > .icon {
+    background-size: 25px;
+    background-position: 10px 9px;
 }
 BODY.desktop-ui .editing_profile_basics #profile-buttons > .icon:hover {
     background-color: #fb1ffb;

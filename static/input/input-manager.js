@@ -11,7 +11,7 @@ export class InputManager {
         this.registered_drivers = {}; // id => class; all available
         this.enabled_drivers = {}; // gp_type => driver[]; enabled by robot
 
-        this.controllers = {}; //id => gp ( touch)
+        this.controllers = {}; //id => ctrl
         this.edited_controller = null;
 
         this.robot_defaults = null; // defaults from robot
@@ -125,13 +125,6 @@ export class InputManager {
             // }
         });
 
-        let close_profile_menu = () => {
-            $('#profile-buttons').removeClass('open');
-            $('#input-manager-overlay')
-                .css('display', 'none')
-                .unbind();
-        }
-
         this.editing_profile_basics = false;
         $('#profile-buttons > .icon, #profile-unsaved-warn').click((ev)=>{
             if (that.editing_profile_basics) {
@@ -140,26 +133,26 @@ export class InputManager {
             }
 
             if ($('#profile-buttons').hasClass('open')) {
-                close_profile_menu();
+                that.close_profile_menu();
             } else {
                 $('#profile-buttons').addClass('open');
                 $('#input-manager-overlay')
                     .css('display', 'block')
                     .unbind()
                     .click((ev_u)=>{
-                        close_profile_menu();
+                        that.close_profile_menu();
                     });
             }
         });
 
         $('#save-input-profile').click((ev)=>{
-            close_profile_menu();
-            that.save_user_gamepad_profile_config(that.edited_controller, that.current_profile);
+            that.save_user_profile(that.current_profile);
+            that.close_profile_menu();
         });
 
        
         $('#edit-input-profile').click(()=>{
-            close_profile_menu();
+            that.close_profile_menu();
             $('#gamepad-settings-container').addClass('editing_profile_basics');
             that.editing_profile_basics = true;
             $('#input-profile-edit-label')
@@ -196,7 +189,7 @@ export class InputManager {
                 if ($(ev.target).hasClass('warn')) {
                     that.delete_current_profile();
                     $(ev.target).removeClass('warn');
-                    close_profile_menu();
+                    that.close_profile_menu();
                     return;
                 } else {
                     $(ev.target).addClass('warn');
@@ -207,7 +200,10 @@ export class InputManager {
             });
 
         $('#input-profile-json').click((ev)=>{
-            that.profile_json_to_clipboard(that.edited_controller, that.current_gamepad.current_profile);
+            that.profile_json_to_clipboard(that.current_profile);
+        });
+        $('#full-input-json').click((ev)=>{
+            that.full_json_to_clipboard();
         });
 
         if (isTouchDevice()) {
@@ -270,12 +266,11 @@ export class InputManager {
             });
 
             // overwrite with local
-            let user_profiles = this.load_user_profiles();
-            user_profiles.forEach((user_profile)=>{
-                // let user_profile = this.load_user_profile(id_profile);
+            this.user_profiles = this.load_user_profiles();
+            Object.keys(this.user_profiles).forEach((id_profile)=>{
+                let user_profile = this.user_profiles[id_profile];
                 if (!user_profile)
                     return;
-                let id_profile = user_profile.id;
                 if (!this.profiles[id_profile]) { // user's own profile
                     let label = user_profile.label ? user_profile.label : id_profile;
                     this.profiles[id_profile] = { 
@@ -315,13 +310,11 @@ export class InputManager {
         if (this.robot_defaults === null) // wait for robot config & cookie overrides
             return;
 
-        if (!c.saved_profiles) 
-            c.saved_profiles = {};
-
         if (!c.profiles) { // only once
 
             // let robot_defaults = this.robot_defaults[c.type];
-            this.edited_controller = c; // autofocus latest
+            if (this.open)
+                this.edited_controller = c; // autofocus latest
 
             c.profiles = {};
             // c.current_profile = null;
@@ -430,6 +423,8 @@ export class InputManager {
             let c_profile = {
                 driver: c.profiles[this.current_profile].driver,
                 default_driver_config: Object.assign({}, c.profiles[this.current_profile].driver_config),
+                default_axes_config: [],
+                default_buttons_config: [],
             }
             c.profiles[id_new_profile] = c_profile;
             this.init_controller_profile(c, c_profile);
@@ -439,6 +434,8 @@ export class InputManager {
         this.reset_all(); // new profile needs reset before triggering
         this.make_ui();
         this.render_touch_buttons();
+
+        this.check_all_controller_profiles_saved();
 
         // focus driver options first
         $('#gamepad_settings #gamepad-settings-tab').click();
@@ -482,13 +479,16 @@ export class InputManager {
                     for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
                         let new_btn = this.make_button(driver, c.type, c_profile.default_buttons_config[i]);
                         if (new_btn.touch_ui_placement) {
-                            if (sort_indexes[new_btn.touch_ui_placement] === undefined)
-                                sort_indexes[new_btn.touch_ui_placement] = 0;
-                            else
-                                sort_indexes[new_btn.touch_ui_placement]++;
-                            new_btn.sort_index = sort_indexes[new_btn.touch_ui_placement];
+                            if (c_profile.default_buttons_config[i].sort_index !== undefined) {
+                                new_btn.sort_index = c_profile.default_buttons_config[i].sort_index;
+                            } else {
+                                if (sort_indexes[new_btn.touch_ui_placement] === undefined)
+                                    sort_indexes[new_btn.touch_ui_placement] = 0;
+                                else
+                                    sort_indexes[new_btn.touch_ui_placement]++;
+                                new_btn.sort_index = sort_indexes[new_btn.touch_ui_placement];
+                            }
                         }
-                        
                     }
                 }
                 for (let i_btn = 0; i_btn < empty_buttons_to_make; i_btn++) { //start with 3, users can add mode but space will be sometimes limitted
@@ -775,7 +775,7 @@ export class InputManager {
         });
     }
 
-    get_profile_config(c, id_profile, only_assigned=false) {
+    get_controller_profile_config(c, id_profile, only_assigned=false) {
         let profile = c.profiles[id_profile];
         let driver = profile.driver_instances[profile.driver];
 
@@ -890,7 +890,7 @@ export class InputManager {
         let driver = c_profile.driver_instances[c_profile.driver];
         driver.set_saved_state();
         
-        let saved_data = this.get_profile_config(c, id_profile, false);
+        let saved_data = this.get_controller_profile_config(c, id_profile, false);
         c_profile.saved_state = saved_data;
     }
 
@@ -898,7 +898,7 @@ export class InputManager {
         
         let profile = this.profiles[id_profile];
         function compare() {
-            if (profile.id != profile.id_saved)
+            if (id_profile != profile.id_saved)
                 return false;
             if (profile.label != profile.label_saved)
                 return false;
@@ -1114,6 +1114,13 @@ export class InputManager {
             $('#input-unsaved-warn').addClass('unsaved');
         }
     }
+
+    close_profile_menu () {
+        $('#profile-buttons').removeClass('open');
+        $('#input-manager-overlay')
+            .css('display', 'none')
+            .unbind();
+    }
     
     close_profile_basics_edit() {
         $('#gamepad-settings-container').removeClass('editing_profile_basics');
@@ -1184,16 +1191,6 @@ export class InputManager {
         return localStorage.getItem('last-input-profile:' + this.client.id_robot);
     }
 
-    load_user_profiles() {
-        let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
-        return val ? JSON.parse(val) : [];
-    }
-
-    save_user_profiles(user_profiles) { //[ { id: 'id_profile', label: 'label'}, ... ]
-        let val = localStorage.setItem('input-profiles:' + this.client.id_robot, JSON.stringify(user_profiles));
-        return val ? JSON.parse(val) : [];
-    }
-
     //ok
     save_user_controller_enabled(c) {
         localStorage.setItem('controller-enabled:' + this.client.id_robot+ ':' + c.id, c.enabled);
@@ -1212,36 +1209,74 @@ export class InputManager {
         return state;
     }
 
-    save_user_controller_profile_config(c, id_profile) {
-        let profile = c.profiles[id_profile];
-        let profile_data = this.get_profile_config(c, id_profile, true); // filters assigned axes & buttons
+    load_user_profiles() {
+        let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
+        return val ? JSON.parse(val) : {};
+    }
 
-        console.log('Saving profile '+id_profile+' for '+c.id, profile_data);
-        let cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+c.id+':'+id_profile;
-        localStorage.setItem(cookie_conf, JSON.stringify(profile_data));
-       
-        // console.log('loaded custom_profile_ids', custom_profile_ids);
+    save_user_profiles(user_profiles) { //[ { id: 'id_profile', label: 'label'}, ... ]
+        localStorage.setItem('input-profiles:' + this.client.id_robot, JSON.stringify(user_profiles));
+    }
 
-        if (custom_profile_ids.indexOf(id_profile) === -1)
-            custom_profile_ids.push(id_profile);
-        if (profile.saved_state.id != id_profile) { // id changed, remove old
-            let pos = custom_profile_ids.indexOf(profile.saved_state.id);
-            if (pos > -1) {
-                custom_profile_ids.splice(pos, 1);
+    save_user_profile(id_profile) {
+
+        let profile = this.profiles[id_profile];
+
+        if (!this.user_profiles[id_profile])
+            this.user_profiles[id_profile] = {};
+        
+        this.user_profiles[id_profile].label = profile.label;
+        profile.label_saved = profile.label;
+        
+        if (!this.user_profiles[id_profile]['controllers'])
+            this.user_profiles[id_profile]['controllers'] = [];
+
+        if (profile.id_saved != id_profile) { // move cookies on profile id change
+            if (this.user_profiles[profile.id_saved] && this.user_profiles[profile.id_saved].controllers) {
+                this.user_profiles[profile.id_saved].controllers.forEach((id_profile_controller)=>{
+                    let old_cookie = 'controller-profile:'+this.client.id_robot+':'+profile.id_saved+':'+id_profile_controller;
+                    let old_val = localStorage.getItem(old_cookie);
+                    localStorage.removeItem(old_cookie);
+                    if (old_val) {
+                        let new_cookie = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_profile_controller;
+                        localStorage.setItem(new_cookie, old_val);
+                        if (this.user_profiles[id_profile]['controllers'].indexOf(id_profile_controller) === -1)
+                            this.user_profiles[id_profile]['controllers'].push(id_profile_controller);
+                    }
+                });
             }
-            let deleted_cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+c.id+':'+profile.saved_state.id;
-            localStorage.removeItem(deleted_cookie_conf);
+            delete this.user_profiles[profile.id_saved];
+            profile.id_saved = id_profile;
+            this.save_last_user_profile(id_profile);
         }
 
-        console.log('saving custom_profile_ids', custom_profile_ids); 
-        localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
+        Object.keys(this.controllers).forEach((id_controller)=>{
+            let c = this.controllers[id_controller];
 
-        this.set_saved_controller_profile_state(c, id_profile);
-        this.check_controller_profile_saved(c, id_profile);
+            let c_profile = c.profiles[id_profile];
+            if (c_profile && !c_profile.saved) {
+
+                if (this.user_profiles[id_profile]['controllers'].indexOf(id_controller) === -1)
+                    this.user_profiles[id_profile]['controllers'].push(id_controller);
+
+                let c_profile_data = this.get_controller_profile_config(c, id_profile, true); // filters assigned axes & buttons
+
+                console.log('Saving profile '+id_profile+' for '+c.id, c_profile_data);
+                let cookie = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+c.id;
+                localStorage.setItem(cookie, JSON.stringify(c_profile_data));
+
+                this.set_saved_controller_profile_state(c, id_profile);
+                this.check_controller_profile_saved(c, id_profile, false);
+            }
+
+        });
+
+        this.save_user_profiles(this.user_profiles);
+        this.check_profile_basics_saved(id_profile, true);
     }
 
     load_user_controller_profile_config(id_controller, id_profile) {
-        let cookie_conf = 'controller-profile-config:'+this.client.id_robot+':'+id_controller+':'+id_profile;
+        let cookie_conf = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_controller;
         let val = localStorage.getItem(cookie_conf);
 
         if (val)
@@ -1262,16 +1297,77 @@ export class InputManager {
     //     // }
     // }
 
+    get_controller_json(id_controller, id_profile, out_data) {
+        let c = this.controllers[id_controller];
+        let id_c = id_controller;
+        if (c.type == 'gamepad')
+            id_c = 'gamepad';
+        let c_profile_config = this.get_controller_profile_config(c, id_profile, true);
+        out_data[id_c] = {
+            driver: c_profile_config.driver,
+            driver_config: c_profile_config.driver_config,
+        }
+        if (c_profile_config.axes && c_profile_config.axes.length) {
+            c_profile_config.axes.forEach((axis_cfg)=>{
+                if (axis_cfg['offset'] == 0.0)
+                    delete axis_cfg['offset'];
+                if (axis_cfg['scale'] == 1.0)
+                    delete axis_cfg['scale'];
+            });
+            out_data[id_c]['axes'] = c_profile_config.axes;
+        }
+        if (c_profile_config.buttons && c_profile_config.buttons.length) {
+            c_profile_config.buttons.forEach((btn_cfg) => {
+                if (btn_cfg['trigger'] == 'press')
+                    delete btn_cfg['trigger'];
+                if (btn_cfg['offset'] == 0.0)
+                    delete btn_cfg['offset'];
+                if (btn_cfg['scale'] == 1.0)
+                    delete btn_cfg['scale'];
+                if (btn_cfg['key'])
+                    btn_cfg['key'] = btn_cfg['key'].toUpperCase();
+            });
+            out_data[id_c]['buttons'] = c_profile_config.buttons;
+        }
+    }
 
+    profile_json_to_clipboard(id_profile) {
+        let profile_data = {};
+        profile_data[id_profile] = {};
 
-    profile_json_to_clipboard(gamepad, id_profile) {
-        let profile_data = this.get_profile_config(gamepad, id_profile, true);
+        if (this.profiles[id_profile].label)
+            profile_data[id_profile].label = this.profiles[id_profile].label;
+
+        let that = this;
+        Object.keys(this.controllers).forEach((id_controller)=>{
+            that.get_controller_json(id_controller, id_profile, profile_data[id_profile]);
+        });
+
         navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
-        console.log('Copied json:', profile_data);
-        $('#gamepad-profile-json-bubble').css('display', 'block');
-        window.setTimeout(()=>{
-            $('#gamepad-profile-json-bubble').css('display', 'none');
-        }, 3000);
+        console.log('Copied profile json:', JSON.stringify(profile_data, null, 4));
+        this.close_profile_menu();
+        this.ui.show_notification('Profile JSON copied');
+    }
+
+    full_json_to_clipboard() {
+        let config_data = {};
+
+        let that = this;
+        Object.keys(this.profiles).forEach((id_profile) => {
+
+            config_data[id_profile] = {};
+            if (that.profiles[id_profile].label)
+                config_data[id_profile].label = that.profiles[id_profile].label;
+
+            Object.keys(that.controllers).forEach((id_controller)=>{
+                that.get_controller_json(id_controller, id_profile, config_data[id_profile]);
+            });
+        });
+
+        navigator.clipboard.writeText(JSON.stringify(config_data, null, 4));
+        console.log('Copied full json:', JSON.stringify(config_data, null, 4));
+        this.close_profile_menu();
+        this.ui.show_notification('Config JSON copied');
     }
     
 
@@ -1334,6 +1430,9 @@ export class InputManager {
                 that.reset_all(); //reset new
                 that.make_ui();
                 that.render_touch_buttons();
+                if (that.current_profile == that.profiles[that.current_profile].id_saved) { //new profile remembered when saved
+                    that.save_last_user_profile(that.current_profile);
+                }
             }
             // that.save_last_user_gamepad_profile(
             //     that.current_gamepad.id,
@@ -2352,7 +2451,10 @@ export class InputManager {
 
             btns.forEach((btn)=> {
                 let wrap_el = $('<li></li>'); 
-                let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'" tabindex="-1">'+btn.src_label+'</span>')
+                let label = btn.src_label.trim();
+                if (!label)
+                    label = '&nbsp;';
+                let btn_el = $('<span class="btn '+(btn.touch_ui_style?btn.touch_ui_style:'')+'" tabindex="-1">'+label+'</span>')
                 let cont = null;
                 
                 if (btn.repeat_timer) {
@@ -2466,6 +2568,7 @@ export class InputManager {
             that.render_touch_buttons();
             that.check_controller_profile_saved(that.edited_controller, that.current_profile);
         });
+        label_inp.on('contextmenu', that.prevent_context_menu);
         btn.config_details_el.append(label_el);
 
         // color placement
@@ -3251,7 +3354,6 @@ export class InputManager {
                 gamepad: ev.gamepad,
                 num_gamepad_axes: gp.axes.length,
                 profiles: null,
-                saved_profiles: null,
                 initiated: false, //this will wait for config
                 connected: true,
             };
@@ -3287,7 +3389,6 @@ export class InputManager {
                 type: 'touch',
                 id: 'touch',
                 profiles: null,
-                saved_profiles: null,                
                 initiated: false, //this will wait for config
                 connected: true,
             };
@@ -3302,7 +3403,6 @@ export class InputManager {
                 type: 'keyboard',
                 id: 'keyboard',
                 profiles: null,
-                saved_profiles: null,
                 initiated: false, //this will wait for config
                 connected: true,
             };
@@ -3510,8 +3610,9 @@ export class InputManager {
             } else if (c.cooldown_started !== undefined) {
                 delete c.cooldown_started; // some axes alive => reset cooldown
             }
-    
-            let transmitting = c.enabled && (axes_alive || buttons_alive || cooldown) && driver.can_transmit();
+            
+            let can_transmit = driver.can_transmit();
+            let transmitting = c.enabled && (axes_alive || buttons_alive || cooldown) && can_transmit;
     
             driver.generate();
             
@@ -3523,7 +3624,7 @@ export class InputManager {
             c.transmitting_user_input = transmitting && !cooldown; // more intuitive user feedback
 
             let had_error = c.has_error;
-            c.has_error = false;
+            c.has_error = !can_transmit && c.enabled && (axes_alive || buttons_alive || cooldown);
             c.show_error = false;
 
             if (transmitting) {
