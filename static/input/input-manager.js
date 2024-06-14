@@ -442,6 +442,53 @@ export class InputManager {
         // that.save_user_gamepad_config(); // save the new profile right away
     }
     
+    delete_current_profile() {
+        
+        this.reset_all(); // stop repeats etc
+
+        let id_delete = this.current_profile;
+        let saved_id_delete = this.profiles[id_delete].id_saved;
+        let old_profile_ids = Object.keys(this.profiles);
+        let pos = old_profile_ids.indexOf(id_delete);
+        
+        console.log('Deleting profile '+id_delete+' (saved id was '+saved_id_delete+')');
+
+        if (this.user_profiles[id_delete]) {
+            if (this.user_profiles[id_delete].controllers) {
+                this.user_profiles[id_delete].controllers.forEach((ctrl)=>{
+                    let cookie = 'controller-profile:'+this.client.id_robot+':'+saved_id_delete+':'+ctrl;
+                    localStorage.removeItem(cookie);
+                });
+            }
+            delete this.user_profiles[id_delete];
+        }  
+        this.save_user_profiles(this.user_profiles);
+
+        delete this.profiles[id_delete];
+        let remaining_profile_ids = Object.keys(this.profiles);
+
+        if (remaining_profile_ids.length == 0) {
+            console.log('No profile to autoselect, making new');
+            this.make_new_profile();
+        } else {
+            while (!remaining_profile_ids[pos] && pos > 0) {
+                pos--;
+            }
+            let id_select = remaining_profile_ids[pos];
+
+            console.log('Autoselecting '+id_select);
+            this.current_profile = id_select;
+            this.reset_all();
+            this.make_ui();
+            this.render_touch_buttons();
+
+            this.check_all_controller_profiles_saved();
+
+            if (this.current_profile == this.profiles[this.current_profile].id_saved) { //new profile remembered when saved
+                this.save_last_user_profile(this.current_profile);
+            }
+        }
+    }
 
     init_controller_profile(c, c_profile) {
 
@@ -1128,59 +1175,6 @@ export class InputManager {
         $('#input-profile-edit-label').unbind();
         $('#input-profile-edit-id').unbind();
         this.check_controller_profile_saved(this.edited_controller, this.current_profile, true);
-    }
-
-    delete_current_profile() {
-    
-        let id_delete = this.current_gamepad.current_profile;
-        let saved_id_delete = this.current_gamepad.profiles[id_delete].saved_state.id;
-        let old_profile_ids = Object.keys(this.current_gamepad.profiles);
-        let pos = old_profile_ids.indexOf(id_delete);
-        
-        console.log('Deleting profile '+id_delete+' (saved id was '+saved_id_delete+')');
-
-        // remove profile conf from cookie
-        let cookie_conf = 'gamepad-profile-config:'+this.client.id_robot+':'+this.current_gamepad.id+':'+saved_id_delete;
-        localStorage.removeItem(cookie_conf);
-
-        let cookie_conf_list = 'user-gamepad-profiles:'+this.client.id_robot+':'+this.current_gamepad.id;
-        let custom_profile_ids = localStorage.getItem(cookie_conf_list);
-        if (custom_profile_ids) {
-            custom_profile_ids = JSON.parse(custom_profile_ids)
-            let pos = custom_profile_ids.indexOf(saved_id_delete);
-            if (pos > -1) {
-                custom_profile_ids.splice(pos, 1);
-            }
-            console.log('saving updated custom_profile_ids', custom_profile_ids); 
-            localStorage.setItem(cookie_conf_list, JSON.stringify(custom_profile_ids));
-        }
-
-        delete this.current_gamepad.profiles[id_delete];
-        let remaining_profile_ids = Object.keys(this.current_gamepad.profiles);
-
-        if (remaining_profile_ids.length == 0) {
-            console.log('No profile to autoselect, making new');
-            
-            let id_new_profile = 'Profile-'+Date.now();
-            this.current_gamepad.profiles[id_new_profile] = {
-                // id: id_new_profile,
-                driver: this.enabled_drivers[this.current_gamepad.type][0], // copy current as default
-                // label: id_new_profile,
-            }
-            this.init_controller_profile(this.current_gamepad.profiles[id_new_profile]);
-            this.current_gamepad.current_profile = id_new_profile;
-
-        } else {
-            while (!remaining_profile_ids[pos] && pos > 0) {
-                pos--;
-            }
-            let id_select = remaining_profile_ids[pos];
-            console.log('Autoselecting '+id_select);
-            this.current_gamepad.current_profile = id_select;
-        }
-
-        this.reset_all();
-        this.make_ui();
     }
 
     save_last_user_profile(id_profile) {
@@ -3636,7 +3630,9 @@ export class InputManager {
                     driver.write_error_started = Date.now();
                 }
 
-                if (!driver.first_write_error_resolved && Date.now() > driver.write_error_started+3000) { 
+                if (!can_transmit) {
+                    c.show_error = true; // writer failed to even set up
+                } else if (!driver.first_write_error_resolved && Date.now() > driver.write_error_started+3000) { 
                     c.show_error = true; // wait 3s in case of the 1st error before reporting problem (writer needs to set up)
                 } else if (driver.first_write_error_resolved) {
                     c.show_error = true; // all further errors report immediately
