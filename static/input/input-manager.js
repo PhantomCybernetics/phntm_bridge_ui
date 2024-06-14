@@ -625,6 +625,27 @@ export class InputManager {
 
         return new_axis;
     }
+
+    copy_axis_config(a_src, a_dest) {
+        a_dest.driver_axis = a_src.driver_axis;
+        a_dest.dead_min = a_src.dead_min;
+        a_dest.dead_max = a_src.dead_max;
+        a_dest.offset = a_src.offset;
+        a_dest.scale = a_src.scale;
+        a_dest.mod_func = a_src.mod_func;
+        a_dest.scale_by_velocity_src = a_src.scale_by_velocity_src;
+        a_dest.scale_by_velocity_mult_min = a_src.scale_by_velocity_mult_min;
+        a_dest.scale_by_velocity_mult_max = a_src.scale_by_velocity_mult_max;
+    }
+
+    switch_axes_config(a1, a2) {
+        console.log('Switching axes ', a1, a2);
+
+        let _a1 = {};
+        this.copy_axis_config(a1, _a1);
+        this.copy_axis_config(a2, a1)
+        this.copy_axis_config(_a1, a2);
+    }
     
     make_button(driver, c_type, default_config = null, default_axis_dead_zone = 0.01) {
         if (driver.i_btn === undefined)
@@ -987,30 +1008,32 @@ export class InputManager {
             for (let i = 0; i < driver.axes.length; i++) {
                 if (driver.axes[i].driver_axis != saved.axes[i].driver_axis)
                     return false;
-                if (driver.axes[i].dead_min != saved.axes[i].dead_min)
-                    return false;
-                if (driver.axes[i].dead_max != saved.axes[i].dead_max)
-                    return false;
-                if (driver.axes[i].offset != saved.axes[i].offset)
-                    return false;
-                if (driver.axes[i].scale != saved.axes[i].scale)
-                    return false;
 
-                let has_mod_func = driver.axes[i].mod_func !== null && driver.axes[i].mod_func !== undefined && driver.axes[i].mod_func !== false && driver.axes[i].mod_func !== "";
-                let has_saved_mod_func = saved.axes[i].mod_func !== null && saved.axes[i].mod_func !== undefined; //obj
-
-                if (has_mod_func != has_saved_mod_func) { 
-                    // console.warn('live v saved mod_func: ', driver.axes[i].mod_func, saved.axes[i].mod_func)
-                    return false;
-                } else if (driver.axes[i].mod_func && saved.axes[i].mod_func) {
-                    if (driver.axes[i].mod_func != saved.axes[i].mod_func.type) 
+                if (driver.axes[i].driver_axis) {
+                    if (driver.axes[i].dead_min != saved.axes[i].dead_min)
                         return false;
-                    if (driver.axes[i].scale_by_velocity_src != saved.axes[i].mod_func.velocity_src) 
+                    if (driver.axes[i].dead_max != saved.axes[i].dead_max)
                         return false;
-                    if (driver.axes[i].scale_by_velocity_mult_min != saved.axes[i].mod_func.slow_multiplier) 
+                    if (driver.axes[i].offset != saved.axes[i].offset)
                         return false;
-                    if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].mod_func.fast_multiplier) 
+                    if (driver.axes[i].scale != saved.axes[i].scale)
                         return false;
+    
+                    let has_mod_func = driver.axes[i].mod_func !== null && driver.axes[i].mod_func !== undefined && driver.axes[i].mod_func !== false && driver.axes[i].mod_func !== "";
+                    let has_saved_mod_func = saved.axes[i].mod_func !== null && saved.axes[i].mod_func !== undefined; //obj
+    
+                    if (has_mod_func != has_saved_mod_func) { 
+                        return false;
+                    } else if (driver.axes[i].mod_func && saved.axes[i].mod_func) {
+                        if (driver.axes[i].mod_func != saved.axes[i].mod_func.type) 
+                            return false;
+                        if (driver.axes[i].scale_by_velocity_src != saved.axes[i].mod_func.velocity_src) 
+                            return false;
+                        if (driver.axes[i].scale_by_velocity_mult_min != saved.axes[i].mod_func.slow_multiplier) 
+                            return false;
+                        if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].mod_func.fast_multiplier) 
+                            return false;
+                    }
                 }
             }
 
@@ -2201,7 +2224,6 @@ export class InputManager {
     make_axes_ui(driver) {
         
         let that = this;
-        let c_profile = this.edited_controller.profiles[this.current_profile];
 
         // all gamepad axes
         let axes_els = [];
@@ -2228,7 +2250,8 @@ export class InputManager {
                 let id_axis = dri_axes_ids[j];
                 opts.push('<option value="'+id_axis+'"'+(axis.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
             }
-            opts.push('<option value="=">Copy from axis...</option>');
+            opts.push('<option value="*">Switch with axis...</option>');
+        
             let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
             assignment_sel_el.appendTo(line_1_el);
             axis.assignment_sel_el = assignment_sel_el;
@@ -2261,69 +2284,84 @@ export class InputManager {
 
             // let that = this;
             assignment_sel_el.change((ev)=>{
-                let id_axis_assigned = $(ev.target).val();
+                let val = $(ev.target).val();
 
-                console.log('Axis '+axis.i+' assigned to '+id_axis_assigned)
+                console.log('Axis '+axis.i+' selected val: '+val)
 
-                let cancel_copy = () => {
+                let cancel_switch = (reset_selection) => {
                     driver.axes.forEach((a)=>{
-                        a.raw_val_el
-                            .unbind()
-                            .removeClass('copy-source');
-                        if (c_profile.copying_into_axis === a) {
-                            a.assignment_sel_el.val(''); //set not in use
-                            a.row_el
-                                .removeClass('copy-destination')
-                                .addClass('unused');
+                        a.raw_val_el.unbind();
+                        a.row_el.removeClass('switch-target');
+                        if (driver.switching_axis === a) {
+                            a.row_el.removeClass('switch-source')
+                            if (reset_selection) {
+                                a.assignment_sel_el.val(a.driver_axis); //set not in use
+                                if (!a.driver_axis)
+                                    a.row_el.addClass('unused');
+                                else
+                                    a.row_el.removeClass('unused');
+                            }
                         }
                     });
-                    delete c_profile.copying_into_axis;
+                    delete driver.switching_axis;
                 }
 
-                if (id_axis_assigned == '=') {
-                    if (c_profile.copying_into_axis) {
-                        // another one is waiting for input, close first
-                        cancel_copy();
+                if (val == '*') {
+                    if (driver.switching_axis && axis !== driver.switching_axis) {
+                        cancel_switch(true); // another one was being switched, cancel first
                     }
-                    //console.log('Copy config for axis '+axis.id)
-                    c_profile.copying_into_axis = axis;
-                    row_el.addClass('unused copy-destination');
+                    driver.switching_axis = axis;
+
+                    row_el.addClass('unused switch-source');
 
                     // let axes_ids = Object.keys()
-                    driver.axes.forEach((a)=>{
-                        if (axis == a) //skip self
+                    driver.axes.forEach((axis2)=>{
+                        if (axis == axis2) //skip source
                             return;
-                        a.raw_val_el.addClass('copy-source')
+                        axis2.row_el.addClass('switch-target');
+                        axis2.raw_val_el
                             .unbind()
                             .click((ev)=>{
-                                cancel_copy();
-                                console.log('Copying axis '+a.i, a);
-                                axis.driver_axis = a.driver_axis;
-                                axis.assignment_sel_el.val(a.driver_axis);
-                                if (axis.driver_axis) {
-                                    axis.dead_min = a.dead_min;
-                                    axis.dead_max = a.dead_max;
-                                    axis.offset = a.offset;
-                                    axis.scale = a.scale;
-                                    axis.mod_func = a.mod_func;
-                                    axis.scale_by_velocity_src = a.scale_by_velocity_src;
-                                    axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
-                                    axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
-                                    that.render_axis_config(driver, axis);
-                                    row_el.removeClass('unused');
-                                } else {
-                                    row_el.addClass('unused');
-                                }
+                                cancel_switch(false);
+                                that.switch_axes_config(axis, axis2);
+
+                                axis.assignment_sel_el.val(axis.driver_axis);
+                                if (axis.driver_axis)
+                                    axis.row_el.removeClass('unused');
+                                else
+                                    axis.row_el.addClass('unused');
+                                that.render_axis_config(driver, axis);
+
+                                axis2.assignment_sel_el.val(axis2.driver_axis);
+                                if (axis2.driver_axis)
+                                    axis2.row_el.removeClass('unused');
+                                else
+                                    axis2.row_el.addClass('unused');
+                                that.render_axis_config(driver, axis2);
+
+                                // axis.driver_axis = a.driver_axis;
+                                // 
+                                // if (axis.driver_axis) {
+                                //     axis.dead_min = a.dead_min;
+                                //     axis.dead_max = a.dead_max;
+                                //     axis.offset = a.offset;
+                                //     axis.scale = a.scale;
+                                //     axis.mod_func = a.mod_func;
+                                //     axis.scale_by_velocity_src = a.scale_by_velocity_src;
+                                //     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
+                                //     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
+                                //     
+                                //   
                                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
                             });
                     });
                     return;
-                } else if (c_profile.copying_into_axis) {
-                    cancel_copy();
+                } else if (driver.switching_axis) {
+                    cancel_switch(driver.switching_axis !== axis);
                 }
 
-                if (id_axis_assigned) {
-                    axis.driver_axis = id_axis_assigned;
+                if (val) {
+                    axis.driver_axis = val;
                     
                     that.render_axis_config(driver, axis);
                     row_el.removeClass('unused');
@@ -2788,7 +2826,6 @@ export class InputManager {
             let id_axis = dri_axes_ids[j];
             opts.push('<option value="axis:'+id_axis+'"'+(btn.driver_axis == id_axis ? ' selected' : '')+'>'+dri_axes[id_axis]+'</option>');
         }
-        opts.push('<option value="=">Copy from button...</option>');
         let assignment_sel_el = $('<select>'+opts.join('')+'</select>');
         assignment_sel_el.appendTo(line_1_el);
         btn.assignment_sel_el = assignment_sel_el;
@@ -2821,65 +2858,6 @@ export class InputManager {
 
         assignment_sel_el.change((ev)=>{
             let val_btn_assigned = $(ev.target).val();
-
-            // console.log('Btn '+btn.i+' assigned to '+val_btn_assigned)
-
-            // let cancel_copy = () => {
-            //     driver.axes.forEach((a)=>{
-            //         a.raw_val_el
-            //             .unbind()
-            //             .removeClass('copy-source');
-            //         if (profile.copying_into_axis === a) {
-            //             a.assignment_sel_el.val(''); //set not in use
-            //             a.row_el
-            //                 .removeClass('copy-destination')
-            //                 .addClass('unused');
-            //         }
-            //     });
-            //     delete profile.copying_into_axis;
-            // }
-
-            // if (id_axis_assigned == '=') {
-            //     if (profile.copying_into_axis) {
-            //         // another one is waiting for input, close first
-            //         cancel_copy();
-            //     }
-            //     //console.log('Copy config for axis '+axis.id)
-            //     profile.copying_into_axis = axis;
-            //     row_el.addClass('unused copy-destination');
-
-            //     // let axes_ids = Object.keys()
-            //     driver.axes.forEach((a)=>{
-            //         if (axis == a) //skip self
-            //             return;
-            //         a.raw_val_el.addClass('copy-source')
-            //             .unbind()
-            //             .click((ev)=>{
-            //                 cancel_copy();
-            //                 console.log('Copying axis '+a.i, a);
-            //                 axis.driver_axis = a.driver_axis;
-            //                 axis.assignment_sel_el.val(a.driver_axis);
-            //                 if (axis.driver_axis) {
-            //                     axis.dead_min = a.dead_min;
-            //                     axis.dead_max = a.dead_max;
-            //                     axis.offset = a.offset;
-            //                     axis.scale = a.scale;
-            //                     axis.mod_func = a.mod_func;
-            //                     axis.scale_by_velocity_src = a.scale_by_velocity_src;
-            //                     axis.scale_by_velocity_mult_min = a.scale_by_velocity_mult_min;
-            //                     axis.scale_by_velocity_mult_max = a.scale_by_velocity_mult_max;
-            //                     render_axis_config();
-            //                     row_el.removeClass('unused');
-            //                 } else {
-            //                     row_el.addClass('unused');
-            //                 }
-            //                 that.check_controller_profile_saved(that.edited_controller, that.current_profile);
-            //             });
-            //     });
-            //     return;
-            // } else if (profile.copying_into_axis) {
-            //     cancel_copy();
-            // }
 
             if (val_btn_assigned) {
 

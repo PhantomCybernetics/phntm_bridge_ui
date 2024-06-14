@@ -2947,8 +2947,8 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     background: yellow !important;
 }
 
-#gamepad_settings .axis-val.copy-source {
-    background: #0079ff;
+#gamepad #gamepad_settings .axis-row.switch-target .axis-val {
+    background: orange;
     border: 1px dashed white;
     color: #fff;
     width: 58px;
@@ -2956,8 +2956,18 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     cursor: pointer;
 }
 
-BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
-    background: orange;
+#gamepad #gamepad_settings .axis-row.switch-target .axis-val:hover {
+    background: rgb(254, 172, 20);
+}
+
+#gamepad #gamepad_settings .axis-row.unused.switch-source SElECT,
+#gamepad #gamepad_settings .axis-row.unused.switch-source .axis-val {
+    background-color: magenta;
+    color: white;
+}
+
+#gamepad #gamepad_settings .axis-row.unused.switch-source .axis-config-details {
+   display: none !important;
 }
 
 #gamepad_settings .axis-config,
@@ -3066,18 +3076,6 @@ BODY.desktop-ui #gamepad_settings .axis-val.copy-source:hover {
     background-color: #423a81;
     color: #8c80ec;
 }
-
-#gamepad #gamepad_settings .axis-row.unused.copy-destination SElECT,
-#gamepad #gamepad_settings .button-row.unused.copy-destination SElECT {
-    background-color: #0079ff;
-    color: white;
-}
-
-#gamepad #gamepad_settings .axis-row.unused.copy-destination .axis-config-details,
-#gamepad #gamepad_settings .button-row.unused.copy-destination .btn-config-details {
-   display: none !important;
-}
-
 
 #gamepad #gamepad_settings .axis-row .config-row,
 #gamepad #gamepad_settings .button-row .config-row {
