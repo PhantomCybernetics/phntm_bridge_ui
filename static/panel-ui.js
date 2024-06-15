@@ -1962,27 +1962,37 @@ export class PanelUI {
         let w_body = $('body').innerWidth();
 
         let min_only = w_body < 600 && isTouchDevice();
-        
-        if (!min_only) {
-            $('#gamepad').css('display', 'block');
-            $('#touch-ui-top-buttons').css('display', 'block');
-            // num_btns++;
-        } else {
+        let num_btns = 1;
+
+        if (this.input_manager.disabled) {
             $('#gamepad').css('display', 'none');
             $('#touch-ui-top-buttons').css('display', 'none');
-        }
-
-        if (isTouchDevice()) {
-            $('#touch_ui').css('display', 'block');
-            
-            // num_btns++;
-        } else {
             $('#touch_ui').css('display', 'none');
-        }
+            let num_btns = 1;
+        } else {
+            if (!min_only) {
+                $('#gamepad').css('display', 'block');
+                $('#touch-ui-top-buttons').css('display', 'block');
+                // num_btns++;
+            } else {
+                $('#gamepad').css('display', 'none');
+                $('#touch-ui-top-buttons').css('display', 'none');
+            }
+    
+            if (isTouchDevice()) {
+                $('#touch_ui').css('display', 'block');
+                // num_btns++;
+            } else {
+                $('#touch_ui').css('display', 'none');
+            }
 
+            num_btns = (min_only ? 2 : isTouchDevice() ? 3 : 2);
+        }
+        
         $('#fixed-right')
-            .removeClass(['btns-4', 'btns-3', 'btns-2'])
-            .addClass('btns-'+(min_only ? 2 : isTouchDevice() ? 3 : 2));
+            .removeClass(['btns-4', 'btns-3', 'btns-2', 'btns-1'])
+            .addClass('btns-'+num_btns);
+        
     }
 
     //on resize, robot name update

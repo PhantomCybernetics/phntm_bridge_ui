@@ -35,6 +35,8 @@ export class InputManager {
 
         this.last_touch_input = {};
        
+        this.disabled = localStorage.getItem('last-input-disabled:'+this.client.id_robot) === 'true';
+
         client.on('input_config', (drivers, defaults)=>{ that.set_config(drivers, defaults); });
         client.on('services', (discovered_services)=>{ that.on_services_updated(discovered_services); });
 
@@ -248,31 +250,42 @@ export class InputManager {
     }
 
     on_ui_config() {
+        if (this.disabled)
+            return;
         this.make_ui(); // ui config may arrive later, render again with current vals (like wifi_scan_enabled)
     }
 
     set_config(enabled_drivers, robot_defaults) {
-        console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}]:`, robot_defaults);
-
-        this.enabled_drivers = enabled_drivers; // input_drivers array from the robot's config
-
-        this.robot_defaults = robot_defaults; // json from the 'input_defaults' file on the robot
         
-        if (!this.enabled_drivers || !this.enabled_drivers.length) { // no drivers allowed => no input
-            console.log('Input is disabled by the robot');
-            // TODO: hide monkey and touch icon from UI
-            return;
-        }
-
-        // this.user_defaults = {};
-       
-        //let user_defaults = {};
-        //this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
-
-        console.log('Loaded user input defaults: ', this.user_defaults);
-
         if (!this.profiles) { // only once 
+
+            if (!enabled_drivers || !enabled_drivers.length) { // no drivers allowed => no input
+                console.log('Input is disabled by the robot');
+                // TODO: hide monkey and touch icon from UI
+                $('#gamepad').css('display', 'none');
+                $('#touch_ui').css('display', 'none');
+                this.disabled = true;
+                localStorage.setItem('last-input-disabled:'+this.client.id_robot, true);
+                return;
+            }
+
+            this.disabled = false;
+            localStorage.removeItem('last-input-disabled:'+this.client.id_robot);
+
             this.profiles = {};
+
+            console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}]:`, robot_defaults);
+
+            this.enabled_drivers = enabled_drivers; // input_drivers array from the robot's config
+
+            this.robot_defaults = robot_defaults; // json from the 'input_defaults' file on the robot
+                
+            this.user_defaults = {};
+           
+            //let user_defaults = {};
+            //this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
+    
+            // console.log('Loaded user input defaults: ', this.user_defaults);
 
             // robot defined profiles
             Object.keys(robot_defaults).forEach((id_profile)=>{
@@ -322,6 +335,8 @@ export class InputManager {
                 this.current_profile = last_user_profile;
             }
 
+        } else {
+            console.info(`Input manager got robot config, reload the page to update`); // ignoring input config updates
         }
         
         this.make_profile_selector_ui();
@@ -333,7 +348,7 @@ export class InputManager {
 
     init_controller(c) {
 
-        if (this.robot_defaults === null) // wait for robot config & cookie overrides
+        if (this.disabled || this.robot_defaults === null) // wait for robot config & cookie overrides
             return;
 
         if (!c.profiles) { // only once
@@ -872,6 +887,9 @@ export class InputManager {
     }
 
     on_services_updated(discovered_services) {
+        if (this.disabled)
+            return;
+
         console.log('input manager got services', discovered_services);
         let that = this;
         Object.values(this.controllers).forEach((c)=>{
@@ -1787,6 +1805,9 @@ export class InputManager {
 
 
     make_ui() {
+
+        if (this.disabled)
+            return;
 
         let that = this;
 
