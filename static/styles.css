@@ -318,7 +318,8 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 #menu-underlay,
 #input-underlay,
 #input-manager-overlay,
-#touch-ui-dialog-underlay {
+#touch-ui-dialog-underlay,
+#dialog-modal-confirm-underlay {
     display: none;
     position: fixed;
     left: 0px;
@@ -4357,4 +4358,88 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 
 #notifications .msg.error.open .close {
     filter: unset;
+}
+
+#dialog-modal-confirm {
+    display: none;
+    position: fixed;
+    background-color: #210077;
+    z-index: 200;
+    min-width: 400px;
+    padding: 20px;
+    width: 30%;
+    font-size: 17px;
+    color: #fff;
+    border-radius: 10px;
+    left: calc(50% - max(440px, calc(30% + 40px)) / 2);
+    top: 20%;
+}
+
+#dialog-modal-confirm A {
+    color: #fff;
+}
+
+#dialog-modal-confirm .warn-icon {
+    display: block;
+    width: 50px;
+    height: 50px;
+    float: left;
+    margin-right: 18px;
+    text-align: center;
+    line-height: 40px;
+    font-size: 50px;
+    font-weight: bold;
+    font-family: emoji;
+    margin-top: 10px;
+    height: 65px;
+}
+
+#dialog-modal-confirm.warn {
+    background: #980303;
+    color: #fff;
+}
+
+#dialog-modal-confirm-underlay {
+    z-index: 199;
+}
+
+#dialog-modal-confirm-buttons {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#dialog-modal-confirm-buttons BUTTON {
+    display: block;
+    background: black;
+    color: white;
+    line-height: 40px;
+    border: 0px;
+    outline: 0px;
+    padding: 0px 15px;
+    margin: 0px 0px 0px 5px;
+    border-radius: 5px;
+    font-weight: bold;
+    float: right;
+}
+
+BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
+    background-color: rgb(25, 25, 25);
+}
+
+#dialog-modal-confirm-buttons BUTTON:active {
+    background-color: yellow;
+    color: black;
+}
+
+#dialog-modal-confirm-buttons LABEL {
+    display: block;
+    float: left;
+    line-height: 40px;
+    font-size: 15px;
+}
+
+#dialog-modal-confirm-buttons LABEL INPUT {
+    margin: 0px 5px 0px 0px;
+    position: relative;
+    top: 1px;
 }

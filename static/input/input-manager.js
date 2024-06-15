@@ -3067,7 +3067,12 @@ export class InputManager {
                 break;
             case 'wifi-roam': 
                 console.log('WIFI SCAN & ROAM');
-                that.ui.trigger_wifi_scan();
+                if (btn.touch_btn_el)
+                    btn.touch_btn_el.addClass('working');
+                that.ui.trigger_wifi_scan(()=>{
+                    if (btn.touch_btn_el)
+                        btn.touch_btn_el.removeClass('working');
+                });
                 break;
             default: 
                 break; 

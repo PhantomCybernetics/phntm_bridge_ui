@@ -85,6 +85,8 @@ export class PanelUI {
 
         this.lastAP = null;
         this.lastESSID = null;
+        let wifi_scan_warning_suppressed = localStorage.getItem('wifi-scan-warning-suppressed:'+this.client.id_robot);
+        this.wifi_scan_warning_suppressed = wifi_scan_warning_suppressed == 'true';
 
         this.graph_menu = new GraphMenu(this);
 
@@ -1321,16 +1323,94 @@ export class PanelUI {
         //     this.gamepad.MarkMappedServiceButtons();
     }
 
-    trigger_wifi_scan(callback=null) {
-        if ($('#trigger_wifi_scan').hasClass('working'))
-            return;
+    confirm_dialog(label, style, confirm_label, confirm_cb, cancel_label, cancel_cb) {
+
+        function close_dialog () {
+            $('BODY').removeClass('no-scroll');
+            $("#dialog-modal-confirm").css('display', 'none').removeClass(style).empty();
+            $('#dialog-modal-confirm-underlay').css('display', 'none').unbind();
+        }
+
+        $('BODY').addClass('no-scroll');
+        let time_shown = Date.now();
+        $('#dialog-modal-confirm-underlay').css('display', 'block').unbind().click((ev)=>{
+            if (Date.now() < time_shown+300)
+                return;
+            close_dialog();
+            cancel_cb();
+        });
+
+        let dialog = $('<div>'
+                        + label
+                        + '</div>')
+        let btns = $('<div id="dialog-modal-confirm-buttons"></div>')
+
+        let btn_ok = $('<button class="warn">'+confirm_label+'</button>')
+        btn_ok.appendTo(btns);
+
+        let btn_cancel = $('<button>'+cancel_label+'</button>')
+        btn_cancel.appendTo(btns);
+
+        let dont_show_inp = $('<input type="checkbox" id="dont_show_again"/>')
+        let dont_show_label = $('<label for="dont_show_again">Don\'t show again</label>');
+        dont_show_label.prepend(dont_show_inp);
+        dont_show_label.prependTo(btns);
+
+        btn_cancel.click(()=>{
+            close_dialog();
+            cancel_cb();
+        });
+        btn_ok.click(()=>{
+            close_dialog();
+            confirm_cb(dont_show_inp.prop('checked'));
+        });
+        
+        btns.appendTo(dialog);
+        $("#dialog-modal-confirm")
+            .empty()
+            .addClass(style)
+            .append(dialog)
+            .css('display', 'block')
+            ;
+    }
+
+    do_wifi_scan_roam(callback) {
+        console.log('do_wifi_scan_roam()');
+
         $('#trigger_wifi_scan').addClass('working');
         this.client.wifi_scan(true, (res) => {
-            $('#trigger_wifi_scan').removeClass('working');
+            $('#trigger_wifi_scan').removeClass('working');    
             if (callback) {
                 callback(res);
             }
-        })
+        });
+    }
+
+    trigger_wifi_scan(callback=null) {
+        if ($('#trigger_wifi_scan').hasClass('working'))
+            return;
+
+        let that = this;
+        if (!this.wifi_scan_warning_suppressed) {
+            this.confirm_dialog('<span class="warn-icon">🚨</span>Depending on your hardware &amp; software setup, '
+                + 'this action can currently leave your robot with <b>no access to the Internet</b>. See <a href="#" target="_blank">more info here</a><br><br>'
+                + 'Before attempting to roam, make sure you have local console access and/or can reboot the system if needed.',
+                'warn',
+                'Scan &amp; Roam', (dont_show_again) => { // confirm
+                    if (dont_show_again) {
+                        that.wifi_scan_warning_suppressed = true;
+                        localStorage.setItem('wifi-scan-warning-suppressed:'+that.client.id_robot, true); // warning won't be shown any more
+                    }
+                    that.do_wifi_scan_roam(callback);
+                }, 
+                'Cancel', () => { // cancel
+                    console.log('roaming cancelled');
+                    if (callback)
+                        callback();
+                });
+        } else {
+            that.do_wifi_scan_roam(callback);
+        }
     }
 
     //widget_opts = {};
