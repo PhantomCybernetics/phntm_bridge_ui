@@ -215,6 +215,12 @@ export class InputManager {
                 $(ev.target).removeClass('warn');
             });
 
+        $('#duplicate-input-profile').click((ev)=>{
+            that.close_profile_menu();
+            that.close_profile_basics_edit();
+            that.duplicate_current_profile();
+        });
+
         $('#input-profile-json').click((ev)=>{
             that.profile_json_to_clipboard(that.current_profile);
         });
@@ -460,6 +466,64 @@ export class InputManager {
         // focus driver options first
         $('#gamepad_settings #gamepad-settings-tab').click();
         // that.save_user_gamepad_config(); // save the new profile right away
+    }
+
+    duplicate_current_profile() {
+        
+
+        this.reset_all(); // reset current input
+        let id_new_profile = this.current_profile+'_copy_'+Date.now();
+        let label_new_profile = this.profiles[this.current_profile].label + ' copy';
+
+        console.log('Duplicating '+this.current_profile+' as '+id_new_profile);
+
+        this.profiles[id_new_profile] = {
+            id: id_new_profile,
+            label: label_new_profile,
+        }
+
+        Object.keys(this.controllers).forEach((id_controller)=>{
+            let c = this.controllers[id_controller];
+            let d = c.profiles[this.current_profile].driver;
+            let original_driver = c.profiles[this.current_profile].driver_instances[d];
+            let original_profile_conf = {};
+            this.get_controller_json(id_controller, this.current_profile, original_profile_conf);
+            if (c.type == 'gamepad' && original_profile_conf['gamepad'])
+                original_profile_conf[id_controller] = original_profile_conf['gamepad'];
+            // let axes_config = [].concat(original_driver.axes);
+            // axes_config.forEach((a)=>{
+            //     a.axis = a.i;
+            // })
+            // let btns_config = [].concat(original_driver.buttons);
+            // btns_config.forEach((b)=>{
+            //     if (c.type == 'touch' || c.type == 'gamepad') {
+            //         b.btn = b.id_src;
+            //     } else if (c.type == 'keyboard') {
+            //         b.key = b.id_src;
+            //     }
+            //     b.label = b.src_label;
+            // });
+            console.log('defaults for '+id_controller, original_profile_conf);
+            let c_profile = {
+                driver: d,
+                default_driver_config: Object.assign({}, c.profiles[this.current_profile].default_driver_config),
+                default_axes_config: original_profile_conf[id_controller].axes,
+                default_buttons_config: original_profile_conf[id_controller].buttons,
+            }
+            console.log('c_profile', c_profile, original_profile_conf);
+            c.profiles[id_new_profile] = c_profile;
+            this.init_controller_profile(c, c_profile);
+        });
+
+        this.current_profile = id_new_profile;
+        this.reset_all(); // new profile needs reset before triggering
+        this.make_ui();
+        this.render_touch_buttons();
+
+        this.check_all_controller_profiles_saved();
+
+        // focus driver options first
+        $('#gamepad_settings #gamepad-settings-tab').click();
     }
     
     delete_current_profile() {
@@ -1213,6 +1277,9 @@ export class InputManager {
     }
     
     close_profile_basics_edit() {
+        if (!this.editing_profile_basics) 
+            return;
+
         $('#gamepad-settings-container').removeClass('editing_profile_basics');
         this.editing_profile_basics = false;
         $('#input-profile-edit-label').unbind();
@@ -1329,6 +1396,7 @@ export class InputManager {
     //     //     custom_profile_ids = JSON.parse(custom_profile_ids)
     //     // }
     // }
+
 
     get_controller_json(id_controller, id_profile, out_data) {
         let c = this.controllers[id_controller];
@@ -1451,9 +1519,9 @@ export class InputManager {
         $('#input-profile-select').unbind().change((ev)=>{
             let val = $(ev.target).val()
             console.log('Selected profile val '+val);
-            if (that.editing_profile_basics) {
-                that.close_profile_basics_edit();
-            }
+            
+            that.close_profile_basics_edit();
+            
             // let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
             if (val == '+') {
                 that.make_new_profile();
@@ -3058,9 +3126,9 @@ export class InputManager {
                         return;
                     }
                     console.log('Setting input profile to '+btn.set_ctrl_profile);
-                    if (that.editing_profile_basics) {
-                        that.close_profile_basics_edit();
-                    }
+                    
+                    that.close_profile_basics_edit();
+                    
                     that.reset_all();
                     that.current_profile = btn.set_ctrl_profile;
                     that.reset_all();
