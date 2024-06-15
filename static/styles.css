@@ -2517,6 +2517,10 @@ BODY.touch-ui .editing .grid-stack-item-content {
     height: 55px;
 }
 
+BODY.desktop-ui #gamepad.open {
+    z-index: 36; /* above top menu */
+}
+
 BODY.touch-ui #gamepad {
     position: static;
 }

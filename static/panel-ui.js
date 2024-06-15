@@ -241,85 +241,17 @@ export class PanelUI {
         client.on('nodes', (nodes) => {
             that.services_menu_from_nodes(nodes);
             that.graph_from_nodes(nodes);
-            this.latest_nodes = nodes;
+            that.latest_nodes = nodes;
             that.cameras_menu_from_nodes_and_devices();
         });
 
         client.on('cameras', (cameras) => {
-            this.latest_cameras = cameras;
+            that.latest_cameras = cameras;
             that.cameras_menu_from_nodes_and_devices();
         });
 
         client.on('docker', (containers) => {
-
-            $('#docker_list').empty();
-
-            this.num_docker_containers = Object.keys(containers).length;
-
-            if (this.num_docker_containers > 0) {
-                $('#docker_controls').addClass('active');
-            } else {
-                $('#docker_controls').removeClass('active');
-            }
-
-            $('#docker_heading .full-w').html(this.num_docker_containers == 1 ? 'Container' : 'Containers');
-            $('#docker_heading B').html(this.num_docker_containers);
-
-            let i = 0;
-            Object.values(containers).forEach((container) => {
-
-                $('#docker_list').append('<div class="docker_cont ' + container.status + '" id="docker_cont_' + i + '" data-container="' + container.id + '">'
-                    // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
-                    //+ (!topic.robotTubscribed?' disabled':'')
-                    // + (panels[camera_data.id] ? ' checked': '' )
-                    // + '/> '
-                    + '<span '
-                    + 'class="docker_cont_name" '
-                    + '>'
-                    + container.name
-                    + '</span>' + ' [' + container.status + ']'
-                    + '<div class="docker_btns">'
-                    + '<button class="docker_run" title="Start"></button>'
-                    + '<button class="docker_stop" title="Stop"></button>'
-                    + '<button class="docker_restart" title="Restart"></button>'
-                    + '</div>'
-                    + '</div>'
-                );
-
-                $('#docker_cont_' + i + ' button.docker_run').click(function (event) {
-                    if ($(this).hasClass('working'))
-                        return;
-                    $(this).addClass('working');
-                    // console.log('Running '+cont_data.name);
-                    let item = this;
-                    client.docker_container_start(container.id, () => {
-                        $(item).removeClass('working');
-                    });
-                });
-                $('#docker_cont_' + i + ' button.docker_stop').click(function (event) {
-                    if ($(this).hasClass('working'))
-                        return;
-                    $(this).addClass('working');
-                    // console.log('Stopping '+cont_data.name);
-                    let item = this;
-                    client.docker_container_stop(container.id, () => {
-                        $(item).removeClass('working');
-                    });
-                });
-                $('#docker_cont_' + i + ' button.docker_restart').click(function (event) {
-                    if ($(this).hasClass('working'))
-                        return;
-                    $(this).addClass('working');
-                    // console.log('Restarting '+cont_data.name);
-                    let item = this;
-                    client.docker_container_restart(container.id, () => {
-                        $(item).removeClass('working');
-                    });
-                });
-
-                i++;
-            });
-
+            that.docker_menu_from_containers(containers);
         });
 
         client.on('peer_connected', () => {
@@ -1046,6 +978,76 @@ export class PanelUI {
                 this.panels[camera.src_id].init(camera.msg_type);
             }
         }
+    }
+
+    docker_menu_from_containers(containers) {
+        $('#docker_list').empty();
+
+        this.num_docker_containers = Object.keys(containers).length;
+
+        if (this.num_docker_containers > 0) {
+            $('#docker_controls').addClass('active');
+        } else {
+            $('#docker_controls').removeClass('active');
+        }
+
+        $('#docker_heading .full-w').html(this.num_docker_containers == 1 ? 'Container' : 'Containers');
+        $('#docker_heading B').html(this.num_docker_containers);
+
+        let i = 0;
+        Object.values(containers).forEach((container) => {
+
+            $('#docker_list').append('<div class="docker_cont ' + container.status + '" id="docker_cont_' + i + '" data-container="' + container.id + '">'
+                // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
+                //+ (!topic.robotTubscribed?' disabled':'')
+                // + (panels[camera_data.id] ? ' checked': '' )
+                // + '/> '
+                + '<span '
+                + 'class="docker_cont_name" '
+                + '>'
+                + container.name
+                + '</span>' + ' [' + container.status + ']'
+                + '<div class="docker_btns">'
+                + '<button class="docker_run" title="Start"></button>'
+                + '<button class="docker_stop" title="Stop"></button>'
+                + '<button class="docker_restart" title="Restart"></button>'
+                + '</div>'
+                + '</div>'
+            );
+
+            $('#docker_cont_' + i + ' button.docker_run').click(function (event) {
+                if ($(this).hasClass('working'))
+                    return;
+                $(this).addClass('working');
+                // console.log('Running '+cont_data.name);
+                let item = this;
+                client.docker_container_start(container.id, () => {
+                    $(item).removeClass('working');
+                });
+            });
+            $('#docker_cont_' + i + ' button.docker_stop').click(function (event) {
+                if ($(this).hasClass('working'))
+                    return;
+                $(this).addClass('working');
+                // console.log('Stopping '+cont_data.name);
+                let item = this;
+                client.docker_container_stop(container.id, () => {
+                    $(item).removeClass('working');
+                });
+            });
+            $('#docker_cont_' + i + ' button.docker_restart').click(function (event) {
+                if ($(this).hasClass('working'))
+                    return;
+                $(this).addClass('working');
+                // console.log('Restarting '+cont_data.name);
+                let item = this;
+                client.docker_container_restart(container.id, () => {
+                    $(item).removeClass('working');
+                });
+            });
+
+            i++;
+        });
     }
 
     graph_from_nodes(nodes) {

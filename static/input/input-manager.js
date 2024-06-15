@@ -77,6 +77,13 @@ export class InputManager {
             that.make_touch_buttons_editable();
         });
 
+        $('#graph_controls, #service_controls, #camera_controls, #docker_controls, #widget_controls').on('mouseenter', (ev) => {
+            if (that.open) {
+                console.log('hiding im');
+                that.input_status_icon.click();
+            }
+        });
+
         window.addEventListener('gamepadconnected', (ev) => this.on_gamepad_connected(ev));
         window.addEventListener('gamepaddisconnected', (ev) => this.on_gamepad_disconnected(ev));
     
