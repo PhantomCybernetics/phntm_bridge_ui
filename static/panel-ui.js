@@ -85,6 +85,7 @@ export class PanelUI {
 
         this.lastAP = null;
         this.lastESSID = null;
+        this.wifi_scan_enabled = false;
         let wifi_scan_warning_suppressed = localStorage.getItem('wifi-scan-warning-suppressed:'+this.client.id_robot);
         this.wifi_scan_warning_suppressed = wifi_scan_warning_suppressed == 'true';
 
@@ -230,6 +231,11 @@ export class PanelUI {
                 wifi_shown = false;
             }
             that.save_last_robot_wifi_signal_shown(wifi_shown);
+
+            if (robot_ui_config['enable_wifi_scan'])
+                this.wifi_scan_enabled = robot_ui_config['enable_wifi_scan'];
+
+            that.input_manager.on_ui_config();
         });
 
         // we must open at least one webrtc channel to establish connection, 
@@ -1387,8 +1393,14 @@ export class PanelUI {
     }
 
     trigger_wifi_scan(callback=null) {
-        if ($('#trigger_wifi_scan').hasClass('working'))
+        if (!this.wifi_scan_enabled || $('#trigger_wifi_scan').hasClass('working')) {
+            if (!this.wifi_scan_enabled) {
+                console.warn('Wi-fi scan disabled on the robot');
+            }
+            if (callback)
+                callback();
             return;
+        }
 
         let that = this;
         if (!this.wifi_scan_warning_suppressed) {
@@ -2415,7 +2427,8 @@ export class PanelUI {
 
         // + ' ' + (msg.num_peers==1?'peer':'peers')
 
-        $('#trigger_wifi_scan').css('display', msg.supports_scanning ? 'inline-block' : 'none')
+        $('#trigger_wifi_scan')
+            .css('display', msg.supports_scanning && this.wifi_scan_enabled ? 'inline-block' : 'none')
         // $('#robot_wifi_info').removeClass('offline');
 
         // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();

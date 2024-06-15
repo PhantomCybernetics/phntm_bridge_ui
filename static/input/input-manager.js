@@ -241,6 +241,10 @@ export class InputManager {
         this.make_ui();
     }
 
+    on_ui_config() {
+        this.make_ui(); // ui config may arrive later, render again with current vals (like wifi_scan_enabled)
+    }
+
     set_config(enabled_drivers, robot_defaults) {
         console.info(`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(', ')}]:`, robot_defaults);
 
@@ -2818,8 +2822,11 @@ export class InputManager {
             '<option value="ctrl-enabled"'+(btn.action == 'ctrl-enabled' ? ' selected': '')+'>Set Controller Enabled</option>',
             '<option value="input-profile"'+(btn.action == 'input-profile' ? ' selected': '')+'>Set Input Profile</option>',
             '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
-            '<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>',
         ];
+        
+        if (this.ui.wifi_scan_enabled) {
+            opts.push('<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>');
+        }
         // let dri = profile.driver_instance;
         let dri_btns = driver.get_buttons();
         let dri_btns_ids = Object.keys(dri_btns);
@@ -2929,7 +2936,7 @@ export class InputManager {
 
         this.render_btn_config(driver, btn);
 
-        if (btn.driver_btn || btn.driver_axis || btn.action) {
+        if (assignment_sel_el.val()) {
             row_el.removeClass('unused');
         } else {
             row_el.addClass('unused');
