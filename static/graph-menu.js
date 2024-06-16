@@ -29,6 +29,9 @@ export class GraphMenu {
         this.hovered_id_node = null;
         this.hovered_topic = null;
 
+        this.color_read = 'rgb(19 144 255)'; //blue
+        this.color_write = 'magenta'; //green
+
         this.margin = {top: 0, right: 0, bottom: 0, left: 0};
         this.width_svg = 0;
         this.height = 0;
@@ -54,7 +57,7 @@ export class GraphMenu {
 
         this.svg.append('defs')
             .append("marker")
-                .attr("id","head-magenta")
+                .attr("id","head-write")
                 .attr("orient", 'auto-start-reverse')
                 .attr("viewBox", '0 0 5 5')
                 .attr("markerWidth", 4)
@@ -63,12 +66,12 @@ export class GraphMenu {
                 .attr("refY",2.5)
                 .append('polygon')
                     .attr('points', '0,5 1.6666666666666667,2.5 0,0 5,2.5')
-                    .style("fill", "magenta");
+                    .style("fill", this.color_write);
 
         this.svg.append('defs')
             .append("marker")
-                .attr("id","head-green")
-                .attr("orient", 'auto')
+                .attr("id","head-read")
+                .attr("orient", 'auto-start-reverse')
                 .attr("viewBox", '0 0 5 5')
                 .attr("markerWidth", 4)
                 .attr("markerHeight", 4)
@@ -76,7 +79,7 @@ export class GraphMenu {
                 .attr("refY",2.5)
                 .append('polygon')
                     .attr('points', '0,5 1.6666666666666667,2.5 0,0 5,2.5')
-                    .style("fill", "green");
+                    .style("fill", this.color_read);
 
         this.topic_container_el.on('scroll', (e) => {
             that.redraw_links();
@@ -195,7 +198,7 @@ export class GraphMenu {
                     node_links.push({
                         node: id_node,
                         topic: id_topic,
-                        group: 1,
+                        group: 1, // write
                     });
                 });
             }
@@ -215,7 +218,7 @@ export class GraphMenu {
                     node_links.push({
                         node: id_node,
                         topic: id_topic,
-                        group: 2,
+                        group: 2, // read
                     });
                 });
             }
@@ -381,15 +384,19 @@ export class GraphMenu {
             link.path = this.svg
                 .append("path")
                 .attr("d", this.get_link_path(link))
-                .style("stroke", link.group == 1 ? 'green' : 'magenta')
+                .style("stroke", link.group == 1 ? this.color_write : this.color_read)
                 .style('fill', 'none')
                 .style('stroke-width', 2)
                 ;
 
             if (link.group == 1) {
-                link.path.attr('marker-end', 'url(#head-green)')
+                link.path.style('stroke-dasharray', '3,5');
+            }
+
+            if (link.group == 1) {
+                link.path.attr('marker-end', 'url(#head-write)')
             } else {
-                link.path.attr('marker-start', 'url(#head-magenta)')
+                link.path.attr('marker-start', 'url(#head-read)')
             }
             
         });
