@@ -35,7 +35,7 @@ export class InputManager {
 
         this.last_touch_input = {};
        
-        this.disabled = localStorage.getItem('last-input-disabled:'+this.client.id_robot) === 'true';
+        this.enabled = localStorage.getItem('last-input-enabled:'+this.client.id_robot) === 'true';
 
         client.on('input_config', (drivers, defaults)=>{ that.set_config(drivers, defaults); });
         client.on('services', (discovered_services)=>{ that.on_services_updated(discovered_services); });
@@ -250,7 +250,7 @@ export class InputManager {
     }
 
     on_ui_config() {
-        if (this.disabled)
+        if (!this.enabled)
             return;
         this.make_ui(); // ui config may arrive later, render again with current vals (like wifi_scan_enabled)
     }
@@ -264,13 +264,13 @@ export class InputManager {
                 // TODO: hide monkey and touch icon from UI
                 $('#gamepad').css('display', 'none');
                 $('#touch_ui').css('display', 'none');
-                this.disabled = true;
-                localStorage.setItem('last-input-disabled:'+this.client.id_robot, true);
+                this.enabled = false;
+                localStorage.setItem('last-input-enabled:'+this.client.id_robot, false);
                 return;
             }
 
-            this.disabled = false;
-            localStorage.removeItem('last-input-disabled:'+this.client.id_robot);
+            this.enabled = true;
+            localStorage.setItem('last-input-enabled:'+this.client.id_robot, true);
 
             this.profiles = {};
 
@@ -305,13 +305,14 @@ export class InputManager {
             });
 
             // overwrite with local
-            this.user_profiles = this.load_user_profiles();
-            Object.keys(this.user_profiles).forEach((id_profile)=>{
-                let user_profile = this.user_profiles[id_profile];
-                if (!user_profile)
-                    return;
+            this.user_profiles = {};
+            this.saved_user_profile_ids = this.load_user_profile_ids();
+            this.saved_user_profile_ids.forEach((id_profile)=>{
+
+                this.user_profiles[id_profile] = this.load_user_profile(id_profile);
+
                 if (!this.profiles[id_profile]) { // user's own profile
-                    let label = user_profile.label ? user_profile.label : id_profile;
+                    let label = this.user_profiles[id_profile].label ? this.user_profiles[id_profile].label : id_profile;
                     this.profiles[id_profile] = { 
                         label: label,
                         saved: true,
@@ -321,9 +322,9 @@ export class InputManager {
                         basics_saved: true,
                     };
                 } else {
-                    if (user_profile.label) {
-                        this.profiles[id_profile].label = user_profile.label;
-                        this.profiles[id_profile].label_saved = user_profile.label;
+                    if (this.user_profiles[id_profile].label) {
+                        this.profiles[id_profile].label = this.user_profiles[id_profile].label;
+                        this.profiles[id_profile].label_saved = this.user_profiles[id_profile].label;
                     }
                 }
             });
@@ -348,7 +349,7 @@ export class InputManager {
 
     init_controller(c) {
 
-        if (this.disabled || this.robot_defaults === null) // wait for robot config & cookie overrides
+        if (!this.enabled || this.robot_defaults === null) // wait for robot config & cookie overrides
             return;
 
         if (!c.profiles) { // only once
@@ -394,26 +395,27 @@ export class InputManager {
                 }
 
                 // overwrite with user defaults
-                let user_defaults = this.load_user_controller_profile_config(c.id, id_profile);
-                if (user_defaults) {
+                if (this.user_profiles[id_profile] && this.user_profiles[id_profile][c.id]) {
+                    let user_defaults = this.user_profiles[id_profile][c.id];
                     console.log(c.id+' loaded user defults for '+id_profile, user_defaults);
                     profile_default_cfg = user_defaults;
                 }
 
-                if (!profile_default_cfg.driver) {
-                    profile_default_cfg.driver = this.enabled_drivers[0];
-                    console.warn('Controller profile '+id_profile+' for '+c.type+' missing driver, fallback='+profile_default_cfg.driver+'; config=', profile_default_cfg)
+                let driver = profile_default_cfg.driver;
+                if (!driver || this.enabled_drivers.indexOf(driver) < 0) {
+                    driver = this.enabled_drivers[0];
+                    console.warn('Controller profile '+id_profile+' for '+c.type+' missing driver, fallback='+driver+'; config=', profile_default_cfg)
                 }
 
                 let c_profile = {
-                    driver: profile_default_cfg.driver,
+                    driver: driver,
                     default_driver_config: {},
                     default_axes_config: profile_default_cfg.axes ? profile_default_cfg.axes : [],
                     default_buttons_config: profile_default_cfg.buttons ? profile_default_cfg.buttons : []
                 }
                 
-                if (profile_default_cfg.driver_config) {
-                    c_profile.default_driver_config[profile_default_cfg.driver] = profile_default_cfg.driver_config;
+                if (profile_default_cfg.driver_config && driver == profile_default_cfg.driver) { //only using driver defaults if the driver matches
+                    c_profile.default_driver_config[driver] = profile_default_cfg.driver_config;
                 }
 
                 c.profiles[id_profile] = c_profile;
@@ -762,11 +764,11 @@ export class InputManager {
         }
 
         if (default_config) {
-            if (default_config.btn !== undefined) { //gp
+            if (default_config.btn !== undefined && default_config.btn !== null) { //gp
                 new_btn.id_src = parseInt(default_config.btn);
                 new_btn.src_label = this.gamepad_button_label(new_btn.id_src);
             }
-            if (default_config.key !== undefined) { //kb
+            if (default_config.key !== undefined && default_config.key !== null) { //kb
                 new_btn.id_src = default_config.key.toLowerCase();
                 if (default_config.key_mod !== undefined) {
                     new_btn.key_mod = default_config.key_mod.toLowerCase();
@@ -887,7 +889,7 @@ export class InputManager {
     }
 
     on_services_updated(discovered_services) {
-        if (this.disabled)
+        if (!this.enabled)
             return;
 
         console.log('input manager got services', discovered_services);
@@ -1327,12 +1329,21 @@ export class InputManager {
         return state;
     }
 
-    load_user_profiles() {
-        let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
+    load_user_profile(id_profile) {
+        let val = localStorage.getItem('input-profile:' + this.client.id_robot + ':' + id_profile);
         return val ? JSON.parse(val) : {};
     }
 
-    save_user_profiles(user_profiles) { //[ { id: 'id_profile', label: 'label'}, ... ]
+    // save_user_profile(id_profile, data) {
+    //     localStorage.setItem('input-profile:' + this.client.id_robot + ':' + id_profile, data);
+    // }
+
+    load_user_profile_ids() {
+        let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
+        return val ? JSON.parse(val) : [];
+    }
+
+    save_user_profile_ids(user_profiles) { //[ { id: 'id_profile', label: 'label'}, ... ]
         localStorage.setItem('input-profiles:' + this.client.id_robot, JSON.stringify(user_profiles));
     }
 
@@ -1340,33 +1351,33 @@ export class InputManager {
 
         let profile = this.profiles[id_profile];
 
+        if (this.saved_user_profile_ids.indexOf(id_profile) === -1)
+            this.saved_user_profile_ids.push(id_profile);
+        
         if (!this.user_profiles[id_profile])
             this.user_profiles[id_profile] = {};
-        
+
         this.user_profiles[id_profile].label = profile.label;
         profile.label_saved = profile.label;
         
-        if (!this.user_profiles[id_profile]['controllers'])
-            this.user_profiles[id_profile]['controllers'] = [];
-
-        if (profile.id_saved != id_profile) { // move cookies on profile id change
-            if (this.user_profiles[profile.id_saved] && this.user_profiles[profile.id_saved].controllers) {
-                this.user_profiles[profile.id_saved].controllers.forEach((id_profile_controller)=>{
-                    let old_cookie = 'controller-profile:'+this.client.id_robot+':'+profile.id_saved+':'+id_profile_controller;
-                    let old_val = localStorage.getItem(old_cookie);
-                    localStorage.removeItem(old_cookie);
-                    if (old_val) {
-                        let new_cookie = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_profile_controller;
-                        localStorage.setItem(new_cookie, old_val);
-                        if (this.user_profiles[id_profile]['controllers'].indexOf(id_profile_controller) === -1)
-                            this.user_profiles[id_profile]['controllers'].push(id_profile_controller);
-                    }
-                });
-            }
-            delete this.user_profiles[profile.id_saved];
-            profile.id_saved = id_profile;
-            this.save_last_user_profile(id_profile);
-        }
+        // if (profile.id_saved != id_profile) { // move cookies on profile id change
+        //     if (this.user_profiles[profile.id_saved] && this.user_profiles[profile.id_saved].controllers) {
+        //         this.user_profiles[profile.id_saved].controllers.forEach((id_profile_controller)=>{
+        //             let old_cookie = 'controller-profile:'+this.client.id_robot+':'+profile.id_saved+':'+id_profile_controller;
+        //             let old_val = localStorage.getItem(old_cookie);
+        //             localStorage.removeItem(old_cookie);
+        //             if (old_val) {
+        //                 let new_cookie = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_profile_controller;
+        //                 localStorage.setItem(new_cookie, old_val);
+        //                 if (this.user_profiles[id_profile]['controllers'].indexOf(id_profile_controller) === -1)
+        //                     this.user_profiles[id_profile]['controllers'].push(id_profile_controller);
+        //             }
+        //         });
+        //     }
+        //     delete this.user_profiles[profile.id_saved];
+        //     profile.id_saved = id_profile;
+        //     this.save_last_user_profile(id_profile);
+        // }
 
         Object.keys(this.controllers).forEach((id_controller)=>{
             let c = this.controllers[id_controller];
@@ -1374,14 +1385,12 @@ export class InputManager {
             let c_profile = c.profiles[id_profile];
             if (c_profile && !c_profile.saved) {
 
-                if (this.user_profiles[id_profile]['controllers'].indexOf(id_controller) === -1)
-                    this.user_profiles[id_profile]['controllers'].push(id_controller);
 
                 let c_profile_data = this.get_controller_profile_config(c, id_profile, true); // filters assigned axes & buttons
 
+                this.user_profiles[id_profile][id_controller] = c_profile_data;
+
                 console.log('Saving profile '+id_profile+' for '+c.id, c_profile_data);
-                let cookie = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+c.id;
-                localStorage.setItem(cookie, JSON.stringify(c_profile_data));
 
                 this.set_saved_controller_profile_state(c, id_profile);
                 this.check_controller_profile_saved(c, id_profile, false);
@@ -1389,19 +1398,21 @@ export class InputManager {
 
         });
 
-        this.save_user_profiles(this.user_profiles);
+        localStorage.setItem('input-profile:' + this.client.id_robot + ':' + id_profile, JSON.stringify(this.user_profiles[id_profile]));
+
+        this.save_user_profile_ids(this.saved_user_profile_ids);
         this.check_profile_basics_saved(id_profile, true);
     }
 
-    load_user_controller_profile_config(id_controller, id_profile) {
-        let cookie_conf = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_controller;
-        let val = localStorage.getItem(cookie_conf);
+    // load_user_controller_profile_config(id_controller, id_profile) {
+    //     let cookie_conf = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_controller;
+    //     let val = localStorage.getItem(cookie_conf);
 
-        if (val)
-            return JSON.parse(val);
-        else
-            return null;
-    }
+    //     if (val)
+    //         return JSON.parse(val);
+    //     else
+    //         return null;
+    // }
 
     // save_edited_profile_ids() {
         
@@ -1806,7 +1817,7 @@ export class InputManager {
 
     make_ui() {
 
-        if (this.disabled)
+        if (!this.enabled)
             return;
 
         let that = this;

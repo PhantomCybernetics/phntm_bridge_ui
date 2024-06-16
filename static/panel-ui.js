@@ -1962,13 +1962,13 @@ export class PanelUI {
         let w_body = $('body').innerWidth();
 
         let min_only = w_body < 600 && isTouchDevice();
-        let num_btns = 1;
+        let num_btns = 0;
 
-        if (this.input_manager.disabled) {
+        if (!this.input_manager.enabled) {
             $('#gamepad').css('display', 'none');
             $('#touch-ui-top-buttons').css('display', 'none');
             $('#touch_ui').css('display', 'none');
-            let num_btns = 1;
+            num_btns = 1;
         } else {
             if (!min_only) {
                 $('#gamepad').css('display', 'block');
