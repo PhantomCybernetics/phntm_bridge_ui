@@ -427,6 +427,9 @@ export class PhntmBridgeClient extends EventTarget {
                 that.pc = null;
             }
         });
+
+        this.on('peer_connected', () => this.start_heartbeat());
+        this.on('peer_disconnected', () => this.stop_heartbeat());
         // pc = InitPeerConnection(id_robot);
     }
 
@@ -680,16 +683,16 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    when_message_types_loaded(cb) {
-        if (this.supported_msg_types === null) {
-            this.once('message_types_loaded', () => {
-                console.log('message_types_loaded');
-                cb();
-            });
-        } else {
-            cb();
-        }
-    }
+    // when_message_types_loaded(cb) {
+    //     if (this.supported_msg_types === null) {
+    //         this.once('message_types_loaded', () => {
+    //             console.log('message_types_loaded');
+    //             cb();
+    //         });
+    //     } else {
+    //         cb();
+    //     }
+    // }
 
     connect() {
         if (this.supported_msg_types === null) {
@@ -698,8 +701,47 @@ export class PhntmBridgeClient extends EventTarget {
             return;
         }
 
+        this.start_heartbeat(); // make webrtc data channel (at least one needed to open webrtc connection)
+
         console.log('Connecting Socket.io...')
         this.socket.connect();
+    }
+
+    start_heartbeat() {
+        if (this.heartbeat_timer)
+            return;
+
+        this.heartbeat_logged = false;
+        this.heartbeat_writer = this.get_writer('_heartbeat', 'std_msgs/msg/Byte');
+
+        if (!this.heartbeat_writer)
+            console.error('Error setting up heartbeat writer');
+        else {
+            console.log('heartbeat writer ready');
+            let that = this;
+            that.heartbeat_timer = window.setInterval(()=>{
+
+                if (that.pc.connectionState != 'connected')
+                    return;
+
+                if (!that.heartbeat_writer.send({data: 1})) { // true when ready and written
+                    console.warn('Failed to send heartbeat');
+                    that.heartbeat_logged = false;
+                } else if (!that.heartbeat_logged) {
+                    console.log('Heartbeat started');
+                    that.heartbeat_logged = true;
+                }
+
+            }, 3000);
+        }
+    }
+
+    stop_heartbeat() {
+        if (this.heartbeat_timer) {
+            console.log('Heartbeat stopped');
+            window.clearInterval(this.heartbeat_timer);
+            this.heartbeat_timer = null;
+        }
     }
 
     get_bridge_file_url(url) {
