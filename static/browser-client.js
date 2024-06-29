@@ -34,9 +34,12 @@ class TopicWriter {
             return false; //err
         }
 
-        let payload = this.msg_writer.writeMessage(msg); //to binary
         //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
-        this.dc.send(payload);
+        setTimeout(()=>{
+            let payload = this.msg_writer.writeMessage(msg); //to binary
+            this.dc.send(payload);
+        }, 0);
+
         return true;
     }
 }
@@ -735,7 +738,6 @@ export class PhntmBridgeClient extends EventTarget {
     }
 
     start_heartbeat() {
-        return;
 
         if (this.heartbeat_timer)
             return;
@@ -748,7 +750,7 @@ export class PhntmBridgeClient extends EventTarget {
         else {
             console.log('heartbeat writer ready');
             let that = this;
-            that.heartbeat_timer = window.setInterval(()=>{
+            that.heartbeat_timer = setInterval(()=>{
 
                 if (!that.pc || that.pc.connectionState != 'connected')
                     return;
@@ -768,7 +770,7 @@ export class PhntmBridgeClient extends EventTarget {
     stop_heartbeat() {
         if (this.heartbeat_timer) {
             console.log('Heartbeat stopped');
-            window.clearInterval(this.heartbeat_timer);
+            clearInterval(this.heartbeat_timer);
             this.heartbeat_timer = null;
         }
     }
