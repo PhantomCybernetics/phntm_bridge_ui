@@ -24,7 +24,9 @@ export class Panel {
 
     max_trace_length = 100;
     zoom = null;
-    default_zoom = 1;
+    default_zoom = 1.0;
+    rot = null;
+    default_rot = 0.0;
 
     grid_widget = null;
 
@@ -35,7 +37,7 @@ export class Panel {
     editing = false;
     //const event = new Event("build");
 
-    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, custom_url_vars) {
+    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, rot, custom_url_vars) {
         this.ui = ui;
         let panels = ui.panels;
         let grid = ui.grid;
@@ -44,6 +46,7 @@ export class Panel {
         this.src_visible = src_visible;
         this.paused = false;
         this.zoom = zoom;
+        this.rot = rot;
         this.custom_url_vars = custom_url_vars;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
 
@@ -261,6 +264,9 @@ export class Panel {
                 this.msg_type = msg_type;
                 if (this.zoom === undefined || this.zoom === null) {
                     this.zoom = this.default_zoom;
+                }
+                if (this.rot === undefined || this.rot === null) {
+                    this.rot = this.default_rot;
                 }
                 if (msg_type != 'video') {
                     this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;

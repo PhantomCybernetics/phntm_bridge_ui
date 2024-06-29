@@ -14,8 +14,8 @@ export class LaserScanWidget {
 
         $('#panel_widget_'+panel.n).addClass('enabled laser_scan');
 
-        const canvas = $('#panel_widget_'+panel.n).html('<canvas id="panel_canvas_'+panel.n+'" width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
-        this.ctx = canvas.getContext("2d");
+        this.canvas = $('#panel_widget_'+panel.n).html('<canvas id="panel_canvas_'+panel.n+'" width="'+panel.widget_width +'" height="'+panel.widget_height+'"></canvas>').find('canvas')[0];
+        this.ctx = this.canvas.getContext("2d");
 
         let that = this;
 
@@ -30,6 +30,7 @@ export class LaserScanWidget {
         panel.widget_menu_cb = () => {
 
             let zoom = panel.zoom === null || panel.zoom === undefined ? '?' : panel.zoom.toFixed(1);
+            let rot = panel.rot === null || panel.rot === undefined ? '?' : panel.rot.toFixed(0);
 
             $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + panel.n + '">' +
               '<span class="minus">-</span>' +
@@ -46,8 +47,26 @@ export class LaserScanWidget {
             });
 
             $('#zoom_ctrl_'+this.panel.n+' .val').click(function(ev) {
-                that.setZoom(1.0);
+                that.setZoom(that.panel.default_zoom);
             });
+
+            $('<div class="menu_line rot_ctrl" id="rot_ctrl_' + panel.n + '">' +
+                '<span class="rot-left"><span class="icon"></span></span>' +
+                '<button class="val" title="Reset zoom">Rotate: ' + rot + '°</button>' +
+                '<span class="rot-right"><span class="icon"></span></span>' +
+                '</div>')
+                .insertAfter($('#zoom_ctrl_'+panel.n));
+              
+              $('#rot_ctrl_'+panel.n+' .rot-right').click(function(ev) {
+                  that.setRot(that.panel.rot + 45.0);
+              });
+              $('#rot_ctrl_'+panel.n+' .rot-left').click(function(ev) {
+                  that.setRot(that.panel.rot - 45.0);
+              });
+  
+              $('#rot_ctrl_'+this.panel.n+' .val').click(function(ev) {
+                  that.setRot(that.panel.default_rot);
+              });
         }
 
         // window.addEventListener('resize', () => {
@@ -191,6 +210,26 @@ export class LaserScanWidget {
         this.renderDirty();
     }
 
+    setRot(rot) {
+
+        // panel.zoom +=1.0;
+        // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        // panel.ui.update_url_hash();
+
+        let panel = this.panel;
+        if (rot < -1.0) {
+            rot = 270.0;
+        } else if (rot > 359.0) {
+            rot = 0.0;
+        }
+        panel.rot = rot;
+        $('#rot_ctrl_'+panel.n+' .val')
+            .html('Rotate: '+panel.rot.toFixed(0)+'°');
+        panel.ui.update_url_hash();
+        
+        this.renderDirty();
+    }
+
     renderDirty() {
         this.render_dirty = true;
     }
@@ -220,7 +259,7 @@ export class LaserScanWidget {
                 decoded.ranges[i] * this.scale
             ]
 
-            let arad = deg2rad(anglePerSample * i);
+            let arad = deg2rad(anglePerSample * i - this.panel.rot);
             let p = [
                 Math.cos(arad)*pos[0] - Math.sin(arad)*pos[1],
                 Math.sin(arad)*pos[0] + Math.cos(arad)*pos[1]

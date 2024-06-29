@@ -1610,7 +1610,8 @@ BODY.desktop-ui .monitor_menu_content .menu_line:hover,
 }
 
 BODY.desktop-ui .monitor_menu_content .panel_msg_types_line:hover,
-BODY.desktop-ui .monitor_menu_content .menu_line.zoom_ctrl:hover {
+BODY.desktop-ui .monitor_menu_content .menu_line.zoom_ctrl:hover,
+BODY.desktop-ui .monitor_menu_content .menu_line.rot_ctrl:hover {
     background-color: unset;
 } 
 
@@ -3534,7 +3535,8 @@ BODY.touch-gamepad .grid-stack-item-content {
     inset: 0; /* TODO change top: if you have content in nested grid */
   }
 
-  .menu_line.zoom_ctrl {
+  .menu_line.zoom_ctrl,
+  .menu_line.rot_ctrl {
     line-height: 30px;
     height: 35px;
     text-align: center;
@@ -3542,11 +3544,13 @@ BODY.touch-gamepad .grid-stack-item-content {
     min-width: 180px;
   }
 
-  .menu_line.zoom_ctrl .minus {
+  .menu_line.zoom_ctrl .minus,
+  .menu_line.rot_ctrl .rot-left {
     left: 5px;
   }
 
-  .menu_line.zoom_ctrl .val {
+  .menu_line.zoom_ctrl .val,
+  .menu_line.rot_ctrl .val {
     display: block;
     margin: 0px 0px 0px -50px;
     float: none;
@@ -3559,16 +3563,20 @@ BODY.touch-gamepad .grid-stack-item-content {
     width: 100px;
   }
 
-  .menu_line.zoom_ctrl .plus {
+  .menu_line.zoom_ctrl .plus,
+  .menu_line.rot_ctrl .rot-right {
     right: 5px;
   }
 
   .menu_line.zoom_ctrl .minus,
-  .menu_line.zoom_ctrl .plus {
+  .menu_line.zoom_ctrl .plus,
+  .menu_line.rot_ctrl .rot-left,
+  .menu_line.rot_ctrl .rot-right {
     position: absolute;
     bottom: 5px;
     display:block;
     width: 40px;
+    height: 30px;
     cursor: pointer;
     font-weight: bold;
     font-size: 20px;
@@ -3579,8 +3587,27 @@ BODY.touch-gamepad .grid-stack-item-content {
     user-select: none; /* Standard syntax */
   }
 
+  .menu_line.rot_ctrl .rot-left .icon,
+  .menu_line.rot_ctrl .rot-right .icon {
+    background-image: url(/static//icon-rotate.png);
+    background-size: 40px;
+    background-repeat: no-repeat;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 10px;
+    top: 7px;
+    background-position: 0px 0px;
+  }
+
+  .menu_line.rot_ctrl .rot-right .icon {
+    background-position: -20px 0px;
+  }
+
   .menu_line.zoom_ctrl .minus:hover,
-  .menu_line.zoom_ctrl .plus:hover {
+  .menu_line.zoom_ctrl .plus:hover,
+  .menu_line.rot_ctrl .rot-left:hover,
+  .menu_line.rot_ctrl .rot-right:hover {
     background-color: #006dff;
   }
 

@@ -1561,11 +1561,15 @@ export class PanelUI {
             ];
             if (that.panels[id_source].src_visible)
                 parts.push('src');
-            if (that.panels[id_source].zoom !== undefined
-                && that.panels[id_source].zoom !== null
+            if (that.panels[id_source].zoom !== undefined && that.panels[id_source].zoom !== null
                 && that.panels[id_source].zoom != that.panels[id_source].default_zoom) {
                 let z = Math.round(that.panels[id_source].zoom * 100) / 100;
                 parts.push('z=' + z);
+            }
+            if (that.panels[id_source].rot !== undefined && that.panels[id_source].rot !== null
+                && that.panels[id_source].rot != that.panels[id_source].default_rot) {
+                let r = that.panels[id_source].rot.toFixed(0);
+                parts.push('r=' + r);
             }
             console.log('update_url_hash for ' + id_source + ': ', that.panels[id_source].display_widget);
             if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== 'undefined') {
@@ -1615,6 +1619,7 @@ export class PanelUI {
             //opional vars follow
             let src_on = false;
             let zoom = null;
+            let rot = null;
             let custom_vars = [];
             for (let j = 3; j < src_vars.length; j++) {
                 if (src_vars[j] == 'src') {
@@ -1623,6 +1628,9 @@ export class PanelUI {
                 else if (src_vars[j].indexOf('z=') === 0) {
                     zoom = parseFloat(src_vars[j].substr(2));
                     console.log('Found zoom for ' + id_source + ': ' + src_vars[j] + ' => ', zoom);
+                } else if (src_vars[j].indexOf('r=') === 0) {
+                        rot = parseFloat(src_vars[j].substr(2));
+                        console.log('Found rot for ' + id_source + ': ' + src_vars[j] + ' => ', rot);
                 } else {
                     custom_vars.push(src_vars[j].split('='));
                 }
@@ -1640,6 +1648,7 @@ export class PanelUI {
                 'y': y,
                 'src_on': src_on,
                 'zoom': zoom,
+                'rot': rot,
                 'custom_vars': custom_vars
             });
         }
@@ -1650,7 +1659,7 @@ export class PanelUI {
                     let p = panels_to_make_sorted[j];
                     if (p.x == x && p.y == y) {
 
-                        this.make_panel(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.custom_vars)
+                        this.make_panel(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.rot, p.custom_vars)
                         if (this.widgets[p.id_source]) {
                             this.panels[p.id_source].init(p.id_source);
                         } // else if (this.widgets[id_source]) {
