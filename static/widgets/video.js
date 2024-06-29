@@ -47,7 +47,7 @@ export class VideoWidget {
 
         this.overlay_sources = new MultiTopicSource(this);
         this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1, this.on_overlay_data, this.clear_overlay);
-        this.overlay_sources.onChange = this.setupOverlatMenuControls;
+        this.overlay_sources.onChange = this.setupOverlayMenuControls;
         this.parseUrlParts(this.panel.custom_url_vars); 
 
         this.overlay_labels = { '/oak/nn/detections' : [
@@ -158,9 +158,10 @@ export class VideoWidget {
         ]};
     }
 
-    setupOverlatMenuControls = () => {
+    setupOverlayMenuControls = () => {
         if (!this.overlay_extra_controls_rendered && this.overlay_sources && this.overlay_sources.hasSources())  {
-            this.overlay_extra_controls_rendered = true;
+            this.overlay_extra_controls_rendered = true; //only add once to DOM
+
             // overlay input area
             $('<div class="menu_line overlay_menu_ctrl"><label for="video_overlay_input_crop_cb_'+this.panel.n+'">'
                 +'<input type="checkbox"'
@@ -173,14 +174,17 @@ export class VideoWidget {
                 if ($(this).prop('checked')) {
                     that.display_overlay_input_crop = true;
                     $('#video_overlay_'+that.panel.n+' svg').addClass('display_crop');
+                    that.panel.ui.update_url_hash();
                 } else {
                     that.display_overlay_input_crop = false;
                     $('#video_overlay_'+that.panel.n+' svg').removeClass('display_crop');
+                    that.panel.ui.update_url_hash();
                 }
             });
 
         } else if (this.overlay_extra_controls_rendered && (!this.overlay_sources || !this.overlay_sources.hasSources())) { //remove
             this.overlay_extra_controls_rendered = false;
+
             $('#monitor_menu_content_'+this.panel.n+' .overlay_menu_ctrl').remove();
         }
     }
@@ -220,7 +224,7 @@ export class VideoWidget {
             }
         });
 
-        this.setupOverlatMenuControls();
+        this.setupOverlayMenuControls();
     }
 
     on_overlay_data = (topic, data) => {
