@@ -292,7 +292,7 @@ export class DescriptionTFWidget extends EventTarget {
         if (start_loop) {
             this.rendering = true;
             this.renderDirty();
-            this.rendering_loop();        
+            requestAnimationFrame((t) => this.rendering_loop());  
         }
     }
 
@@ -477,7 +477,7 @@ export class DescriptionTFWidget extends EventTarget {
         // });
     }
 
-    on_tf_data (topic, tf) {
+    async on_tf_data (topic, tf) {
         if (this.panel.paused)
             return;
 
@@ -623,7 +623,7 @@ export class DescriptionTFWidget extends EventTarget {
         console.warn('on_model_removed');
     }
 
-    on_description_data (topic, desc) {
+    async on_description_data (topic, desc) {
 
         if (this.panel.paused)
             return;
@@ -836,7 +836,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.render_dirty = true;
     }
 
-    rendering_loop() {
+    async rendering_loop() {
 
         if (!this.rendering)
             return;
@@ -948,10 +948,7 @@ export class DescriptionTFWidget extends EventTarget {
             }
         }        
 
-        window.requestAnimationFrame((step)=>{
-            this.rendering_loop()
-        });
-
+        requestAnimationFrame((t) => this.rendering_loop());
     }
 
 }

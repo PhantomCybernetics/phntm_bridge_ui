@@ -2855,6 +2855,41 @@ BODY.desktop-ui BUTTON#delete-input-profile:active {
     background-color: rgb(173, 0, 0);
 }
 
+BUTTON#delete-input-profile .icon {
+    display: none;
+}
+
+@keyframes delete_wobble {
+    0%   {rotate: 3deg;}
+    /* 25%  {rotate: -5deg} */
+    50%  {rotate: -3deg}
+    /* 75%  {rotate: -5deg} */
+    100% {rotate: 3deg}
+  }
+
+.monitor_menu_content .menu_line.warn A .icon,
+BUTTON#delete-input-profile.warn .icon {
+    display: block;
+    width: 17px;
+    height: 21px;
+    right: 7px;
+    top: 6px;
+    position: absolute;
+    background-image: url(/static/icon-trash.png);
+    background-repeat: no-repeat;
+    background-position: 0px 0px;
+    background-size: 17px;
+    left: unset;
+    animation-name: delete_wobble;
+    animation-duration: .2s;
+    animation-iteration-count: infinite;
+}
+.monitor_menu_content .menu_line.warn A .icon {
+    width: 20px;
+    height: 24px;
+    background-size: 20px;
+    top: 7px;
+}
 
 #gamepad_settings .tab {
     display: block;
@@ -3635,6 +3670,12 @@ BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
     background-size: 80px;
     background-repeat: no-repeat;
     background-position: 0px 0px;
+}
+
+@supports (-webkit-touch-callout: none) {
+    BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
+        display: none; /* use "hide toolbar" on ios */
+    }
 }
 
 BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle:active {

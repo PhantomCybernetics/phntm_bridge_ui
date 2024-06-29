@@ -103,7 +103,7 @@ export class Panel {
 
         this.ui.client.on(id_source, this._on_data_context_wrapper);
 
-        window.setTimeout(()=>{
+        setTimeout(()=>{
             panels[id_source].onResize()
         }, 300); // resize at the end of the animation
 
@@ -428,7 +428,7 @@ export class Panel {
             els.push(msgTypesEl);
         }
 
-        let closeEl = $('<div class="menu_line close_panel" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel</a></div>');
+        let closeEl = $('<div class="menu_line close_panel" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel<span class="icon"></span></a></div>');
         closeEl.click(function(ev) {
 
             if (!isTouchDevice() || closeEl.hasClass('warn')) {

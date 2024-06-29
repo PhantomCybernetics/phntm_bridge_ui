@@ -168,7 +168,7 @@ export class LaserScanWidget {
         el.onpointerleave = pointerupHandler;
 
         this.rendering = true;
-        this.rendering_loop();     
+        requestAnimationFrame((t)=> this.rendering_loop());
     }
 
     setZoom(zoom) {
@@ -201,7 +201,7 @@ export class LaserScanWidget {
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);
 
-    onData = (decoded) => {
+    async onData (decoded) {
         let numSamples = decoded.ranges.length;
         let anglePerSample = 360.0 / numSamples;
 
@@ -246,13 +246,11 @@ export class LaserScanWidget {
             return;
     
         if (this.render_dirty) {
-            this.render();
             this.render_dirty = false;
+            this.render();
         }
 
-        window.requestAnimationFrame((step)=>{
-            this.rendering_loop()
-        });
+        requestAnimationFrame((t)=> this.rendering_loop());
     }
 
     render = () => {

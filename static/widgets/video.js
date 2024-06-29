@@ -19,6 +19,8 @@ export class VideoWidget {
 
         this.el = $('#panel_video_'+panel.n);
         this.overlay_el = $('#video_overlay_'+panel.n);
+        this.video_stats_el = $('#video_stats_' + panel.n);
+        this.video_fps_el = $('#video_fps_' + panel.n);
 
         let that = this;
         this.videoWidth = -1;
@@ -197,13 +199,13 @@ export class VideoWidget {
         let that = this;
         $('#video_fps_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
-                $('#video_fps_'+that.panel.n).addClass('enabled');
+                that.video_fps_el.addClass('enabled');
             } else {
-                $('#video_fps_'+that.panel.n).removeClass('enabled');
+                that.video_fps_el.removeClass('enabled');
             }
         });
 
-        $('#video_fps_'+this.panel.n).addClass('enabled'); //on by default
+        this.video_fps_el.addClass('enabled'); //on by default
 
         //stats menu toggle
         $('<div class="menu_line"><label for="video_stats_cb_'+this.panel.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+this.panel.n+'">'
@@ -212,9 +214,9 @@ export class VideoWidget {
 
         $('#video_stats_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
-                $('#video_stats_'+that.panel.n).addClass('enabled');
+                that.video_stats_el.addClass('enabled');
             } else {
-                $('#video_stats_'+that.panel.n).removeClass('enabled');
+                that.video_stats_el.removeClass('enabled');
             }
         });
 

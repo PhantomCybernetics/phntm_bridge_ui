@@ -151,7 +151,9 @@ export class PhntmBridgeClient extends EventTarget {
         this.socket = io(this.socket_url, {
             path: this.socket_path,
             auth: this.socket_auth,
-            autoConnect: this.socket_auto_connect
+            autoConnect: this.socket_auto_connect,
+            forceNew: true,
+            transport: 'websocket'
         });
 
         this.socket.on("connect", () => {
@@ -171,24 +173,28 @@ export class PhntmBridgeClient extends EventTarget {
 
             console.log('Socket.io connected with id '+that.socket.id+', requesting:', req_data);
 
-            that.socket.emit('robot', req_data,
-                (robot_data) => {
-                    that._process_robot_data(robot_data, (answer_data) => {
-                        that.socket.emit('sdp:answer', answer_data, (res_answer) => {
-                            if (!res_answer || !res_answer['success']) {
-                                console.error('Error answering topic read subscription offer: ', res_answer);
-                                return;
-                            }
+            setTimeout(()=>{
+                that.socket.emit('robot', req_data,
+                    (robot_data) => {
+                        that._process_robot_data(robot_data, (answer_data) => {
+                            that.socket.emit('sdp:answer', answer_data, (res_answer) => {
+                                if (!res_answer || !res_answer['success']) {
+                                    console.error('Error answering topic read subscription offer: ', res_answer);
+                                    return;
+                                }
+                            });
                         });
-                    });
-                }
-            );
+                    }
+                );
+            }, 0);
         });
 
         this.socket.on("disconnect", () => {
             console.log('Socket.io disconnected'); // undefined
             that.robot_online = false;
-            that.emit('socket_disconnect');
+            setTimeout(()=>{
+                that.emit('socket_disconnect');
+            }, 0);
         });
 
         this.socket.on("error", (err) => {
@@ -200,31 +206,37 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on('instance', (id_instance) => {
-            if (that.socket_auth.id_instance != id_instance) {
-                console.warn('Got new id instance: '+id_instance);
-                if (that.pc) {
-                    console.warn('Removing pc for old instance: '+that.socket_auth.id_instance);
-                    that.pc.close();
-                    that.pc = null;
+            setTimeout(()=>{
+                if (that.socket_auth.id_instance != id_instance) {
+                    console.warn('Got new id instance: '+id_instance);
+                    if (that.pc) {
+                        console.warn('Removing pc for old instance: '+that.socket_auth.id_instance);
+                        that.pc.close();
+                        that.pc = null;
+                    }
+                    that.socket_auth.id_instance = id_instance;
                 }
-                that.socket_auth.id_instance = id_instance;
-            }
+            }, 0);
         });
 
         this.socket.on('robot', (robot_data, return_callback) => {
-            that._process_robot_data(robot_data, return_callback);
+            setTimeout(()=>{
+                that._process_robot_data(robot_data, return_callback);
+            }, 0)
         });
 
         this.socket.on("robot:update", (update_data, return_callback) => {
-            that._process_robot_data(update_data, return_callback);
+            setTimeout(()=>{
+                that._process_robot_data(update_data, return_callback);
+            }, 0);
         });
-
-      
 
         this.socket.on("introspection", (state) => {
             console.log('Got introspetion state '+state); // undefined
             that.introspection = state;
-            that.emit('introspection', that.introspection);
+            setTimeout(()=>{
+                that.emit('introspection', that.introspection);
+            }, 0);
         });
 
         this.socket.on('nodes', (nodes_data) => {
@@ -234,51 +246,54 @@ export class PhntmBridgeClient extends EventTarget {
 
             console.warn('Raw nodes: ', nodes_data);
 
-            this.discovered_nodes = {};
-            Object.keys(nodes_data[this.id_robot]).forEach((node)=>{
-                this.discovered_nodes[node] = {
-                    node: node,
-                    namespace: nodes_data[this.id_robot][node]['namespace'],
-                    publishers: {},
-                    subscribers: {},
-                    services: {},
-                }
-                if (nodes_data[this.id_robot][node]['publishers']) {
-                    let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
-                    topics.forEach((topic) => {
-                        let msg_types = nodes_data[this.id_robot][node]['publishers'][topic];
-                        this.discovered_nodes[node].publishers[topic] = {
-                            msg_types: msg_types,
-                            is_video: IsImageTopic(msg_types[0]),
-                            msg_type_supported: this.find_message_type(msg_types[0]) != null,
-                        }
-                    })
-                }
-                if (nodes_data[this.id_robot][node]['subscribers']) {
-                    let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
-                    topics.forEach((topic) => {
-                        let msg_types = nodes_data[this.id_robot][node]['subscribers'][topic];
-                        this.discovered_nodes[node].subscribers[topic] = {
-                            msg_types: msg_types,
-                            is_video: IsImageTopic(msg_types[0]),
-                            msg_type_supported: this.find_message_type(msg_types[0]) != null,
-                        }
-                    })
-                }
-                if (nodes_data[this.id_robot][node]['services']) {
-                    let services = Object.keys(nodes_data[this.id_robot][node]['services']);
-                    services.forEach((service) => {
-                        let msg_types = nodes_data[this.id_robot][node]['services'][service];
-                        this.discovered_nodes[node].services[service] = {
-                            service: service,
-                            msg_types: msg_types,
-                        }
-                    })
-                }
-            });
+            setTimeout(()=>{
+                this.discovered_nodes = {};
+                Object.keys(nodes_data[this.id_robot]).forEach((node)=>{
+                    this.discovered_nodes[node] = {
+                        node: node,
+                        namespace: nodes_data[this.id_robot][node]['namespace'],
+                        publishers: {},
+                        subscribers: {},
+                        services: {},
+                    }
+                    if (nodes_data[this.id_robot][node]['publishers']) {
+                        let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
+                        topics.forEach((topic) => {
+                            let msg_types = nodes_data[this.id_robot][node]['publishers'][topic];
+                            this.discovered_nodes[node].publishers[topic] = {
+                                msg_types: msg_types,
+                                is_video: IsImageTopic(msg_types[0]),
+                                msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                            }
+                        })
+                    }
+                    if (nodes_data[this.id_robot][node]['subscribers']) {
+                        let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
+                        topics.forEach((topic) => {
+                            let msg_types = nodes_data[this.id_robot][node]['subscribers'][topic];
+                            this.discovered_nodes[node].subscribers[topic] = {
+                                msg_types: msg_types,
+                                is_video: IsImageTopic(msg_types[0]),
+                                msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                            }
+                        })
+                    }
+                    if (nodes_data[this.id_robot][node]['services']) {
+                        let services = Object.keys(nodes_data[this.id_robot][node]['services']);
+                        services.forEach((service) => {
+                            let msg_types = nodes_data[this.id_robot][node]['services'][service];
+                            this.discovered_nodes[node].services[service] = {
+                                service: service,
+                                msg_types: msg_types,
+                            }
+                        })
+                    }
+                });
 
-            console.log('Got nodes ', this.discovered_nodes);
-            this.emit('nodes', this.discovered_nodes);
+                console.log('Got nodes ', this.discovered_nodes);
+                this.emit('nodes', this.discovered_nodes);
+
+            }, 0);
 
             // let i = 0;
             // let subscribe_topics = [];
@@ -317,20 +332,22 @@ export class PhntmBridgeClient extends EventTarget {
             if (!topics_data[this.id_robot])
                 return;
 
-            this.discovered_topics = {};
-            topics_data[this.id_robot].forEach((topic_data)=>{
-                let topic = topic_data.shift();
-                let msg_types = topic_data
-                this.discovered_topics[topic] = {
-                    msg_types: msg_types,
-                    id: topic,
-                    is_video: IsImageTopic(msg_types[0]),
-                    msg_type_supported: this.find_message_type(msg_types[0]) != null,
-                }
-            });
+            setTimeout(()=>{
+                this.discovered_topics = {};
+                topics_data[this.id_robot].forEach((topic_data)=>{
+                    let topic = topic_data.shift();
+                    let msg_types = topic_data
+                    this.discovered_topics[topic] = {
+                        msg_types: msg_types,
+                        id: topic,
+                        is_video: IsImageTopic(msg_types[0]),
+                        msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                    }
+                });
 
-            console.log('Got topics ', this.discovered_topics);
-            this.emit('topics', this.discovered_topics);
+                console.log('Got topics ', this.discovered_topics);
+                this.emit('topics', this.discovered_topics);
+            }, 0);
 
             // let i = 0;
             // let subscribe_topics = [];
@@ -368,20 +385,22 @@ export class PhntmBridgeClient extends EventTarget {
             if (!services_data[this.id_robot])
                 return;
 
-            this.discovered_services = {};
+            setTimeout(()=>{
+                this.discovered_services = {};
 
-            // let i = 0;
-            services_data[this.id_robot].forEach((service_data) => {
-                let service = service_data[0];
-                let msg_type = service_data[1];
-                this.discovered_services[service] = {
-                    service: service,
-                    msg_type: msg_type
-                };
-            });
+                // let i = 0;
+                services_data[this.id_robot].forEach((service_data) => {
+                    let service = service_data[0];
+                    let msg_type = service_data[1];
+                    this.discovered_services[service] = {
+                        service: service,
+                        msg_type: msg_type
+                    };
+                });
 
-            console.log('Got services:', this.discovered_services);
-            this.emit('services', this.discovered_services);
+                console.log('Got services:', this.discovered_services);
+                this.emit('services', this.discovered_services);
+            }, 0);
         });
 
         this.socket.on('cameras', (cameras_data) => {
@@ -389,20 +408,20 @@ export class PhntmBridgeClient extends EventTarget {
             if (!cameras_data[this.id_robot])
                 return;
 
+            setTimeout(()=>{
+                this.discovered_cameras = {};
 
+                Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
 
-            this.discovered_cameras = {};
+                    this.discovered_cameras[id_camera] = {
+                        id: id_camera,
+                        info: cameras_data[this.id_robot][id_camera],
+                    };
+                });
 
-            Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
-
-                this.discovered_cameras[id_camera] = {
-                    id: id_camera,
-                    info: cameras_data[this.id_robot][id_camera],
-                };
-            });
-
-            console.log('Got Cameras:', this.discovered_cameras);
-            this.emit('cameras', this.discovered_cameras);
+                console.log('Got Cameras:', this.discovered_cameras);
+                this.emit('cameras', this.discovered_cameras);
+            }, 0);
         });
 
         this.socket.on('docker', (docker_containers_data) => {
@@ -410,14 +429,16 @@ export class PhntmBridgeClient extends EventTarget {
             if (!docker_containers_data[this.id_robot])
                 return;
 
-            this.discovered_docker_containers = {};
+            setTimeout(()=>{
+                this.discovered_docker_containers = {};
 
-            docker_containers_data[this.id_robot].forEach((cont_data) => {
-                this.discovered_docker_containers[cont_data.id] = cont_data
-            });
+                docker_containers_data[this.id_robot].forEach((cont_data) => {
+                    this.discovered_docker_containers[cont_data.id] = cont_data
+                });
 
-            console.log('Got Docker containers:', this.discovered_docker_containers);
-            this.emit('docker', this.discovered_docker_containers);
+                console.log('Got Docker containers:', this.discovered_docker_containers);
+                this.emit('docker', this.discovered_docker_containers);
+            }, 0);
         });
 
         window.addEventListener("beforeunload", function(e){
@@ -448,7 +469,9 @@ export class PhntmBridgeClient extends EventTarget {
             this.create_subscriber(event);
 
             if (this.latest[event]) {
-                cb(this.latest[event].msg, this.latest[event].ev);
+                setTimeout(()=>{
+                    cb(this.latest[event].msg, this.latest[event].ev);
+                }, 0);
             }
         }
     }
@@ -459,7 +482,9 @@ export class PhntmBridgeClient extends EventTarget {
 
         let wrapper_cb = (...args) => {
             this.off(event, wrapper_cb);
-            cb(...args);
+            setTimeout(()=>{
+                cb(...args);
+            }, 0);
         }
         this.on(event, wrapper_cb)
     }
@@ -497,7 +522,9 @@ export class PhntmBridgeClient extends EventTarget {
         // console.log('calling callbacks for '+event, this.event_calbacks[event]);
         let callbacks = Object.values(this.event_calbacks[event]);
         callbacks.forEach((cb) => {
-            cb(...args)
+            setTimeout(()=>{
+                cb(...args)
+            }, 0);
         });
     }
 
@@ -708,6 +735,8 @@ export class PhntmBridgeClient extends EventTarget {
     }
 
     start_heartbeat() {
+        return;
+
         if (this.heartbeat_timer)
             return;
 
@@ -721,7 +750,7 @@ export class PhntmBridgeClient extends EventTarget {
             let that = this;
             that.heartbeat_timer = window.setInterval(()=>{
 
-                if (that.pc.connectionState != 'connected')
+                if (!that.pc || that.pc.connectionState != 'connected')
                     return;
 
                 if (!that.heartbeat_writer.send({data: 1})) { // true when ready and written
@@ -1400,7 +1429,9 @@ export class PhntmBridgeClient extends EventTarget {
             if (evt.currentTarget.connectionState == 'connected') {
                 if (!pc.connected) { //just connected
                     pc.connected = true;
-                    that.emit('peer_connected')
+                    setTimeout(()=>{
+                        that.emit('peer_connected')
+                    }, 0);
                     // window.gamepadController.InitProducers()
                     // let subscribe_topics = []
                     // let panelTopics = Object.keys(panels);
@@ -1412,13 +1443,14 @@ export class PhntmBridgeClient extends EventTarget {
                     // }
                     // if (subscribe_topics.length)
                     //     SetTopicsReadSubscription(id_robot, subscribe_topics, true);
-                    that.get_peer_stats_loop();
+                    that.run_peer_stats_loop();
                 }
             } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
                 console.error(`Peer disconnected, robot_online=${that.robot_online }`);
 
                 let was_connected = pc.connected;
+                that.peer_stats_loop_running = false;
                 pc.connected = false;
 
                 if (was_connected)
@@ -1480,27 +1512,39 @@ export class PhntmBridgeClient extends EventTarget {
         return pc;
     }
     
-    get_peer_stats_loop() {
+    async get_peer_stats() {
+        let that = this;
+        return new Promise((resolve) => {
+
+            if (!that.pc || !that.pc.connected) {
+                setTimeout(() => {
+                    resolve();
+                }, 100);
+            }
+                
+            that.pc.getStats(null)
+                .then((results) => {
+                    that.emit('peer_stats', results);
+                })
+                .catch((err) => {
+                    console.error(err);
+                })
+                .finally((info) => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 1000);
+                });
+        });
+    }
+
+    async run_peer_stats_loop() {
         // return;
 
-        if (window.clearTimeout(this.pc_stats_timer)) {
-            window.clearTimeout(this.pc_stats_timer);
-            this.pc_stats_timer = null;
+        this.peer_stats_loop_running = true;
+
+        while (this.peer_stats_loop_running) {
+            await this.get_peer_stats();
         }
-
-        if (!this.pc || !this.pc.connected)
-            return; // kills the loop (starts on pc connect)     
-
-        let that = this;
-        this.pc.getStats(null).then(
-            (results) => {
-                that.emit('peer_stats', results);
-                that.pc_stats_timer = window.setTimeout(() => that.get_peer_stats_loop(), 1000);
-            },
-            (err) => {
-                console.error(err);
-                that.pc_stats_timer = window.setTimeout(() => that.get_peer_stats_loop(), 1000);
-            });
     }
 
     service_call(service, data, cb) { 

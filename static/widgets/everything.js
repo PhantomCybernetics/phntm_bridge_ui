@@ -44,10 +44,10 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.rendering = true;
         this.renderDirty();
-        this.rendering_loop();        
+        requestAnimationFrame((t) => this.rendering_loop());  
     }
     
-    rendering_loop() {
+    async rendering_loop() {
 
         if (!this.rendering)
             return;
@@ -108,7 +108,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         });
     }
 
-    on_laser_data = (topic, scan) => {
+    async on_laser_data (topic, scan) {
 
         // console.log('Has laser!');
 
@@ -144,7 +144,12 @@ export class Everything3DWidget extends DescriptionTFWidget {
             this.laser_frames[topic] = this.robot.getFrame(frame_id);
 
         if (!this.laser_frames[topic]) {
-            console.error('Frame '+frame_id+' not found in robot model for laser data from '+topic);
+            if (!this.laser_frames_error_logged)
+                this.laser_frames_error_logged = {};
+            if (!this.laser_frames_error_logged[topic]) {
+                this.laser_frames_error_logged[topic] = true;  //only log once
+                console.error('Frame '+frame_id+' not found in robot model for laser data from '+topic);
+            }
             return;
         }
 
@@ -201,7 +206,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
     }
 
-    on_range_data = (topic, range) => {
+    async on_range_data (topic, range) {
         if (!this.robot || this.panel.paused)
             return;
 
@@ -261,7 +266,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
     }
 
-    on_costmap_data = (topic, costmap) => {
+    async on_costmap_data (topic, costmap) {
         
     }
 
