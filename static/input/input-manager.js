@@ -180,7 +180,7 @@ export class InputManager {
                 .unbind()
                 // .on('contextmenu', that.prevent_context_menu)
                 .change((ev)=>{
-                    that.profiles[that.current_profile].label = $('#input-profile-edit-label').val();
+                    that.profiles[that.current_profile].label = $('#input-profile-edit-label').val().trim();
                     that.check_profile_basics_saved(that.current_profile, false);
                     that.make_profile_selector_ui();
                 })
@@ -189,17 +189,19 @@ export class InputManager {
                 .unbind()
                 // .on('contextmenu', that.prevent_context_menu)
                 .change((ev)=>{
-                    let new_id = $('#input-profile-edit-id').val();
+                    let new_id = $('#input-profile-edit-id').val().trim();
                     that.reset_all();
                     let old_id = that.current_profile;
-                    that.profiles[new_id] = that.profiles[old_id];
-                    that.profiles[new_id].id = new_id;
-                    delete that.profiles[old_id];
-                    that.current_profile = new_id;
-                    Object.values(that.controllers).forEach((c)=>{
-                        c.profiles[new_id] = c.profiles[old_id];
-                        delete c.profiles[old_id];
-                    });
+                    if (old_id != new_id) {
+                        that.profiles[new_id] = that.profiles[old_id];
+                        that.profiles[new_id].id = new_id;
+                        delete that.profiles[old_id];
+                        that.current_profile = new_id;
+                        Object.values(that.controllers).forEach((c)=>{
+                            c.profiles[new_id] = c.profiles[old_id];
+                            delete c.profiles[old_id];
+                        });
+                    }
                     that.reset_all();
                     that.check_profile_basics_saved(that.current_profile, false);
                     that.make_ui();
@@ -292,7 +294,7 @@ export class InputManager {
             // console.log('Loaded user input defaults: ', this.user_defaults);
 
             // robot defined profiles
-            Object.keys(robot_defaults).forEach((id_profile)=>{
+            Object.keys(this.robot_defaults).forEach((id_profile)=>{
                 if (this.current_profile === null)
                     this.current_profile = id_profile; // 1st is default
                 if (!this.profiles[id_profile]) {
@@ -309,7 +311,7 @@ export class InputManager {
             });
 
             // overwrite with local
-            this.user_profiles = {};
+            this.saved_user_profiles = {};
             let saved_user_profile_ids = this.load_user_profile_ids();
             this.saved_user_profile_ids = [];
             if (saved_user_profile_ids) {
@@ -321,10 +323,10 @@ export class InputManager {
                         return;
     
                     this.saved_user_profile_ids.push(id_profile);
-                    this.user_profiles[id_profile] = profile_data;
+                    this.saved_user_profiles[id_profile] = profile_data;
     
                     if (!this.profiles[id_profile]) { // user's own profile
-                        let label = this.user_profiles[id_profile].label ? this.user_profiles[id_profile].label : id_profile;
+                        let label = this.saved_user_profiles[id_profile].label ? this.saved_user_profiles[id_profile].label : id_profile;
                         this.profiles[id_profile] = { 
                             label: label,
                             saved: true,
@@ -334,9 +336,9 @@ export class InputManager {
                             basics_saved: true,
                         };
                     } else {
-                        if (this.user_profiles[id_profile].label) {
-                            this.profiles[id_profile].label = this.user_profiles[id_profile].label;
-                            this.profiles[id_profile].label_saved = this.user_profiles[id_profile].label;
+                        if (this.saved_user_profiles[id_profile].label) {
+                            this.profiles[id_profile].label = this.saved_user_profiles[id_profile].label;
+                            this.profiles[id_profile].label_saved = this.saved_user_profiles[id_profile].label;
                         }
                     }
                 });
@@ -383,8 +385,8 @@ export class InputManager {
                 }
 
                 // overwrite with user's defaults
-                if (this.user_profiles[id_profile] && this.user_profiles[id_profile][c.id]) {
-                    let user_defaults = this.user_profiles[id_profile][c.id];
+                if (this.saved_user_profiles[id_profile] && this.saved_user_profiles[id_profile][c.id]) {
+                    let user_defaults = this.saved_user_profiles[id_profile][c.id];
                     console.log(c.id+' loaded user defults for '+id_profile, user_defaults);
                     profile_default_cfg = user_defaults;
                 }
@@ -543,9 +545,9 @@ export class InputManager {
         
         console.log('Deleting profile '+id_delete+' (saved id was '+saved_id_delete+')');
 
-        if (this.user_profiles[id_delete]) {
+        if (this.saved_user_profiles[id_delete]) {
             localStorage.removeItem('input-profile:' + this.client.id_robot + ':' + id_delete);
-            delete this.user_profiles[id_delete];
+            delete this.saved_user_profiles[id_delete];
         }
         let ids_pos = this.saved_user_profile_ids.indexOf(id_delete);
         if (ids_pos > -1) {
@@ -941,14 +943,13 @@ export class InputManager {
         let driver = profile.driver_instances[profile.driver];
 
         let data = {
-            // id: profile.id,
-            // label: profile.label,
             driver: profile.driver,
             driver_config: driver.get_config(),
             axes: [],
             buttons: [],
         };
         
+        // axes stats => config
         for (let i = 0; i < driver.axes.length; i++) {
             if (only_assigned && !driver.axes[i].driver_axis) {
                 continue;
@@ -958,8 +959,8 @@ export class InputManager {
                 driver_axis: driver.axes[i].driver_axis,
                 dead_min: driver.axes[i].dead_min,
                 dead_max: driver.axes[i].dead_max,
-                offset: driver.axes[i].offset,
-                scale: driver.axes[i].scale,
+                offset: driver.axes[i].offset == 0.0 ? undefined : driver.axes[i].offset,
+                scale: driver.axes[i].scale == 1.0 ? undefined : driver.axes[i].scale,
             }
             if (driver.axes[i].mod_func) {
                 axis_data['mod_func'] = {
@@ -971,7 +972,10 @@ export class InputManager {
             }
             data.axes.push(axis_data);
         }
+        if (!data.axes.length)
+            delete data.axes;
 
+        // button states to => config
         for (let i = 0; i < driver.buttons.length; i++) {
             let btn = driver.buttons[i];
             if (only_assigned && !btn.assigned) {
@@ -987,6 +991,8 @@ export class InputManager {
 
             if (c.type == 'keyboard') {
                 btn_data['key'] = btn.id_src;
+                if (btn_data['key'])
+                    btn_data['key'] = btn_data['key'].toUpperCase(); //saving upper case
                 btn_data['key_mod'] = btn.key_mod ? btn.key_mod : undefined;
             } else if (c.type == 'gamepad') {
                 btn_data['btn'] = btn.id_src;
@@ -1002,7 +1008,7 @@ export class InputManager {
 
             switch (btn.trigger) {
                 case 0: btn_data.trigger = 'touch'; break;
-                case 1: btn_data.trigger = 'press'; break;
+                case 1: /* btn_data.trigger = 'press'; */ break; // press is default
                 case 2: btn_data.trigger = 'release'; break;
             }
 
@@ -1010,8 +1016,10 @@ export class InputManager {
             if (btn.driver_axis) {
                 btn_data['dead_min'] = btn.dead_min;
                 btn_data['dead_max'] = btn.dead_max;
-                btn_data['offset'] = btn.offset;
-                btn_data['scale'] = btn.scale;
+                if (btn.offset != 0.0) // ignore default
+                    btn_data['offset'] = btn.offset;
+                if (btn.scale != 1.0) // ignore default
+                    btn_data['scale'] = btn.scale;
 
                 if (btn.mod_func) {
                     btn_data['mod_func'] = {
@@ -1042,6 +1050,8 @@ export class InputManager {
 
             data.buttons.push(btn_data);
         }
+        if (!data.buttons.length)
+            delete data.buttons;
 
         return data;
     }
@@ -1051,7 +1061,7 @@ export class InputManager {
         let driver = c_profile.driver_instances[c_profile.driver];
         driver.set_saved_state();
         
-        let saved_data = this.get_controller_profile_config(c, id_profile, false);
+        let saved_data = this.get_controller_profile_config(c, id_profile, true);
         c_profile.saved_state = saved_data;
     }
 
@@ -1076,174 +1086,160 @@ export class InputManager {
         function compare(live, saved) {
             if (!live || !saved)
                 return false;
-            // if (profile.id != saved.id)
-            //     return false;
-            // if (profile.label != saved.label)
-            //     return false;
             if (live.driver != saved.driver)
                 return false;
             let driver = live.driver_instances[live.driver];
             if (!driver.check_saved())
                 return false;
             
-            if (driver.axes.length != saved.axes.length)
+            if ((!live.axes && saved.axes) || (live.axes && !saved.axes)
+                || (live.axes && saved.axes && live.axes.length != saved.axes.length))
                 return false;
-
-            for (let i = 0; i < driver.axes.length; i++) {
-                if (driver.axes[i].driver_axis != saved.axes[i].driver_axis)
-                    return false;
-
-                if (driver.axes[i].driver_axis) {
-                    if (driver.axes[i].dead_min != saved.axes[i].dead_min)
-                        return false;
-                    if (driver.axes[i].dead_max != saved.axes[i].dead_max)
-                        return false;
-                    if (driver.axes[i].offset != saved.axes[i].offset)
-                        return false;
-                    if (driver.axes[i].scale != saved.axes[i].scale)
+            
+            if (live.axes) {
+                for (let i = 0; i < live.axes.length; i++) {
+                    if (live.axes[i].driver_axis != saved.axes[i].driver_axis)
                         return false;
     
-                    let has_mod_func = driver.axes[i].mod_func !== null && driver.axes[i].mod_func !== undefined && driver.axes[i].mod_func !== false && driver.axes[i].mod_func !== "";
-                    let has_saved_mod_func = saved.axes[i].mod_func !== null && saved.axes[i].mod_func !== undefined; //obj
-    
-                    if (has_mod_func != has_saved_mod_func) { 
-                        return false;
-                    } else if (driver.axes[i].mod_func && saved.axes[i].mod_func) {
-                        if (driver.axes[i].mod_func != saved.axes[i].mod_func.type) 
+                    if (live.axes[i].driver_axis) {
+                        if (live.axes[i].dead_min != saved.axes[i].dead_min)
                             return false;
-                        if (driver.axes[i].scale_by_velocity_src != saved.axes[i].mod_func.velocity_src) 
+                        if (live.axes[i].dead_max != saved.axes[i].dead_max)
                             return false;
-                        if (driver.axes[i].scale_by_velocity_mult_min != saved.axes[i].mod_func.slow_multiplier) 
+                        if (live.axes[i].offset != saved.axes[i].offset)
                             return false;
-                        if (driver.axes[i].scale_by_velocity_mult_max != saved.axes[i].mod_func.fast_multiplier) 
+                        if (live.axes[i].scale != saved.axes[i].scale)
                             return false;
+        
+                        let live_has_mod_func = live.axes[i].mod_func !== null && live.axes[i].mod_func !== undefined;
+                        let saved_has_mod_func = saved.axes[i].mod_func !== null && saved.axes[i].mod_func !== undefined;
+        
+                        if (live_has_mod_func != saved_has_mod_func) { 
+                            return false;
+                        } else if (live.axes[i].mod_func && saved.axes[i].mod_func) {
+                            if (live.axes[i].mod_func.type != saved.axes[i].mod_func.type) 
+                                return false;
+                            if (live.axes[i].mod_func.velocity_src != saved.axes[i].mod_func.velocity_src) 
+                                return false;
+                            if (live.axes[i].mod_func.slow_multiplier != saved.axes[i].mod_func.slow_multiplier) 
+                                return false;
+                            if (live.axes[i].mod_func.fast_multiplier != saved.axes[i].mod_func.fast_multiplier) 
+                                return false;
+                        }
                     }
                 }
             }
 
-            for (let i = 0; i < driver.buttons.length; i++) {
-                let btn_live = driver.buttons[i];
-                let btn_saved = saved.buttons[i];
-
-                if (!btn_live.assigned && !btn_saved)
-                    continue;
-
-                if (!btn_saved)
-                    return false;
-
-                if (btn_live.driver_axis != btn_saved.driver_axis) {
-                    // console.log('axes diff:', btn_live.driver_axis, btn_saved.driver_axis);
-                    return false;
-                }
-                    
-                if (btn_live.driver_btn != btn_saved.driver_btn)
-                    return false;
-                if (btn_live.action != btn_saved.action)
-                    return false;
-
-                if (btn_live.driver_axis) {
-                    if (btn_live.dead_min != btn_saved.dead_min)
-                        return false;
-                    if (btn_live.dead_max != btn_saved.dead_max)
-                        return false;
-                    if (btn_live.offset != btn_saved.offset)
-                        return false;
-                    if (btn_live.scale != btn_saved.scale)
-                        return false;
-
-                    let has_mod_func = btn_live.mod_func !== null && btn_live.mod_func !== undefined && btn_live.mod_func !== false && btn_live.mod_func !== "";
-                    let has_saved_mod_func = btn_saved.mod_func !== null && btn_saved.mod_func !== undefined; //obj
+            if ((!live.buttons && saved.buttons) || (live.buttons && !saved.buttons)
+                || (live.buttons && saved.buttons && live.buttons.length != saved.buttons.length))
+                return false;
+            
+            if (live.buttons) {
+                for (let i = 0; i < live.buttons.length; i++) {
+                    let btn_live = live.buttons[i];
+                    let btn_saved = saved.buttons[i];
     
-                    if (has_mod_func != has_saved_mod_func) { 
+                    if (btn_live.driver_axis != btn_saved.driver_axis)
                         return false;
-                    }
-                    if (btn_live.mod_func && btn_saved.mod_func) {
-                        if (btn_live.mod_func != btn_saved.mod_func.type) 
+                    if (btn_live.driver_btn != btn_saved.driver_btn)
+                        return false;
+                    if (btn_live.action != btn_saved.action)
+                        return false;
+    
+                    if (btn_live.driver_axis) {
+                        if (btn_live.dead_min != btn_saved.dead_min)
                             return false;
-                        if (btn_live.scale_by_velocity_src != btn_saved.mod_func.velocity_src) 
+                        if (btn_live.dead_max != btn_saved.dead_max)
                             return false;
-                        if (btn_live.scale_by_velocity_mult_min != btn_saved.mod_func.slow_multiplier) 
+                        if (btn_live.offset != btn_saved.offset)
                             return false;
-                        if (btn_live.scale_by_velocity_mult_max != btn_saved.mod_func.fast_multiplier) 
+                        if (btn_live.scale != btn_saved.scale)
                             return false;
-                    }
-                }
-
-                if (c.type == 'keyboard') {
-                    if (btn_live.id_src != btn_saved.key)
-                        return false;
-                    if (btn_live.key_mod != btn_saved.key_mod)
-                        return false;
-                } else if (c.type == 'gamepad') {
-                    if (btn_live.id_src != btn_saved.btn) 
-                        return false;
-                } if (c.type == 'touch') {
-                    if (btn_live.touch_ui_style != btn_saved.style) 
-                        return false;
-                    if (btn_live.touch_ui_placement == 1 && btn_saved.placement != 'top') 
-                        return false;
-                    if (btn_live.touch_ui_placement == 2 && btn_saved.placement != 'overlay') 
-                        return false;
-                    if (btn_live.src_label != btn_saved.label)
-                        return false;
-                    if (btn_live.sort_index != btn_saved.sort_index)
-                        return false;
-                }
-
-                if (btn_live.trigger === 0 && btn_saved.trigger != 'touch')
-                    return false;
-                if (btn_live.trigger === 1 && btn_saved.trigger != 'press')
-                    return false;
-                if (btn_live.trigger === 2 && btn_saved.trigger != 'release')
-                    return false;
-
-                if ((!btn_live.repeat && btn_saved.repeat) || (btn_live.repeat && !btn_saved.repeat))
-                    return false;
-
-                switch (btn_live.action) {
-                    case 'ros-srv':
-                        if (btn_live.ros_srv_id != btn_saved.ros_srv_id)
-                            return false;
-                        if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val)) {
-                            console.log('Serv vals differ:', btn_live.ros_srv_val, btn_saved.ros_srv_val);
+    
+                        let line_has_mod_func = btn_live.mod_func !== null && btn_live.mod_func !== undefined;
+                        let saved_has_mod_func = btn_saved.mod_func !== null && btn_saved.mod_func !== undefined;
+        
+                        if (line_has_mod_func != saved_has_mod_func) { 
                             return false;
                         }
-                        break;
-                    case 'ctrl-enabled':
-                        if (btn_live.set_ctrl_state == 1 && btn_saved.ctrl_state != true)
+                        if (btn_live.mod_func && btn_saved.mod_func) {
+                            if (btn_live.mod_func.type != btn_saved.mod_func.type) 
+                                return false;
+                            if (btn_live.mod_func.velocity_src != btn_saved.mod_func.velocity_src) 
+                                return false;
+                            if (btn_live.mod_func.slow_multiplier != btn_saved.mod_func.slow_multiplier) 
+                                return false;
+                            if (btn_live.mod_func.fast_multiplier != btn_saved.mod_func.fast_multiplier) 
+                                return false;
+                        }
+                    }
+    
+                    if (c.type == 'keyboard') {
+                        if (btn_live.key != btn_saved.key)
                             return false;
-                        if (btn_live.set_ctrl_state == 0 && btn_saved.ctrl_state != false)
+                        if (btn_live.key_mod != btn_saved.key_mod)
                             return false;
-                        if (btn_live.set_ctrl_state == 2 && btn_saved.ctrl_state != 'toggle')
+                    } else if (c.type == 'gamepad') {
+                        if (btn_live.btn != btn_saved.btn) 
                             return false;
-                        break;
-                    case 'input-profile':
-                        if (btn_live.set_ctrl_profile != btn_saved.profile)
+                    } if (c.type == 'touch') {
+                        if (btn_live.style != btn_saved.style) 
                             return false;
-                        break;
+                        if (btn_live.placement != btn_saved.placement) 
+                            return false;
+                        if (btn_live.label != btn_saved.label)
+                            return false;
+                        if (btn_live.sort_index != btn_saved.sort_index)
+                            return false;
+                    }
+    
+                    if (btn_live.trigger != btn_saved.trigger)
+                        return false;
+    
+                    if (btn_live.repeat != btn_saved.repeat)
+                        return false;
+    
+                    switch (btn_live.action) {
+                        case 'ros-srv':
+                            if (btn_live.ros_srv_id != btn_saved.ros_srv_id)
+                                return false;
+                            if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val)) {
+                                return false;
+                            }
+                            break;
+                        case 'ctrl-enabled':
+                            if (btn_live.ctrl_state != btn_saved.ctrl_state)
+                                return false;
+                            break;
+                        case 'input-profile':
+                            if (btn_live.profile != btn_saved.profile)
+                                return false;
+                            break;
+                    }
+                  
                 }
-              
             }
 
             return true; // all checks up 
         }
 
-        let live_c_profile = c.profiles[id_profile];
-        let saved_c_profile = live_c_profile.saved_state;
+        let live_c_profile_state = this.get_controller_profile_config(c, id_profile, true); //filters unused
+        live_c_profile_state.driver_instances = c.profiles[id_profile].driver_instances;
+        let saved_c_profile_state = c.profiles[id_profile].saved_state; //unused filtered
 
-        let match = compare(live_c_profile, saved_c_profile);
+        let match = compare(live_c_profile_state, saved_c_profile_state);
 
         // console.info(`Profile ${id_profile} saved: `, match, live_profile, saved_profile);
 
-        if (!match && live_c_profile.saved) {
-            live_c_profile.saved = false;
+        if (!match && c.profiles[id_profile].saved) {
+            c.profiles[id_profile].saved = false;
             this.profiles[id_profile].saved = false;
             console.log('Profile '+id_profile+' not saved');
             if (update_ui)
                 this.make_profile_selector_ui();
            
-        } else if (match && !live_c_profile.saved) {
-            live_c_profile.saved = true;
+        } else if (match && !c.profiles[id_profile].saved) {
+            c.profiles[id_profile].saved = true;
             if (!this.profiles[id_profile].saved) {
                 let all_saved = true;
                 Object.values(this.controllers).forEach((cc)=>{
@@ -1304,13 +1300,11 @@ export class InputManager {
         return localStorage.getItem('last-input-profile:' + this.client.id_robot);
     }
 
-    //ok
     save_user_controller_enabled(c) {
         localStorage.setItem('controller-enabled:' + this.client.id_robot+ ':' + c.id, c.enabled);
         console.log('Saved controller enabled for robot '+this.client.id_robot+', id="'+c.id+'": '+c.enabled);
     }
 
-    //ok
     load_user_controller_enabled(id_controller) {
         let state = localStorage.getItem('controller-enabled:' + this.client.id_robot + ':' + id_controller);    
         state = state === 'true';
@@ -1323,10 +1317,6 @@ export class InputManager {
         return val ? JSON.parse(val) : null;
     }
 
-    // save_user_profile(id_profile, data) {
-    //     localStorage.setItem('input-profile:' + this.client.id_robot + ':' + id_profile, data);
-    // }
-
     load_user_profile_ids() {
         let val = localStorage.getItem('input-profiles:' + this.client.id_robot);
         return val ? JSON.parse(val) : null;
@@ -1338,47 +1328,35 @@ export class InputManager {
 
     save_user_profile(id_profile) {
 
-        let profile = this.profiles[id_profile];
+        let live_profile = this.profiles[id_profile];
 
         if (this.saved_user_profile_ids.indexOf(id_profile) === -1)
             this.saved_user_profile_ids.push(id_profile);
-        
-        if (!this.user_profiles[id_profile])
-            this.user_profiles[id_profile] = {};
 
-        this.user_profiles[id_profile].label = profile.label;
-        profile.label_saved = profile.label;
+        this.saved_user_profiles[id_profile] = this.get_profile_json_data(id_profile);
+        live_profile.label_saved = live_profile.label;
 
-        Object.keys(this.controllers).forEach((id_controller)=>{
-            let c = this.controllers[id_controller];
-
+        Object.keys(this.controllers).forEach((c_id)=>{
+            let c = this.controllers[c_id];
             let c_profile = c.profiles[id_profile];
-            if (c_profile && (!c_profile.saved || profile.id_saved != id_profile) ) {
-
-                let c_profile_data = this.get_controller_profile_config(c, id_profile, true); // filters assigned axes & buttons
-
-                this.user_profiles[id_profile][id_controller] = c_profile_data;
-
-                console.log('Saving profile '+id_profile+' for '+c.id, c_profile_data);
-
+            if (c_profile) {
                 this.set_saved_controller_profile_state(c, id_profile);
                 this.check_controller_profile_saved(c, id_profile, false);
             }
-
         });
 
-        if (profile.id_saved != id_profile) { // moving cookies on profile id change
-            if (profile.id_saved) {
-                console.warn('Moving saved input profile from '+profile.id_saved+' => '+id_profile);
-                let old_pos = this.saved_user_profile_ids.indexOf(profile.id_saved);
+        if (live_profile.id_saved != id_profile) { // moving cookies on profile id change
+            if (live_profile.id_saved) {
+                console.warn('Moving saved input profile from '+live_profile.id_saved+' => '+id_profile);
+                let old_pos = this.saved_user_profile_ids.indexOf(live_profile.id_saved);
                 if (old_pos > -1)
                     this.saved_user_profile_ids.splice(old_pos, 1);
-                localStorage.removeItem('input-profile:' + this.client.id_robot + ':' + profile.id_saved);    
+                localStorage.removeItem('input-profile:' + this.client.id_robot + ':' + live_profile.id_saved);    
             }
-            profile.id_saved = id_profile;
+            live_profile.id_saved = id_profile;
         }
 
-        localStorage.setItem('input-profile:' + this.client.id_robot + ':' + id_profile, JSON.stringify(this.user_profiles[id_profile]));
+        localStorage.setItem('input-profile:' + this.client.id_robot + ':' + id_profile, JSON.stringify(this.saved_user_profiles[id_profile]));
 
         this.save_user_profile_ids(this.saved_user_profile_ids);
 
@@ -1388,74 +1366,59 @@ export class InputManager {
         this.check_profile_basics_saved(id_profile, true);
     }
 
-    // load_user_controller_profile_config(id_controller, id_profile) {
-    //     let cookie_conf = 'controller-profile:'+this.client.id_robot+':'+id_profile+':'+id_controller;
-    //     let val = localStorage.getItem(cookie_conf);
 
-    //     if (val)
-    //         return JSON.parse(val);
-    //     else
-    //         return null;
-    // }
-
-    // save_edited_profile_ids() {
-        
-    //     //TODO
-    //     let cookie_conf_list = 'user-input-profiles:'+this.client.id_robot;
-    //     let custom_profile_ids = localStorage.getItem(cookie_conf_list);
-    //     // if (!custom_profile_ids) {
-    //     //     custom_profile_ids = [];
-    //     // } else {
-    //     //     custom_profile_ids = JSON.parse(custom_profile_ids)
-    //     // }
-    // }
-
-
-    get_controller_json(id_controller, id_profile, out_data) {
-        let c = this.controllers[id_controller];
-        let id_c = id_controller;
-        if (c.type == 'gamepad')
-            id_c = 'gamepad';
-        let c_profile_config = this.get_controller_profile_config(c, id_profile, true);
-        out_data[id_c] = {
-            driver: c_profile_config.driver,
-            driver_config: c_profile_config.driver_config,
-        }
-        if (c_profile_config.axes && c_profile_config.axes.length) {
-            c_profile_config.axes.forEach((axis_cfg)=>{
-                if (axis_cfg['offset'] == 0.0)
-                    delete axis_cfg['offset'];
-                if (axis_cfg['scale'] == 1.0)
-                    delete axis_cfg['scale'];
+    get_all_controller_ids_for_profile(id_profile_saved) {
+        let all_controller_ids = [ 'keyboard', 'touch', 'gamepad' ];
+        if (this.robot_defaults && this.robot_defaults[id_profile_saved]) { // copy robot defaults
+            Object.keys(this.robot_defaults[id_profile_saved]).forEach((id_controller)=>{
+                if (all_controller_ids.indexOf(id_controller) < 0)
+                    all_controller_ids.push(id_controller);
             });
-            out_data[id_c]['axes'] = c_profile_config.axes;
         }
-        if (c_profile_config.buttons && c_profile_config.buttons.length) {
-            c_profile_config.buttons.forEach((btn_cfg) => {
-                if (btn_cfg['trigger'] == 'press')
-                    delete btn_cfg['trigger'];
-                if (btn_cfg['offset'] == 0.0)
-                    delete btn_cfg['offset'];
-                if (btn_cfg['scale'] == 1.0)
-                    delete btn_cfg['scale'];
-                if (btn_cfg['key'])
-                    btn_cfg['key'] = btn_cfg['key'].toUpperCase();
+        if (this.saved_user_profiles && this.saved_user_profiles[id_profile_saved]) { // overwrite with user setup
+            Object.keys(this.saved_user_profiles[id_profile_saved]).forEach((id_controller)=>{
+                if (id_controller == 'label')
+                    return;
+                if (all_controller_ids.indexOf(id_controller) < 0)
+                    all_controller_ids.push(id_controller);
             });
-            out_data[id_c]['buttons'] = c_profile_config.buttons;
         }
+        Object.keys(this.controllers).forEach((id_controller) => {
+            if (all_controller_ids.indexOf(id_controller) < 0)
+                all_controller_ids.push(id_controller);
+        });
+        return all_controller_ids;
+    }
+
+    get_profile_json_data(id_profile) {
+        let profile_data = {};
+       
+        if (this.profiles[id_profile].label)
+            profile_data.label = this.profiles[id_profile].label;
+
+        let id_profile_saved = this.profiles[id_profile].id_saved;
+
+        let all_controller_ids = this.get_all_controller_ids_for_profile(id_profile_saved);
+        all_controller_ids.forEach((c_id)=>{
+            // pass on robot defaults
+            if (this.robot_defaults && this.robot_defaults[id_profile_saved] && this.robot_defaults[id_profile_saved][c_id]) {
+                profile_data[c_id] = Object.assign({}, this.robot_defaults[id_profile_saved][c_id]); 
+            }
+            // overwrite with saved user config
+            if (this.saved_user_profiles && this.saved_user_profiles[id_profile_saved] && this.saved_user_profiles[id_profile_saved][c_id]) {
+                profile_data[c_id] = Object.assign({}, this.saved_user_profiles[id_profile_saved][c_id]);
+            }
+            // overwrite with live controller state
+            if (this.controllers[c_id] && this.controllers[c_id].profiles[id_profile]) {
+                profile_data[c_id] = this.get_controller_profile_config(this.controllers[c_id], id_profile, true); // filters assigned axes & buttons
+            }
+        });
+        return profile_data;
     }
 
     profile_json_to_clipboard(id_profile) {
         let profile_data = {};
-        profile_data[id_profile] = {};
-
-        if (this.profiles[id_profile].label)
-            profile_data[id_profile].label = this.profiles[id_profile].label;
-
-        let that = this;
-        Object.keys(this.controllers).forEach((id_controller)=>{
-            that.get_controller_json(id_controller, id_profile, profile_data[id_profile]);
-        });
+        profile_data[id_profile] = this.get_profile_json_data(id_profile);
 
         navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
         console.log('Copied profile json:', JSON.stringify(profile_data, null, 4));
@@ -1468,18 +1431,11 @@ export class InputManager {
 
         let that = this;
         Object.keys(this.profiles).forEach((id_profile) => {
-
-            config_data[id_profile] = {};
-            if (that.profiles[id_profile].label)
-                config_data[id_profile].label = that.profiles[id_profile].label;
-
-            Object.keys(that.controllers).forEach((id_controller)=>{
-                that.get_controller_json(id_controller, id_profile, config_data[id_profile]);
-            });
+            config_data[id_profile] = this.get_profile_json_data(id_profile);
         });
 
         navigator.clipboard.writeText(JSON.stringify(config_data, null, 4));
-        console.log('Copied full json:', JSON.stringify(config_data, null, 4));
+        console.log('Copied full input json:', JSON.stringify(config_data, null, 4));
         this.close_profile_menu();
         this.ui.show_notification('Config JSON copied');
     }
@@ -1589,43 +1545,6 @@ export class InputManager {
                 if (this.current_profile) {
                     let c_profile = this.edited_controller.profiles[this.current_profile];
 
-                    //profile id
-                    // let line_id = $('<div class="line"><span class="label">Profile ID:</span></div>');
-                    // let inp_id = $('<input type="text" inputmode="url" value="'+profile.id+'"/>');
-                    // inp_id.change((ev)=>{
-                    //     let val = $(ev.target).val();
-                    //     if (this.current_gamepad.current_profile == profile.id) {
-                    //         this.current_gamepad.current_profile = val;
-                    //     }
-                    //     this.current_gamepad.profiles[val] = this.current_gamepad.profiles[profile.id];
-                    //     delete this.current_gamepad.profiles[profile.id];
-                    //     profile.id = val;
-                    //     console.log('Profile id changed to: '+profile.id);
-                    //     that.save_last_user_gamepad_profile( // id changed
-                    //         that.current_gamepad.id,
-                    //         val
-                    //     );
-                    //     that.check_profile_saved(that.current_gamepad, profile.id, false);
-                    //     that.make_profile_selector_ui();
-                    // });
-
-                    // inp_id.appendTo(line_id);
-                    // lines.push(line_id);
-
-                    // //profile name
-                    // let line_name = $('<div class="line"><span class="label">Profile name:</span></div>');
-                    // let inp_name = $('<input type="text" value="'+profile.label+'"/>');
-                    // inp_name.change((ev)=>{
-                    //     let val = $(ev.target).val();
-                    //     profile.label = val;
-                    //     console.log('Profile name changed to: '+profile.label);
-                    //     that.check_profile_saved(that.current_gamepad, profile.id, false);
-                    //     that.make_profile_selector_ui();
-                    // });
-
-                    // inp_name.appendTo(line_name);
-                    // lines.push(line_name);
-
                     //driver
                     let line_driver = $('<div class="line"><span class="label">Output driver:</span></div>');
                     let driver_opts = [];
@@ -1720,7 +1639,6 @@ export class InputManager {
             icons.push($('<span class="keyboard disabled"></span>'));
         if (types_connected.indexOf('gamepad') < 0)
             icons.push($('<span class="gamepad disabled"></span>'));
-
 
         $('#input-controller-selection')
             .empty().append(icons);
@@ -2809,7 +2727,7 @@ export class InputManager {
     }
 
     keyboard_key_label(key, mod) {
-        let label = key.toUpperCase();
+        let label = key ? key.toUpperCase() : key;
         switch (label) {
             case ' ': label = '␣'; break;
             case 'ARROWLEFT': label = '←'; break; // &#8592;
@@ -2823,7 +2741,6 @@ export class InputManager {
             case 'META': label = 'Meta'; break;
             case 'ALT': label = 'Alt'; break;
         }
-
         switch (mod) {
             case 'alt': label = 'Alt+'+label; break;
             case 'ctrl': label = 'Ctrl+'+label; break;
@@ -2852,6 +2769,7 @@ export class InputManager {
                 raw_val_el.addClass('assigned');
             $('#input-manager-overlay').unbind().css('display', 'none');
             delete driver.on_button_press;
+            that.check_controller_profile_saved(that.edited_controller, that.current_profile);
         };
         raw_val_el.click(()=>{
             if (that.edited_controller.type == 'touch')

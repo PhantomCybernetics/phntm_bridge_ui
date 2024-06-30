@@ -114,7 +114,7 @@ export class InputDriver {
     
         let that = this;
         this.inp_topic.change((ev)=>{
-            that.output_topic = $(ev.target).val();
+            that.output_topic = $(ev.target).val().trim();
             // console.log('Driver output topic is: '+that.output_topic);
             that.setup_writer();
             that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
