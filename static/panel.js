@@ -48,7 +48,7 @@ export class Panel {
         this.zoom = zoom;
         this.rot = rot;
         this.custom_url_vars = custom_url_vars;
-        console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible)
+        console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible+'; custom_url_vars=', this.custom_url_vars);
 
         this.widget_menu_cb = null;
         this.floating_menu_top = null;
@@ -506,7 +506,7 @@ export class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
-        console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+        // console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
 
         $('#panel_widget_'+this.n).parent()
             .css('height', this.widget_height)

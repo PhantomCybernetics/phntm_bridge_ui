@@ -48,6 +48,7 @@ export class VideoWidget {
         this.overlay_sources = new MultiTopicSource(this);
         this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1, this.on_overlay_data, this.clear_overlay);
         this.overlay_sources.onChange = this.setupOverlayMenuControls;
+        // console.log('Hi from video + multitopic, panel.custom_url_vars=', this.panel.custom_url_vars)
         this.parseUrlParts(this.panel.custom_url_vars); 
 
         this.overlay_labels = { '/oak/nn/detections' : [
@@ -351,7 +352,7 @@ export class VideoWidget {
     getUrlHashParts (out_parts) {
         this.overlay_sources.getUrlHashParts(out_parts);
         out_parts.push('crp='+(this.display_overlay_input_crop ? '1' : '0'));
-        console.log('Video.getUrlHashParts', out_parts);
+        // console.log('Video.getUrlHashParts', out_parts);
     }
 
     parseUrlParts (custom_url_vars) {
@@ -368,7 +369,7 @@ export class VideoWidget {
                     break;
             }
         });
-        console.log('Video.parseUrlParts', custom_url_vars);
+        // console.log('Video.parseUrlParts', custom_url_vars);
     }
 
 }

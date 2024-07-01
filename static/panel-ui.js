@@ -1464,11 +1464,11 @@ export class PanelUI {
 
     //widget_opts = {};
 
-    toggle_panel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false, zoom) {
+    toggle_panel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
         let panel = this.panels[id_source];
         if (state) {
             if (!panel) {
-                panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom);
+                panel = new Panel(id_source, this, w, h, x, y, src_visible);
                 panel.init(msg_type);
 
                 if (isTouchDevice()) { // place new in editing state
@@ -1483,12 +1483,12 @@ export class PanelUI {
         }
     }
 
-    make_panel(id_source, w, h, x = null, y = null, src_visible = false, zoom, custom_url_vars) {
+    make_panel(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, custom_url_vars) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
         //msg type unknown here
-        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, custom_url_vars);
+        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, rot, custom_url_vars);
         panel.init(null);
 
         if (isTouchDevice()) {
@@ -1590,7 +1590,7 @@ export class PanelUI {
                 let r = that.panels[id_source].rot.toFixed(0);
                 parts.push('r=' + r);
             }
-            console.log('update_url_hash for ' + id_source + ': ', that.panels[id_source].display_widget);
+            // console.log('update_url_hash for ' + id_source + ': ', that.panels[id_source].display_widget);
             if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== 'undefined') {
                 that.panels[id_source].display_widget.getUrlHashParts(parts);
             }

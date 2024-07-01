@@ -58,7 +58,7 @@ export class MultiTopicSource {
             console.error('Dead multitopic got parseUrlParts');
             return;
         }
-        console.warn('multitopic got parseUrlParts');
+        // console.warn('multitopic got parseUrlParts', custom_url_vars);
         if (!custom_url_vars)
             return;
         custom_url_vars.forEach((kvp)=>{
