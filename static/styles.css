@@ -7,6 +7,40 @@ body {
     padding: 0px 0px 10px 0px; /* make some space for panel resizing  */
 }
 
+/* preload graphics */
+body::after{
+    position:absolute; width:0; height:0; overflow:hidden; z-index:-1;
+    content: 
+        url('/static/icon-menu.png')
+        url('/static/arrow.png')
+        url('/static/battery.png')
+        url('/static/discovery_stopped.svg')
+        url('/static/discovery.svg')
+        url('/static/gamepad.png')
+        url('/static/graph.png')
+        url('/static/icon-check.png')
+        url('/static/icon-config-thicker.png')
+        url('/static/icon-edit.png')
+        url('/static/icon-fullscreen.png')
+        url('/static/icon-menu-thicker.png')
+        url('/static/icon-menu.png')
+        url('/static/icon-play-pause.png')
+        url('/static/icon-plus.png')
+        url('/static/icon-rotate.png')
+        url('/static/icon-settings.png')
+        url('/static/icon-trash.png')
+        url('/static/icon-video.png')
+        url('/static/keyboard.png')
+        url('/static/menu-arrow.png')
+        url('/static/remove.png')
+        url('/static/tiles.png')
+        url('/static/touch-input-black.png')
+        url('/static/touch-input.png')
+        url('/static/user-input.png')
+        url('/static/wifi.png')        
+    ;
+ }
+
 BODY.desktop-ui {
     min-height: calc(100% - 70px);
 }
