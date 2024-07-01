@@ -408,6 +408,7 @@ export class Panel {
                         that.src_visible = true;
         
                         let w = parseInt($(that.grid_widget).attr('gs-w'));
+                        that.panel_w_src_hidden = w;
                         if (w < 5) {
                             w *= 2;
                             that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
@@ -417,13 +418,15 @@ export class Panel {
                         }
         
                     } else {
-        
+                        
+                        that.src_visible = false;
                         source_el.removeClass('enabled');
                         widget_el.removeClass('source_visible');
-                        let w = Math.floor(parseInt($(that.grid_widget).attr('gs-w'))/2);
-                        that.src_visible = false;
+                        let curr_w = parseInt($(that.grid_widget).attr('gs-w'));
+                        let w = that.panel_w_src_hidden ? that.panel_w_src_hidden : Math.floor(curr_w/2);
                         that.ui.grid.update(that.grid_widget, {w : w});  //updates url hash, triggers onResize
-        
+                        if (curr_w == w)
+                            that.onResize();
                     }
                 });
                 els.push(showSourceEl);
@@ -503,7 +506,7 @@ export class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
-        // console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
+        console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
 
         $('#panel_widget_'+this.n).parent()
             .css('height', this.widget_height)

@@ -11,8 +11,7 @@ import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari } from "./lib.js";
-import { call } from 'three/examples/jsm/nodes/Nodes.js';
+import { isPortraitMode, isTouchDevice, isSafari, msToTime } from "./lib.js";
 
 export class PanelUI {
 
@@ -103,10 +102,15 @@ export class PanelUI {
         this.wifi_signal_el = $('#network-info #signal-monitor');
         this.network_peers_el = $('#network-info-peers');
         this.network_rtt_el = $('#network-info-rtt');
+        this.webrtc_status_el = null; // made in update_webrtc_status()
+        this.webrtc_uptime_el = null; // -//-
         this.webrtc_info_el = $('#webrtc_info');
-        this.webrtc_status_el = $('#webrtc_status');
         this.trigger_wifi_scan_el = $('#trigger_wifi_scan');
         this.robot_wifi_info_el = $('#robot_wifi_info');
+
+        this.last_connected_time = null;
+        this.connection_uptime_timer = null;
+        this.last_connection_uptime = '';
 
         client.on('introspection', (state) => {
             if (state) {
@@ -114,17 +118,6 @@ export class PanelUI {
             } else {
                 $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
             }
-        });
-        client.on('peer_disconnected', () => {
-            $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
-
-            that.set_dot_state(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
-            that.update_wifi_signal(-1);
-            that.update_num_peers(-1);
-            that.update_rtt(-1);
-            // this.update_wifi_status();
-            this.trigger_wifi_scan_el.css('display', 'none');
-            this.robot_wifi_info_el.empty().css('display', 'none');
         });
 
         client.on('error', (error, msg) => {
@@ -282,9 +275,35 @@ export class PanelUI {
 
         client.on('peer_connected', () => {
             that.update_webrtc_status();
+
+            that.last_connected_time = Date.now();
+            
+            if (that.connection_uptime_timer)
+                clearInterval(that.connection_uptime_timer);
+            that.connection_uptime_timer = setInterval(()=>{
+                if (that.webrtc_uptime_el) {
+                    let ms = Date.now() - that.last_connected_time;
+                    that.last_connection_uptime = msToTime(ms);
+                    that.webrtc_uptime_el.html(that.last_connection_uptime);
+                }
+            }, 1000);
         })
 
         client.on('peer_disconnected', () => {
+
+            clearInterval(that.connection_uptime_timer);
+            that.connection_uptime_timer = null;
+
+            $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
+
+            that.set_dot_state(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
+            that.update_wifi_signal(-1);
+            that.update_num_peers(-1);
+            that.update_rtt(-1);
+            // this.update_wifi_status();
+            this.trigger_wifi_scan_el.css('display', 'none');
+            this.robot_wifi_info_el.empty().css('display', 'none');
+
             that.update_webrtc_status();
         })
 
@@ -1702,13 +1721,15 @@ export class PanelUI {
         else
             state = 'n/a'
 
-        let wrtc_info = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span>' ];
+        let wrtc_info = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">'+this.last_connection_uptime+'</span>' ];
         if (via_turn)
             wrtc_info.push('<span class="label">TURN Server: </span> <span id="turn_ip" class="turn">'+ip+'</span>')
         else if (ip.indexOf('redacted') === -1 && ip != 'n/a')
             wrtc_info.push('<span class="label">IP: </span> <span id="robot_ip">'+ip+'</span>')
 
         this.webrtc_info_el.html(wrtc_info.join('<br>'));
+        this.webrtc_status_el = $('#webrtc_status');
+        this.webrtc_uptime_el = $('#webrtc_connection_uptime');
 
         if (state == 'Connected') {
             this.webrtc_status_el.html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]</span>'));

@@ -1358,6 +1358,11 @@ BODY.hamburger #docker_controls H3 {
     right: -100px;
 }
 
+#webrtc_connection_uptime {
+    color: #ffffff78;
+    cursor: help;
+    margin-left: 5px;
+}
 
 #network-info-wrapper #network-details.one-column,
 #battery-info #battery-details.one-column {
