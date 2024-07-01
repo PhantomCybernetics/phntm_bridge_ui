@@ -1040,6 +1040,8 @@ export class PanelUI {
         $('#docker_heading B').html(this.num_docker_containers);
 
         let i = 0;
+        let that = this;
+
         Object.values(containers).forEach((container) => {
 
             $('#docker_list').append('<div class="docker_cont ' + container.status + '" id="docker_cont_' + i + '" data-container="' + container.id + '">'
@@ -1066,7 +1068,7 @@ export class PanelUI {
                 $(this).addClass('working');
                 // console.log('Running '+cont_data.name);
                 let item = this;
-                client.docker_container_start(container.id, () => {
+                that.client.docker_container_start(container.id, () => {
                     $(item).removeClass('working');
                 });
             });
@@ -1076,7 +1078,7 @@ export class PanelUI {
                 $(this).addClass('working');
                 // console.log('Stopping '+cont_data.name);
                 let item = this;
-                client.docker_container_stop(container.id, () => {
+                that.client.docker_container_stop(container.id, () => {
                     $(item).removeClass('working');
                 });
             });
@@ -1086,7 +1088,7 @@ export class PanelUI {
                 $(this).addClass('working');
                 // console.log('Restarting '+cont_data.name);
                 let item = this;
-                client.docker_container_restart(container.id, () => {
+                that.client.docker_container_restart(container.id, () => {
                     $(item).removeClass('working');
                 });
             });

@@ -18,11 +18,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         let that = this;
 
-        this.addEventListener('pg_updated', this.on_pg_updated);
+        this.addEventListener('pg_updated', (e) => this.on_pg_updated(e));
 
-        this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1, this.on_laser_data, this.clear_laser);
-        this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1, this.on_range_data, this.clear_range);
-        this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, this.on_costmap_data);
+        this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1, (t, s) => this.on_laser_data(t, s), (t) => this.clear_laser(t));
+        this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1, (t, r) => this.on_range_data(t, r), (t) => this.clear_range(t));
+        this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
 
         this.parseUrlParts(this.panel.custom_url_vars);
         
@@ -108,12 +108,12 @@ export class Everything3DWidget extends DescriptionTFWidget {
         });
     }
 
-    async on_laser_data (topic, scan) {
+    on_laser_data (topic, scan) {
 
         // console.log('Has laser!');
 
         if (!this.robot || this.panel.paused) {
-            // console.log('!');
+            // console.log('!', this);
             return;
         }
 
@@ -191,12 +191,12 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
 
-    on_pg_updated = (e) => {
+    on_pg_updated(ev) {
         // console.log('on_pg_updated', e);
         // this.render_queued_laser_data(e.detail.topic, e.detail.pg_node.ns_stamp);
     }
 
-    clear_laser = (topic) => {
+    clear_laser(topic) {
         if (this.laser_visuals[topic]) {
             this.laser_visuals[topic].removeFromParent();
             delete this.laser_visuals[topic];
@@ -206,7 +206,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
     }
 
-    async on_range_data (topic, range) {
+    on_range_data (topic, range) {
         if (!this.robot || this.panel.paused)
             return;
 
@@ -259,14 +259,14 @@ export class Everything3DWidget extends DescriptionTFWidget {
         // console.log('got range for '+frame_id, range, f);
     }
 
-    clear_range = (topic) => {
+    clear_range(topic) {
         if (this.range_visuals[topic]) {
             this.range_visuals[topic].cone.removeFromParent();
             delete this.range_visuals[topic];
         }
     }
 
-    async on_costmap_data (topic, costmap) {
+    on_costmap_data(topic, costmap) {
         
     }
 
