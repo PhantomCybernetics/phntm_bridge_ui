@@ -1371,7 +1371,7 @@ export class InputManager {
         let all_controller_ids = [ 'keyboard', 'touch', 'gamepad' ];
         if (this.robot_defaults && this.robot_defaults[id_profile_saved]) { // copy robot defaults
             Object.keys(this.robot_defaults[id_profile_saved]).forEach((id_controller)=>{
-                if (all_controller_ids.indexOf(id_controller) < 0)
+                if (all_controller_ids.indexOf(id_controller) < 0 && id_controller != 'label')
                     all_controller_ids.push(id_controller);
             });
         }
@@ -1379,12 +1379,12 @@ export class InputManager {
             Object.keys(this.saved_user_profiles[id_profile_saved]).forEach((id_controller)=>{
                 if (id_controller == 'label')
                     return;
-                if (all_controller_ids.indexOf(id_controller) < 0)
+                if (all_controller_ids.indexOf(id_controller) < 0 && id_controller != 'label')
                     all_controller_ids.push(id_controller);
             });
         }
         Object.keys(this.controllers).forEach((id_controller) => {
-            if (all_controller_ids.indexOf(id_controller) < 0)
+            if (all_controller_ids.indexOf(id_controller) < 0 && id_controller != 'label')
                 all_controller_ids.push(id_controller);
         });
         return all_controller_ids;
