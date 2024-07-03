@@ -161,8 +161,7 @@
 
     import { PhntmBridgeClient } from '/static/browser-client.js';
     import { InputManager } from '/static/input/input-manager.js';
-    // import { KeyboardController } from '/static/keyboard.js';
-    import { PanelUI  } from '/static/panel-ui.js';
+    import { PanelUI } from '/static/panel-ui.js';
     import { LaserOdometryWidget } from '/static/widgets/laser-odo.js';
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
     import { NavigationWidget } from '/static/widgets/navigation.js';
@@ -175,34 +174,6 @@
 
     $(document).ready(function() {
 
-        // function handlePermission() {
-        //     navigator.permissions.query({ name: "camera" }).then((result) => {
-        //         if (result.state === "granted") {
-        //             report(result.state);
-        //             //geoBtn.style.display = "none";
-        //         } else if (result.state === "prompt") {
-        //             report(result.state);
-        //             // geoBtn.style.display = "none";
-        //             // navigator.geolocation.getCurrentPosition(
-        //             //     revealPosition,
-        //             //     positionDenied,
-        //             //     geoSettings,
-        //             // );
-        //         } else if (result.state === "denied") {
-        //             report(result.state);
-        //             // geoBtn.style.display = "inline";
-        //         }
-        //         result.addEventListener("change", () => {
-        //             report(result.state);
-        //         });
-        //     });
-        // }
-
-        // function report(state) {
-        //     console.log(`Permission ${state}`);
-        // }
-
-        // handlePermission();
         let robot = new PhntmBridgeClient({
             socket_url: '<%= bridge_socket_url %>',
             socket_path: '/app/socket.io/',
@@ -220,16 +191,12 @@
                 username: 'app',
                 credential: 'pass'
             }],
-            force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1
+            force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1 (debug)
         });
 
-        let input_manager = new InputManager(robot); // creates write channels when gamepad is connected
+        let input_manager = new InputManager(robot);
         input_manager.register_driver('Joy', JoyInputDriver);
         input_manager.register_driver('Twist', TwistInputDriver);
-
-        // let keyboard = new KeyboardController(robot); // creates write channels when enabled
-        // keyboard.register_driver('Joy', JoyInputDriver);
-        // keyboard.register_driver('Twist', TwistInputDriver);
 
         let panel_ui = new PanelUI(robot, 119, input_manager);
         panel_ui.add_widget(Everything3DWidget);
@@ -242,7 +209,7 @@
         panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
         panel_ui.add_service_type_widget('astra_camera_msgs/srv/SetInt32', ServiceInput_Int);
 
-        panel_ui.set_ignored_service_types([ //these will not be available in ui (?!)
+        panel_ui.set_ignored_service_types([ // these will not be available in ui (?!)
             'rcl_interfaces/srv/DescribeParameters',
             'rcl_interfaces/srv/GetParameterTypes',
             'rcl_interfaces/srv/GetParameters',
@@ -251,13 +218,12 @@
             'rcl_interfaces/srv/SetParametersAtomically'
         ]);
 
-        //init panel setup from url
-        //also subscribes to topics and cameras required by panel widgets
+        // init panel setup from url
+        // also subscribes to topics and cameras required by panel widgets
         panel_ui.panels_from_url_hash(window.location.hash);
-        // panel_ui.update_url_hash();
 
         robot.on('error', (err, msg)=>{
-            // $('#robot_info').html('<span class="error">'+msg+'</spam>');
+            console.error('Robot returned error: '+err, msg);
         })
 
         //robot connected via Socket.io
@@ -270,10 +236,6 @@
 
         // introspection running in the robot
         robot.on('introspection',  (state) => {
-            // if (state)
-            //     console.info('(Socket.io) Robot introspection running');
-            // else
-            //     console.info('(Socket.io) Robot introspection stopped');
         });
 
         // robot's state changed
@@ -326,16 +288,7 @@
         if (navigator.userAgent.toLowerCase().includes('firefox')) {
             panel_ui.show_page_error(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>');
         }
-
-        // socket.on('offer', (offer_data) => {
-        //     console.log('Got webrtc offer:', offer_data)
-        //     let id_robot = Object.keys(offer_data)[0];
-        //     OnWebRTCOffer(id_robot, offer_data[id_robot]);
-        // });
-
     });
-
-
 
 </script>
 

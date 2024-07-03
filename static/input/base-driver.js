@@ -64,7 +64,7 @@ export class InputDriver {
             return;
         }
         let err = {};
-        this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, null, err);
+        this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, err);
         this.error_message = err.message;
         this.handle_error_message();
     }

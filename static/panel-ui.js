@@ -133,11 +133,11 @@ export class PanelUI {
             }
 
             $('#robot_info').html('<span class="label">Robot ID:</span> ' + client.id_robot + '<br>'
-                + '<span class="label">Robot IP (public):</span> ' + (client.robot_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>')
+                + '<span class="label">Robot IP (public):</span> ' + (client.robot_socket_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>')
             );
 
-            that.set_dot_state(1, client.robot_online ? 'green' : 'red', 'Robot ' + (client.robot_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
-            if (!client.robot_online) {
+            that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            if (!client.robot_socket_online) {
                 that.update_wifi_signal(-1);
                 that.update_num_peers(-1);
                 that.update_rtt(-1);
@@ -147,7 +147,7 @@ export class PanelUI {
         });
 
         client.on('socket_disconnect', () => {
-            that.set_dot_state(1, client.robot_online ? 'green' : 'red', 'Robot ' + (client.robot_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
         });
 
         client.on('media_stream', (id_src, stream) => {
@@ -301,8 +301,8 @@ export class PanelUI {
             that.update_num_peers(-1);
             that.update_rtt(-1);
             // this.update_wifi_status();
-            this.trigger_wifi_scan_el.css('display', 'none');
-            this.robot_wifi_info_el.empty().css('display', 'none');
+            that.trigger_wifi_scan_el.css('display', 'none');
+            that.robot_wifi_info_el.empty().css('display', 'none');
 
             that.update_webrtc_status();
         })
@@ -935,7 +935,6 @@ export class PanelUI {
         topic_ids.forEach((id_topic) => {
             if (!that.panels[id_topic] || that.panels[id_topic].initiated)
                 return;
-            console.log(topics[id_topic]);
             let msg_type = topics[id_topic].msg_types[0];
             that.panels[id_topic].init(msg_type); //init w message type
         });
