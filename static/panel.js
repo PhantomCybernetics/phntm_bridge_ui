@@ -166,7 +166,7 @@ export class Panel {
         this.last_content_space_click = null;
         this.maximized = false;
 
-        $('#panel_content_space_'+this.n).on('touchstart', (ev) => {
+        $('#panel_content_space_'+this.n)[0].addEventListener('touchstart', (ev) => {
             if (that.editing)
                 return;
 
@@ -190,7 +190,7 @@ export class Panel {
 
             // console.log('Clicked '+id_source);
             that.last_content_space_click = Date.now();
-        });
+        }, {'passive': true});
 
         
         let menu_content_el = document.getElementById('monitor_menu_'+this.n);
@@ -210,7 +210,7 @@ export class Panel {
 
 
         menu_content_el.addEventListener('touchstart', (ev) => {
-            console.log('menu touchstart', ev);
+            // console.log('menu touchstart', ev);
             // ev.preventDefault();
             that.ui.menu_locked_scroll = true;
         
@@ -226,7 +226,7 @@ export class Panel {
         // });
 
         menu_content_el.addEventListener('touchend', (ev) => {
-            console.log('menu touchend', ev);
+            // console.log('menu touchend', ev);
             // ev.preventDefault();
             that.ui.menu_locked_scroll = null;
             // ev.stopPropagation();

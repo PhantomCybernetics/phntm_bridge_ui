@@ -30,6 +30,9 @@ export class InputManager {
         this.input_status_icon = $('#input-status-icon');
         this.debug_output_panel = $('#gamepad-output-panel');
 
+        this.cooldown_drivers = {};
+        this.topics_transmitted_last_frame = {};
+
         let that = this;
         this.zero2 = new THREE.Vector2(0,0);
 
@@ -3468,19 +3471,21 @@ export class InputManager {
     run_input_loop() {
 
         if (!this.loop_running) {
-            console.log('Gamepad loop stopped')
+            console.log('Input loop stopped')
             this.loop_running = false;
             return;
         }
 
+        let topics_transmitted_this_frame = {};
+        
         let that = this;
         Object.values(this.controllers).forEach((c)=>{
         
             if (!c.profiles)
                 return; //not yet configured
 
-            let profile = c.profiles[that.current_profile];
-            let driver = profile.driver_instances[profile.driver];
+            let c_profile = c.profiles[that.current_profile];
+            let driver = c_profile.driver_instances[c_profile.driver];
     
             if (c.type == 'touch') {
     
@@ -3627,16 +3632,20 @@ export class InputManager {
             let axes_alive = this.process_axes_input(c) && c.connected;
             let buttons_alive = this.process_buttons_input(c) && c.connected;
             let cooldown = false;
-
-            if (!axes_alive && !buttons_alive && c.transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
-                if (c.cooldown_started === undefined) {
-                    c.cooldown_started = Date.now();
+            let transmitted_last_frame = this.topics_transmitted_last_frame[driver.output_topic];
+            
+            if (!axes_alive && !buttons_alive && transmitted_last_frame) { // cooldown for 1s to make sure zero values are received
+                if (that.cooldown_drivers[driver.output_topic] === undefined) {
+                    that.cooldown_drivers[driver.output_topic] = {
+                        started: Date.now(),
+                        driver: driver,
+                    }
                     cooldown = true;
-                } else if (c.cooldown_started + 1000 > Date.now() ) {
+                } else if (that.cooldown_drivers[driver.output_topic].started + 1000 > Date.now() ) {
                     cooldown = true;
                 }
-            } else if (c.cooldown_started !== undefined) {
-                delete c.cooldown_started; // some axes alive => reset cooldown
+            } else if (that.cooldown_drivers[driver.output_topic] !== undefined) {
+                delete that.cooldown_drivers[driver.output_topic]; // some axes alive => reset cooldown
             }
             
             let can_transmit = driver.can_transmit();
@@ -3648,7 +3657,7 @@ export class InputManager {
                 driver.display_output(this.debug_output_panel, transmitting);
             }
     
-            c.transmitted_last_frame = transmitting;
+            // c.transmitted_last_frame = transmitting;
             c.transmitting_user_input = transmitting && !cooldown; // more intuitive user feedback
 
             let had_error = c.has_error;
@@ -3657,6 +3666,7 @@ export class InputManager {
 
             if (transmitting) {
                 c.has_error = !driver.transmit();
+                topics_transmitted_this_frame[driver.output_topic] = driver;
             }
             if (c.has_error && !cooldown) {
 
@@ -3680,6 +3690,34 @@ export class InputManager {
             that.update_input_status_icon();
 
         });
+
+        let topics_transmitted_last_frame = Object.keys(this.topics_transmitted_last_frame);
+        topics_transmitted_last_frame.forEach((topic) => {
+            if (!topics_transmitted_this_frame[topic] && !this.cooldown_drivers[topic]) {
+                let driver = that.topics_transmitted_last_frame[topic];
+                that.cooldown_drivers[topic] = {
+                    started: Date.now(),
+                    driver: driver
+                }
+                driver.reset_all_output(); //make sure we send all zeroes
+            }
+        });
+
+        // cooldown topic even when driver was switched for a controller
+        let cooldown_topics = Object.keys(this.cooldown_drivers);
+        cooldown_topics.forEach((topic)=>{
+            if (topics_transmitted_this_frame[topic])
+                return;
+
+            if (that.cooldown_drivers[topic].started + 1000 < Date.now()) {
+                delete that.cooldown_drivers[topic];
+            } else {
+                that.cooldown_drivers[topic].driver.generate();
+                that.cooldown_drivers[topic].driver.transmit();
+            }
+        });
+
+        this.topics_transmitted_last_frame = topics_transmitted_this_frame;
 
         this.update_axes_ui_values();
         this.update_buttons_ui_values();
@@ -3715,8 +3753,8 @@ export class InputManager {
         if (!c || !c.profiles)
             return;
 
-        let profile = c.profiles[this.current_profile];
-        let driver = profile.driver_instances[profile.driver];
+        let c_profile = c.profiles[this.current_profile];
+        let driver = c_profile.driver_instances[c_profile.driver];
 
         let that = this;
 
@@ -3769,8 +3807,8 @@ export class InputManager {
         if (!c || !c.profiles)
             return;
 
-        let profile = c.profiles[this.current_profile];
-        let driver = profile.driver_instances[profile.driver];
+        let c_profile = c.profiles[this.current_profile];
+        let driver = c_profile.driver_instances[c_profile.driver];
         let that = this;
 
         if (driver.on_button_press) { // if still listening on up, thus must be a single modifier

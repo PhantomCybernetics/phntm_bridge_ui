@@ -222,7 +222,7 @@ export class MultiTopicSource {
             else
                 menu_line_el.addClass('open');
 
-            console.log('Multitopic clicked, open='+menu_line_el.hasClass('open'))
+            // console.log('Multitopic clicked, open='+menu_line_el.hasClass('open'))
 
             if (isTouchDevice()) {
                 that.panel.ui.panel_menu_autosize(that.panel);
@@ -262,7 +262,7 @@ export class MultiTopicSource {
     clearSlot(slot) {
         if (slot.topic) {
 
-            console.log('Clearing topic: '+slot.topic);
+            // console.log('Clearing topic: '+slot.topic);
 
             delete this.subscribed_topics[slot.topic];
             this.widget.panel.ui.client.off(slot.topic, slot.cb_wrapper);
@@ -322,7 +322,7 @@ export class MultiTopicSource {
             that.widget.panel.ui.message_type_dialog(slot.msg_type);
         });
 
-        btn.on('touchstart', (e) => {
+        btn[0].addEventListener('touchstart', (e) => {
             if (!isTouchDevice()) return;
             console.log('touchstart '+slot.label);
             if (slot.btn_timer)
@@ -338,7 +338,7 @@ export class MultiTopicSource {
                     });
 
             }, 2000) // hold for 2s for the delete button to appear
-        });
+        }, {'passive': true});
 
         btn.on('touchend', (e) => {
             if (!isTouchDevice()) return;

@@ -187,6 +187,9 @@ export class PhntmBridgeClient extends EventTarget {
         this.socket.on("disconnect", () => {
             console.log('Socket.io disconnected');
             that.robot_socket_online = false;
+            if (that.pc && that.pc.signalingState == 'closed') {
+                that._clear_connection();
+            }
             setTimeout(()=>{
                 that.emit('socket_disconnect');
             }, 0);
@@ -724,10 +727,20 @@ export class PhntmBridgeClient extends EventTarget {
     _process_robot_data(robot_data, answer_callback) {
 
         console.warn('Recieved robot state data: ', this.id_robot, robot_data);
+        let that = this;
 
         if (robot_data['session']) { // no session means server pushed just brief info
             if (this.session != robot_data['session']) {
-                console.warn('NEW PC SESSION '+robot_data['session'])
+                console.warn('NEW PC SESSION '+robot_data['session']);
+
+                Object.keys(this.topic_writers).forEach((topic)=>{
+                    if (that.topic_writers[topic].dc) {
+                        that.topic_writers[topic].dc.close();
+                        that.topic_writers[topic].dc_id = -1;
+                        delete that.topic_writers[topic].dc;
+                    }
+                });
+
                 if (this.pc != null) {
                     this.pc.close(); // make new pc
                     this.pc = null;
@@ -762,17 +775,24 @@ export class PhntmBridgeClient extends EventTarget {
         if (this.robot_socket_online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
             this.pc = this._init_peer_connection(this.id_robot);
-        } else {
+        } else if (this.robot_socket_online) {
             console.warn(`Re-using old webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}; this should autoconnect...`);
             // should autoconnect ?!?!
         }
 
         if (prev_online != this.robot_socket_online)
-            this.emit('online', this.robot_socket_online);
+            this.emit('robot-socket-connected', this.robot_socket_online);
 
         this.emit('update');
+
         if (prev_introspection != this.introspection)
             this.emit('introspection', this.introspection);
+
+        if (!this.robot_socket_online) {
+            // in case of socket connection loss this webrtc stays up transmitting p2p
+            console.warn('Server reports robot disconnected from socket.io')
+            return;
+        }
 
         if (robot_data['input_drivers'] || robot_data['input_defaults']) {
             let drivers = robot_data['input_drivers'];
@@ -836,8 +856,6 @@ export class PhntmBridgeClient extends EventTarget {
             });
         }
 
-        let that = this;
-
         if (robot_data['write_data_channels']) {
             console.log('Got write channels', robot_data['write_data_channels'])
             robot_data['write_data_channels'].forEach((topic_data)=>{
@@ -889,11 +907,6 @@ export class PhntmBridgeClient extends EventTarget {
         } else {
             console.log('Initiated without subs, unlocking...');
             this.can_change_subscriptions = true;
-        }
-
-        if (!this.robot_socket_online) {
-            console.log('Server reports robot disconnected from socket.io')
-            // in case of socket connection loss this webrtc stays up transmitting p2p
         }
     }
 
@@ -1064,20 +1077,40 @@ export class PhntmBridgeClient extends EventTarget {
 
         let that = this;
         dc.addEventListener('open', (ev)=> {
-            console.warn('Write DC '+topic+' open', dc)
+            console.warn('Write DC '+topic+' open', dc.id)
         });
         dc.addEventListener('close', (ev)=> {
-            console.warn('Write DC '+topic+' closed')
-            delete that.topic_writers[topic].dc;
-            that.topic_writers[topic].dc_id = -1;
+            console.warn('Write DC '+topic+' closed', dc.id)
+            if (that.topic_writers[topic].dc == dc) {
+                delete that.topic_writers[topic].dc;
+                that.topic_writers[topic].dc_id = -1;    
+            }
         });
         dc.addEventListener('error', (ev)=> {
             console.error('write DC '+topic+' error', ev)
-            delete that.topic_writers[topic].dc;
-            that.topic_writers[topic].dc_id = -1;
+            if (that.topic_writers[topic].dc == dc) {
+                delete that.topic_writers[topic].dc;
+                that.topic_writers[topic].dc_id = -1;
+            }
         });
     }
 
+    _clear_connection() {
+        console.warn('Socket and webrtc disconnected; clearing session');
+        this.session = null;
+        this.init_complete = false;
+        let that = this;
+        Object.keys(that.topic_writers).forEach((topic)=>{
+            if (that.topic_writers[topic].dc) {
+                that.topic_writers[topic].dc.close();
+                // delete that.topic_writers[topic].dc;
+            }
+        });
+        if (this.pc != null) {
+            this.pc.close(); // make new pc
+            this.pc = null;
+        }
+    }
 
     _init_peer_connection(id_robot) {
 
@@ -1257,18 +1290,22 @@ export class PhntmBridgeClient extends EventTarget {
 
             that.can_change_subscriptions = (pc.signalingState == 'stable');
 
-            switch (pc.signalingState) {
-                case "closed":
-                  console.warn('Peer connection closed');
-                  break;
-              }
+            if (pc.signalingState == 'closed' && !that.robot_socket_online) {
+               that._clear_connection();
+            }
+
+            // switch (pc.signalingState) {
+            //     case "closed":
+            //       console.warn('Peer signalling state is closed');
+            //       break;
+            //   }
         });
 
         pc.addEventListener("connectionstatechange", (evt) => {
 
             let newState = evt.currentTarget.connectionState;
             if (newState == 'failed' || newState == 'disconnected') {
-                console.error('Peer connection state: ', evt.currentTarget.connectionState);
+                console.warn('Peer connection state: ', evt.currentTarget.connectionState);
             } else {
                 console.warn('Peer connection state: ', evt.currentTarget.connectionState);
             }
@@ -1290,7 +1327,7 @@ export class PhntmBridgeClient extends EventTarget {
                 Object.keys(that.topic_writers).forEach((topic)=>{
                     if (that.topic_writers[topic].dc) {
                         that.topic_writers[topic].dc.close();
-                        delete that.topic_writers[topic].dc;
+                        // delete that.topic_writers[topic].dc;
                     }
                 });
 
@@ -1318,6 +1355,7 @@ export class PhntmBridgeClient extends EventTarget {
                 setTimeout(() => {
                     resolve();
                 }, 100);
+                return;
             }
                 
             that.pc.getStats(null)

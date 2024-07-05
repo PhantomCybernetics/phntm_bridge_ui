@@ -26,6 +26,11 @@ export class InputDriver {
         return {}; // override
     }
 
+    reset_all_output() {
+        this.axes_output = {};
+        this.buttons_output = {};
+    }
+
     set_config(cfg) { // from cookie, robot, etc
         if (cfg && cfg.output_topic) {
             this.output_topic = cfg.output_topic;

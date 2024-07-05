@@ -510,10 +510,8 @@ export class PanelUI {
         let min_top = $(window).scrollTop() + 25.0;
         let t0 = t;
         if (t < min_top) {
-            console.log('over top');
             t = min_top;
         } else if (t + h + 10 > ($(window).scrollTop() + window.innerHeight - 10)) {
-            console.log('over bottom');
             t = $(window).scrollTop() + window.innerHeight - 10 - h - 10;
         }
         // console.log('menu content='+h_cont+'; min-top='+min_top+'; scrolls='+scrolls+'; t='+t);
