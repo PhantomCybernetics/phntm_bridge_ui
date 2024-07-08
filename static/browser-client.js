@@ -36,6 +36,9 @@ class TopicWriter {
 
         //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
         setTimeout(()=>{
+            if (!this.client.pc || this.client.pc.connectionState != 'connected'
+                || !this.dc || this.dc.readyState != 'open' || !this.msg_writer)
+                return;
             let payload = this.msg_writer.writeMessage(msg); //to binary
             this.dc.send(payload);
         }, 0);
