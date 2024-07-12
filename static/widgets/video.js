@@ -22,18 +22,18 @@ export class VideoWidget {
         this.video_stats_el = $('#video_stats_' + panel.n);
         this.video_fps_el = $('#video_fps_' + panel.n);
 
-        let that = this;
         this.videoWidth = -1;
         this.videoHeight = -1;
-        this.overlay_extra_controls_rendered = false;
+    
+        // this.overlay_extra_controls_rendered = false;
         this.display_overlay_input_crop = false;
 
-        // var v = document.getElementById("myVideo");
+        let that = this;
         this.el.on('loadedmetadata', function() {
             console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
             that.videoWidth = this.videoWidth;
             that.videoHeight = this.videoHeight;
-            // that.aspect = this.videoWidth, this.videoHeight;
+            that.updateAllOverlays();
         });
 
         if (panel.id_stream && panel.ui.client.media_streams[panel.id_stream]) { // assign stream, if already available
@@ -42,157 +42,107 @@ export class VideoWidget {
         }
 
         this.overlays = {};
+        this.next_overlay_id = 0;
+        this.overlay_crop_display_control_menu_el = null;
 
-        this.panel.widget_menu_cb = this.setupMenu;
+        this.panel.widget_menu_cb = () => that.setupMenu();
 
         this.overlay_sources = new MultiTopicSource(this);
-        this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1, this.on_overlay_data, this.clear_overlay);
-        this.overlay_sources.onChange = this.setupOverlayMenuControls;
-        // console.log('Hi from video + multitopic, panel.custom_url_vars=', this.panel.custom_url_vars)
-        this.parseUrlParts(this.panel.custom_url_vars); 
-
-        this.overlay_labels = { '/oak/nn/detections' : [
-            // YOLO @ COCO:
-            "person",
-            "bicycle",
-            "car",
-            "motorbike",
-            "aeroplane",
-            "bus",
-            "train",
-            "truck",
-            "boat",
-            "traffic light",
-            "fire hydrant",
-            "stop sign",
-            "parking meter",
-            "bench",
-            "bird",
-            "cat",
-            "dog",
-            "horse",
-            "sheep",
-            "cow",
-            "elephant",
-            "bear",
-            "zebra",
-            "giraffe",
-            "backpack",
-            "umbrella",
-            "handbag",
-            "tie",
-            "suitcase",
-            "frisbee",
-            "skis",
-            "snowboard",
-            "sports ball",
-            "kite",
-            "baseball bat",
-            "baseball glove",
-            "skateboard",
-            "surfboard",
-            "tennis racket",
-            "bottle",
-            "wine glass",
-            "cup",
-            "fork",
-            "knife",
-            "spoon",
-            "bowl",
-            "banana",
-            "apple",
-            "sandwich",
-            "orange",
-            "broccoli",
-            "carrot",
-            "hot dog",
-            "pizza",
-            "donut",
-            "cake",
-            "chair",
-            "sofa",
-            "pottedplant",
-            "bed",
-            "diningtable",
-            "toilet",
-            "tvmonitor",
-            "laptop",
-            "mouse",
-            "remote",
-            "keyboard",
-            "cell phone",
-            "microwave",
-            "oven",
-            "toaster",
-            "sink",
-            "refrigerator",
-            "book",
-            "clock",
-            "vase",
-            "scissors",
-            "teddy bear",
-            "hair drier",
-            "toothbrush"
-
-            //MobileNet @ PASCAL 2007 VOC
-            // "background",
-            // "aeroplane",
-            // "bicycle",
-            // "bird",
-            // "boat",
-            // "bottle",
-            // "bus",
-            // "car",
-            // "cat",
-            // "chair",
-            // "cow",
-            // "diningtable",
-            // "dog",
-            // "horse",
-            // "motorbike",
-            // "person",
-            // "pottedplant",
-            // "sheep",
-            // "sofa",
-            // "train",
-            // "tvmonitor"
-        ]};
+        this.overlay_sources.on('change', (topics) => that.onOverlaySourcesChange(topics));
+        this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1,
+                                 (t, d) => { that.onOverlayData(t, d); },
+                                 (t) => { that.clearOverlay(t); });
+        
+        this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
+        this.panel.ui.client.on('topic_config', (t, c) => that.onTopicConfigUpdate(t, c))
+        this.onOverlaySourcesChange(this.overlay_sources.getSources());
     }
 
-    setupOverlayMenuControls = () => {
-        if (!this.overlay_extra_controls_rendered && this.overlay_sources && this.overlay_sources.hasSources())  {
-            this.overlay_extra_controls_rendered = true; //only add once to DOM
-
-            // overlay input area
-            $('<div class="menu_line overlay_menu_ctrl"><label for="video_overlay_input_crop_cb_'+this.panel.n+'">'
-                +'<input type="checkbox"'
-                + (this.display_overlay_input_crop?' checked':'')
-                + ' id="video_overlay_input_crop_cb_'+this.panel.n+'" title="Display overlay input cropping"> Show overlay input cropping</label></div>'
-            ).insertBefore($('#close_panel_menu_'+this.panel.n));
-
-            let that = this;
-            $('#video_overlay_input_crop_cb_'+this.panel.n).change(function(ev) {
-                if ($(this).prop('checked')) {
-                    that.display_overlay_input_crop = true;
-                    $('#video_overlay_'+that.panel.n+' svg').addClass('display_crop');
-                    that.panel.ui.update_url_hash();
-                } else {
-                    that.display_overlay_input_crop = false;
-                    $('#video_overlay_'+that.panel.n+' svg').removeClass('display_crop');
-                    that.panel.ui.update_url_hash();
-                }
-            });
-
-        } else if (this.overlay_extra_controls_rendered && (!this.overlay_sources || !this.overlay_sources.hasSources())) { //remove
-            this.overlay_extra_controls_rendered = false;
-
-            $('#monitor_menu_content_'+this.panel.n+' .overlay_menu_ctrl').remove();
+    onTopicConfigUpdate(topic, config) {
+        console.warn('onTopicConfigUpdate', topic, config);
+        if (this.overlays[topic]) {
+            this.setupOverlay(topic, config);
         }
     }
 
-    setupMenu = () => {
+    onOverlaySourcesChange(overlay_topics) {
 
-        // $('#monitor_menu_content_'+this.panel.n+' .panel_msg_types_line').addClass('nospace');
+        console.warn('onOverlaySourcesChange', overlay_topics)
+
+        let client = this.panel.ui.client;
+        let that = this;
+        overlay_topics.forEach((topic)=>{
+            if (!that.overlays[topic])
+                that.overlays[topic] = {};
+            if (client.topic_configs[topic])
+                that.setupOverlay(topic, client.topic_configs[topic]);
+        });
+    }
+
+    setupOverlay(topic, config) {
+
+        if (config) {
+            this.overlays[topic].nn_cropped_square = config['nn_input_cropped_square'] ? config['nn_input_cropped_square'] : false;
+            this.overlays[topic].nn_w = config['nn_input_w'] ? config['nn_input_w'] : 0;
+            this.overlays[topic].nn_h = config['nn_input_h'] ? config['nn_input_h'] : 0;
+            this.overlays[topic].config = config;
+        } else if (!this.overlays[topic].config) {
+            return;
+        }
+        
+        if (this.videoWidth < 0 || this.videoHeight < 0)
+            return; //video dimenstions still unknown
+
+        this.overlays[topic].display_w = this.overlays[topic].nn_cropped_square ? this.videoHeight : this.videoWidth;
+        this.overlays[topic].display_h = this.videoHeight;
+        this.overlays[topic].xoff = (this.videoWidth-this.overlays[topic].display_w) / 2.0;
+
+        if (this.overlays[topic].container_el) {
+            // let svg = this.overlays[topic].svg.select(function() { return this.parentNode; })
+            // svg.remove();
+            this.overlays[topic].container_el.remove();
+        }
+
+        console.log('Making overlay from '+topic);
+        let cont_id = 'video_overlay_'+this.panel.n+'_'+(this.next_overlay_id);
+        this.next_overlay_id++;
+        this.overlays[topic].container_el = $('<div class="video_overlay_cont" id="'+cont_id+'"></div>');
+        this.overlays[topic].container_el.css('left', ((this.overlays[topic].xoff/this.videoWidth)*100)+'%');
+        this.overlays[topic].container_el.appendTo(this.overlay_el);
+        
+        this.overlays[topic].svg = d3.select('#'+cont_id).append("svg");
+        this.overlays[topic].svg.attr("width", ((this.overlays[topic].display_w/this.videoWidth)*100)+'%')
+                .attr("viewBox", '0 0 ' + this.overlays[topic].display_w + ' ' + this.overlays[topic].display_h)
+                .append("g");
+        if (this.display_overlay_input_crop) {
+            this.overlays[topic].container_el.addClass('display_crop');
+        }
+
+        this.renderOverlayMenuControls();
+    }
+
+    updateAllOverlays() {
+        let overlay_topics = Object.keys(this.overlays);
+        overlay_topics.forEach((t) => {
+            this.setupOverlay(t, null);
+        });
+    }
+
+    clearOverlay (topic) {
+        if (this.overlays[topic]) {
+            console.log('Removing overlay', this.overlays[topic]);
+            if (this.overlays[topic].container_el) {
+                // let svg = this.overlays[topic].svg.select(function() { return this.parentNode; })
+                // svg.remove();
+                this.overlays[topic].container_el.remove();
+            }
+            delete this.overlays[topic];
+        }
+        this.renderOverlayMenuControls();
+    }
+
+
+    setupMenu() {
 
         this.overlay_sources.setupMenu("Overlay");
 
@@ -225,44 +175,66 @@ export class VideoWidget {
             }
         });
 
-        this.setupOverlayMenuControls();
+        this.overlay_crop_display_control_menu_el = null; //menu is empty here, force re-create
+        this.renderOverlayMenuControls();
     }
 
-    on_overlay_data = (topic, data) => {
+
+
+    renderOverlayMenuControls() {
+
+        let some_overlay_is_cropped = false;
+        Object.keys(this.overlays).forEach((topic)=>{
+            if (this.overlays[topic].nn_cropped_square) {
+                some_overlay_is_cropped = true;
+                return;
+            }
+        });
+
+        if (some_overlay_is_cropped && !this.overlay_crop_display_control_menu_el) {
+
+            this.overlay_crop_display_control_menu_el = $('<div class="menu_line overlay_menu_ctrl"><label for="video_overlay_input_crop_cb_'+this.panel.n+'">'
+                +'<input type="checkbox"'
+                + (this.display_overlay_input_crop?' checked':'')
+                + ' id="video_overlay_input_crop_cb_'+this.panel.n+'" title="Display overlay input cropping"> Show overlay input cropping</label></div>'
+            );
+            this.overlay_crop_display_control_menu_el.insertBefore($('#close_panel_menu_'+this.panel.n));
+            
+            let that = this;
+            $('#video_overlay_input_crop_cb_'+this.panel.n).change((ev) => {
+                if ($(ev.target).prop('checked')) {
+                    that.display_overlay_input_crop = true;
+                    that.panel.ui.update_url_hash();
+                } else {
+                    that.display_overlay_input_crop = false;
+                    that.panel.ui.update_url_hash();
+                }
+
+                Object.keys(that.overlays).forEach((topic)=>{
+                    if (that.overlays[topic].container_el) {
+                        if (that.display_overlay_input_crop) 
+                            that.overlays[topic].container_el.addClass('display_crop');
+                        else
+                            that.overlays[topic].container_el.removeClass('display_crop');
+                    }
+                });
+            });
+
+        } else if (!some_overlay_is_cropped && this.overlay_crop_display_control_menu_el) {
+            this.overlay_crop_display_control_menu_el.remove();
+            this.overlay_crop_display_control_menu_el = null;
+        }
+    }
+
+    onOverlayData (topic, data) {
         
         if (this.panel.paused)
             return;
 
-        let nn_cropped_square = true;
-        // yolo:
-        let nn_w = 416;
-        let nn_h = 416;
-        // mobilenet:
-        // let nn_w = 300;
-        // let nn_h = 300;
-        
-        let display_w = nn_cropped_square ? this.videoHeight : this.videoWidth;
-        let display_h = this.videoHeight;
+        if (!this.overlays[topic] || !this.overlays[topic].svg)
+            return; //not yet initiated
 
-        let xoff = (this.videoWidth-display_w) / 2.0;
-
-        if (!this.overlays[topic]) {
-            if (this.videoWidth < 0 || this.videoHeight < 0)
-                return; //video dimenstions still unknown
-
-            console.log('Making overlay from '+topic)
-            $('#video_overlay_'+this.panel.n).css('left', ((xoff/this.videoWidth)*100)+'%');
-            this.overlays[topic] = d3.select("#video_overlay_"+this.panel.n)
-                .append("svg")
-                    .attr("width", ((display_w/this.videoWidth)*100)+'%')
-                    .attr("viewBox", '0 0 ' + display_w + ' ' + display_h)
-                        .append("g");
-            if (this.display_overlay_input_crop) {
-                $('#video_overlay_'+this.panel.n+' svg').addClass('display_crop');
-            }
-        }
-
-        let svg = this.overlays[topic];
+        let svg = this.overlays[topic].svg;
         svg.selectAll("rect").remove();
         svg.selectAll("text").remove();
 
@@ -275,17 +247,15 @@ export class VideoWidget {
             for (let j = 0; j < d.results.length; j++) {
                 let c = d.results[j].hypothesis.class_id;
                 let l = 'Class ' + c;
-                if (this.overlay_labels[topic] && this.overlay_labels[topic][c])
-                    l = this.overlay_labels[topic][c];
+                if (this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
+                    && this.overlays[topic].config['nn_detection_labels'][c])
+                    l = this.overlays[topic].config['nn_detection_labels'][c];
                 labels.push(l + ' (' + d.results[j].hypothesis.score.toFixed(2)+')');
             }
             let label = labels.join("\n");
-            // console.log(i+' bbox: ', d.bbox, label)
-            // let sx = this.videoWidth / 416.0;
-            // let sy = this.videoHeight / 416.0;
 
-            let sx = display_w / nn_w;
-            let sy = display_h / nn_h;
+            let sx = this.overlays[topic].display_w / this.overlays[topic].nn_w;
+            let sy = this.overlays[topic].display_h / this.overlays[topic].nn_h;
 
             let bbcx = d.bbox.center.position.x * sx;
             let bbcy = d.bbox.center.position.y * sy;
@@ -303,7 +273,7 @@ export class VideoWidget {
                     .attr("height", 10)
                     .style('fill', 'magenta')
                 ;
-
+            
             let boxpath = svg
                 .append("rect")
                     .attr("x", bbleft)
@@ -314,14 +284,7 @@ export class VideoWidget {
                     .style('fill', 'none')
                     .style('stroke-width', 2)
                 ;
-            // let labelbox = svg
-            //     .append("rect")
-            //         .attr("x", d.bbox.center.position.x-(d.bbox.size_x/2.0))
-            //         .attr("y", d.bbox.center.position.y+(d.bbox.size_y/2.0))
-            //         .attr("width", d.bbox.size_x)
-            //         .attr("height", 20)
-            //         .style('fill', 'magenta')
-            //     ;
+
             svg.append('text')
                 .attr('class', 'detection-res')
                 .attr('x', bbleft+5.0)
@@ -332,44 +295,29 @@ export class VideoWidget {
                 .attr('dy', 20)
                 .text(label);
             }
-        
     }
 
-    // get_box_path(bbox) {
-
-    //     return 'M '+offset_node+' '+pos_node+' C 100 '+pos_node+', 100 '+pos_topic+', '+offset_topic+' '+pos_topic;
-    // }
-
-    clear_overlay = (topic) => {
-        if (this.overlays[topic]) {
-            console.log('Removing overlay', this.overlays[topic]);
-            let svg = this.overlays[topic].select(function() { return this.parentNode; })
-            svg.remove();
-            delete this.overlays[topic];
-        }
-    }
+    
 
     getUrlHashParts (out_parts) {
         this.overlay_sources.getUrlHashParts(out_parts);
         out_parts.push('crp='+(this.display_overlay_input_crop ? '1' : '0'));
-        // console.log('Video.getUrlHashParts', out_parts);
     }
 
     parseUrlParts (custom_url_vars) {
         if (!custom_url_vars)
             return;
         this.overlay_sources.parseUrlParts(custom_url_vars);
+
         custom_url_vars.forEach((kvp)=>{
             let arg = kvp[0];
             let val = kvp[1];
-            // console.warn('DRF got ' + arg +" > "+val);
             switch (arg) {
                 case 'crp':
                     this.display_overlay_input_crop = parseInt(val) == 1;
                     break;
             }
         });
-        // console.log('Video.parseUrlParts', custom_url_vars);
     }
 
 }

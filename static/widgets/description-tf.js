@@ -302,10 +302,6 @@ export class DescriptionTFWidget extends EventTarget {
             this.sources.setupMenu();
         }
 
-        // this.sources.makeTopicButton('Static TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf_static);
-        // this.sources.makeTopicButton('TF source', 'tf2_msgs/msg/TFMessage', this.topic_tf);
-        // this.sources.makeTopicButton('', '', this.topic_desc);
-
         let that = this;
 
         $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'"><input type="checkbox" '+(this.follow_target?'checked':'')+' id="follow_target_'+this.panel.n+'" title="Follow target"> Follow target</label></div>')

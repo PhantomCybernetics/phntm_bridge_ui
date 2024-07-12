@@ -1,17 +1,70 @@
 import { isTouchDevice } from "./../../lib.js";
 
-export class MultiTopicSource {
+export class MultiTopicSource extends EventTarget {
 
     constructor(widget) {
+        super();
+
         this.widget = widget;
         this.panel = widget.panel;
         this.sources = [];
         this.subscribed_topics = {};
 
         let that = this;
-        this.widget.panel.ui.client.on('topics', (discovered_topics) => { this.onTopics(discovered_topics); });
+        this.widget.panel.ui.client.on('topics', (discovered_topics) => { that.onTopicsDiscovered(discovered_topics); });
 
-        this.onChange = null;
+        this.event_calbacks = {};
+    }
+
+    add(msg_type, label, selected_topic, num, cb, clear_cb) {
+        let new_src = {
+            msg_type: msg_type,
+            label: label,
+            selected_topic: selected_topic,
+            num: num,
+            cb: cb,
+            clear_cb: clear_cb,
+            topic_slots: []
+        }
+        this.sources.push(new_src);
+        this.updateSlots(new_src);    
+    }
+
+
+    on(event, cb) {
+
+        if (!this.event_calbacks[event])
+            this.event_calbacks[event] = [];
+
+        let p = this.event_calbacks[event].indexOf(cb);
+        if (p > -1)
+            return;
+
+        this.event_calbacks[event].push(cb);
+    }
+
+    off(event, cb) {
+        if (!this.event_calbacks[event]) {
+            return;
+        }
+
+        let p = this.event_calbacks[event].indexOf(cb)
+        if (p > -1) {
+            this.event_calbacks[event].splice(p, 1);
+        }
+    }
+
+    emit(event, ...args) {
+        if (!this.event_calbacks[event]) {
+            return;
+        }
+
+        let callbacks = Object.values(this.event_calbacks[event]);
+        callbacks.forEach((cb) => {
+            setTimeout(()=>{
+                cb(...args)
+            }, 0);
+        });
     }
 
     hasSources() {
@@ -25,6 +78,20 @@ export class MultiTopicSource {
             }
         }
         return false;
+    }
+
+    getSources() {
+        let topics = [];
+        for (let i = 0; i < this.sources.length; i++) {
+            if (!this.sources[i].topic_slots)
+                continue;
+            for (let j = 0; j < this.sources[i].topic_slots.length; j++) {    
+                if (this.sources[i].topic_slots[j].selected_topic) {
+                    topics.push(this.sources[i].topic_slots[j].selected_topic);
+                }
+            }
+        }
+        return topics;
     }
 
     topicSubscribed(topic) {
@@ -94,19 +161,7 @@ export class MultiTopicSource {
         this.updateMenuContent();
     }
 
-    add(msg_type, label, selected_topic, num, cb, clear_cb) {
-        let new_src = {
-            msg_type: msg_type,
-            label: label,
-            selected_topic: selected_topic,
-            num: num,
-            cb: cb,
-            clear_cb: clear_cb,
-            topic_slots: []
-        }
-        this.sources.push(new_src);
-        this.updateSlots(new_src);    
-    }
+    
 
     updateSlots(src) {
 
@@ -175,17 +230,17 @@ export class MultiTopicSource {
         this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
     }
 
-    onTopics (discovered_topics) { // client updated topics
+    onTopicsDiscovered (discovered_topics) { // client updated topics
 
         let changed = false;
         let that = this;
 
-        console.log('Multisource got topics', discovered_topics)
+        console.log('Multisource got dicovered topics', discovered_topics)
 
         Object.values(discovered_topics).forEach((topic)=>{
 
             if (that.subscribed_topics[topic.id]) {
-                console.log(`multitopic already subscribed to ${topic.id}`)
+                console.log(`Multisource already subscribed to ${topic.id}`)
                 return; // already subscribed
             }
 
@@ -203,10 +258,8 @@ export class MultiTopicSource {
 
         if (changed) {
             this.updateMenuContent();
-            if (this.onChange)
-                this.onChange();
+            this.emit('change', this.getSources());
         }
-        
     }
 
 
@@ -285,13 +338,12 @@ export class MultiTopicSource {
         }
 
         this.updateMenuContent();
-        if (this.onChange)
-            this.onChange();
+        this.emit('change', this.getSources());
     }
 
     //clear all subs
     close() {
-        // this.widget.panel.ui.client.off('topics', this.onTopics);
+        // this.widget.panel.ui.client.off('topics', this.onTopicsDiscovered);
         let topics = Object.keys(this.subscribed_topics);
         let that = this;
         topics.forEach((topic)=>{
@@ -408,8 +460,7 @@ export class MultiTopicSource {
                     that.updateSlots(slot.src);
                     that.updateMenuContent();
                     that.panel.ui.update_url_hash();
-                    if (that.onChange)
-                        that.onChange();
+                    that.emit('change', that.getSources());
                 },
                 () => { //onclose
                     // if (!isTouchDevice()) {

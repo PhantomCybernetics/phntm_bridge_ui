@@ -2416,13 +2416,22 @@ BODY.touch-ui .editing .grid-stack-item-content {
     height: 100%;
 }
 
+.video_overlay_cont {
+    position: absolute;
+    z-index: 2;
+    left: 0px; top: 0px;
+    /* background: rgba(0, 255, 0, 0.315); */
+    width: 100%;
+    height: 100%;
+}
+
 .panel_widget .video_overlay svg {
     position: absolute;
     top: 50%;
     -ms-transform: translateY(-50%);
     transform: translateY(-50%);
 }
-.panel_widget .video_overlay svg.display_crop {
+.panel_widget .video_overlay_cont.display_crop svg {
     border-style: dashed;
     border-color: rgb(162, 255, 0);
     border-width: 2px;
