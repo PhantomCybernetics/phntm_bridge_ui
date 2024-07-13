@@ -562,6 +562,14 @@ BODY.narrower .narrower-w { display: inline; }
     opacity: 50%;
 }
 
+.narrow .graph_topic .box.dimmed {
+    opacity: unset;
+}
+
+BODY.desktop-ui .narrow .graph_topic .box:hover {
+    background-color: #ff8c00;
+}
+
 .graph_node .box.focused,
 .graph_topic .box.focused {
     background-color: #ff8c00;

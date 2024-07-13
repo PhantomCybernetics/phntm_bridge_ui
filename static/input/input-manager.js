@@ -354,6 +354,11 @@ export class InputManager {
                 this.current_profile = last_user_profile;
             }
 
+            if (Object.keys(this.profiles).length == 0) {
+                console.warn('No input profiles defined, making a new one...');
+                this.current_profile = this.make_new_profile();
+            }
+
         } else {
             console.info(`Input manager got robot config, reload the page to update`); // ignoring input config updates
         }
@@ -458,13 +463,24 @@ export class InputManager {
             id: id_new_profile,
             label: id_new_profile,
         }
+        let first_profile_created = false;
         Object.values(this.controllers).forEach((c)=>{
+            let initial_driver = this.enabled_drivers[0]; // must be at least one for input manager to be active
+            let initial_driver_config = {}
+            if (this.current_profile) { // copy current
+                initial_driver = c.profiles[this.current_profile].driver;
+                initial_driver_config = c.profiles[this.current_profile].driver_config;
+            } else {
+                first_profile_created = true;
+            }
             let c_profile = {
-                driver: c.profiles[this.current_profile].driver,
-                default_driver_config: Object.assign({}, c.profiles[this.current_profile].driver_config),
+                driver: initial_driver,
+                default_driver_config: Object.assign({}, initial_driver_config),
                 default_axes_config: [], //empty
                 default_buttons_config: [], //empty
             }
+            if (!c.profiles)
+                c.profiles = {};
             c.profiles[id_new_profile] = c_profile;
             this.init_controller_profile(c, c_profile);
         });
@@ -477,7 +493,10 @@ export class InputManager {
         this.check_all_controller_profiles_saved();
 
         // focus driver options first
-        $('#gamepad_settings #gamepad-settings-tab').click();
+        if (!first_profile_created)
+            $('#gamepad_settings #gamepad-settings-tab').click();
+
+        return id_new_profile;
     }
 
     // duplicate_current_profile() {
@@ -1445,7 +1464,6 @@ export class InputManager {
     
 
     disable_kb_on_conflict() {
-
         if (!this.current_gamepad.enabled)
             return;
 
@@ -3128,6 +3146,8 @@ export class InputManager {
                 
                 if (axis.val !== null && axis.val !== undefined)
                     axis.out_val_el.html(axis.val.toFixed(2));
+                else
+                    axis.out_val_el.html('0.00');
 
                 if (axis.live) {
                     axis.out_val_el.addClass('live');

@@ -343,7 +343,6 @@ export class MultiTopicSource extends EventTarget {
 
     //clear all subs
     close() {
-        // this.widget.panel.ui.client.off('topics', this.onTopicsDiscovered);
         let topics = Object.keys(this.subscribed_topics);
         let that = this;
         topics.forEach((topic)=>{
@@ -355,7 +354,6 @@ export class MultiTopicSource extends EventTarget {
             that.widget.panel.ui.client.off(topic, slot.cb_wrapper);
         });
         this.subscribed_topics = {};
-
     }
 
     makeTopicButton(slot) {

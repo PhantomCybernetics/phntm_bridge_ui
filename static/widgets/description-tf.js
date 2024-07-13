@@ -65,7 +65,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.urdf_loader = new URDFLoader(this.manager);
         this.urdf_loader.parseCollision = true;
         this.urdf_loader.packages = (targetPkg) => {
-            return 'package://'+targetPkg+''; // puts back the url scheme removed by URDFLoader 
+            return 'package://' + targetPkg; // put back the url scheme removed by URDFLoader 
         }
         this.robot = null;
         
@@ -112,11 +112,9 @@ export class DescriptionTFWidget extends EventTarget {
             }
         };
        
-
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
 
-        // let q = decoded.orientation;
         [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
 
         this.scene = new THREE.Scene();
@@ -125,7 +123,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
-            precision : 'highp' // med & low are really bad on some devices, there could be a switch for this in the menu
+            precision : 'highp' // TODO: med & low are really bad on some devices, there could be a switch for this in the menu
         });
         this.renderer.shadowMap.enabled = true;
         this.renderer.setSize(panel.widget_width, panel.widget_height);
@@ -138,8 +136,6 @@ export class DescriptionTFWidget extends EventTarget {
         this.labelRenderer.domElement.style.top = '0px';
         document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
 
-        // const geometry = new THREE.BoxGeometry( .1, .1, .1 );
-        // const material = new THREE.MeshStandardMaterial( { color: 0x00ff00 } );
         this.model = new THREE.Object3D()
         this.scene.add(this.model);
         this.model.position.y = 0
@@ -180,40 +176,6 @@ export class DescriptionTFWidget extends EventTarget {
 
         const ambience = new THREE.AmbientLight( 0x606060 ); // soft white light
         this.scene.add( ambience );
-
-
-        // const axesHelper = new THREE.AxesHelper( 5 );
-        // this.scene.add( axesHelper );
-
-        // const axesHelperCube = new THREE.AxesHelper( 5 );
-        // axesHelperCube.scale.set(1, 1, 1); //show z forward like in ROS
-        // this.model.add( axesHelperCube );
-
-        // const gridHelper = new THREE.GridHelper( 10, 10 );
-        // const plane = new THREE.Plane( new THREE.Vector3( 0, 1, 0 ), 0);
-        // const planeHelper = new THREE.PlaneHelper( plane, 10, 0xffff00 );
-        // this.scene.add( gridHelper );
-        // this.scene.add( planeHelper );
-
-        // const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 ); 
-        // const boxMaterial = new THREE.MeshBasicMaterial( {color: 0x00ff00} ); 
-        // const cube = new THREE.Mesh( boxGeometry, boxMaterial ); 
-        // this.scene.add( cube );
-        // cube.castShadow = true;
-        // cube.position.set(1,1,1);
-
-        // panel.display_widget = this.renderer;
-
-        // panel.animate();
-
-        // window.addEventListener('resize', () => {
-        //     ResizeWidget(panel);
-        //     RenderImu(panel);
-        // });
-        // $('#display_panel_source_'+panel.n).change(() => {
-        //     ResizeWidget(panel);
-        //     RenderImu(panel);
-        // });
         
         panel.resize_event_handler = () => {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
@@ -230,7 +192,6 @@ export class DescriptionTFWidget extends EventTarget {
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
 
         //ground plane
-        
         this.tex_loader.load('/static/tiles.png', (plane_tex) => {
             const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
             plane_tex.wrapS = THREE.RepeatWrapping;
@@ -251,12 +212,12 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
         if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
         if (!this.render_joints)  {
-            this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); //joints 
-            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //joint labels
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); 
+            this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); 
         }
         if (!this.render_links) {
-            this.camera.layers.disable(DescriptionTFWidget.L_LINKS); //links
-            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //link labels
+            this.camera.layers.disable(DescriptionTFWidget.L_LINKS);
+            this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
 
         }
         if (!this.render_labels) {
@@ -266,29 +227,14 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.render_pose_graph) {
             this.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
         }
-
         this.collider_mat = new THREE.MeshStandardMaterial({
             color: 0xffff00,
             emissive: 0xffff00,
             wireframe: true,
-            // depthFunc: THREE.LessEqualDepth
         });
         
-
-        // this.topic_tf_static = '/tf_static';
-        // this.topic_tf = '/tf';
-        // this.topic_desc = '/robot_description';
-
-        // // this.last_odo = null;
-        // panel.ui.client.on(this.topic_tf_static, this.on_tf_data);
-        // panel.ui.client.on(this.topic_tf, this.on_tf_data);
-        // panel.ui.client.on(this.topic_desc, this.on_description_data);
-
-     
         panel.widget_menu_cb = () => { that.setupMenu(); }
-
-        // console.log('constructor done; renderDirty()');
-        
+    
         if (start_loop) {
             this.rendering = true;
             this.renderDirty();
@@ -365,7 +311,6 @@ export class DescriptionTFWidget extends EventTarget {
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_visuals_'+this.panel.n).change(function(ev) {
             that.render_visuals = $(this).prop('checked');
-            // console.log('Visuals '+that.render_visuals);
             if (that.render_visuals)
                 that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
             else
@@ -417,7 +362,6 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     onClose() {
-        // console.warn('Closing desc/tf widget')
         this.rendering = false; //kills the loop
         this.sources.close();
         
@@ -483,8 +427,6 @@ export class DescriptionTFWidget extends EventTarget {
             let t = tf.transforms[i].transform;
             if (tf.transforms[i].child_frame_id == 'base_link') {
 
-                // console.log('Got base_link, all transforms are:', tf.transforms);
-
                 if (this.pos_offset == null) {
                     this.pos_offset = new THREE.Vector3();
                     this.pos_offset.copy(t.translation);
@@ -531,30 +473,6 @@ export class DescriptionTFWidget extends EventTarget {
 
         return this.pose_graph[this.pose_graph.length-1].ns_stamp;
     }
-
-    // get_pg_offset (ns_stamp_search, pos_to_pg, rot_to_pg) {
-
-    //     if (this.pose_graph.length < 1) {
-    //         return false;
-    //     }
-
-    //     if (ns_stamp_search > this.pose_graph[this.pose_graph.length-1].ns_stamp) {
-    //         console.log('Laser ns-delta is in the future, using latest pos. d_sec=+'+((ns_stamp_search-this.pose_graph[this.pose_graph.length-1].ns_stamp)/1000000000))    
-    //         return false;
-    //     }
-
-    //     let lag = 0;
-    //     for (let i = this.pose_graph.length-1; i >= 0; i--) {
-    //         let d = ns_stamp_search - this.pose_graph[i].ns_stamp;
-    //         if (d <= 0) {
-    //             console.warn('Laser d_sec='+(d/1000000000)+'; rendering laser lag='+lag);
-    //             return true; 
-    //         }
-    //         lag++;
-    //     }
-
-    //     return false;
-    // }
 
     clear_model(obj, lvl=0, inVisual=false, inCollider=false) {
 
@@ -642,21 +560,14 @@ export class DescriptionTFWidget extends EventTarget {
 
         console.warn('Parsing robot description...');
         let robot = this.urdf_loader.parse(desc.data);
-        // console.warn('Parsed robot:', robot);
-        // this.clear_model(robot);
         this.init_camera(robot); 
-        // robot.castShadow = true;
         
         this.world.clear();
         this.robot = robot;
         
         this.world.position.set(0,0,0);
 
-        let that = this;
-        
-        // console.log('got desc: ', desc.data);
-
-        console.log('model initiated...');
+        console.log('Model initiated...');
         this.renderDirty();
     }
 
@@ -676,20 +587,11 @@ export class DescriptionTFWidget extends EventTarget {
 
             joints_avg.add(wp);
             joints_num++;
-            // if (ji == 0) {
-            //     console.log('Focusing cam on 1st joint: '+key);      
-            //     that.camera_anchor_joint = robot.joints[key];
-            //     that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
-            // }
-            // ji++;
         });
-
-        console.log('num joints', joints_num);
 
         if (joints_num) {
             // find the joint closest to avg center
             joints_avg.divideScalar(joints_num);
-            console.log('joints_avg', joints_avg);
             let closest_joint_dist = Number.POSITIVE_INFINITY;
             let focus_joint = null;
             let focus_joint_key = null;
@@ -709,8 +611,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
         }
         
-
-         Object.keys(robot.links).forEach((key)=>{
+        Object.keys(robot.links).forEach((key)=>{
             robot.links[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
@@ -739,9 +640,7 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     init_markers(robot) {
-
         let that = this;        
-
         Object.keys(robot.joints).forEach((key)=>{
             that.make_mark(robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
         });
@@ -749,38 +648,6 @@ export class DescriptionTFWidget extends EventTarget {
         Object.keys(robot.links).forEach((key)=>{
             that.make_mark(robot.links[key], key, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS);
         });
-
-        // let camera_target = null;
-        Object.keys(robot.frames).forEach((key)=>{
-
-            // if (robot.frames[key].children) {
-            //     robot.frames[key].children.forEach((ch)=>{
-            //         if (ch.isObject3D) {
-            //             if (ch.isURDFVisual) {
-            //                 if (ch.children && ch.children.length > 0) {
-            //                     if (ch.children[0].layers)
-            //                         ch.children[0].layers.set(DescriptionTFWidget.L_VISUALS);
-            //                 }
-            //             } else if (ch.isURDFCollider) {
-            //                 if (ch.children && ch.children.length > 0) { 
-            //                     if (ch.children[0].layers)
-            //                         ch.children[0].layers.set(DescriptionTFWidget.L_COLLIDERS);
-            //                     ch.children[0].material = this.collider_mat;
-            //                     ch.children[0].scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
-            //                 }
-            //             }
-            //         }
-            //     });
-            // }
-
-            // that.make_mark(that.robot.joints[key], key)
-            // that.robot.visual[key].castShadow = true;
-            // that.robot.visual[key].receiveShadow = true;
-            // that.robot.visual[key].material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.DoubleSide, shadowSide: THREE.DoubleSide} );
-        });
-
-        // update initial cam pos
-        
     }
 
     make_mark(target, label_text, layer_axes, layer_labels) {
@@ -789,12 +656,7 @@ export class DescriptionTFWidget extends EventTarget {
         if (label_text == 'base_link') {
             axis_size = .15;
         }
-        // const mat = new THREE.LineBasicMaterial();
-       
-        // mat.depthWrite = true;
-        // mat.depthTest = false;
-        // mat.transparent = true;
-        // mat.blendDst = THREE.AddEquation;
+  
         const axesHelper = new THREE.AxesHelper(axis_size);       
         axesHelper.material.transparent = true;
         axesHelper.material.opacity = 0.9;
@@ -803,7 +665,6 @@ export class DescriptionTFWidget extends EventTarget {
 
         target.add(axesHelper);
         axesHelper.layers.set(layer_axes);
-        // axesHelper.renderOrder = 1000;
 
         if (label_text) {
             const el = document.createElement('div');
@@ -867,14 +728,7 @@ export class DescriptionTFWidget extends EventTarget {
                 if (id_child == this.robot.urdfName) {
                         
                     if (!this.fix_base) {
-                        // if (this.follow_target)
-                        //     ch.attach(this.camera);
-
                         ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
-                        // if (this.follow_target && this.camera_anchor_joint) {
-                        //     this.scene.attach(this.camera);
-                        //     this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
-                        // }
                     }
                         
                     ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
@@ -898,7 +752,6 @@ export class DescriptionTFWidget extends EventTarget {
             this.transforms_queue = [];
         }
     
-        
         let that = this;
         if ((this.controls_dirty || this.render_dirty) && this.robot) {
             this.controls_dirty = false;

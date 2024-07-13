@@ -25,8 +25,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
 
         this.parseUrlParts(this.panel.custom_url_vars);
-        
-        // this.sources = new MultiTopicSource(this);
 
         this.range_visuals = {};
         this.laser_visuals = {};
@@ -78,7 +76,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
                 that.laser_visuals[topic].castShadow = false;
                 that.laser_visuals[topic].receiveShadow = false;
-                // that.laser_visuals[topic].frustumCulled = false;
                 that.laser_frames[topic].add(that.laser_visuals[topic]);
         
             } else {
