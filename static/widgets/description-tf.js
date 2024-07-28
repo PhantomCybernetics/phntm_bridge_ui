@@ -42,8 +42,10 @@ export class DescriptionTFWidget extends EventTarget {
         this.pos_offset = null;
         this.fix_base = false;
 
-        this.transforms_queue = [];
-        this.last_tf_stamps = {};
+        // this.latest_tf_stamps = {};
+        // this.transforms_queue = [];
+        this.smooth_transforms_queue = {};
+        // this.last_tf_stamps = {};
 
         let that = this;
 
@@ -68,7 +70,9 @@ export class DescriptionTFWidget extends EventTarget {
             return 'package://' + targetPkg; // put back the url scheme removed by URDFLoader 
         }
         this.robot = null;
-        
+        this.last_robot_world_position = new THREE.Vector3();
+        this.last_robot_world_rotation = new THREE.Quaternion();
+
         this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
 
             console.log('loaded mesh from '+path);
@@ -107,7 +111,15 @@ export class DescriptionTFWidget extends EventTarget {
             if (that.robot) {
                 that.clear_model(that.robot); //clear after urdf  sets mats
                 that.init_markers(that.robot); 
-                that.world.add(this.robot);
+                that.world.add(that.robot);
+
+                // this.camera_target_robot_joint.getWorldPosition(this.camera_target_pos);
+
+                // if (that.follow_target) {
+                //     that.robot.attach(that.camera);
+                //     console.log('Attached cam to robot', that.robot);
+                // }
+
                 that.renderDirty();
             }
         };
@@ -136,18 +148,24 @@ export class DescriptionTFWidget extends EventTarget {
         this.labelRenderer.domElement.style.top = '0px';
         document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
 
-        this.model = new THREE.Object3D()
-        this.scene.add(this.model);
-        this.model.position.y = 0
+        // this.model = new THREE.Object3D()
+        // this.scene.add(this.model);
+        // this.model.position.y = 0
 
-        this.initial_camera_pos = new THREE.Vector3(1,.5,1);
-        this.model.add(this.camera);
-        this.camera.position.copy(this.initial_camera_pos);
-    
+        this.camera_pos = new THREE.Vector3(1,.5,1);
+        
+        // this.camera_container = new THREE.Object3D();
+        // this.scene.attach(this.camera_container);
+        // this.camera_container.position.set(0,0,0);
+        // this.camera_container.quaternion.set(0,0,0,1);
+        
         this.scene.add(this.camera);
-        this.camera_target_pos = new THREE.Vector3().copy(this.model.position);
+        this.camera.position.copy(this.camera_pos);
+    
+        this.camera_target_pos = new THREE.Vector3(0.0,0.0,0.0);
         this.camera.lookAt(this.camera_target_pos);
-        this.camera_anchor_joint = null;
+        this.camera_target_robot_joint = null;
+        // this.camera_anchor_joint = null;
 
         this.controls = new OrbitControls( this.camera, this.labelRenderer.domElement );
         this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
@@ -166,7 +184,7 @@ export class DescriptionTFWidget extends EventTarget {
         light.castShadow = true; // default false
         this.scene.add( light );
         light.position.set( 1, 2, 1 );
-        light.lookAt(this.model.position);
+        light.lookAt(this.camera_target_pos);
         light.shadow.mapSize.width = 2 * 1024; // default
         light.shadow.mapSize.height = 2 * 1024; // default
         
@@ -189,6 +207,9 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.parseUrlParts(this.panel.custom_url_vars);
 
+        // if (this.follow_target)
+        //     this.camera_container.attach(this.camera);
+
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
 
         //ground plane
@@ -207,6 +228,8 @@ export class DescriptionTFWidget extends EventTarget {
             that.scene.add(that.ground_plane);
         });
         
+        // if (this.follow_target)
+        //     this.model.add(this.camera);
     
         this.camera.layers.enableAll();
         if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -421,15 +444,31 @@ export class DescriptionTFWidget extends EventTarget {
         if (this.panel.paused)
             return;
 
-        for (let i = 0; i < tf.transforms.length; i++) {
-            this.transforms_queue.push(tf.transforms[i]); //processed in rendering_loop()
+        // console.log(tf);
+        // debugger;
 
+        for (let i = 0; i < tf.transforms.length; i++) {
+
+            let ns_stamp = tf.transforms[i].header.stamp.sec * 1000000000 + tf.transforms[i].header.stamp.nanosec;
+            let ch_id = tf.transforms[i].child_frame_id;
             let t = tf.transforms[i].transform;
-            if (tf.transforms[i].child_frame_id == 'base_link') {
+
+            if (this.smooth_transforms_queue[ch_id] !== undefined && this.smooth_transforms_queue[ch_id].stamp > ns_stamp)
+                continue; //throw out older transforms
+
+            this.smooth_transforms_queue[ch_id] = {
+                parent: tf.transforms[i].header.frame_id,
+                transform: t,
+                stamp: ns_stamp
+            }
+
+            //this.transforms_queue.push(tf.transforms[i]); //processed in rendering_loop()
+            
+            if (ch_id == 'base_link') {
 
                 if (this.pos_offset == null) {
                     this.pos_offset = new THREE.Vector3();
-                    this.pos_offset.copy(t.translation);
+                    this.pos_offset.copy(t.translation); // will be subtracted from all transforms
                 }
 
                 // trim pg
@@ -439,8 +478,7 @@ export class DescriptionTFWidget extends EventTarget {
                         rem.visual.removeFromParent();
                     }
                 }
-
-                let ns_stamp = tf.transforms[i].header.stamp.sec*1000000000 + tf.transforms[i].header.stamp.nanosec;
+                
                 let pg_node = {
                     pos: new THREE.Vector3().copy(t.translation).sub(this.pos_offset),
                     rot: new THREE.Quaternion().copy(t.rotation),
@@ -460,7 +498,7 @@ export class DescriptionTFWidget extends EventTarget {
                 
                 this.pose_graph.push(pg_node);
                 
-                let e = new CustomEvent('pg_updated', { detail: { topic: topic, pg_node:pg_node } } );
+                let e = new CustomEvent('pg_updated', { detail: { topic: topic, pg_node: pg_node } } );
                 this.dispatchEvent(e);
             }
 
@@ -549,7 +587,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.last_processed_desc = desc;
 
         if (this.robot) {
-            console.warn('Removing old model')
+            console.warn('Removing old robot model')
             this.world.clear();//this.world.remove(this.robot);
             this.on_model_removed();
             this.robot = null;
@@ -560,18 +598,18 @@ export class DescriptionTFWidget extends EventTarget {
 
         console.warn('Parsing robot description...');
         let robot = this.urdf_loader.parse(desc.data);
-        this.init_camera(robot); 
+        this.init_camera_pose(robot); 
         
         this.world.clear();
         this.robot = robot;
         
         this.world.position.set(0,0,0);
 
-        console.log('Model initiated...');
+        console.log('Robot model initiated...');
         this.renderDirty();
     }
 
-    init_camera(robot) {
+    init_camera_pose(robot) {
         let wp = new Vector3();
         let farthest_pt_dist = 0;
         
@@ -598,7 +636,6 @@ export class DescriptionTFWidget extends EventTarget {
             Object.keys(robot.joints).forEach((key)=>{
                 robot.joints[key].getWorldPosition(wp);
                 let d = wp.distanceTo(joints_avg);
-                console.log('d['+key+']', d);
                 if (d < closest_joint_dist) {
                     closest_joint_dist = d;
                     focus_joint = robot.joints[key];
@@ -606,9 +643,10 @@ export class DescriptionTFWidget extends EventTarget {
                 }        
             });
 
-            console.log('Focusing cam on joint: '+focus_joint_key);      
-            that.camera_anchor_joint = focus_joint;
-            that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
+            console.log('Focusing cam on joint: '+focus_joint_key);
+            this.camera_target_robot_joint = focus_joint;
+            // that.camera_anchor_joint = focus_joint;
+            // that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
         }
         
         Object.keys(robot.links).forEach((key)=>{
@@ -629,18 +667,22 @@ export class DescriptionTFWidget extends EventTarget {
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
-
         });
 
         if (this.follow_target) {
-            let initial_dist = farthest_pt_dist * 3.0;
-            this.camera.position.copy(this.initial_camera_pos);
-            this.camera.position.normalize().multiplyScalar(initial_dist);
+            let initial_dist = farthest_pt_dist * 2.0; // initial distance proportional to model size
+            this.camera_pos.normalize().multiplyScalar(initial_dist);
+            this.camera.position.copy(this.camera_pos);
+            //this.camera.position
+            
+            // robot.attach(this.camera);
+            // console.log('Attached cam to robot', robot);     
         }
     }
 
     init_markers(robot) {
-        let that = this;        
+        let that = this; 
+
         Object.keys(robot.joints).forEach((key)=>{
             that.make_mark(robot.joints[key], key, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS);
         });
@@ -684,6 +726,7 @@ export class DescriptionTFWidget extends EventTarget {
 
     controls_changed() {
         this.controls_dirty = true;
+        this.camera_pos.copy(this.camera.position);
     }
 
     renderDirty() {
@@ -698,60 +741,159 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.rendering)
             return;
 
-        this.controls.update();
-
         if (this.robot && this.robot.links) {
 
-            if (this.follow_target && this.camera_anchor_joint) {
-                this.scene.attach(this.camera);
-                this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
-            }
+            let transform_ch_frames = Object.keys(this.smooth_transforms_queue);
+            for (let i = 0; i < transform_ch_frames.length; i++) {
 
-            for (let i = 0; i < this.transforms_queue.length; i++) {
-                this.renderDirty();
-                let id_parent = this.transforms_queue[i].header.frame_id;
-                let id_child = this.transforms_queue[i].child_frame_id;
-                let t = this.transforms_queue[i].transform;
-                let s = this.transforms_queue[i].header.stamp;
-                let t_sec = (s.sec * 1000000000.0 + s.nanosec) / 1000000000.0;
+                let id_child = transform_ch_frames[i];
+                let id_parent = this.smooth_transforms_queue[id_child].parent;
+                let t = this.smooth_transforms_queue[id_child].transform;
 
-                let tf_id = id_parent+'>'+id_child;
-                if (this.last_tf_stamps[tf_id] && this.last_tf_stamps[tf_id] > t_sec) 
-                    continue;
-
-                this.last_tf_stamps[tf_id] = t_sec;
                 let p = this.robot.frames[id_parent];
                 let ch = this.robot.frames[id_child];
                 if (!ch)
-                    continue;
-    
-                if (id_child == this.robot.urdfName) {
-                        
+                    continue; // child node not present in urdf
+
+                if (id_child == this.robot.urdfName) { // robot base frame
+
                     if (!this.fix_base) {
-                        ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
+                        let pos = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
+
+                        let old_robot_world_position = new THREE.Vector3();
+                        ch.getWorldPosition(old_robot_world_position);
+
+                        ch.position.lerp(pos, 0.2);
+
+                        let new_robot_world_position = new THREE.Vector3();
+                        ch.getWorldPosition(new_robot_world_position);
+
+                        let d = new THREE.Vector3().subVectors(new_robot_world_position, old_robot_world_position);
+
+                        this.camera_pos.add(d); // move camera by d
                     }
-                        
-                    ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
-    
-                    this.light.target = ch;
-                }
                     
-                else if (this.robot && p && ch) {
-                
+                    let rot = new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+                    ch.quaternion.slerp(rot, 0.2); //set rot always
+
+                } else if (this.robot && ch && p) {
+                    
                     let orig_p = ch.parent;
+
                     p.attach(ch);
-                    ch.position.set(t.translation.x, t.translation.y, t.translation.z);
-                    ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+
+                    ch.position.lerp(new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z), 0.2);
+                    ch.quaternion.slerp(new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w), 0.2);
     
                     orig_p.attach(ch);
     
-                } else {
-                    console.warn('tf not found: '+id_child+' < '+id_parent);
-                }
+                } // else {
+                    //   console.warn('tf not found: '+id_child+' < '+id_parent);
+                // }
             }
-            this.transforms_queue = [];
-        }
+
+            // if (this.follow_target && this.camera_anchor_joint) {
+            //     this.scene.attach(this.camera);
+            //     this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
+            // }
+
+            // if (this.transforms_queue.length) {
+
+            //     for (let i = 0; i < this.transforms_queue.length; i++) {
+            //         let id_parent = this.transforms_queue[i].header.frame_id;
+            //         let id_child = this.transforms_queue[i].child_frame_id;
+            //         let t = this.transforms_queue[i].transform;
+            //         // let s = this.transforms_queue[i].header.stamp;
+            //         // let t_sec = (s.sec * 1000000000.0 + s.nanosec) / 1000000000.0;
     
+            //         // let tf_id = id_parent+'>'+id_child;
+            //         // if (this.last_tf_stamps[tf_id] && this.last_tf_stamps[tf_id] > t_sec) 
+            //         //     continue;
+    
+            //         // this.last_tf_stamps[tf_id] = t_sec;
+    
+            //         let p = this.robot.frames[id_parent];
+            //         let ch = this.robot.frames[id_child];
+            //         if (!ch)
+            //             continue; // child node not present in urdf
+        
+            //         if (id_child == this.robot.urdfName) { // robot base frame
+                        
+            //             // if (this.follow_target) {
+            //             //     this.robot.attach(this.camera);
+            //             // }
+    
+            //             if (!this.fix_base) {
+            //                 ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
+            //             }
+                            
+            //             ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
+        
+            //             this.smooth_transform_targets[id_child] = {
+            //                 'pos': new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset),
+            //                 'rot': new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w)
+            //             }
+
+            //             this.light.target = ch;
+    
+            //             // if (this.follow_target) {
+            //             //     this.scene.attach(this.camera);
+            //             // }
+            //             let robot_world_position = new THREE.Vector3();
+            //             ch.getWorldPosition(robot_world_position);
+            //             let d = new THREE.Vector3().subVectors(robot_world_position, this.last_robot_world_position);
+            //             this.camera_pos.add(d);
+            //             this.last_robot_world_position.copy(robot_world_position);
+            //             // ch.getWorldPosition();
+            //             ch.getWorldQuaternion(this.last_robot_world_rotation);
+    
+            //         } else if (this.robot && ch && p) {
+                    
+            //             let orig_p = ch.parent;
+
+            //             p.attach(ch);
+
+            //             ch.position.set(t.translation.x, t.translation.y, t.translation.z);
+            //             ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+        
+            //             orig_p.attach(ch);
+        
+            //         } // else {
+            //          //   console.warn('tf not found: '+id_child+' < '+id_parent);
+            //         // }
+    
+                    
+            //     }
+
+            //     this.renderDirty();
+    
+            //     this.transforms_queue = []; // clear 
+
+            // }
+
+
+        }
+
+        if (this.follow_target) {
+
+            let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
+            this.camera.position.copy(this.camera.position.lerp(this.camera_pos, 0.5));
+            
+            if (this.camera_target_robot_joint) {
+                let new_target_pos = new THREE.Vector3();
+                this.camera_target_robot_joint.getWorldPosition(new_target_pos);
+                this.camera_target_pos.copy(this.camera_target_pos.lerp(new_target_pos, 0.5));
+                // this.camera.lookAt(this.camera_target_pos);
+            }
+
+            this.controls.update();
+            this.camera_pos = pos_to_maintain;
+            
+            //this.camera_container.quaternion.copy(this.last_robot_world_rotation.slerp(this.camera_container.quaternion, 0.5));
+        }
+
+        
+
         let that = this;
         if ((this.controls_dirty || this.render_dirty) && this.robot) {
             this.controls_dirty = false;

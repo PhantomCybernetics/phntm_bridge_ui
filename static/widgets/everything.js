@@ -34,6 +34,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.scan_older_stamp_drops = {}; // topic => num
         this.laser_frames = {};
         this.dirty_laser_points = {}; // topic => vector3[]
+        this.clear_laser_timeout = {}; // timer refs
         this.base_link_frame = null;
         
         panel.widget_menu_cb = () => {
@@ -83,7 +84,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             }
         });
         
-        super.rendering_loop();
+        super.rendering_loop(); //description-tf render
     }
 
     on_model_removed() {
@@ -185,6 +186,24 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.dirty_laser_points[topic] = laser_points;
 
         this.renderDirty();
+
+        this.clear_laser_on_timeout(topic);
+    }
+
+    clear_laser_on_timeout(topic) {
+        if (this.clear_laser_timeout[topic])
+            clearTimeout(this.clear_laser_timeout[topic])
+
+        let that = this;
+        this.clear_laser_timeout[topic] = setTimeout(()=>{
+            if (that.panel.paused) { //don't clear while paused
+                that.clear_laser_on_timeout(topic);
+                return;
+            }
+
+            that.dirty_laser_points[topic] = [];
+            that.renderDirty();
+        }, 200);
     }
 
 
