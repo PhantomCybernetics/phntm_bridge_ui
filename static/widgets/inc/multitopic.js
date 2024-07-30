@@ -161,8 +161,6 @@ export class MultiTopicSource extends EventTarget {
         this.updateMenuContent();
     }
 
-    
-
     updateSlots(src) {
 
         let num_slots = src.topic_slots.length;
@@ -212,7 +210,6 @@ export class MultiTopicSource extends EventTarget {
         return assigned;
     }
 
-    
 
     setSubscription(slot, topic) {
 
@@ -229,6 +226,7 @@ export class MultiTopicSource extends EventTarget {
         }
         this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
     }
+
 
     onTopicsDiscovered (discovered_topics) { // client updated topics
 
@@ -295,6 +293,7 @@ export class MultiTopicSource extends EventTarget {
         this.updateMenuContent();
     }
 
+    
     updateMenuContent() {
 
         if (!this.src_ctrl_menu)

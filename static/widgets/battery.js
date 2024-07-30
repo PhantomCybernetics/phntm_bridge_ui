@@ -8,19 +8,36 @@ export class BatteryStateWidget {
         this.panel = panel;
         this.topic = topic;
 
-        this.minVoltage = 3.2*3;
-        this.maxVoltage = 4.2*3;
-
-        if (panel.ui.client.topic_configs[topic]) {
-            this.minVoltage = panel.ui.client.topic_configs[topic].min_voltage;
-            this.maxVoltage = panel.ui.client.topic_configs[topic].max_voltage;
-        }
+        this.minVoltage = 0; // override these
+        this.maxVoltage = 0; // in topic config
 
         $('#panel_widget_'+panel.n).addClass('enabled battery');
+        
+        let that = this;
 
+        this.onTopicConfigUpdate = (config) => {
+            console.warn('battery onTopicConfigUpdate', config, this);
+            if (config) {
+                this.minVoltage = config.min_voltage;
+                this.maxVoltage = config.max_voltage;
+                this.makeChart();
+            }
+        }
+
+        // make chart when we have topic config
+        this.panel.ui.client.on_topic_config(topic, this.onTopicConfigUpdate); //', (t, c) => that.onTopicConfigUpdate(t, c))
+    
+        panel.resize_event_handler = () => { that.onResize() } ; //no need here
+    }
+
+    makeChart() {
         this.data_trace = [];
-
-        this.chart = new CanvasJS.Chart('panel_widget_'+panel.n, {
+        if (this.chart) {
+            console.log('clearing old battery chart')
+            this.chart.destroy();
+            $('#panel_widget_'+this.panel.n).empty();
+        }
+        this.chart = new CanvasJS.Chart('panel_widget_'+this.panel.n, {
             //Chart Options - Check https://canvasjs.com/docs/charts/chart-options/
             // title:{
             //   text: "Basic Column Chart in JavaScript"              
@@ -59,7 +76,7 @@ export class BatteryStateWidget {
                         labelBackgroundColor: "#77AE23",
                         lineDashType: "dot",
                         thickness: 2,
-                        labelFontSize:12,
+                        labelFontSize: 12,
                     },
                     {                
                         // startValue: this.minVoltage-1.0,
@@ -70,7 +87,7 @@ export class BatteryStateWidget {
                         labelBackgroundColor: "#cc0000",
                         lineDashType: "solid",
                         thickness: 1,
-                        labelFontSize:12,
+                        labelFontSize: 12,
                     },
                 ],
                 
@@ -81,20 +98,18 @@ export class BatteryStateWidget {
                 dataPoints: this.data_trace
             }]
             
-          });
-        // console.warn('setting wxh='+panel.widget_width+'x'+panel.widget_height);
-        //Render Chart
+        });
+
         this.chart.render();
-        
-        
-        panel.resize_event_handler = () => { this.onResize() } ; //no need here
     }
 
     onResize() {
-        this.chart.render();
+        if (this.chart)
+            this.chart.render();
     }
 
     onClose() {
+        this.panel.ui.client.remove_topic_config_handler(this.topic, this.onTopicConfigUpdate);
     }
 
     onData = (decoded) => {

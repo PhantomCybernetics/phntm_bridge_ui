@@ -52,19 +52,13 @@ export class VideoWidget {
         this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1,
                                  (t, d) => { that.onOverlayData(t, d); },
                                  (t) => { that.clearOverlay(t); });
-        
+
         this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
-        this.panel.ui.client.on('topic_config', (t, c) => that.onTopicConfigUpdate(t, c))
+        // this.panel.ui.client.on('topic_config', (t, c) => that.onTopicConfigUpdate(t, c))
         this.onOverlaySourcesChange(this.overlay_sources.getSources());
     }
 
-    onTopicConfigUpdate(topic, config) {
-        console.warn('onTopicConfigUpdate', topic, config);
-        if (this.overlays[topic]) {
-            this.setupOverlay(topic, config);
-        }
-    }
-
+    
     onOverlaySourcesChange(overlay_topics) {
 
         console.warn('onOverlaySourcesChange', overlay_topics)
@@ -72,10 +66,15 @@ export class VideoWidget {
         let client = this.panel.ui.client;
         let that = this;
         overlay_topics.forEach((topic)=>{
-            if (!that.overlays[topic])
+            if (!that.overlays[topic]) {
                 that.overlays[topic] = {};
-            if (client.topic_configs[topic])
-                that.setupOverlay(topic, client.topic_configs[topic]);
+                that.overlays[topic].config_update_cb = (config) => {
+                    console.warn('onTopicConfigUpdate', topic, config);
+                    that.overlays[topic].config = config;
+                    that.setupOverlay(topic, config);
+                }
+                client.on_topic_config(topic, that.overlays[topic].config_update_cb);
+            }
         });
     }
 
@@ -131,16 +130,24 @@ export class VideoWidget {
     clearOverlay (topic) {
         if (this.overlays[topic]) {
             console.log('Removing overlay', this.overlays[topic]);
+            let client = this.panel.ui.client;
             if (this.overlays[topic].container_el) {
-                // let svg = this.overlays[topic].svg.select(function() { return this.parentNode; })
-                // svg.remove();
                 this.overlays[topic].container_el.remove();
+            }
+            if (this.overlays[topic].config_update_cb) {
+                client.remove_topic_config_handler(topic, this.overlays[topic].config_update_cb);
             }
             delete this.overlays[topic];
         }
         this.renderOverlayMenuControls();
     }
 
+    onClose() {
+        let overlay_topics = Object.keys(this.overlays);
+        overlay_topics.forEach((topic) => {
+            this.clearOverlay(topic);
+        });
+    }
 
     setupMenu() {
 
@@ -178,8 +185,6 @@ export class VideoWidget {
         this.overlay_crop_display_control_menu_el = null; //menu is empty here, force re-create
         this.renderOverlayMenuControls();
     }
-
-
 
     renderOverlayMenuControls() {
 
@@ -296,8 +301,6 @@ export class VideoWidget {
                 .text(label);
             }
     }
-
-    
 
     getUrlHashParts (out_parts) {
         this.overlay_sources.getUrlHashParts(out_parts);

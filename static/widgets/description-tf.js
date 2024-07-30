@@ -670,13 +670,9 @@ export class DescriptionTFWidget extends EventTarget {
         });
 
         if (this.follow_target) {
-            let initial_dist = farthest_pt_dist * 2.0; // initial distance proportional to model size
+            let initial_dist = farthest_pt_dist * 3.0; // initial distance proportional to model size
             this.camera_pos.normalize().multiplyScalar(initial_dist);
             this.camera.position.copy(this.camera_pos);
-            //this.camera.position
-            
-            // robot.attach(this.camera);
-            // console.log('Attached cam to robot', robot);     
         }
     }
 
@@ -741,6 +737,9 @@ export class DescriptionTFWidget extends EventTarget {
         if (!this.rendering)
             return;
 
+        const lerp_amount = 0.5;
+        const cam_lerp_amount = 0.5;
+
         if (this.robot && this.robot.links) {
 
             let transform_ch_frames = Object.keys(this.smooth_transforms_queue);
@@ -763,7 +762,7 @@ export class DescriptionTFWidget extends EventTarget {
                         let old_robot_world_position = new THREE.Vector3();
                         ch.getWorldPosition(old_robot_world_position);
 
-                        ch.position.lerp(pos, 0.2);
+                        ch.position.lerp(pos, lerp_amount);
 
                         let new_robot_world_position = new THREE.Vector3();
                         ch.getWorldPosition(new_robot_world_position);
@@ -774,7 +773,9 @@ export class DescriptionTFWidget extends EventTarget {
                     }
                     
                     let rot = new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
-                    ch.quaternion.slerp(rot, 0.2); //set rot always
+                    ch.quaternion.slerp(rot, lerp_amount); //set rot always
+
+                    this.light.target = ch;                    
 
                 } else if (this.robot && ch && p) {
                     
@@ -782,14 +783,14 @@ export class DescriptionTFWidget extends EventTarget {
 
                     p.attach(ch);
 
-                    ch.position.lerp(new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z), 0.2);
-                    ch.quaternion.slerp(new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w), 0.2);
+                    ch.position.lerp(new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z), lerp_amount);
+                    ch.quaternion.slerp(new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w), lerp_amount);
     
                     orig_p.attach(ch);
     
-                } // else {
-                    //   console.warn('tf not found: '+id_child+' < '+id_parent);
-                // }
+                } else {
+                    console.warn('tf transform not found: '+id_parent+' > '+id_child);
+                }
             }
 
             // if (this.follow_target && this.camera_anchor_joint) {
@@ -877,12 +878,12 @@ export class DescriptionTFWidget extends EventTarget {
         if (this.follow_target) {
 
             let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
-            this.camera.position.copy(this.camera.position.lerp(this.camera_pos, 0.5));
+            this.camera.position.copy(this.camera.position.lerp(this.camera_pos, cam_lerp_amount));
             
             if (this.camera_target_robot_joint) {
                 let new_target_pos = new THREE.Vector3();
                 this.camera_target_robot_joint.getWorldPosition(new_target_pos);
-                this.camera_target_pos.copy(this.camera_target_pos.lerp(new_target_pos, 0.5));
+                this.camera_target_pos.copy(this.camera_target_pos.lerp(new_target_pos, cam_lerp_amount));
                 // this.camera.lookAt(this.camera_target_pos);
             }
 

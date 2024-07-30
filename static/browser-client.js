@@ -88,6 +88,7 @@ export class PhntmBridgeClient extends EventTarget {
 
     socket = null;
     event_calbacks = {}
+    topic_config_calbacks = {};
 
     constructor(opts) {
         super();
@@ -444,8 +445,8 @@ export class PhntmBridgeClient extends EventTarget {
         let p = this.event_calbacks[event].indexOf(cb)
         if (p !== -1) {
             this.event_calbacks[event].splice(p, 1);
-            console.log('Handler removed for '+event+"; "+Object.keys(this.event_calbacks[event]).length+" remaing");
-            if (Object.keys(this.event_calbacks[event]).length == 0) {
+            console.log('Handler removed for '+event+"; "+this.event_calbacks[event].length+" remaing");
+            if (this.event_calbacks[event].length == 0) {
                 delete this.event_calbacks[event];
                 if (event.indexOf('/') === 0) { // topic or camera id
                     console.log('Unsubscribing from '+event);
@@ -465,10 +466,49 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         // console.log('calling callbacks for '+event, this.event_calbacks[event]);
-        let callbacks = Object.values(this.event_calbacks[event]);
-        callbacks.forEach((cb) => {
+        this.event_calbacks[event].forEach((cb) => {
             setTimeout(()=>{
                 cb(...args)
+            }, 0);
+        });
+    }
+
+    on_topic_config(topic, cb) {
+        if (!this.topic_config_calbacks[topic])
+            this.topic_config_calbacks[topic] = [];
+
+        this.topic_config_calbacks[topic].push(cb);
+
+        if (this.topic_configs[topic]) { //if we have cofig, fire right away
+            setTimeout(()=>{
+                cb(this.topic_configs[topic])
+            }, 0);
+        }
+    }
+
+    remove_topic_config_handler(topic, cb) {
+        if (!this.topic_config_calbacks[topic])
+            return;
+
+        let p = this.topic_config_calbacks[topic].indexOf(cb)
+        if (p !== -1) {
+            this.topic_config_calbacks[topic].splice(p, 1);
+            console.log('Handler removed for topic config '+topic+"; "+this.topic_config_calbacks[topic].length+" remaining");
+            if (this.topic_config_calbacks[topic].length == 0) {
+                delete this.topic_config_calbacks[topic];
+            }
+        }
+    }
+
+    emit_topic_config(topic, config) {
+        if (!this.topic_config_calbacks[topic]) {
+            return;
+        }
+
+        // console.log('calling callbacks for '+event, this.event_calbacks[event]);
+        this.topic_config_calbacks[topic].forEach((cb) => {
+            setTimeout(()=>{
+                cb(config)
             }, 0);
         });
     }
@@ -814,11 +854,11 @@ export class PhntmBridgeClient extends EventTarget {
                 if (topic_config && Object.keys(topic_config).length) {
                     console.log('Got '+topic+' extra config:', topic_config);
                     this.topic_configs[topic] = topic_config;
-                    this.emit('topic_config', topic, this.topic_configs[topic]);
+                    this.emit_topic_config(topic, this.topic_configs[topic]);
                 } else if (this.topic_configs[topic]) {
                     console.log('Deleted '+topic+' extra config');
                     delete this.topic_configs[topic];
-                    this.emit('topic_config', topic, null);
+                    this.emit_topic_config(topic, null);
                 }
             });
         }
