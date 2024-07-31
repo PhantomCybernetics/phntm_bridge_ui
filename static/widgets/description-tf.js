@@ -107,7 +107,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         }
         this.manager.onLoad = () => {
-            console.info('All loaded');
+            console.info('Robot URDF loaded', that.robot);
             if (that.robot) {
                 that.clear_model(that.robot); //clear after urdf  sets mats
                 that.init_markers(that.robot); 
@@ -180,15 +180,17 @@ export class DescriptionTFWidget extends EventTarget {
         this.world.rotation.set(-Math.PI/2.0, 0.0, 0.0); //+z up
         this.scene.add(this.world);
 
-        const light = new THREE.SpotLight( 0xffffff, 5.0 );
+        const light = new THREE.SpotLight( 0xffffff, 30.0, 0, Math.PI/10);
         light.castShadow = true; // default false
-        this.scene.add( light );
-        light.position.set( 1, 2, 1 );
+        this.scene.add(light);
+        light.position.set(0, 5, 0); // will stay 5m above the model
         light.lookAt(this.camera_target_pos);
-        light.shadow.mapSize.width = 2 * 1024; // default
-        light.shadow.mapSize.height = 2 * 1024; // default
-        
-        light.shadow.bias= -0.002;
+        light.shadow.mapSize.width = 5 * 1024; // default
+        light.shadow.mapSize.height = 5 * 1024; // default
+        light.shadow.camera.near = 0.5; // default
+        light.shadow.camera.far = 10; // default
+
+        // light.shadow.bias= -0.002;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
         this.light = light;
 
@@ -429,15 +431,6 @@ export class DescriptionTFWidget extends EventTarget {
             }
         });
         this.sources.parseUrlParts(custom_url_vars);
-        // console.warn('DRF attrs after parse:', {
-        //     follow_target: this.follow_target,
-        //     render_joints: this.render_joints,
-        //     render_links: this.render_links,
-        //     render_labels: this.render_labels,
-        //     render_visuals: this.render_visuals,
-        //     render_collisions: this.render_collisions,
-        //     fix_base: this.fix_base,
-        // });
     }
 
     async on_tf_data (topic, tf) {
@@ -519,7 +512,7 @@ export class DescriptionTFWidget extends EventTarget {
                 console.error('Invalid model imported')
             }
             return false;
-        }
+        }   
 
         if (obj.isURDFVisual) {
             inVisual = true;
@@ -530,8 +523,10 @@ export class DescriptionTFWidget extends EventTarget {
         // mesh visuals
         if (obj.isMesh && inVisual) {
 
+            console.log('Visual:', obj);
+
             if (!obj.material) {
-                obj.material = new THREE.MeshPhongMaterial({
+                obj.material = new THREE.MeshBasicMaterial({
                     color: 0xffffff,
                     side: THREE.DoubleSide,
                     depthWrite: true,
@@ -540,31 +535,33 @@ export class DescriptionTFWidget extends EventTarget {
                 obj.material.needsUpdate = true;
             } else  {
                 obj.material.depthWrite = true;
-                obj.material.side = THREE.DoubleSide;
+                obj.material.transparent = false;
+                obj.material.side = THREE.FrontSide;
             }
             obj.material.needsUpdate = true;
             obj.castShadow = true;
+            obj.receiveShadow = true;
             obj.renderOrder = -1;
             obj.layers.set(DescriptionTFWidget.L_VISUALS);
         
         // colliders
         } else if (obj.isMesh && inCollider) {
 
+            console.log('Collider:', obj);
+
             obj.material = this.collider_mat;
             obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
             obj.layers.set(DescriptionTFWidget.L_COLLIDERS);
-
         }
 
-        if (!obj.children || !obj.children.length)
-            return true;
-        
-        for (let i = 0; i < obj.children.length; i++) {
-            let ch = obj.children[i];
-            let res = this.clear_model(ch, lvl+1, inVisual, inCollider); // recursion
-            if (!res) {
-                obj.remove(ch);
-                i--;
+        if (obj.children && obj.children.length) {
+            for (let i = 0; i < obj.children.length; i++) {
+                let ch = obj.children[i];
+                let res = this.clear_model(ch, lvl+1, inVisual, inCollider); // recursion
+                if (!res) {
+                    obj.remove(ch);
+                    i--;
+                }
             }
         }
 
@@ -756,6 +753,8 @@ export class DescriptionTFWidget extends EventTarget {
 
                 if (id_child == this.robot.urdfName) { // robot base frame
 
+                    let new_robot_world_position = new THREE.Vector3();
+
                     if (!this.fix_base) {
                         let pos = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
 
@@ -764,16 +763,34 @@ export class DescriptionTFWidget extends EventTarget {
 
                         ch.position.lerp(pos, lerp_amount);
 
-                        let new_robot_world_position = new THREE.Vector3();
                         ch.getWorldPosition(new_robot_world_position);
 
-                        let d = new THREE.Vector3().subVectors(new_robot_world_position, old_robot_world_position);
+                        let d_pos = new THREE.Vector3().subVectors(new_robot_world_position, old_robot_world_position);
 
-                        this.camera_pos.add(d); // move camera by d
+                        this.camera_pos.add(d_pos); // move camera by d
+                        this.light.position.add(d_pos);
+
+                    } else {
+                        ch.getWorldPosition(new_robot_world_position); // only get world pos (to rotate around)
                     }
                     
+                    let old_robot_world_rotation = new THREE.Quaternion();
+                    ch.getWorldQuaternion(old_robot_world_rotation);
+
                     let rot = new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
                     ch.quaternion.slerp(rot, lerp_amount); //set rot always
+
+                    let new_robot_world_rotation = new THREE.Quaternion();
+                    ch.getWorldQuaternion(new_robot_world_rotation);
+
+                    // let d_rot_rad = old_robot_world_rotation.angleTo(new_robot_world_rotation);
+                    let d_rot = new_robot_world_rotation.multiply(old_robot_world_rotation.invert());
+                    // console.log(d_rot_rad);
+
+                    this.camera_pos.sub(new_robot_world_position)
+                                    //    .applyAxisAngle(new THREE.Vector3(0,1,0), d_rot_rad)
+                                   .applyQuaternion(d_rot)
+                                   .add(new_robot_world_position);
 
                     this.light.target = ch;                    
 
@@ -791,87 +808,9 @@ export class DescriptionTFWidget extends EventTarget {
                 } else {
                     console.warn('tf transform not found: '+id_parent+' > '+id_child);
                 }
+
+                this.renderDirty();
             }
-
-            // if (this.follow_target && this.camera_anchor_joint) {
-            //     this.scene.attach(this.camera);
-            //     this.camera_anchor_joint.getWorldPosition(this.camera_target_pos);
-            // }
-
-            // if (this.transforms_queue.length) {
-
-            //     for (let i = 0; i < this.transforms_queue.length; i++) {
-            //         let id_parent = this.transforms_queue[i].header.frame_id;
-            //         let id_child = this.transforms_queue[i].child_frame_id;
-            //         let t = this.transforms_queue[i].transform;
-            //         // let s = this.transforms_queue[i].header.stamp;
-            //         // let t_sec = (s.sec * 1000000000.0 + s.nanosec) / 1000000000.0;
-    
-            //         // let tf_id = id_parent+'>'+id_child;
-            //         // if (this.last_tf_stamps[tf_id] && this.last_tf_stamps[tf_id] > t_sec) 
-            //         //     continue;
-    
-            //         // this.last_tf_stamps[tf_id] = t_sec;
-    
-            //         let p = this.robot.frames[id_parent];
-            //         let ch = this.robot.frames[id_child];
-            //         if (!ch)
-            //             continue; // child node not present in urdf
-        
-            //         if (id_child == this.robot.urdfName) { // robot base frame
-                        
-            //             // if (this.follow_target) {
-            //             //     this.robot.attach(this.camera);
-            //             // }
-    
-            //             if (!this.fix_base) {
-            //                 ch.position.set(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
-            //             }
-                            
-            //             ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w); //set rot always
-        
-            //             this.smooth_transform_targets[id_child] = {
-            //                 'pos': new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset),
-            //                 'rot': new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w)
-            //             }
-
-            //             this.light.target = ch;
-    
-            //             // if (this.follow_target) {
-            //             //     this.scene.attach(this.camera);
-            //             // }
-            //             let robot_world_position = new THREE.Vector3();
-            //             ch.getWorldPosition(robot_world_position);
-            //             let d = new THREE.Vector3().subVectors(robot_world_position, this.last_robot_world_position);
-            //             this.camera_pos.add(d);
-            //             this.last_robot_world_position.copy(robot_world_position);
-            //             // ch.getWorldPosition();
-            //             ch.getWorldQuaternion(this.last_robot_world_rotation);
-    
-            //         } else if (this.robot && ch && p) {
-                    
-            //             let orig_p = ch.parent;
-
-            //             p.attach(ch);
-
-            //             ch.position.set(t.translation.x, t.translation.y, t.translation.z);
-            //             ch.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
-        
-            //             orig_p.attach(ch);
-        
-            //         } // else {
-            //          //   console.warn('tf not found: '+id_child+' < '+id_parent);
-            //         // }
-    
-                    
-            //     }
-
-            //     this.renderDirty();
-    
-            //     this.transforms_queue = []; // clear 
-
-            // }
-
 
         }
 
@@ -892,8 +831,6 @@ export class DescriptionTFWidget extends EventTarget {
             
             //this.camera_container.quaternion.copy(this.last_robot_world_rotation.slerp(this.camera_container.quaternion, 0.5));
         }
-
-        
 
         let that = this;
         if ((this.controls_dirty || this.render_dirty) && this.robot) {
