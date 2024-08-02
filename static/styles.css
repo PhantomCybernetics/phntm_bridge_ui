@@ -4567,3 +4567,20 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     position: relative;
     top: 1px;
 }
+
+.marker_label {
+    padding: 5px;
+    border-radius: 3px;
+    white-space: pre;
+    /* text-align: center; */
+}
+
+.marker_label.joint {
+    text-align: right;
+    margin-left: -5px;
+}
+
+.marker_label.link {
+    text-align: left;
+    margin-left: 5px;
+}
