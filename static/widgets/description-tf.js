@@ -232,7 +232,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.scene.add(that.ground_plane);
         });
         
-        this.make_mark(this.scene, '[0,0,0]', 1, 1, 1.0);
+        // this.make_mark(this.scene, '[0,0,0]', 1, 1, 1.0);
 
         // if (this.follow_target)
         //     this.model.add(this.camera);
@@ -298,7 +298,9 @@ export class DescriptionTFWidget extends EventTarget {
             } else {
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //labels
-            }        
+            }
+            if (that.robot)    
+                that.make_robot_markers(that.robot);
             // that.panel.ui.update_url_hash(); 
             that.renderDirty();          
         });
@@ -315,7 +317,8 @@ export class DescriptionTFWidget extends EventTarget {
                 that.camera.layers.disable(DescriptionTFWidget.L_LINKS);
                 that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //labels
             }
-            // that.panel.ui.update_url_hash();
+            if (that.robot)    
+                that.make_robot_markers(that.robot);
             that.renderDirty();
         });
 
@@ -678,10 +681,27 @@ export class DescriptionTFWidget extends EventTarget {
 
     make_robot_markers(robot) {
 
-        let h_center = false;
-        this.joint_markers = this.make_marker_group(robot.joints, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS, h_center);
-        this.link_markers = this.make_marker_group(robot.links, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS, h_center);
+        this.joint_markers.forEach((m)=>{
+            if (m.axis_el)
+                m.axis_el.removeFromParent();
+            if (m.label_el)
+                m.label_el.removeFromParent()
+        });
+        this.joint_markers = [];
 
+        this.link_markers.forEach((m)=>{
+            if (m.axis_el)
+                m.axis_el.removeFromParent();
+            if (m.label_el)
+                m.label_el.removeFromParent()
+        });
+        this.link_markers = [];
+
+        let h_center = !this.render_joints || !this.render_links; // when rendering only one type, make it centered
+        if (this.render_joints)
+            this.joint_markers = this.make_marker_group(robot.joints, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS, h_center);
+        if (this.render_links)
+            this.link_markers = this.make_marker_group(robot.links, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS, h_center);
     }
 
     make_marker_group(frames, layer_axes, layer_labels, h_center) {
