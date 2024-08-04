@@ -249,10 +249,9 @@ export class InputManager {
         document.addEventListener('keydown', (ev) => that.on_keyboard_key_down(ev, that.controllers['keyboard']));
         document.addEventListener('keyup', (ev) => that.on_keyboard_key_up(ev, that.controllers['keyboard']));
         window.addEventListener("blur", (event) => {
-            // TODO reset keyboard?
-            // console.warn('Window lost focus');
-            // that.last_keyboard_input = {};
-            // that.update_input_ui();
+            // reset all controllers
+            console.warn('Window lost focus');
+            that.reset_all();
         });
 
         this.make_ui();
