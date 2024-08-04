@@ -19,11 +19,9 @@ export class InputManager {
         this.profiles = null;
         this.current_profile = null;
 
-        // this.last_gp_loaded = null;
         this.loop_delay = 33.3; // ms, 30Hz updates
         this.input_repeat_delay = 200; // ms between button/key triggers 
 
-        // this.enabled = false; 
         this.loop_running = false;
         this.controller_enabled_cb = $('#controller-enabled-cb');
         this.controller_enabled_cb.prop('checked', false);
@@ -128,24 +126,7 @@ export class InputManager {
         });
 
         this.controller_enabled_cb.change((ev) => {
-            that.edited_controller.enabled = $(ev.target).prop('checked');
-            that.save_user_controller_enabled(that.edited_controller);
-            that.make_controller_icons();
-            if (that.edited_controller.type == 'touch') {
-
-                if (that.edited_controller.enabled && !that.touch_gamepad_on) {
-                    that.ui.toggleTouchGamepad();
-                } else {
-                    that.ui.update_touch_gamepad_icon();
-                }
-                that.render_touch_buttons();
-            }
-            // if (that.edited_controller.enabled) {
-            //     // $('#gamepad').addClass('enabled');
-            //     // that.disable_kb_on_conflict();
-            // } else {
-            //     // $('#gamepad').removeClass('enabled');
-            // }
+            that.set_controller_enabled(that.edited_controller, $(ev.target).prop('checked'));
         });
 
         this.editing_profile_basics = false;
@@ -377,8 +358,7 @@ export class InputManager {
         if (!c.profiles) { // only once
 
             c.profiles = {};
-            c.enabled = c.type == 'touch' ? false : this.load_user_controller_enabled(c.id); // touch gets enabled by virtual gamepad
-
+            
             Object.keys(this.profiles).forEach((id_profile)=>{
 
                 // robot defaults
@@ -425,14 +405,11 @@ export class InputManager {
                 //     c.current_profile = id_profile;
                 // }
             });
-        
-
-            // if (last_user_gamepad_profile && gamepad.profiles[last_user_gamepad_profile]) {
-            //     gamepad.current_profile = last_user_gamepad_profile;  // overrride default profile by user
-            // }
 
             if (this.open)
                 this.edited_controller = c; // autofocus latest
+
+            this.set_controller_enabled(c, c.type == 'touch' ? false : this.load_user_controller_enabled(c.id), false); // touch gets enabled by virtual gamepad
 
             console.log('Initiated profiles for gamepad '+c.id);
         }
@@ -451,6 +428,42 @@ export class InputManager {
             this.loop_running = true;
             requestAnimationFrame((t) => this.run_input_loop());
         }
+    }
+
+    set_controller_enabled(c, state, update_icons=true) {
+        c.enabled = state;
+        this.save_user_controller_enabled(c);
+        
+        if (c === this.edited_controller) {
+            this.controller_enabled_cb.prop('checked', c.enabled);
+        }
+
+        if (c.type == 'touch') {
+            if (c.enabled && !this.touch_gamepad_on) {
+                this.ui.toggleTouchGamepad();
+            } else {
+                this.ui.update_touch_gamepad_icon();
+            }
+            this.render_touch_buttons();
+        }
+
+        // disable controllers producing into the same topic to avoid conflicsts
+        if (state) {
+            let c_ids = Object.keys(this.controllers);
+            c_ids.forEach((cc_id) => {
+                let cc = this.controllers[cc_id];
+                if (cc_id == c.id)
+                    return;
+                if (!cc.enabled)
+                    return;
+                if (cc.profiles[this.current_profile].driver.output_topic == c.profiles[this.current_profile].driver.output_topic) {
+                    this.set_controller_enabled(cc, false, false);
+                }
+            });
+        }
+
+        if (update_icons)
+            this.make_controller_icons();
     }
 
     make_new_profile() {
@@ -1461,16 +1474,6 @@ export class InputManager {
         this.ui.show_notification('Config JSON copied');
     }
     
-
-    disable_kb_on_conflict() {
-        if (!this.current_gamepad.enabled)
-            return;
-
-        let kb = this.client.ui.keyboard;
-        if (kb && kb.enabled && kb.current_driver.id == this.current_gamepad.profiles[this.current_gamepad.current_profile].driver) {
-            $('#keyboard_enabled').click(); // avoid same driver coflicts
-        }
-    }
 
     register_driver(id_driver, driver_class) {
         if (this.registered_drivers[id_driver])
@@ -3075,18 +3078,13 @@ export class InputManager {
                 
                 break;
             case 'ctrl-enabled': 
+                let state = false; 
                 switch (btn.set_ctrl_state) {
-                    case 0: c.enabled = false; break;
-                    case 1: c.enabled = true; break;
-                    case 2: c.enabled = !c.enabled; break;
+                    case 0: state = false; break;
+                    case 1: state = true; break;
+                    case 2: state = !c.enabled; break;
                 }
-                if (c === that.edited_controller) {
-                    this.controller_enabled_cb.prop('checked', c.enabled);
-                }
-                that.save_user_controller_enabled(c);
-                that.make_controller_icons();
-                if (c.type == 'touch')
-                    that.render_touch_buttons();
+                that.set_controller_enabled(c, state);
                 break;
             case 'input-profile': 
                 if (btn.set_ctrl_profile) {
