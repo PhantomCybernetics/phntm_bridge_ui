@@ -196,6 +196,9 @@ export class PanelUI {
             $('#network-details').css('display', '');
         }
 
+        this.docker_control_shown = this.load_last_robot_docker_control_shown();
+        $('#docker_controls').css('display', this.docker_control_shown ? '' : 'none');
+
         this.update_layout();
 
         client.on('ui_config', (robot_ui_config) => {
@@ -210,12 +213,25 @@ export class PanelUI {
                 client.on(that.battery_topic, battery_status_wrapper);
                 console.warn('battery topic is '+that.battery_topic)
                 $('#battery-info').css('display', 'block');
-                this.battery_shown = true;
+                that.battery_shown = true;
             } else {
                 $('#battery-info').css('display', 'none');
-                this.battery_shown = false;
+                that.battery_shown = false;
             }
-            that.save_last_robot_battery_shown(this.battery_shown);
+            that.save_last_robot_battery_shown(that.battery_shown);
+
+            let old_docker_control_shown = that.docker_control_shown;
+            if (robot_ui_config['docker_control']) {
+                that.docker_control_shown = true;
+            } else {
+                that.docker_control_shown = false;
+            }
+            that.save_last_robot_docker_control_shown(that.docker_control_shown);
+            if (old_docker_control_shown != that.docker_control_shown) {
+                $('#docker_controls').css('display', that.docker_control_shown ? '' : 'none');
+                that.update_layout();
+            }
+                
 
             //wifi status
             let wifi_shown = false;
@@ -813,7 +829,7 @@ export class PanelUI {
                 .addClass('graph_controls')
                 .css('display', 'block');
 
-            let t = ((el.parent().parent().children().index(el.parent())) * -(15 + 15 + 21 + 1));
+            let t = ((el.parent().parent().children(':visible').index(el.parent())) * -(15 + 15 + 21 + 1));
             t += $('#menubar_scrollable').scrollTop();
             el.css({
                     width: el_w + 'px', //10 is padding
@@ -1024,7 +1040,9 @@ export class PanelUI {
 
     docker_menu_from_containers(containers) {
         $('#docker_list').empty();
-
+        if (!this.docker_control_shown)
+            return;
+        
         this.num_docker_containers = Object.keys(containers).length;
 
         if (this.num_docker_containers > 0) {
@@ -1860,9 +1878,19 @@ export class PanelUI {
         return val;
     }
 
+    async save_last_robot_docker_control_shown(val) {
+        localStorage.setItem('last-robot-docker-control-shown:' + this.client.id_robot, val);
+    }
+
+    load_last_robot_docker_control_shown() {
+        let val = localStorage.getItem('last-robot-docker-control-shown:' + this.client.id_robot) == 'true';
+        return val;
+    }
+
     async save_last_robot_wifi_signal_shown(val) {
         localStorage.setItem('last-robot-wifi-shown:' + this.client.id_robot, val);
     }
+    
 
     load_last_robot_wifi_signal_shown() {
         let val = localStorage.getItem('last-robot-wifi-shown:' + this.client.id_robot) == 'true';
@@ -2061,10 +2089,13 @@ export class PanelUI {
             }
         }
 
+        let that = this;
         function sum (what) {
             let keys = Object.keys(menu_item_widths[what]);
             let res = 0;
             keys.forEach((key)=>{
+                if (key == 'docker_controls' && !that.docker_control_shown)
+                    return;
                 res += menu_item_widths[what][key] + h_extra;
             });
             return res;
