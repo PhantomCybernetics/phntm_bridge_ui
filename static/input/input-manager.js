@@ -231,7 +231,7 @@ export class InputManager {
         document.addEventListener('keyup', (ev) => that.on_keyboard_key_up(ev, that.controllers['keyboard']));
         window.addEventListener("blur", (event) => {
             // reset all controllers
-            console.warn('Window lost focus');
+            console.log('Window lost focus');
             that.reset_all();
         });
 
@@ -3057,14 +3057,21 @@ export class InputManager {
         switch (btn.action) {
             case 'ros-srv':
                 //TODO
-                if (!btn.ros_srv_id) { console.warn('Service ID not set'); return; }
-                if (!btn.ros_srv_msg_type) {
-                    console.error('Service msg_type not set');
-                    if (btn.touch_btn_el)
-                        this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, { err: 1, msg: 'Service not yet discovered, missing message type'});
+                if (!btn.ros_srv_id) {
+                    this.ui.show_notification('Service ID not set', 'error');
+                    console.warn('Service ID not set');
                     return;
                 }
-                if (btn.service_blocked) { console.warn('Service skipping call (previous unfinished)'); return; }
+                if (!btn.ros_srv_msg_type) {
+                    console.error('Service msg_type not set');
+                    this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, { err: 1, msg: 'Service not yet discovered, missing message type'});
+                    return;
+                }
+                if (btn.service_blocked) {
+                    this.ui.show_notification('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)', 'error');
+                    console.warn('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)');
+                    return;
+                }
                 let call_args = btn.ros_srv_val; // from widget or parsed json
 
                 if (btn.touch_btn_el)
@@ -3742,6 +3749,16 @@ export class InputManager {
         requestAnimationFrame((t) => this.run_input_loop());
     }
 
+    driver_has_key_mod_binding(driver, key, key_mod) {
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (btn.id_src == key && btn.key_mod == key_mod) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     on_keyboard_key_down(ev, c) {
         
         //console.log('Down: '+ev.code, ev);
@@ -3791,13 +3808,21 @@ export class InputManager {
             if (btn.id_src == ev.key.toLowerCase()) {
                 if (btn.key_mod == 'shift' && !ev.shiftKey)
                     continue;
+                if (ev.shiftKey && btn.key_mod != 'shift' && this.driver_has_key_mod_binding(driver, ev.key.toLowerCase(), 'shift'))
+                    continue;
                 if (btn.key_mod == 'meta' && !ev.metaKey)
+                    continue;
+                if (ev.metaKey && btn.key_mod != 'meta' && this.driver_has_key_mod_binding(driver, ev.key.toLowerCase(), 'meta'))
                     continue;
                 if (btn.key_mod == 'ctrl' && !ev.ctrlKey)
                     continue;
+                if (ev.ctrlKey && btn.key_mod != 'ctrl' && this.driver_has_key_mod_binding(driver, ev.key.toLowerCase(), 'ctrl'))
+                    continue;
                 if (btn.key_mod == 'alt' && !ev.altKey)
                     continue;
-
+                if (ev.altKey && btn.key_mod != 'alt' && this.driver_has_key_mod_binding(driver, ev.key.toLowerCase(), 'alt'))
+                    continue;
+               
                 btn.pressed = true;
                 btn.raw = 1.0;
 
