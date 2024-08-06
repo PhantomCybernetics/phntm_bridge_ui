@@ -727,34 +727,23 @@ export class Panel {
         if (this.ui.panel_menu_on === this)
             this.ui.panel_menu_touch_toggle();  //remove open menu
 
+        // uncheck in topic menu if topic
         if (this.ui.graph_menu.topics[this.id_source]) {
-            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
-            // $('.topic[data-topic="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
             this.ui.graph_menu.uncheck_topic(this.id_source);
-    
-            // SetTopicsReadSubscription(id_robot, [ this.id_source ], false);
-        } // else { //topics not loaded
-            // Panel.TogglePanel(that.id_source, null, false);
-        // }
+        }
 
-        // this.ui.client.off(this.id_source, this._on_stream_context_wrapper);
-        this.ui.client.off(this.id_source, this._on_data_context_wrapper);
-
+        // uncheck in cam menu if cam
         if ($('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').length > 0) {
-            // $('.topic[data-toppic="'+that.id_source+'"] INPUT:checkbox').click();
             $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler
             $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').prop('checked', false);
             $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
         }
 
+        this.ui.client.off(this.id_source, this._on_data_context_wrapper);
+
         if (this.display_widget && this.display_widget.onClose) {
             this.display_widget.onClose();
         }
-
-        // let x = parseInt($(this.grid_widget).attr('gs-x'));
-        // let y = parseInt($(this.grid_widget).attr('gs-y'));
 
         this.ui.grid.removeWidget(this.grid_widget);
 

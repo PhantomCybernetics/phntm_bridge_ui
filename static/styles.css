@@ -5,6 +5,11 @@ body {
     min-height: 100%;
     position: relative;
     padding: 0px 0px 10px 0px; /* make some space for panel resizing  */
+    
+}
+
+HTML {
+    scrollbar-width: none;
 }
 
 /* preload graphics */
@@ -497,7 +502,6 @@ BODY.narrower .narrower-w { display: inline; }
     float: left;
     overflow-y: scroll;
     overscroll-behavior: none;
-
     scrollbar-width: none;
 }
 
@@ -809,8 +813,9 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 #graph_display {
     display: none;
     position: absolute;
-    top: 45px;
+    top: 44px;
     text-align: left;
+    scrollbar-width: none;
 }
 
 #cameras_list {
@@ -2048,6 +2053,7 @@ SPAN.error {
     display: none;
     height: -moz-available;
     height: -webkit-fill-available;
+    scrollbar-width: none;
     /* overflow: hidden; */
     /* margin-bottom: 5px; */
     /* margin-bottom: 15px; */
@@ -2378,6 +2384,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     font-size: 12px;
     height: 100%;
     overflow: scroll;
+    scrollbar-width: none;
 }
 
 .panel_widget.log .log_line {
@@ -2466,6 +2473,8 @@ BODY.touch-ui .editing .grid-stack-item-content {
 .video_stats {
     bottom: 20px;
     overflow: scroll;
+    scrollbar-width: none;
+    max-width: 50%;
 }
 .grid-stack-item.maximized .video_stats {
     top: 90px;
@@ -2993,6 +3002,7 @@ BODY.desktop-ui #gamepad_settings .tab {
     max-height: calc(100dvh - 230px);
     overflow-x: hidden;
     overflow-y: scroll;
+    scrollbar-width: none;
 }
 
 BODY.touch-gamepad.touch-bottom-buttons #gamepad_settings .panel {
@@ -4387,7 +4397,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     width: calc(100% - 20px);
     left: 10px;
     top: 60px;
-    z-index: 16; /* above maxed panel & touch gamepad, under all overlays and input panel */
+    z-index: 200; /* above everything */
 }
 
 @keyframes msg_err_shake {

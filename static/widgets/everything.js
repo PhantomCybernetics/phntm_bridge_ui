@@ -203,7 +203,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
             that.dirty_laser_points[topic] = [];
             that.renderDirty();
-        }, 200);
+        }, 300);
     }
 
 

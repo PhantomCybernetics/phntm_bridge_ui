@@ -1003,7 +1003,7 @@ export class PanelUI {
         for (let i = 0; i < cameras.length; i++) {
             let camera = cameras[i];
 
-            let row_el = $('<label for="cb_camera_' + i + '" class="prevent-select camera">'
+            let row_el = $('<label for="cb_camera_' + i + '" class="prevent-select camera" data-src="'+camera.src_id+'">'
                             + camera.src_id + '</label>'
             );
 
