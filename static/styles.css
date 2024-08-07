@@ -16,33 +16,33 @@ HTML {
 body::after{
     position:absolute; width:0; height:0; overflow:hidden; z-index:-1;
     content: 
-        url('/static/icon-menu.png')
-        url('/static/arrow.png')
-        url('/static/battery.png')
-        url('/static/discovery_stopped.svg')
-        url('/static/discovery.svg')
-        url('/static/gamepad.png')
-        url('/static/graph.png')
-        url('/static/icon-check.png')
-        url('/static/icon-config-thicker.png')
-        url('/static/icon-edit.png')
-        url('/static/icon-fullscreen.png')
-        url('/static/icon-menu-thicker.png')
-        url('/static/icon-menu.png')
-        url('/static/icon-play-pause.png')
-        url('/static/icon-plus.png')
-        url('/static/icon-rotate.png')
-        url('/static/icon-settings.png')
-        url('/static/icon-trash.png')
-        url('/static/icon-video.png')
-        url('/static/keyboard.png')
-        url('/static/menu-arrow.png')
-        url('/static/remove.png')
-        url('/static/tiles.png')
-        url('/static/touch-input-black.png')
-        url('/static/touch-input.png')
-        url('/static/user-input.png')
-        url('/static/wifi.png')        
+        url('/static/graph/icon-menu.png')
+        url('/static/graph/arrow.png')
+        url('/static/graph/battery.png')
+        url('/static/graph/discovery_stopped.svg')
+        url('/static/graph/discovery.svg')
+        url('/static/graph/gamepad.png')
+        url('/static/graph/graph.png')
+        url('/static/graph/icon-check.png')
+        url('/static/graph/icon-config-thicker.png')
+        url('/static/graph/icon-edit.png')
+        url('/static/graph/icon-fullscreen.png')
+        url('/static/graph/icon-menu-thicker.png')
+        url('/static/graph/icon-menu.png')
+        url('/static/graph/icon-play-pause.png')
+        url('/static/graph/icon-plus.png')
+        url('/static/graph/icon-rotate.png')
+        url('/static/graph/icon-settings.png')
+        url('/static/graph/icon-trash.png')
+        url('/static/graph/icon-video.png')
+        url('/static/graph/keyboard.png')
+        url('/static/graph/menu-arrow.png')
+        url('/static/graph/remove.png')
+        url('/static/graph/tiles.png')
+        url('/static/graph/touch-input-black.png')
+        url('/static/graph/touch-input.png')
+        url('/static/graph/user-input.png')
+        url('/static/graph/wifi.png')        
     ;
  }
 
@@ -249,7 +249,7 @@ BODY.hamburger #menubar_hamburger {
     height: 30px;
     margin-left: 0px;
     display: block;
-    background-image: url('/static/icon-menu.png');
+    background-image: url('/static/graph/icon-menu.png');
     background-size: 69px;
     background-position: -36px 0px;
     background-repeat: no-repeat;
@@ -449,7 +449,7 @@ BODY.hamburger #menubar_hamburger_close {
     top: 20px;
     z-index: 10;
     cursor: pointer;
-    background-image: url(/static/menu-arrow.png);
+    background-image: url(/static/graph/menu-arrow.png);
     background-repeat: no-repeat;
     padding-left: 16px;
     background-size: 9px;
@@ -530,7 +530,7 @@ BODY.narrower .narrower-w { display: inline; }
 
 #graph_topics .msg_type.video {
     padding-right: 17px;
-    background-image: url(/static/icon-video.png);
+    background-image: url(/static/graph/icon-video.png);
     background-position: center right;
     background-repeat: no-repeat;
     background-size: auto 12px;
@@ -668,7 +668,7 @@ BODY.hamburger #docker_controls {
 
 #graph_controls {
     
-    background-image: url(/static/graph.png);
+    background-image: url(/static/graph/graph.png);
     background-position: center 7px;
     background-repeat: no-repeat;
     background-size: 25px 25px;
@@ -1177,7 +1177,7 @@ BODY.hamburger #docker_controls H3 {
 #battery-info {
     display: none;
     /* background-color: #033669; */
-    background-image: url(/static/battery.png);
+    background-image: url(/static/graph/battery.png);
     width: 23px;
     height: 41px;
     margin-top: 7px;
@@ -1261,7 +1261,7 @@ BODY.hamburger #docker_controls H3 {
     top: 9px;
     width: 25px;
     height: 25px;
-    background-image: url(/static/wifi.png);
+    background-image: url(/static/graph/wifi.png);
     background-size: 125px;
     background-repeat: no-repeat;
     background-position: 0px 0px;
@@ -1458,7 +1458,7 @@ BUTTON#trigger_wifi_scan.working {
     right: 0px;
     top: -1px;
     z-index: 114;
-    background-image: url(/static/icon-menu.png);
+    background-image: url(/static/graph/icon-menu.png);
     background-size: 59px;
     background-repeat: no-repeat;
     background-position: -31px 1px;
@@ -1477,7 +1477,7 @@ BODY.touch-ui .monitor_menu{
     right: 0px;
     top: -8px;
     /* background-color: blue; */
-    background-image: url(/static/icon-menu-thicker.png);
+    background-image: url(/static/graph/icon-menu-thicker.png);
     background-size: 128px;
     background-position: -44px 12px;
 }
@@ -1732,7 +1732,7 @@ BODY.desktop-ui .monitor_menu_content .menu_line.close_panel:hover {
 } */
 
 BODY.desktop-ui .monitor_menu_content .menu_line.src_ctrl {
-    /* background-image: url(/static/menu-arrow.png);
+    /* background-image: url(/static/graph/menu-arrow.png);
     background-repeat: no-repeat;
     background-size: 6px;
     background-position: 5px center; */
@@ -1760,7 +1760,7 @@ BODY.touch-ui .menu_line.src_ctrl.open {
     top: 0px;
     width: 30px;
     height: 30px;
-    background-image: url(/static/menu-arrow.png);
+    background-image: url(/static/graph/menu-arrow.png);
     background-repeat: no-repeat;
     background-size: 6px;
     background-position: 11px 12px;
@@ -1848,7 +1848,7 @@ BODY.touch-ui  .monitor_menu_content {
 }
 
 .src_ctrl_menu BUTTON .remove .icon {
-    background: url(/static/remove.png);
+    background: url(/static/graph/remove.png);
     background-repeat: no-repeat;
     background-position: right center;
     background-size: 15px;
@@ -2282,7 +2282,7 @@ BODY.desktop-ui .pause-panel-button.paused:hover {
     left: 0px;
     top: 2px;
     z-index: 2;
-    background-image: url('/static/icon-play-pause.png');
+    background-image: url('/static/graph/icon-play-pause.png');
     background-repeat: no-repeat;
     background-position: -40px 0px;
     background-size: 60px;
@@ -2317,7 +2317,7 @@ BODY.touch-ui .pause-panel-button.paused {
     right: 40px;
     top: -8px;
     z-index: 2;
-    background-image: url(/static/icon-edit.png);
+    background-image: url(/static/graph/icon-edit.png);
     background-repeat: no-repeat;
     background-position: -44px 8px;
     background-size: 100px;
@@ -2594,7 +2594,7 @@ BODY.touch-ui #gamepad {
 
 #introspection_state {
     /* background: #4a4a4a; */
-    background-image: url(/static/discovery_stopped.svg);
+    background-image: url(/static/graph/discovery_stopped.svg);
     -webkit-animation-play-state: paused;
     -moz-animation-play-state: paused;
     animation-play-state: paused;
@@ -2623,7 +2623,7 @@ BODY.desktop-ui #introspection_state:hover,
 }
 
 #introspection_state.active {
-    background-image: url(/static/discovery.svg);
+    background-image: url(/static/graph/discovery.svg);
 }
 
 #touch_ui_status,
@@ -2635,7 +2635,7 @@ BODY.desktop-ui #introspection_state:hover,
 
 #keyboard_status {
     background-size: 126px;
-    background-image: url(/static/keyboard.png);
+    background-image: url(/static/graph/keyboard.png);
     background-position: 8px 17px;
     height: 55px;
     margin-top: 0;
@@ -2644,7 +2644,7 @@ BODY.desktop-ui #introspection_state:hover,
 
 #input-status-icon {
     height: 55px;
-    background-image: url(/static/user-input.png);
+    background-image: url(/static/graph/user-input.png);
     background-size: 261px;
     background-position: 0px 0px;
     filter: unset;
@@ -2665,7 +2665,7 @@ BODY.desktop-ui #introspection_state:hover,
 
 #touch_ui_status {
     height: 55px;
-    background-image: url(/static/touch-input-black.png);
+    background-image: url(/static/graph/touch-input-black.png);
     background-size: 105px;
     background-position: 10px 9px;
 }
@@ -2816,7 +2816,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     position: absolute;
     width: 46px;
     height: 40px;
-    background-image: url(/static/icon-settings.png);
+    background-image: url(/static/graph/icon-settings.png);
     background-size: 21px;
     background-repeat: no-repeat;
     background-position: center 9px;
@@ -2941,7 +2941,7 @@ BUTTON#delete-input-profile.warn .icon {
     right: 7px;
     top: 6px;
     position: absolute;
-    background-image: url(/static/icon-trash.png);
+    background-image: url(/static/graph/icon-trash.png);
     background-repeat: no-repeat;
     background-position: 0px 0px;
     background-size: 17px;
@@ -2980,7 +2980,7 @@ BODY.desktop-ui #gamepad_settings .tab {
     float: right;
     width: 25px;
     margin-right: 5px;
-    background-image: url(/static/icon-settings.png);
+    background-image: url(/static/graph/icon-settings.png);
     background-size: 21px;
     background-repeat: no-repeat;
     background-position: center 6px;
@@ -3097,7 +3097,7 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     /* line-height: 30px; */
     float: right;
     margin-right: 5px;
-    background-image: url(/static/icon-config-thicker.png);
+    background-image: url(/static/graph/icon-config-thicker.png);
     background-repeat: no-repeat;
     background-position: 17px 5px;
     background-size: 128px;
@@ -3393,7 +3393,7 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     height: 12px;
     top: 5px;
     left: 2px;
-    background-image: url(/static/menu-arrow.png);
+    background-image: url(/static/graph/menu-arrow.png);
     background-position: 3px center;
     background-repeat: no-repeat;
     background-size: auto 12px;
@@ -3402,7 +3402,7 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
 }
 
 #keyboard_settings_controls button.close:hover::before {
-    background-image: url(/static/remove.png);
+    background-image: url(/static/graph/remove.png);
 } */
 
 #gamepad_config_controls button#gamepad_config_save,
@@ -3655,7 +3655,7 @@ BODY.touch-gamepad .grid-stack-item-content {
 
   .menu_line.rot_ctrl .rot-left .icon,
   .menu_line.rot_ctrl .rot-right .icon {
-    background-image: url(/static//icon-rotate.png);
+    background-image: url(/static/graph//icon-rotate.png);
     background-size: 40px;
     background-repeat: no-repeat;
     position: absolute;
@@ -3759,7 +3759,7 @@ BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
     bottom: 8px;
     margin: 0px;
     padding: 0px;
-    background-image: url(/static/icon-fullscreen.png);
+    background-image: url(/static/graph/icon-fullscreen.png);
     background-size: 80px;
     background-repeat: no-repeat;
     background-position: 0px 0px;
@@ -3820,7 +3820,7 @@ BODY.hamburger  #bottom-links.inline {
   }
 
   #bottom-links A.credits {
-    background-image: url(/static/favicons/favicon-blue-purple-16x16.png);
+    background-image: url(/static/graph/favicons/favicon-blue-purple-16x16.png);
     background-repeat: no-repeat;
     padding-left: 19px;
     background-size: 16px;
@@ -4042,7 +4042,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     top: 7px;
     width: 15px;
     height: 15px;
-    background-image: url(/static/icon-plus.png);
+    background-image: url(/static/graph/icon-plus.png);
     background-size: 15px;
     background-repeat: no-repeat;
 }
@@ -4089,7 +4089,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
 
 
 #input-controller-selection span.touch {
-    background-image: url(/static/touch-input.png);
+    background-image: url(/static/graph/touch-input.png);
     background-size: 200px;
     background-position: 10px 6px;
 }
@@ -4098,7 +4098,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
 #input-controller-selection span.touch.error { background-position: -142px 6px !important; /* red */ }
 
 #input-controller-selection span.keyboard {
-    background-image: url(/static/keyboard.png);
+    background-image: url(/static/graph/keyboard.png);
     background-size: 255px;
     background-position: 7px 12px;
 }
@@ -4107,7 +4107,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
 #input-controller-selection span.keyboard.error { background-position: -203px 12px !important; }
 
 #input-controller-selection span.gamepad {
-    background-image: url(/static/gamepad.png);
+    background-image: url(/static/graph/gamepad.png);
     background-size: 246px;
     background-position: 5px 5px;
 }
@@ -4131,7 +4131,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
 .editing_profile_basics #profile-buttons > .icon {
     background-color: #e90fe9;
     border-radius: 0px 5px 0px 0px;
-    background-image: url(/static/icon-check.png);
+    background-image: url(/static/graph/icon-check.png);
     background-size: 32px;
     background-position: 7px 6px;
     cursor: pointer;
@@ -4451,7 +4451,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     position: absolute;
     left: 3px;
     top: 4px;
-    background-image: url(/static/icon-check.png);
+    background-image: url(/static/graph/icon-check.png);
     background-size: 20px;
     background-repeat: no-repeat;
     background-position: 5px 5px;
@@ -4483,7 +4483,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     position: absolute;
     right: 5px;
     top: 4px;
-    background-image: url(/static/remove.png);
+    background-image: url(/static/graph/remove.png);
     background-size: 20px;
     background-repeat: no-repeat;
     background-position: 5px 5px;
@@ -4526,6 +4526,9 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     font-family: emoji;
     margin-top: 10px;
     height: 65px;
+    background-image: url('/static/graph/warning.svg');
+    background-size: 50px;
+    background-repeat: no-repeat;
 }
 
 #dialog-modal-confirm.warn {

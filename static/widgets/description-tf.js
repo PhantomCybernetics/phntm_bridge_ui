@@ -217,7 +217,7 @@ export class DescriptionTFWidget extends EventTarget {
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
 
         //ground plane
-        this.tex_loader.load('/static/tiles.png', (plane_tex) => {
+        this.tex_loader.load('/static/graph/tiles.png', (plane_tex) => {
             const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
             plane_tex.wrapS = THREE.RepeatWrapping;
             plane_tex.wrapT = THREE.RepeatWrapping;

@@ -22,7 +22,7 @@ export class Zoomable2DTiles {
             '<div class="canvas_container" id="canvas_container_'+panel.n+'">' +
                 // '<canvas id="panel_overlay_canvas_'+panel.n+'" class="big_canvas canvas_overlay" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
                 // '<canvas id="panel_canvas_'+panel.n+'" class="big_canvas" width="'+ this.canvas_size[0] +'" height="'+ this.canvas_size[1] +'"></canvas>' +
-                '<img id="panel_arrow_'+panel.n+'" title="Follow target" class="arrow" src="/static/arrow.png">' +
+                '<img id="panel_arrow_'+panel.n+'" title="Follow target" class="arrow" src="/static/graph/arrow.png">' +
             '</div>');
             // this.canvas = canvases[0]
             // this.canvas_overlay = canvases[1];

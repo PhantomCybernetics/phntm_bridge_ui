@@ -1458,9 +1458,9 @@ export class PanelUI {
 
         let that = this;
         if (!this.wifi_scan_warning_suppressed) {
-            this.confirm_dialog('<span class="warn-icon">🚨</span>Depending on your hardware &amp; software setup, '
-                + 'this action can currently leave your robot with <b>no access to the Internet</b>. See <a href="#" target="_blank">more info here</a><br><br>'
-                + 'Before attempting to roam, make sure you have local console access and/or can reboot the system if needed.',
+            this.confirm_dialog('<span class="warn-icon"></span>Depending on your hardware &amp; software setup, '
+                + 'this action can leave your robot offline. See <a href="#" target="_blank">more info here</a><br><br>'
+                + 'Before attempting to roam, make sure you have local console access and/or can reboot the system if necessary.',
                 'warn',
                 'Scan &amp; Roam', (dont_show_again) => { // confirm
                     if (dont_show_again) {
