@@ -168,7 +168,7 @@ BODY.desktop-ui.menu-cancels-scroll {
     position: relative;
     padding-right: 0px;
     /* z-index: 36; */
-    z-index: 3; /* above gamepad config panel */
+    z-index: 41; /* above gamepad config panel & notifications */
     display: none;
 }
 
@@ -179,6 +179,7 @@ BODY.desktop-ui.menu-cancels-scroll {
 
     margin-right: 0px; /* set to fixed-right width on resize */
     margin-left: 0px; /* set to fixed-left width on resize */
+    z-index: 42; /* above notifications */
 }
 
 #fixed-right {
@@ -4398,7 +4399,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     width: calc(100% - 20px);
     left: 10px;
     top: 60px;
-    z-index: 200; /* above everything */
+    z-index: 40; /* below net / batt in top menu */
+    pointer-events: none;
 }
 
 @keyframes msg_err_shake {
@@ -4438,6 +4440,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     animation-name: msg_fade_in_out;
     animation-duration: 3s;
     animation-iteration-count: 1;
+
+    pointer-events: auto;
 }
 
 #notifications .msg.success {

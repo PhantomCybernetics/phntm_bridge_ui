@@ -194,17 +194,18 @@ export class InputManager {
 
         $('#delete-input-profile')
             .click((ev)=>{
-                if ($(ev.target).hasClass('warn')) {
+                console.log('clicked', ev.target);
+                if ($('#delete-input-profile').hasClass('warn')) {
                     that.delete_current_profile();
-                    $(ev.target).removeClass('warn');
+                    $('#delete-input-profile').removeClass('warn');
                     that.close_profile_menu();
                     return;
                 } else {
-                    $(ev.target).addClass('warn');
+                    $('#delete-input-profile').addClass('warn');
                 }
             })
             .blur((ev)=>{
-                $(ev.target).removeClass('warn');
+                $('#delete-input-profile').removeClass('warn');
             });
 
         $('#duplicate-input-profile').click((ev)=>{
@@ -343,11 +344,21 @@ export class InputManager {
             console.info(`Input manager got robot config, reload the page to update`); // ignoring input config updates
         }
         
+        this.show_input_profile_notification();
+
         this.make_profile_selector_ui();
 
         Object.values(this.controllers).forEach((c)=>{
             this.init_controller(c);
         });
+    }
+
+    show_input_profile_notification(force=false) {
+        if (!this.current_profile)
+            return;
+        if (!force && Object.keys(this.profiles).length < 2)
+            return;
+        this.ui.show_notification('Input profile is '+this.profiles[this.current_profile].label);
     }
 
     init_controller(c) {
@@ -667,6 +678,8 @@ export class InputManager {
                 this.save_last_user_profile(this.current_profile);
             }
         }
+
+        this.show_input_profile_notification(true); //always
     }
 
     init_controller_profile(c, c_profile) {
@@ -1571,9 +1584,11 @@ export class InputManager {
                 // let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
                 if (val == '+') {
                     that.make_new_profile();
+                    that.show_input_profile_notification();
                 } else {
                     that.reset_all(); //reset old
                     that.current_profile = $(ev.target).val();
+                    that.show_input_profile_notification();
                     that.reset_all(); //reset new
                     that.make_ui();
                     that.render_touch_buttons();
@@ -3158,6 +3173,7 @@ export class InputManager {
                     
                     that.reset_all();
                     that.current_profile = btn.set_ctrl_profile;
+                    that.show_input_profile_notification();
                     that.reset_all();
                     that.make_ui();
                     that.render_touch_buttons();
@@ -3229,48 +3245,50 @@ export class InputManager {
                 if (btn.listening)
                     continue;
 
-                if (this.edited_controller.type == 'keyboard' && btn.id_src) {
+                if (btn.raw_val_el) {
+                    if (this.edited_controller.type == 'keyboard' && btn.id_src) {
 
-                    btn.raw_val_el.html(btn.src_label);
-
-                    if (btn.pressed)
-                        btn.raw_val_el.addClass('pressed');
-                    else
-                        btn.raw_val_el.removeClass('pressed');
-
-                } else if (this.edited_controller.type == 'touch' && btn.src_label) {
-
-                    btn.raw_val_el.html(btn.src_label);
-
-                    if (btn.pressed)
-                        btn.raw_val_el.addClass('pressed');
-                    else
-                        btn.raw_val_el.removeClass('pressed');
-
-                } else if (Number.isInteger(btn.id_src)) {
-
-                    if (btn.driver_axis && (btn.pressed || btn.touched) && !(btn.raw === undefined || btn.raw === null)) {
-                        btn.raw_val_el.html(btn.raw.toFixed(2));
-                    } else if (btn.src_label) {
                         btn.raw_val_el.html(btn.src_label);
+    
+                        if (btn.pressed)
+                            btn.raw_val_el.addClass('pressed');
+                        else
+                            btn.raw_val_el.removeClass('pressed');
+    
+                    } else if (this.edited_controller.type == 'touch' && btn.src_label) {
+    
+                        btn.raw_val_el.html(btn.src_label);
+    
+                        if (btn.pressed)
+                            btn.raw_val_el.addClass('pressed');
+                        else
+                            btn.raw_val_el.removeClass('pressed');
+    
+                    } else if (Number.isInteger(btn.id_src)) {
+    
+                        if (btn.driver_axis && (btn.pressed || btn.touched) && !(btn.raw === undefined || btn.raw === null)) {
+                            btn.raw_val_el.html(btn.raw.toFixed(2));
+                        } else if (btn.src_label) {
+                            btn.raw_val_el.html(btn.src_label);
+                        } else {
+                            btn.raw_val_el.html('none');
+                        }
+    
+                        if (btn.touched)
+                            btn.raw_val_el.addClass('touched');
+                        else
+                            btn.raw_val_el.removeClass('touched');
+            
+                        if (btn.pressed)
+                            btn.raw_val_el.addClass('pressed');
+                        else
+                            btn.raw_val_el.removeClass('pressed');
+    
                     } else {
+                        btn.raw_val_el.removeClass('touched');
+                        btn.raw_val_el.removeClass('pressed');
                         btn.raw_val_el.html('none');
                     }
-
-                    if (btn.touched)
-                        btn.raw_val_el.addClass('touched');
-                    else
-                        btn.raw_val_el.removeClass('touched');
-        
-                    if (btn.pressed)
-                        btn.raw_val_el.addClass('pressed');
-                    else
-                        btn.raw_val_el.removeClass('pressed');
-
-                } else {
-                    btn.raw_val_el.removeClass('touched');
-                    btn.raw_val_el.removeClass('pressed');
-                    btn.raw_val_el.html('none');
                 }
 
                 if (btn.assigned) {
