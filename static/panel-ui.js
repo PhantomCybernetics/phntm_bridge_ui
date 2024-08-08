@@ -1986,13 +1986,7 @@ export class PanelUI {
             
             this.input_manager.set_touch_gamepad_on(true);
             if (this.input_manager.controllers['touch'] && !this.input_manager.controllers['touch'].enabled) {
-                this.input_manager.controllers['touch'].enabled = true;
-                
-                if (this.input_manager.edited_controller == this.input_manager.controllers['touch']) {
-                    this.input_manager.controller_enabled_cb.prop('checked', true);
-                }
-                this.input_manager.make_controller_icons();
-                this.input_manager.render_touch_buttons();
+                this.input_manager.set_controller_enabled(this.input_manager.controllers['touch'], true, true);
             }
             this.update_touch_gamepad_icon();
             
@@ -2004,13 +1998,7 @@ export class PanelUI {
 
             this.input_manager.set_touch_gamepad_on(false);
             if (this.input_manager.controllers['touch'] && this.input_manager.controllers['touch'].enabled) {
-                this.input_manager.controllers['touch'].enabled = false;
-                
-                if (this.input_manager.edited_controller == this.input_manager.controllers['touch']) {
-                    this.input_manager.controller_enabled_cb.prop('checked', false);
-                }
-                this.input_manager.make_controller_icons();
-                this.input_manager.render_touch_buttons();
+                this.input_manager.set_controller_enabled(this.input_manager.controllers['touch'], false, true);
             }
             this.update_touch_gamepad_icon();
 

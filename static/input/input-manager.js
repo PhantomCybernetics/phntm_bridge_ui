@@ -431,6 +431,8 @@ export class InputManager {
     }
 
     set_controller_enabled(c, state, update_icons=true) {
+        let report_change = c.enabled != state && (c.enabled !== undefined || state); // initial enabled = undefined (don't report on init, unless on)
+
         c.enabled = state;
         this.save_user_controller_enabled(c);
         
@@ -450,20 +452,71 @@ export class InputManager {
         // disable controllers producing into the same topic to avoid conflicsts
         if (state) {
             let c_ids = Object.keys(this.controllers);
+            let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
             c_ids.forEach((cc_id) => {
                 let cc = this.controllers[cc_id];
                 if (cc_id == c.id)
                     return;
                 if (!cc.enabled)
                     return;
-                if (cc.profiles[this.current_profile].driver.output_topic == c.profiles[this.current_profile].driver.output_topic) {
+                let dd = cc.profiles[this.current_profile].driver_instances[cc.profiles[this.current_profile].driver];
+                if (dd.output_topic == d.output_topic) {
                     this.set_controller_enabled(cc, false, false);
                 }
             });
         }
 
+        if (report_change) {
+            let label = c.id;
+            if (label == 'touch')
+                label = 'Touch input';
+            else if (label == 'keyboard')
+                label = 'Keyboard';
+            else 
+                label = label.split('(')[0]; // remove (Vendor: xxx)
+            this.ui.show_notification(label + (state ? ' enabled' : ' disabled'));
+        }
+
         if (update_icons)
             this.make_controller_icons();
+    }
+
+    disable_controllers_with_conflicting_diver(active_driver) {
+        
+        let change = false;
+        let c_ids = Object.keys(this.controllers);
+
+        let c = null; // find controller by provided driver (driver has no ref)
+        c_ids.forEach((cc_id) => {
+            let cc = this.controllers[cc_id];
+            if (!cc.enabled)
+                return;
+            let d = cc.profiles[this.current_profile].driver_instances[cc.profiles[this.current_profile].driver];
+            if (d == active_driver) {
+                c = cc;
+                return;
+            }
+        });
+
+        if (!c)
+            return;
+
+        c_ids.forEach((cc_id) => {
+            let cc = this.controllers[cc_id];
+            if (!cc.enabled)
+                return;
+            let d = cc.profiles[this.current_profile].driver_instances[cc.profiles[this.current_profile].driver];
+            if (d == active_driver)
+                return;
+            if (d.output_topic == active_driver.output_topic) {
+                change = true;
+                this.set_controller_enabled(cc, false, false);
+            }
+        });
+        
+        if (change) {
+            this.make_controller_icons();
+        }
     }
 
     make_new_profile() {
@@ -1560,7 +1613,7 @@ export class InputManager {
                 if (this.edited_controller.type == 'keyboard')
                     label = 'Keyboard';
 
-                let line_source = $('<div class="line"><span class="label">Input source:</span><span class="static_val">'
+                let line_source = $('<div class="line"><span class="label">Input source:</span><span class="static_val" title="'+label+'">'
                                 + label
                                 + '</span></div>');
                 lines.push(line_source);
@@ -3422,6 +3475,9 @@ export class InputManager {
             console.info('Gamepad was already connected:', id_gamepad);
         }
 
+        let label = id_gamepad.split('(')[0]; // remove (Vendor: xxx)
+        this.ui.show_notification(label + ' connected');
+
         this.init_controller(this.controllers[id_gamepad]);
     }
 
@@ -3434,6 +3490,9 @@ export class InputManager {
             this.controllers[ev.gamepad.id].connected = false;
 
             this.make_controller_icons();
+
+            let label = ev.gamepad.id.split('(')[0]; // remove (Vendor: xxx)
+            this.ui.show_notification(label + ' disconnected');
         }
 
     }

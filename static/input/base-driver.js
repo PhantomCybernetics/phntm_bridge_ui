@@ -72,6 +72,7 @@ export class InputDriver {
         this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, err);
         this.error_message = err.message;
         this.handle_error_message();
+        this.input_manager.disable_controllers_with_conflicting_diver(this);
     }
 
     handle_error_message() {

@@ -42,7 +42,8 @@ body::after{
         url('/static/graph/touch-input-black.png')
         url('/static/graph/touch-input.png')
         url('/static/graph/user-input.png')
-        url('/static/graph/wifi.png')        
+        url('/static/graph/wifi.png')
+        url('/static/graph/warning.svg')
     ;
  }
 
@@ -3820,7 +3821,7 @@ BODY.hamburger  #bottom-links.inline {
   }
 
   #bottom-links A.credits {
-    background-image: url(/static/graph/favicons/favicon-blue-purple-16x16.png);
+    background-image: url(/static/favicons/favicon-blue-purple-16x16.png);
     background-repeat: no-repeat;
     padding-left: 19px;
     background-size: 16px;
