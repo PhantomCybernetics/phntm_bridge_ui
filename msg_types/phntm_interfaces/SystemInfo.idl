@@ -1,0 +1,43 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from phntm_interfaces/msg/SystemInfo.msg
+// generated code does not contain a copyright notice
+
+#include "phntm_interfaces/msg/CPUStatusInfo.idl"
+#include "phntm_interfaces/msg/DiskVolumeStatusInfo.idl"
+#include "std_msgs/msg/Header.idl"
+
+module phntm_interfaces {
+  module msg {
+    struct SystemInfo {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "per core")
+      sequence<phntm_interfaces::msg::CPUStatusInfo> cpu;
+
+      uint64 mem_total_bytes;
+
+      uint64 mem_available_bytes;
+
+      uint64 mem_used_bytes;
+
+      uint64 mem_free_bytes;
+
+      uint64 mem_buffers_bytes;
+
+      uint64 mem_shared_bytes;
+
+      uint64 mem_cached_bytes;
+
+      uint64 swp_total_bytes;
+
+      uint64 swp_used_bytes;
+
+      uint64 swp_free_bytes;
+
+      @verbatim (language="comment", text=
+        "per monitored volume")
+      sequence<phntm_interfaces::msg::DiskVolumeStatusInfo> disk;
+    };
+  };
+};

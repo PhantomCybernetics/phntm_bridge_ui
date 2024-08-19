@@ -1784,6 +1784,149 @@
     ]
   },
   {
+    "name": "phntm_interfaces/msg/CPUStatusInfo",
+    "definitions": [
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "user_percent"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "nice_percent"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "system_percent"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "idle_percent"
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/DiskVolumeStatusInfo",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "path"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "total_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "used_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "free_bytes"
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/DockerContainerStatus_Constants",
+    "definitions": [
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "STATUS_EXITED",
+        "valueText": "0",
+        "value": 0,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "STATUS_RUNNING",
+        "valueText": "1",
+        "value": 1,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "STATUS_PAUSED",
+        "valueText": "2",
+        "value": 2,
+        "isComplex": false
+      },
+      {
+        "isConstant": true,
+        "type": "uint8",
+        "name": "STATUS_RESTARTING",
+        "valueText": "3",
+        "value": 3,
+        "isComplex": false
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/DockerContainerStatus",
+    "definitions": [
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "id"
+      },
+      {
+        "type": "string",
+        "isComplex": false,
+        "name": "name"
+      },
+      {
+        "type": "uint8",
+        "isComplex": false,
+        "name": "status"
+      },
+      {
+        "type": "float32",
+        "isComplex": false,
+        "name": "cpu_percent"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "block_io_read_bytes"
+      },
+      {
+        "type": "uint32",
+        "isComplex": false,
+        "name": "block_io_write_bytes"
+      },
+      {
+        "type": "uint16",
+        "isComplex": false,
+        "name": "pids"
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/DockerStatus",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "phntm_interfaces/msg/DockerContainerStatus",
+        "isComplex": true,
+        "isArray": true,
+        "name": "containers"
+      }
+    ]
+  },
+  {
     "name": "phntm_interfaces/msg/IWStatus_Constants",
     "definitions": [
       {
@@ -1866,6 +2009,78 @@
         "type": "uint8",
         "isComplex": false,
         "name": "num_peers"
+      }
+    ]
+  },
+  {
+    "name": "phntm_interfaces/msg/SystemInfo",
+    "definitions": [
+      {
+        "type": "std_msgs/msg/Header",
+        "isComplex": true,
+        "name": "header"
+      },
+      {
+        "type": "phntm_interfaces/msg/CPUStatusInfo",
+        "isComplex": true,
+        "isArray": true,
+        "name": "cpu"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_total_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_available_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_used_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_free_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_buffers_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_shared_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "mem_cached_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "swp_total_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "swp_used_bytes"
+      },
+      {
+        "type": "uint64",
+        "isComplex": false,
+        "name": "swp_free_bytes"
+      },
+      {
+        "type": "phntm_interfaces/msg/DiskVolumeStatusInfo",
+        "isComplex": true,
+        "isArray": true,
+        "name": "disk"
       }
     ]
   },

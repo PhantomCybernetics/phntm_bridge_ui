@@ -3,6 +3,8 @@ import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
 
 import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
 
+BigInt.prototype.toJSON = function() { return this.toString() } // fixes Bigint serialization issue in JSON.stringify
+
 export class Panel {
 
     ui = null;
@@ -673,7 +675,13 @@ export class Panel {
         } else if (msg && this.src_visible) {
             
             if (raw_len < 10000) {
-                datahr = JSON.stringify(msg, null, 2);
+                try {
+                    datahr = JSON.stringify(msg, null, 2);
+                } catch (e) {
+                    datahr = 'Error (see console)';
+                    console.error('Exception while deserializing message: '+e, msg);
+                }
+                
             } else {
                 datahr = '';
                 let trimmed = {};

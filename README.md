@@ -42,7 +42,7 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
         "url": "/", // base address of the ui (/ + ID_ROBOT) 
 
         // .idl files are searched here  
-        "msgTypesDir": "static/msg_types/",
+        "msgTypesDir": "msg_types/",
         // .json message definitions are written here  
         "msgTypesJsonFile": "static/msg_types.json",
 
@@ -110,7 +110,7 @@ npm install # necessary on the first run from new source!
 ```
 
 # Custom ROS Message Types
-When starting, the UI server looks for .idl files in msgTypesDir (static/msg_types/grp_name/*.idl) and generates a JSON definition into a single .json file (static/msg_types.json) that the clients' web browsers then fetch. If you want to add support for ROS message types, just add add new .idl to the source folder, restart the UI server and reload web browser.
+When starting, the UI server looks for .idl files in msgTypesDir (msg_types/grp_name/*.idl) and generates a JSON definition into a single .json file (static/msg_types.json) that the clients' web browsers then fetch. If you want to add support for ROS message types, just add add new .idl to the source folder, restart the UI server and reload web browser.
 
 Neither the Cloud Bridge nor the Bridge UI Server use these definitions themselves in any way. They are used in the web browser to serialize and deserialzie binary ROS messages. Unsupported message types will be ignored by the client by default; topics and services are discovered regardless.
 
