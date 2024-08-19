@@ -2167,7 +2167,7 @@ export class InputManager {
             
             let node_opts = [];
             service_ids.forEach((id_srv)=>{
-                let msg_type = node.services[id_srv].msg_types[0];
+                let msg_type = node.services[id_srv].msg_type;
                 if (that.ui.ignored_service_types.includes(msg_type))
                     return; // not rendering ignored
 

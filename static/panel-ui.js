@@ -949,7 +949,7 @@ export class PanelUI {
         topic_ids.forEach((id_topic) => {
             if (!that.panels[id_topic] || that.panels[id_topic].initiated)
                 return;
-            let msg_type = topics[id_topic].msg_types[0];
+            let msg_type = topics[id_topic].msg_type;
             that.panels[id_topic].init(msg_type); //init w message type
         });
     }
@@ -977,7 +977,7 @@ export class PanelUI {
                 if (node.publishers) {
                     let topic_ids = Object.keys(node.publishers);
                     topic_ids.forEach((id_topic) => {
-                        let msg_type = node.publishers[id_topic].msg_types[0];
+                        let msg_type = node.publishers[id_topic].msg_type;
                         if (IsFastVideoTopic(msg_type)) {
                             cameras.push({
                                 src_id: id_topic,
@@ -1193,7 +1193,7 @@ export class PanelUI {
                 if (exclude_topics && exclude_topics.length && exclude_topics.indexOf(topic) !== -1)
                     return;
 
-                if (!that.client.discovered_topics[topic].msg_types || that.client.discovered_topics[topic].msg_types[0] != msg_type)
+                if (!that.client.discovered_topics[topic].msg_type || that.client.discovered_topics[topic].msg_type != msg_type)
                     return;
 
                 let l = $('<a href="#" class="topic-option">' + topic + '</a>');
@@ -1332,7 +1332,7 @@ export class PanelUI {
 
                 let id_service = service_ids[i];
                 let service = node.services[id_service];
-                let msg_type = node.services[id_service].msg_types[0];
+                let msg_type = node.services[id_service].msg_type;
 
                 if (this.ignored_service_types.includes(msg_type))
                     continue; // not rendering internals (?!)
@@ -1341,7 +1341,7 @@ export class PanelUI {
 
                 service.ui_handled = this.input_widgets[msg_type] != undefined;
 
-                let service_content = $('<div class="service ' + (service.ui_handled ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_types[0] + '">'
+                let service_content = $('<div class="service ' + (service.ui_handled ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
                     + '<div '
                     + 'class="service_heading" '
                     + 'title="' + service.service + '\n' + msg_type + '"'

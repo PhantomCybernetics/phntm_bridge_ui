@@ -189,7 +189,7 @@ export class GraphMenu {
                     if (this.topics[id_topic] === undefined) {
                         this.topics[id_topic] = {
                             connections: 1,
-                            msg_type: nodes[id_node].publishers[id_topic].msg_types[0]
+                            msg_type: nodes[id_node].publishers[id_topic].msg_type
                         };
                     } else {
                         this.topics[id_topic]['connections']++;
@@ -209,7 +209,7 @@ export class GraphMenu {
                     if (this.topics[id_topic] === undefined) {
                         this.topics[id_topic] = {
                             connections: 1,
-                            msg_type: nodes[id_node].subscribers[id_topic].msg_types[0]
+                            msg_type: nodes[id_node].subscribers[id_topic].msg_type
                         };
                     } else {
                         this.topics[id_topic]['connections']++;

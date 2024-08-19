@@ -261,32 +261,32 @@ export class PhntmBridgeClient extends EventTarget {
                     if (nodes_data[this.id_robot][node]['publishers']) {
                         let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
                         topics.forEach((topic) => {
-                            let msg_types = nodes_data[this.id_robot][node]['publishers'][topic];
+                            let msg_type = nodes_data[this.id_robot][node]['publishers'][topic];
                             this.discovered_nodes[node].publishers[topic] = {
-                                msg_types: msg_types,
-                                is_video: IsImageTopic(msg_types[0]),
-                                msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                                msg_type: msg_type,
+                                is_video: IsImageTopic(msg_type),
+                                msg_type_supported: this.find_message_type(msg_type) != null,
                             }
                         })
                     }
                     if (nodes_data[this.id_robot][node]['subscribers']) {
                         let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
                         topics.forEach((topic) => {
-                            let msg_types = nodes_data[this.id_robot][node]['subscribers'][topic];
+                            let msg_type = nodes_data[this.id_robot][node]['subscribers'][topic];
                             this.discovered_nodes[node].subscribers[topic] = {
-                                msg_types: msg_types,
-                                is_video: IsImageTopic(msg_types[0]),
-                                msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                                msg_type: msg_type,
+                                is_video: IsImageTopic(msg_type),
+                                msg_type_supported: this.find_message_type(msg_type) != null,
                             }
                         })
                     }
                     if (nodes_data[this.id_robot][node]['services']) {
                         let services = Object.keys(nodes_data[this.id_robot][node]['services']);
                         services.forEach((service) => {
-                            let msg_types = nodes_data[this.id_robot][node]['services'][service];
+                            let msg_type = nodes_data[this.id_robot][node]['services'][service];
                             this.discovered_nodes[node].services[service] = {
                                 service: service,
-                                msg_types: msg_types,
+                                msg_type: msg_type,
                             }
                         })
                     }
@@ -308,13 +308,13 @@ export class PhntmBridgeClient extends EventTarget {
             setTimeout(()=>{
                 this.discovered_topics = {};
                 topics_data[this.id_robot].forEach((topic_data)=>{
-                    let topic = topic_data.shift();
-                    let msg_types = topic_data
+                    let topic = topic_data[0];
+                    let msg_type = topic_data[1];
                     this.discovered_topics[topic] = {
-                        msg_types: msg_types,
+                        msg_type: msg_type,
                         id: topic,
-                        is_video: IsImageTopic(msg_types[0]),
-                        msg_type_supported: this.find_message_type(msg_types[0]) != null,
+                        is_video: IsImageTopic(msg_type),
+                        msg_type_supported: this.find_message_type(msg_type) != null,
                     }
                 });
 
