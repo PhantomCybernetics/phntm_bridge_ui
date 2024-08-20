@@ -41,11 +41,6 @@ Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
         "host": "https://bridge.phntm.io",
         "url": "/", // base address of the ui (/ + ID_ROBOT) 
 
-        // .idl files are searched here  
-        "msgTypesDir": "msg_types/",
-        // .json message definitions are written here  
-        "msgTypesJsonFile": "static/msg_types.json",
-
         // Cloud Bridge Socket.io where the client browsers should connect to
         "bridgeSocketUrl": "https://bridge.phntm.io:1337",
 

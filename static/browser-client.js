@@ -5,18 +5,6 @@ class TopicWriter {
         this.msg_type = msg_type;
         this.ui = null;
         this.dc_id = null;
-
-        if (!client.msg_writers[msg_type]) {
-            let Writer = window.Serialization.MessageWriter;
-            let msg_class = client.find_message_type(msg_type);
-            if (!msg_class) {
-                console.error('Failed creating writer for '+msg_type+'; message class not found');
-                return null;
-            }
-            client.msg_writers[msg_type] = new Writer( [ msg_class ].concat(client.supported_msg_types) );
-        }
-
-        this.msg_writer = client.msg_writers[msg_type];
         this.dc = null;
     }
 
@@ -31,7 +19,23 @@ class TopicWriter {
         }
 
         if (!this.msg_writer) {
-            return false; //err
+
+            if (!this.client.msg_writers[this.msg_type]) {
+                let Writer = window.Serialization.MessageWriter;
+                let msg_class = this.client.find_message_type(this.msg_type);
+                if (!msg_class) {
+                    console.info('Failed creating writer for '+this.msg_type+'; message class not found (yet)');
+                    return false;
+                }
+                console.log('Creating msg writer for '+this.msg_type+'; class loaded=', msg_class, this.client.supported_msg_types);
+                this.client.msg_writers[this.msg_type] = new Writer( [ msg_class ].concat(this.client.supported_msg_types) );
+                if (!this.client.msg_writers[this.msg_type] ) {
+                    console.info('Failed creating writer for '+this.msg_type+'; message class was loaded');
+                    return false;
+                }
+            }
+    
+            this.msg_writer = this.client.msg_writers[this.msg_type];
         }
 
         //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
@@ -71,7 +75,7 @@ export class PhntmBridgeClient extends EventTarget {
 
     id_robot = null;
     session = null;
-    supported_msg_types = null; //fetched static
+    supported_msg_types = []; // served from Cloud Bridge
 
     pc = null;
 
@@ -135,9 +139,7 @@ export class PhntmBridgeClient extends EventTarget {
         this.media_streams = {}; //id_stream => stream
         this.latest = {};
 
-        this.supported_msg_types = null;
-        this.msg_types_src = opts.msg_types_src !== undefined ? opts.msg_types_src : '/static/msg_types.json' // json defs generated from .idl files
-        this.load_message_types(); //async
+        this.supported_msg_types = [];
 
         let that = this;
 
@@ -239,6 +241,21 @@ export class PhntmBridgeClient extends EventTarget {
             setTimeout(()=>{
                 that.emit('introspection', that.introspection);
             }, 0);
+        });
+
+        this.socket.on('defs', (msg_defs_data) => {
+
+            if (!msg_defs_data[this.id_robot])
+                return;
+
+            let defs = msg_defs_data[this.id_robot];
+            console.log('Received message type defs', defs);
+
+            defs.forEach((def)=>{
+                if (this.find_message_type(def.name))
+                    return; // don't overwrite
+                this.supported_msg_types.push(def);
+            });
         });
 
         this.socket.on('nodes', (nodes_data) => {
@@ -697,28 +714,28 @@ export class PhntmBridgeClient extends EventTarget {
         }
     }
 
-    load_message_types() {
+    // load_message_types() {
 
-        fetch(this.msg_types_src)
-        .then((response) => response.json())
-        .then((json) => {
-            this.supported_msg_types = json;
-            console.log('Fetched '+json.length+' msg types from '+this.msg_types_src)
-            this.emit('message_types_loaded');
-        });
-    }
+    //     fetch(this.msg_types_src)
+    //     .then((response) => response.json())
+    //     .then((json) => {
+    //         this.supported_msg_types = json;
+    //         console.log('Fetched '+json.length+' msg types from '+this.msg_types_src)
+    //         this.emit('message_types_loaded');
+    //     });
+    // }
 
     connect() {
-        if (this.supported_msg_types === null) {
-            //wait for messages defs to load
-            this.once('message_types_loaded', () => { this.connect(); });
-            return;
-        }
-
-        this.start_heartbeat(); // make webrtc data channel (at least one needed to open webrtc connection)
+        // if (this.supported_msg_types === null) {
+        //     //wait for messages defs to load
+        //     this.once('message_types_loaded', () => { this.connect(); });
+        //     return;
+        // }
 
         console.log('Connecting Socket.io...')
         this.socket.connect();
+
+        this.start_heartbeat(); // make webrtc data channel (at least one needed to open webrtc connection)
     }
 
     start_heartbeat() {
@@ -1499,7 +1516,9 @@ export class PhntmBridgeClient extends EventTarget {
     find_message_type(search, msg_types) {
         if (msg_types === undefined)
             msg_types = this.supported_msg_types;
-
+        if (!msg_types)
+            return null;
+        
         for (let i = 0; i < msg_types.length; i++) {
             if (msg_types[i].name == search) {
                 return msg_types[i];
