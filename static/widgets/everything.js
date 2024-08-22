@@ -77,8 +77,9 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
                 that.laser_visuals[topic].castShadow = false;
                 that.laser_visuals[topic].receiveShadow = false;
-                that.laser_frames[topic].add(that.laser_visuals[topic]);
-        
+                if (that.laser_frames[topic]) {
+                    that.laser_frames[topic].add(that.laser_visuals[topic]);
+                }
             } else {
                 that.laser_geometry[topic].setFromPoints(laser_points);
             }
@@ -167,17 +168,20 @@ export class Everything3DWidget extends DescriptionTFWidget {
         const rot_axis = new THREE.Vector3(0, 0, 1); // +z is up
         const center = new THREE.Vector3(0, 0, 0);
 
+        let a = scan.angle_min;
         for (let i = 0; i < scan.ranges.length; i++)  {
             let dist = scan.ranges[i];
-            if (dist === null || dist > scan.range_max || dist < scan.range_min) 
-                continue;
+            
+            a += scan.angle_increment;
 
-            let p = new THREE.Vector3(dist, 0, 0);
-            p.applyAxisAngle(rot_axis, scan.angle_min + (i * scan.angle_increment));
-
-            laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
-            laser_points.push(center);
-
+            if (dist !== null && dist < scan.range_max && dist > scan.range_min) {
+                let p = new THREE.Vector3(dist, 0, 0);
+                p.applyAxisAngle(rot_axis, a);
+                laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
+                laser_points.push(center);
+                
+            }
+            
         };
 
         // if (!this.dirty_laser_points[topic])

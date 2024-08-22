@@ -61,6 +61,40 @@ class Subscriber {
     }
 }
 
+class TopicReader {
+    constructor(opts) {
+        this.topic = opts.topic;
+        this.msg_type = opts.msg_type;
+        this.dc_id = opts.dc_id;
+        this.dc = opts.dc;
+        this.msg_reader = null;
+        this.msg_queue = []; //stores early messages until we have msg_type definition
+        this.logged =false;
+    }
+
+    tryGetMessageReader(client) {
+
+        if (this.msg_reader)
+            return true; // only once
+
+        let msg_type_class = client.find_message_type(this.msg_type, client.supported_msg_types)
+        if (!msg_type_class) {
+            console.warn('Msg type def '+this.msg_type+' not yet awailable for '+this.topic);
+            return false;
+        }
+
+        let Reader = window.Serialization.MessageReader;
+        this.msg_reader = new Reader([ msg_type_class ].concat(client.supported_msg_types));
+
+        this.msg_queue.forEach((raw_msg)=>{
+            client._on_dc_message(this, raw_msg);
+        });
+        this.msg_queue = []; //clear
+
+        return true;
+    }
+}
+
 export function IsImageTopic(t) {
     return t == 'sensor_msgs/msg/Image' ||
            t == 'sensor_msgs/msg/CompressedImage' ||
@@ -80,7 +114,6 @@ export class PhntmBridgeClient extends EventTarget {
     pc = null;
 
     discovered_topics = {} // str topic => { msg_types: str[], subscribed: bool }
-    topic_dcs = {}; //str topic => RTCDataChannel
     discovered_nodes = {}; // str service => { msg_type: str}
     discovered_services = {}; // str service => { msg_type: str}
     discovered_cameras = {}; // str id => { info: {}}
@@ -131,7 +164,8 @@ export class PhntmBridgeClient extends EventTarget {
         this.msg_writers = {}; //msg_type => writer
         this.msg_readers = {}; //msg_type => reader
         this.topic_writers = {}; //id => writer
-        this.subscribers = {}; //id => topic ot cam reader
+        this.topic_readers = {}; //str topic => TopicReader
+        this.subscribers = {}; //id => topic or cam reader
         this.can_change_subscriptions = false;
         this.requested_subscription_change = false;
         this.topic_streams = {};
@@ -245,16 +279,22 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on('defs', (msg_defs_data) => {
 
-            if (!msg_defs_data[this.id_robot])
+            if (!msg_defs_data[that.id_robot])
                 return;
 
-            let defs = msg_defs_data[this.id_robot];
+            let defs = msg_defs_data[that.id_robot];
             console.log('Received message type defs', defs);
 
             defs.forEach((def)=>{
-                if (this.find_message_type(def.name))
+                if (that.find_message_type(def.name))
                     return; // don't overwrite
-                this.supported_msg_types.push(def);
+                that.supported_msg_types.push(def);
+            });
+
+            Object.values(that.topic_readers).forEach((dc_reader)=>{
+                if (!dc_reader.msg_reader) {
+                    dc_reader.tryGetMessageReader(that); // clears the queue of early messages
+                }
             });
         });
 
@@ -541,7 +581,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.subscribers[id_source] = new Subscriber(this, id_source);
 
-        if (this.init_complete) { //not waiting for initial subs
+        if (this.init_complete) { //not waiting for initial bulk subs collection
             console.log('emitting subscribe for '+id_source)
 
             if (this.add_subscribers_timeout) {
@@ -786,7 +826,7 @@ export class PhntmBridgeClient extends EventTarget {
 
     _process_robot_data(robot_data, answer_callback) {
 
-        console.warn('Recieved robot state data: ', this.id_robot, robot_data);
+        console.info('Recieved robot state data: ', this.id_robot, robot_data);
         let that = this;
 
         if (robot_data['session']) { // no session means server pushed just brief info
@@ -836,7 +876,7 @@ export class PhntmBridgeClient extends EventTarget {
             console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
             this.pc = this._init_peer_connection(this.id_robot);
         } else if (this.robot_socket_online) {
-            console.warn(`Re-using old webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}; this should autoconnect...`);
+            console.info(`Valid webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}`);
             // should autoconnect ?!?!
         }
 
@@ -861,6 +901,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         if (robot_data['read_data_channels']) {
+            console.log('Got read channels', robot_data['read_data_channels'])
             robot_data['read_data_channels'].forEach((topic_data)=>{
                 let topic = topic_data[0];
                 let dc_id = topic_data[1];
@@ -868,14 +909,46 @@ export class PhntmBridgeClient extends EventTarget {
                 let reliable = topic_data[3];
                 let topic_config = topic_data[4]; //extra topic config
 
+                if (dc_id && that.topic_readers[topic] && that.topic_readers[topic].msg_type == msg_type) {
+                    that.topic_readers[topic].dc_id = dc_id;
+                }
+                if (dc_id && msg_type) { // dc_ids starts with 1
+                    that._make_read_data_channel(topic, dc_id, msg_type, reliable)
+                } else if (topic && that.topic_readers[topic] && that.topic_readers[topic].dc) {
+                    console.log('Topic '+topic+' closed by the robot')
+                    that.topic_readers[topic].dc.close();
+                    that.topic_readers[topic].dc = null;
+                    delete that.topic_readers[topic];
+                }
+
                 if (topic_config && Object.keys(topic_config).length) {
                     console.log('Got '+topic+' extra config:', topic_config);
-                    this.topic_configs[topic] = topic_config;
-                    this.emit_topic_config(topic, this.topic_configs[topic]);
-                } else if (this.topic_configs[topic]) {
+                    that.topic_configs[topic] = topic_config;
+                    that.emit_topic_config(topic, that.topic_configs[topic]);
+                } else if (that.topic_configs[topic]) {
                     console.log('Deleted '+topic+' extra config');
-                    delete this.topic_configs[topic];
-                    this.emit_topic_config(topic, null);
+                    delete that.topic_configs[topic];
+                    that.emit_topic_config(topic, null);
+                }
+            });
+        }
+
+        if (robot_data['write_data_channels']) {
+            console.log('Got write channels', robot_data['write_data_channels'])
+            robot_data['write_data_channels'].forEach((topic_data)=>{
+                let topic = topic_data[0];
+                let dc_id = topic_data[1];
+                let msg_type = topic_data[2];
+
+                if (dc_id && that.topic_writers[topic] && that.topic_writers[topic].msg_type == msg_type) {
+                    that.topic_writers[topic].dc_id = dc_id;
+                }
+                if (dc_id && msg_type) { // dc_ids starts with 1
+                    that._make_write_data_channel(topic, dc_id, msg_type)
+                } else if (topic && that.topic_writers[topic] && that.topic_writers[topic].dc) {
+                    console.log('Topic '+topic+' closed by the robot')
+                    that.topic_writers[topic].dc.close();
+                    that.topic_writers[topic].dc = null;
                 }
             });
         }
@@ -912,26 +985,6 @@ export class PhntmBridgeClient extends EventTarget {
                     // if (this.media_streams[this.topic_streams[id_src]])
                     //     delete this.media_streams[this.topic_streams[id_src]];
                     delete this.topic_streams[id_src];
-                }
-            });
-        }
-
-        if (robot_data['write_data_channels']) {
-            console.log('Got write channels', robot_data['write_data_channels'])
-            robot_data['write_data_channels'].forEach((topic_data)=>{
-                let topic = topic_data[0];
-                let dc_id = topic_data[1];
-                let msg_type = topic_data[2];
-
-                if (dc_id && that.topic_writers[topic] && that.topic_writers[topic].msg_type == msg_type) {
-                    that.topic_writers[topic].dc_id = dc_id;
-                }
-                if (dc_id && msg_type) { // dc_ids starts with 1
-                    this._make_write_data_channel(topic, dc_id, msg_type)
-                } else if (topic && this.topic_writers[topic] && this.topic_writers[topic].dc) {
-                    console.log('Topic '+topic+' closed by the robot')
-                    this.topic_writers[topic].dc.close();
-                    this.topic_writers[topic].dc = null;
                 }
             });
         }
@@ -998,7 +1051,67 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    // _make_read_data_channel(topic, dc_id, msg_type, reliable) {
+    _make_read_data_channel(topic, dc_id, msg_type, reliable) {
+
+        if (this.topic_readers[topic]) {
+            console.log('Reader already exists for '+topic+'; ');
+            return;
+        }
+
+        if (this.pc.signalingState == 'closed') {
+            console.err('Cannot create read DC for '+topic+'; pc.signalingState=closed');
+            return;
+        }
+
+        let dc = null;
+        try {
+            console.log('Creating read DC for '+topic+'; pc=', this.pc);
+            dc = this.pc.createDataChannel(
+                topic,
+                {
+                    negotiated: true, // negotiated by the app, not webrtc layer
+                    ordered: reliable ? true : false,
+                    maxRetransmits: reliable ? null : 0,
+                    id: dc_id
+                }
+            );
+        } catch (e) {
+            console.error('Creating read DC for '+topic+' failed', e);
+            return;
+        }
+
+        let reader = new TopicReader({
+            topic: topic,
+            msg_type: msg_type,
+            dc_id: dc_id,
+            dc: dc,
+            msg_reader: null,
+            msg_queue: [], //stores early messages until we have msg_type definition
+            logged: false,
+        })
+        this.topic_readers[topic] = reader;
+
+        let that = this;
+        dc.addEventListener("open", (open_evt) => {
+            console.log('Read channel '+topic+' open '+open_evt.target.label, open_evt)
+        });
+        dc.addEventListener("error", (err_evt) => {
+            console.error('Read channel '+topic+' error '+err_evt.target.label, err_evt)
+        });
+        dc.addEventListener("bufferedamountlow", (event) => {
+            console.warn('Read channel '+topic+' bufferedamountlow '+event.target.label, event)
+        });
+        dc.addEventListener("close", (close_evt) => {
+            console.log('Read channel '+topic+' close', close_evt)
+            delete that.topic_readers[topic];
+        });
+        dc.addEventListener("message", (msg_evt) => {
+            if (!reader.tryGetMessageReader(that)) {
+                reader.msg_queue.push(msg_evt);
+                return;
+            }
+            that._on_dc_message(reader, msg_evt);
+        });
 
     //     if (this.topic_dcs[topic]) {
     //         console.log('DC already exists for '+topic);
@@ -1097,7 +1210,7 @@ export class PhntmBridgeClient extends EventTarget {
     //             ev: ev
     //         };
     //     });
-    // }
+    }
 
     _make_write_data_channel(topic, dc_id, msg_type) {
 
@@ -1107,7 +1220,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         if (this.topic_writers[topic].dc && this.topic_writers[topic].dc.id == dc_id) {
-            console.log('Writer DC already exists for '+topic+'; id='+dc_id);
+            console.log('Writer DC already exists for '+topic+'; dc_id='+dc_id);
             // if (dc_id != this.topic_writers[topic].dc.id) {
             //     console.warn('Write DC for '+topic+' has new id: '+dc_id+', old='+this.topic_writers[topic].dc.id);
             //     this.topic_writers[topic].dc.close();
@@ -1123,7 +1236,7 @@ export class PhntmBridgeClient extends EventTarget {
             dc = this.pc.createDataChannel(
                 topic,
                 {
-                    negotiated: true, //negotiated by the app, not webrtc layer
+                    negotiated: true, // negotiated by the app, not webrtc layer
                     ordered: false,
                     maxRetransmits: 0,
                     id: dc_id
@@ -1170,6 +1283,56 @@ export class PhntmBridgeClient extends EventTarget {
             this.pc.close(); // make new pc
             this.pc = null;
         }
+    }
+
+    _on_dc_message(dc, msg_evt) { //arraybuffer
+
+        if (!dc.msg_reader)
+            return;
+
+        let rawData = msg_evt.data;
+
+        let decoded = null;
+        let raw_len = 0;
+        let raw_type = "";
+        let that = this;
+
+        if (rawData instanceof ArrayBuffer ) {
+            raw_len = rawData.byteLength;
+            raw_type = 'ArrayBuffer';
+            let v = new DataView(rawData)
+            decoded = dc.msg_reader.readMessage(v);
+            
+        } else if (rawData instanceof Blob) { // firefox uses Blobs
+            raw_len = rawData.size;
+            raw_type = 'Blob';
+                  
+            new Response(rawData).arrayBuffer()
+            .then((buff)=>{
+                let v = new DataView(buff)
+                decoded = dc.msg_reader.readMessage(v);
+                that.emit(dc.topic, decoded, msg_evt)
+                that.latest[dc.topic] = {
+                    msg: decoded,
+                    ev: msg_evt
+                };
+            });
+            return; //async
+
+        } else { // consider string
+            decoded = rawData; 
+        }
+
+        if (!dc.logged) {
+            dc.logged = true;
+            console.log('Incoming data for '+dc.topic+' ('+dc.msg_type+')', decoded);
+        }
+
+        this.emit(dc.topic, decoded, msg_evt)
+        that.latest[dc.topic] = {
+            msg: decoded,
+            ev: msg_evt
+        };
     }
 
     _init_peer_connection(id_robot) {
@@ -1238,107 +1401,48 @@ export class PhntmBridgeClient extends EventTarget {
         // connect data
         pc.addEventListener('datachannel', (evt) => {
 
-            let ch = evt.channel;
-            let topic = ch.label;
-            let msg_type = ch.protocol;
-            let dc_id = ch.id;
+            console.log('New read data channel added '+ch.label);
+
+            // let ch = evt.channel;
+            // let topic = ch.label;
+            // let msg_type = ch.protocol;
+            // let dc_id = ch.id;
+
+            // let dc = new TopicReader({
+            //     topic: topic,
+            //     msg_type: msg_type,
+            //     dc_id: dc_id,
+            //     ch: ch,
+            //     msg_reader: null,
+            //     msg_queue: [], //stores early messages until we have msg_type definition
+            //     logged: false,
+            // })
+            // that.topic_dcs[topic] = dc;
+
+            // console.log('New read data channel added '+topic, ch);
+
+            // ch.addEventListener("open", (open_evt) => {
+            //     console.log('Read channel open '+open_evt.target.label, open_evt)
+            // });
+            // ch.addEventListener("error", (err_evt) => {
+            //     console.error('Read channel error '+err_evt.target.label, err_evt)
+            // });
+            // ch.addEventListener("bufferedamountlow", (event) => {
+            //     console.warn('Read channel bufferedamountlow '+event.target.label, event)
+            // });
+
+            // ch.addEventListener("close", (close_evt) => {
+            //     console.log('Read channel close', close_evt)
+            //     delete that.topic_dcs[topic];
+            // });
             
-            // if (that.topic_writers[topic]) {
-            //     that.topic_writers[topic] = ch;
-            //     console.log('New write data channel added '+ch.label, ch);
-            //     // return;
-            // }
-
-            console.log('New read data channel added '+ch.label, ch);
-
-            let channelLogged = false;
-
-            let Reader = window.Serialization.MessageReader;
-            
-            let msg_type_class = that.find_message_type(msg_type, that.supported_msg_types)
-            if (!msg_type_class) {
-                console.error('Unsupported msg type: '+msg_type);
-                return;
-            }
-                
-            let msg_reader = new Reader([ msg_type_class ].concat(that.supported_msg_types));
-
-            ch.addEventListener("open", (open_evt) => {
-                console.log('Read channel open '+open_evt.target.label, open_evt)
-            });
-            ch.addEventListener("error", (err_evt) => {
-                console.error('Read channel error '+err_evt.target.label, err_evt)
-            });
-            ch.addEventListener("bufferedamountlow", (event) => {
-                console.warn('Read channel bufferedamountlow '+event.target.label, event)
-            });
-
-            ch.addEventListener("close", (close_evt) => {
-                console.log('Read channel close', close_evt)
-            });
-            
-            ch.addEventListener("message", (msg_evt) => {
-                
-                let rawData = msg_evt.data; //arraybuffer
-                let decoded = null;
-                let raw_len = 0;
-                let raw_type = "";
-
-                if (rawData instanceof ArrayBuffer ) {
-                    raw_len = rawData.byteLength;
-                    raw_type = 'ArrayBuffer';
-                    if (msg_reader != null) {                    
-                        let v = new DataView(rawData)
-                        decoded = msg_reader.readMessage(v);
-                    } else {
-                        decoded = buf2hex(rawData)
-                    }
-                } else if (rawData instanceof Blob) { //firefox
-                    raw_len = rawData.size;
-                    raw_type = 'Blob';
-                    if (msg_reader != null) {                    
-                    
-                        new Response(rawData).arrayBuffer()
-                        .then((buff)=>{
-                            let v = new DataView(buff)
-                            decoded = msg_reader.readMessage(v);
-                            that.emit(topic, decoded, ev)
-                            that.latest[topic] = {
-                                msg: decoded,
-                                ev: ev
-                            };
-                        });
-                        return; //async
-    
-                    } else {
-                        decoded = buf2hex(rawData)
-                    }
-                    
-                } else { // fail => string
-                    decoded = rawData; 
-                }
-
-                if (!channelLogged) {
-                    channelLogged = true;
-                    console.log('Incoming data for '+topic+' ('+msg_type+')', decoded);
-                }
-
-                that.emit(topic, decoded, msg_evt)
-                that.latest[topic] = {
-                    msg: decoded,
-                    ev: msg_evt
-                };
-                
-            });
-
-         
-
-            // if (evt.track.kind == 'video') {
-            //     document.getElementById('video').srcObject = evt.streams[0];
-            // } else {
-            //     document.getElementById('audio').srcObject = evt.streams[0];
-            // }
-
+            // ch.addEventListener("message", (msg_evt) => {
+            //     if (!dc.tryGetMessageReader(that)) {
+            //         dc.msg_queue.push(msg_evt);
+            //         return;
+            //     }
+            //     that._on_dc_message(dc, msg_evt);
+            // });
         });
 
         pc.addEventListener('negotiationneeded', (evt) => {
@@ -1353,12 +1457,6 @@ export class PhntmBridgeClient extends EventTarget {
             if (pc.signalingState == 'closed' && !that.robot_socket_online) {
                that._clear_connection();
             }
-
-            // switch (pc.signalingState) {
-            //     case "closed":
-            //       console.warn('Peer signalling state is closed');
-            //       break;
-            //   }
         });
 
         pc.addEventListener("connectionstatechange", (evt) => {

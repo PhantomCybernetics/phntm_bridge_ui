@@ -998,7 +998,7 @@ export class InputManager {
                             if (btn.ros_srv_id && !btn.ros_srv_msg_type
                                 && discovered_services[btn.ros_srv_id]) {
                                 btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
-                                console.log('message type identigied for '+btn.ros_srv_id)+': '+btn.ros_srv_msg_type;
+                                console.log('Message type discovered for '+btn.ros_srv_id)+': '+btn.ros_srv_msg_type;
                             }
 
                             // update ros-srv btn config ui
