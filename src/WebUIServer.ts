@@ -38,9 +38,6 @@ const HTTPS_SERVER_OPTIONS = {
     cert: fs.readFileSync(certFiles[1]),
 };
 
-const MSG_TYPES_DIR = CONFIG['WEB_UI'].msgTypesDir;
-const MSG_TYPES_JSON_FILE = CONFIG['WEB_UI'].msgTypesJsonFile;
-
 const UI_PORT:number = CONFIG['WEB_UI'].port;
 const UI_HOST:string = CONFIG['WEB_UI'].host;
 const UI_URL:string = CONFIG['WEB_UI'].url;
@@ -50,8 +47,6 @@ const BRIDGE_FILES_URL:string = CONFIG['WEB_UI'].bridgeFilesUrl;
 const APP_ID:string = CONFIG['WEB_UI'].appId;
 const APP_KEY:string = CONFIG['WEB_UI'].appKey;
 const ANALYTICS_CODE:string[] = CONFIG['WEB_UI'].analyticsCode;
-
-import { ImportMessageTypes } from './lib/messageTypesImporter';
 
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE WEB UI'.yellow);
@@ -63,9 +58,6 @@ console.log((' App Key: '+APP_KEY+'').green);
 console.log((' ').green);
 //console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
 console.log('----------------------------------------------------------------------'.yellow);
-
-// imports IDL
-ImportMessageTypes(dir, MSG_TYPES_DIR, MSG_TYPES_JSON_FILE);
 
 import * as express from "express";
 
