@@ -19,23 +19,7 @@ class TopicWriter {
         }
 
         if (!this.msg_writer) {
-
-            if (!this.client.msg_writers[this.msg_type]) {
-                let Writer = window.Serialization.MessageWriter;
-                let msg_class = this.client.find_message_type(this.msg_type);
-                if (!msg_class) {
-                    console.info('Failed creating writer for '+this.msg_type+'; message class not found (yet)');
-                    return false;
-                }
-                console.log('Creating msg writer for '+this.msg_type+'; class loaded=', msg_class, this.client.supported_msg_types);
-                this.client.msg_writers[this.msg_type] = new Writer( [ msg_class ].concat(this.client.supported_msg_types) );
-                if (!this.client.msg_writers[this.msg_type] ) {
-                    console.info('Failed creating writer for '+this.msg_type+'; message class was loaded');
-                    return false;
-                }
-            }
-    
-            this.msg_writer = this.client.msg_writers[this.msg_type];
+            this.msg_writer = this.client.get_msg_writer(this.msg_type);
         }
 
         //console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
@@ -427,19 +411,19 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on('docker', (docker_containers_data) => {
 
-            if (!docker_containers_data[this.id_robot])
-                return;
+            // if (!docker_containers_data[this.id_robot])
+            //     return;
 
-            setTimeout(()=>{
-                this.discovered_docker_containers = {};
+            // setTimeout(()=>{
+            //     this.discovered_docker_containers = {};
 
-                docker_containers_data[this.id_robot].forEach((cont_data) => {
-                    this.discovered_docker_containers[cont_data.id] = cont_data
-                });
+            //     docker_containers_data[this.id_robot].forEach((cont_data) => {
+            //         this.discovered_docker_containers[cont_data.id] = cont_data
+            //     });
 
-                console.log('Got Docker containers:', this.discovered_docker_containers);
-                this.emit('docker', this.discovered_docker_containers);
-            }, 0);
+            //     console.log('Got Docker containers:', this.discovered_docker_containers);
+            //     this.emit('docker', this.discovered_docker_containers);
+            // }, 0);
         });
 
         window.addEventListener("beforeunload", function(e){
@@ -455,6 +439,24 @@ export class PhntmBridgeClient extends EventTarget {
             this.stop_heartbeat();
         });
         // pc = InitPeerConnection(id_robot);
+    }
+
+    get_msg_writer(msg_type) {
+        if (this.msg_writers[msg_type])
+            return this.msg_writers[msg_type];
+
+        let Writer = window.Serialization.MessageWriter;
+        let msg_class = this.find_message_type(msg_type);
+        if (!msg_class) {
+            console.warn('Failed creating writer for '+msg_type+'; message class not found (yet)');
+            return false;
+        }
+        console.log('Creating msg writer for '+msg_type+'; class loaded=', msg_class, this.supported_msg_types);
+        this.msg_writers[msg_type] = new Writer( [ msg_class ].concat(this.supported_msg_types) );
+        if (!this.msg_writers[this.msg_type] ) {
+            console.info('Failed creating writer for '+msg_type+'; message class was loaded');
+            return false;
+        }
     }
 
     on(event, cb) {
@@ -1541,45 +1543,19 @@ export class PhntmBridgeClient extends EventTarget {
         }
     }
 
-    service_call(service, data, cb) { 
+    service_call(service, data, silent, cb) { 
         let req = {
             id_robot: this.id_robot,
             service: service,
             msg: data // data undefined => no msg
         }
-        if (this.ui) {
+        if (this.ui && !silent) {
             let data_hr = (data !== null && data !== undefined) ? ': '+JSON.stringify(data) : ''; 
             this.ui.show_notification('Calling service '+service + data_hr);
         }
         console.warn('Service call request', req);
         this.socket.emit('service', req, (reply)=> {
             console.log('Service call reply', reply);
-            if (cb)
-                cb(reply);
-        });
-    }
-
-    docker_container_start(id_cont, cb) {
-       this._docker_call(id_cont, 'start', cb)
-    }
-
-    docker_container_stop(id_cont, cb) { 
-        this._docker_call(id_cont, 'stop', cb)
-    }
-
-    docker_container_restart(id_cont, cb) { 
-        this._docker_call(id_cont, 'restart', cb)
-    }
-
-    _docker_call(id_cont, msg, cb) {
-        let req = {
-            id_robot: this.id_robot,
-            container: id_cont,
-            msg: msg
-        }
-        console.warn('Docker request', req);
-        this.socket.emit('docker', req, (reply)=> {
-            console.log('Docker reply', reply);
             if (cb)
                 cb(reply);
         });
@@ -1596,20 +1572,18 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    wifi_scan(roam=true, cb) {
-        console.warn('Triggering wifi scan on robot '+this.id_robot+'; roam='+roam)
-        this.socket.emit('iw:scan', { id_robot: this.id_robot, roam: roam }, (res) => {
-            if (!res || !res['success']) {
-                console.error('Wifi scan err: ', res);
-                if (cb)
-                    cb(res);
-                return;
-            }
-            console.log('IW Scan results:', res.res);
-            if (cb)
-                cb(res.res);
-        });
-    }
+    // wifi_scan(roam=true, cb) {
+    //     console.warn('Triggering wifi scan on robot '+this.id_robot+'; roam='+roam)
+    //     let agent_node = '';
+
+    //     this.service_call('/'+agent_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
+    //         if (reply.err) {
+    //             that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+    //         }
+    //         if (cb)
+    //             cb(res.res);
+    //     });
+    // }
 
     find_message_type(search, msg_types) {
         if (msg_types === undefined)

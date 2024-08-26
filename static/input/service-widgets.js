@@ -10,7 +10,7 @@ export class ServiceInput_Empty extends ServiceInput {
     
         btn.click((ev)=>{
             btn.addClass('working');
-            client.service_call(service.service, null, (reply) => {
+            client.service_call(service.service, null, false, (reply) => {
                 client.ui.service_reply_notification(btn, service.service, reply);
             });
         });
@@ -34,14 +34,14 @@ export class ServiceInput_Bool extends ServiceInput  {
 
         btn_true.click((ev)=>{
             btn_true.addClass('working');
-            client.service_call(service.service, true, (reply) => {
+            client.service_call(service.service, { data: true }, false, (reply) => {
                 client.ui.service_reply_notification(btn_true, service.service, reply);
             });
         });
 
         btn_false.click((ev)=>{
             btn_false.addClass('working');
-            client.service_call(service.service, false, (reply) => {
+            client.service_call(service.service, { data: false }, false, (reply) => {
                 client.ui.service_reply_notification(btn_false, service.service, reply);
             });
         });
@@ -76,7 +76,7 @@ export class ServiceInput_Int extends ServiceInput  {
         btn_call.click((ev)=>{
             btn_call.addClass('working');
             let int32_val = parseInt(inp.val());
-            client.service_call(service.service, int32_val, (reply) => {
+            client.service_call(service.service, { data: int32_val}, false, (reply) => {
                 client.ui.service_reply_notification(btn_call, service.service, reply);
             });
         });

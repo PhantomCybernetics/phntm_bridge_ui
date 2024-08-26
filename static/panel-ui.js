@@ -11,7 +11,7 @@ import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari, msToTime } from "./lib.js";
+import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./lib.js";
 
 export class PanelUI {
 
@@ -93,6 +93,7 @@ export class PanelUI {
         this.num_services = 0;
         this.num_cameras = 0;
         this.num_docker_containers = 0;
+        this.docker_hosts = {};
         this.num_widgets = 0;
 
         this.conn_dot_els = [];
@@ -184,7 +185,13 @@ export class PanelUI {
             that.update_wifi_status(msg);
         }
 
+        let docker_monitor_wrapper = (msg) => {
+            that.docker_menu_from_monitor_message(msg);
+        } 
+
         this.battery_topic = null;
+        this.docker_monitor_topic = null;
+        this.subscribed_docker_monitor_topic = null;
         this.iw_topic = null;
         this.battery_shown = this.load_last_robot_battery_shown();
         // display ui elements as last time to prevent them moving around too much during init
@@ -219,29 +226,36 @@ export class PanelUI {
                 that.battery_shown = false;
             }
             that.save_last_robot_battery_shown(that.battery_shown);
-
+            if (robot_ui_config['docker_monitor_topic']) {
+                that.docker_monitor_topic = robot_ui_config['docker_monitor_topic'];
+            }
             let old_docker_control_shown = that.docker_control_shown;
-            if (robot_ui_config['docker_control']) {
+            if (robot_ui_config['docker_control'] && that.docker_monitor_topic) {
                 that.docker_control_shown = true;
-            } else {
+                that.subscribed_docker_monitor_topic = that.docker_monitor_topic;
+                client.on(that.subscribed_docker_monitor_topic, docker_monitor_wrapper);
+            } else if (that.docker_control_shown) {
                 that.docker_control_shown = false;
+                if (that.subscribed_docker_monitor_topic) {
+                    client.off(that.subscribed_docker_monitor_topic, docker_monitor_wrapper);
+                }
+                that.subscribed_docker_monitor_topic = null;
             }
             that.save_last_robot_docker_control_shown(that.docker_control_shown);
             if (old_docker_control_shown != that.docker_control_shown) {
                 $('#docker_controls').css('display', that.docker_control_shown ? '' : 'none');
                 that.update_layout();
             }
-                
 
             //wifi status
             let wifi_shown = false;
-            if (that.iw_topic && that.iw_topic != robot_ui_config['iw_monitor_topic']) {
+            if (that.iw_topic && that.iw_topic != robot_ui_config['wifi_monitor_topic']) {
                 client.off(that.iw_topic, iw_status_wrapper);
                 that.iw_topic = null;
                 wifi_shown = false;
             }
-            if (robot_ui_config['iw_monitor_topic']) {
-                that.iw_topic = robot_ui_config['iw_monitor_topic'];
+            if (robot_ui_config['wifi_monitor_topic']) {
+                that.iw_topic = robot_ui_config['wifi_monitor_topic'];
                 client.on(that.iw_topic, iw_status_wrapper);
                 $('#signal-monitor').css('display', 'block');
                 $('#network-details').css('display', '');
@@ -285,9 +299,9 @@ export class PanelUI {
             that.cameras_menu_from_nodes_and_devices();
         });
 
-        client.on('docker', (containers) => {
-            that.docker_menu_from_containers(containers);
-        });
+        // client.on('docker', (containers) => {
+        //     that.docker_menu_from_containers(containers);
+        // });
 
         client.on('peer_connected', () => {
             that.update_webrtc_status();
@@ -1038,12 +1052,109 @@ export class PanelUI {
         }
     }
 
-    docker_menu_from_containers(containers) {
-        $('#docker_list').empty();
-        if (!this.docker_control_shown)
+    docker_menu_from_monitor_message(msg) {
+
+        let host = msg.header.frame_id; // agent host
+        let agent_node = host ? 'phntm_agent_'+host : 'phntm_agent';
+        if (!host)
+            host = '__default__';
+
+        if (!this.docker_control_shown) {
+            $('#docker_list').empty();
             return;
-        
-        this.num_docker_containers = Object.keys(containers).length;
+        }
+
+        let that = this;
+        // console.log('Got docker monitor data for "'+host+'"', msg);
+
+        if (!this.docker_hosts[host]) {
+            let grp_el = $('<div class="host-group"></div>');
+            let grp_containers_el = $('<div class="host-group-containers"></div>');
+            grp_containers_el.appendTo(grp_el);
+            if (msg.header.frame_id) { //actual host
+                grp_el.prepend($('<h4>'+msg.header.frame_id+'</h4>'));
+                grp_el.appendTo($('#docker_list'));
+            } else {
+                grp_el.prependTo($('#docker_list')); // no host => default, put first
+            }
+
+            this.docker_hosts[host] = {
+                grp_el: grp_el,
+                grp_containers_el: grp_containers_el,
+                containers: msg.containers
+            }
+        }
+
+        let grp_containers_el = this.docker_hosts[host].grp_containers_el;
+        grp_containers_el.empty();
+        msg.containers.forEach((cont)=>{
+            let status = ''
+            switch (cont.status) {
+                case 0: status = 'exited'; break;
+                case 1: status = 'running'; break;
+                case 2: status = 'paused'; break;
+                case 3: status = 'restarting'; break;
+            }
+            let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '" data-container="' + cont.id + '">'
+                // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
+                //+ (!topic.robotTubscribed?' disabled':'')
+                // + (panels[camera_data.id] ? ' checked': '' )
+                // + '/> '
+                + '<span class="docker_cont_name">'
+                + cont.name
+                + '</span>' + ' [' + status + ']'
+                + '<span class="docker_cpu" title="CPU">'
+                + cont.cpu_percent.toFixed(1)+'%'
+                + '</span>'
+                + '<span class="docker_io" title="Block IO">'
+                + formatBytes(cont.block_io_read_bytes)+' / '+formatBytes(cont.block_io_write_bytes)
+                + '</span>'
+                + '<span class="docker_pids" title="PIDs">'
+                + cont.pids
+                + '</span>'
+                + '</div>'
+            );
+
+            let btns_el = $('<div class="docker_btns"></div>');
+            
+            let btn_run = $('<button class="docker_run" title="Start"></button>');
+            let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
+            let btn_restart = $('<button class="docker_restart" title="Restart"></button>');
+            btn_run.appendTo(btns_el);
+            btn_stop.appendTo(btns_el);
+            btn_restart.appendTo(btns_el);
+
+            function call_docker_srv(state, btn) {
+                if ($(btn).hasClass('working'))
+                    return;
+                $(btn).addClass('working');
+
+                that.client.service_call('/'+agent_node+'/docker_command', { id_container: cont.id, set_state: state }, true, (reply) =>{
+                    $(btn).removeClass('working');
+                    if (reply.err) {
+                        that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+                    }
+                });
+            }
+
+            btn_run.click(function (event) {
+                call_docker_srv(1, this);
+            });
+            btn_stop.click(function (event) {
+                call_docker_srv(0, this);
+            });
+            btn_restart.click(function (event) {
+                call_docker_srv(2, this);
+            });
+            
+            btns_el.appendTo(cont_el)
+            cont_el.appendTo(grp_containers_el);
+        });
+
+        this.num_docker_containers = 0;
+        Object.values(this.docker_hosts).forEach((docker_host)=>{
+            this.num_docker_containers += Object.keys(docker_host.containers).length;
+        });
 
         if (this.num_docker_containers > 0) {
             $('#docker_controls').addClass('active');
@@ -1053,63 +1164,6 @@ export class PanelUI {
 
         $('#docker_heading .full-w').html(this.num_docker_containers == 1 ? 'Container' : 'Containers');
         $('#docker_heading B').html(this.num_docker_containers);
-
-        let i = 0;
-        let that = this;
-
-        Object.values(containers).forEach((container) => {
-
-            $('#docker_list').append('<div class="docker_cont ' + container.status + '" id="docker_cont_' + i + '" data-container="' + container.id + '">'
-                // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
-                //+ (!topic.robotTubscribed?' disabled':'')
-                // + (panels[camera_data.id] ? ' checked': '' )
-                // + '/> '
-                + '<span '
-                + 'class="docker_cont_name" '
-                + '>'
-                + container.name
-                + '</span>' + ' [' + container.status + ']'
-                + '<div class="docker_btns">'
-                + '<button class="docker_run" title="Start"></button>'
-                + '<button class="docker_stop" title="Stop"></button>'
-                + '<button class="docker_restart" title="Restart"></button>'
-                + '</div>'
-                + '</div>'
-            );
-
-            $('#docker_cont_' + i + ' button.docker_run').click(function (event) {
-                if ($(this).hasClass('working'))
-                    return;
-                $(this).addClass('working');
-                // console.log('Running '+cont_data.name);
-                let item = this;
-                that.client.docker_container_start(container.id, () => {
-                    $(item).removeClass('working');
-                });
-            });
-            $('#docker_cont_' + i + ' button.docker_stop').click(function (event) {
-                if ($(this).hasClass('working'))
-                    return;
-                $(this).addClass('working');
-                // console.log('Stopping '+cont_data.name);
-                let item = this;
-                that.client.docker_container_stop(container.id, () => {
-                    $(item).removeClass('working');
-                });
-            });
-            $('#docker_cont_' + i + ' button.docker_restart').click(function (event) {
-                if ($(this).hasClass('working'))
-                    return;
-                $(this).addClass('working');
-                // console.log('Restarting '+cont_data.name);
-                let item = this;
-                that.client.docker_container_restart(container.id, () => {
-                    $(item).removeClass('working');
-                });
-            });
-
-            i++;
-        });
     }
 
     graph_from_nodes(nodes) {
@@ -1435,14 +1489,17 @@ export class PanelUI {
     }
 
     do_wifi_scan_roam(callback) {
-        console.log('do_wifi_scan_roam()');
-
+        console.warn('Triggering wifi scan');
+        let that = this;
         $('#trigger_wifi_scan').addClass('working');
-        this.client.wifi_scan(true, (res) => {
-            $('#trigger_wifi_scan').removeClass('working');    
-            if (callback) {
-                callback(res);
+        this.client.service_call('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: true }, true, (reply) =>{
+            $('#trigger_wifi_scan').removeClass('working');
+            console.info('Wifi scan reply:', reply);
+            if (reply.err) {
+                that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
             }
+            if (callback)
+                callback(reply);
         });
     }
 
@@ -1456,10 +1513,18 @@ export class PanelUI {
             return;
         }
 
+        if (!this.wifi_scan_node) {
+            this.show_notification('Error: Wifi scan node unknown', 'error');
+
+            if (callback)
+                callback();
+            return;
+        }
+
         let that = this;
         if (!this.wifi_scan_warning_suppressed) {
             this.confirm_dialog('<span class="warn-icon"></span>Depending on your hardware &amp; software setup, '
-                + 'this action can leave your robot offline. See <a href="#" target="_blank">more info here</a><br><br>'
+                + 'this action can leave your robot offline. See <a href="https://github.com/PhantomCybernetics/phntm_agent?tab=readme-ov-file#wireless-network-scanning-and-roaming" target="_blank">more info here</a><br><br>'
                 + 'Before attempting to roam, make sure you have local console access and/or can reboot the system if necessary.',
                 'warn',
                 'Scan &amp; Roam', (dont_show_again) => { // confirm
@@ -2497,6 +2562,9 @@ export class PanelUI {
         $('#trigger_wifi_scan')
             .css('display', msg.supports_scanning && this.wifi_scan_enabled ? 'inline-block' : 'none')
         // $('#robot_wifi_info').removeClass('offline');
+
+        if (msg.supports_scanning)
+            this.wifi_scan_node = msg.header.frame_id ? 'phntm_agent_'+msg.header.frame_id : 'phntm_agent';
 
         // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
         // console.log('Selected pair', selected_pair);

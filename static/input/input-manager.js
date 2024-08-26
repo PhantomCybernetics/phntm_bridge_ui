@@ -3146,7 +3146,7 @@ export class InputManager {
                     btn.touch_btn_el.addClass('working');
 
                 btn.service_blocked = true;
-                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, (reply) => {
+                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, false, (reply) => {
                     btn.service_blocked = false;
                     that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, reply);
                 });

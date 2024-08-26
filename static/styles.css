@@ -838,13 +838,53 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     overflow: scroll;
     background: #000000e6;
     right: 0px;
-    width: 360px;
+    width: 500px;
     max-height: 520px;
     padding: 10px 5px 0px 10px;
     border-radius: 5px 0px 5px 5px;
     border-top: 3px solid #de5a30;
 }
 
+#docker_list h4 { /* docker host */
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    margin: 10px 0px 6px 0px;
+    padding: 0px;
+    border-bottom: 1px dashed #de5a30;
+    display: block;
+}
+
+#docker_list .host-group:first-child h4 {
+    margin-top: 0px;
+    border-bottom: 0px;
+}
+
+#docker_list .docker_cpu,
+#docker_list .docker_io,
+#docker_list .docker_pids 
+{
+    position: absolute;
+    font-size: 12px;
+    opacity: 0.8;
+    cursor: help;
+}
+
+#docker_list .docker_cpu {
+    left: 220px;
+}
+
+#docker_list .docker_io {
+    left: 270px;
+    width: 100px;
+    text-align: center;
+}
+
+#docker_list .docker_pids {
+    left: 380px;
+    width: 20px;
+    text-align: center;
+}
 
 #cameras_list LABEL.camera,
 #widget_list LABEL.widget {
