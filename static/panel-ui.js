@@ -51,7 +51,13 @@ export class PanelUI {
     constructor(client, grid_cell_height, input_manager) {
         this.client = client;
         this.client.ui = this;
-
+        
+        this.is_visible = true;
+        this.run_in_background = false; //disconnects when backgrounded or computer goes to sleep
+        this.reconnection_timer = null;
+        this.disconnect_timer = null;
+        this.reconnection_delay = 1000; // ms
+        this.background_disconnect_delay = 1000 * 60 * 2; // 2 min
         // document.querySelector("body").requestFullscreen();
 
         let GridStack = window.exports.GridStack;
@@ -147,8 +153,26 @@ export class PanelUI {
             that.update_layout(); // robot name length affects layout
         });
 
+        function reconnectSockerTimer() {
+            if (document.is_visible || that.run_in_background) {
+                console.log('Reconnection timer, UI visible='+that.is_visible+', document.visibilityState='+document.visibilityState);
+                that.client.connect();
+            }
+        }
+
         client.on('socket_disconnect', () => {
             that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+
+            if (!that.reconnection_timer) {
+                that.reconnection_timer = setInterval(reconnectSockerTimer, that.reconnection_delay)
+            }
+        });
+
+        client.on('socket_connect', () => {
+            if (this.reconnection_timer) {
+                clearInterval(this.reconnection_timer);
+                this.reconnection_timer = null;
+            }
         });
 
         client.on('media_stream', (id_src, stream) => {
@@ -448,6 +472,29 @@ export class PanelUI {
             $('BODY').removeClass('menu-cancels-scroll');
         });
 
+        function delayedDisconnectSockerTimer() {
+            if (that.is_visible)
+                return;
+            console.log('Delayed disconnect');
+            that.client.disconnect();
+        }
+
+        const onUIVisibilityChange = async () => {
+            console.log('document.visibilityState: '+document.visibilityState);
+            let visibility = document.visibilityState === 'visible';
+            if (visibility && !that.is_visible) {
+                clearTimeout(that.disconnect_timer)
+                that.disconnect_timer = null;
+                that.client.connect();
+            } else if (!visibility && that.is_visible && !that.run_in_background) {
+                clearTimeout(that.disconnect_timer)
+                that.disconnect_timer = setTimeout(delayedDisconnectSockerTimer, that.background_disconnect_delay)
+            }
+            that.is_visible = visibility;
+        };
+
+        document.addEventListener('visibilitychange', onUIVisibilityChange);
+
         $(window).on('scroll touchmove', { passive: false }, (ev) => {
 
             if (that.panel_menu_on) {
@@ -497,7 +544,7 @@ export class PanelUI {
             // The wake lock sentinel.
             let wakeLock = null;
 
-            // Function that attempts to request a screen wake lock.
+            // Function that attempts to request a screen wake lock
             const requestWakeLock = async () => {
                 try {
                     wakeLock = await navigator.wakeLock.request();

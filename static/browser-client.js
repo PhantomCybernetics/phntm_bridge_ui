@@ -158,6 +158,7 @@ export class PhntmBridgeClient extends EventTarget {
         this.latest = {};
 
         this.supported_msg_types = [];
+        this.ui = null; // ui ref
 
         let that = this;
 
@@ -171,6 +172,7 @@ export class PhntmBridgeClient extends EventTarget {
             path: this.socket_path,
             auth: this.socket_auth,
             autoConnect: this.socket_auto_connect,
+            reconnection: false, 
             forceNew: true,
             transport: 'websocket'
         });
@@ -206,16 +208,21 @@ export class PhntmBridgeClient extends EventTarget {
                     }
                 );
             }, 0);
+
+            setTimeout(()=>{
+                that.emit('socket_connect'); // ui reconnects
+            }, 0);
         });
 
-        this.socket.on("disconnect", () => {
-            console.log('Socket.io disconnected');
+        this.socket.on("disconnect", (reason) => {
+            console.log('Socket.io disconnected, reason: ', reason);
+            // io client disconnect
             that.robot_socket_online = false;
             if (that.pc && that.pc.signalingState == 'closed') {
                 that._clear_connection();
             }
             setTimeout(()=>{
-                that.emit('socket_disconnect');
+                that.emit('socket_disconnect'); // ui reconnects
             }, 0);
         });
 
@@ -768,16 +775,26 @@ export class PhntmBridgeClient extends EventTarget {
     // }
 
     connect() {
-        // if (this.supported_msg_types === null) {
-        //     //wait for messages defs to load
-        //     this.once('message_types_loaded', () => { this.connect(); });
-        //     return;
-        // }
+        if (this.socket.connected) {
+            console.log('Socket.io already connected');
+            return;
+        }
 
         console.log('Connecting Socket.io...')
         this.socket.connect();
 
         this.start_heartbeat(); // make webrtc data channel (at least one needed to open webrtc connection)
+    }
+
+    disconnect() {
+        
+        if (!this.socket.connected) {
+            console.log('Socket.io already disconnected');
+            return;
+        }
+        
+        console.log('Disconnecting Socket.io...')
+        this.socket.disconnect();
     }
 
     start_heartbeat() {
@@ -1273,7 +1290,7 @@ export class PhntmBridgeClient extends EventTarget {
     _clear_connection() {
         console.warn('Socket and webrtc disconnected; clearing session');
         this.session = null;
-        this.init_complete = false;
+        this.init_complete = false; 
         let that = this;
         Object.keys(that.topic_writers).forEach((topic)=>{
             if (that.topic_writers[topic].dc) {
