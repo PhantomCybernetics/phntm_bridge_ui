@@ -325,9 +325,9 @@ export class PanelUI {
             that.cameras_menu_from_nodes_and_devices();
         });
 
-        // client.on('docker', (containers) => {
-        //     that.docker_menu_from_containers(containers);
-        // });
+        client.on('docker', (containers_by_host) => {
+             that.docker_menu_from_all_hosts(containers_by_host);
+        });
 
         client.on('peer_connected', () => {
             that.update_webrtc_status();
@@ -1107,108 +1107,98 @@ export class PanelUI {
         }
     }
 
-    docker_menu_from_monitor_message(msg) {
+    docker_menu_from_all_hosts(msg_by_host) {
+        console.warn('Got full Docker containers: ', msg_by_host);
+        this.docker_hosts = {}; // always redraw completely
+        this.num_docker_containers = 0;
+        $('#docker_list').empty();
 
-        let host = msg.header.frame_id; // agent host
-        let agent_node = host ? 'phntm_agent_'+host : 'phntm_agent';
-        if (!host)
-            host = '__default__';
-
-        if (!this.docker_control_shown) {
-            $('#docker_list').empty();
+        if (!this.docker_control_shown) {    
             return;
         }
 
         let that = this;
-        // console.log('Got docker monitor data for "'+host+'"', msg);
+        function call_docker_srv(agent_node, id_container, state, btn) {
+            if ($(btn).hasClass('working'))
+                return;
+            $(btn).addClass('working');
 
-        if (!this.docker_hosts[host]) {
+            that.client.service_call('/'+agent_node+'/docker_command', { id_container: id_container, set_state: state }, true, (reply) =>{
+                $(btn).removeClass('working');
+                if (reply.err) {
+                    that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+                }
+            });
+        }
+
+        let hosts =  Object.keys(msg_by_host);
+        hosts.sort(); //keep sorted aphabetically
+        hosts.forEach((host)=>{
+
             let grp_el = $('<div class="host-group"></div>');
             let grp_containers_el = $('<div class="host-group-containers"></div>');
             grp_containers_el.appendTo(grp_el);
-            if (msg.header.frame_id) { //actual host
-                grp_el.prepend($('<h4>'+msg.header.frame_id+'</h4>'));
-                grp_el.appendTo($('#docker_list'));
-            } else {
-                grp_el.prependTo($('#docker_list')); // no host => default, put first
+            if (msg_by_host[host].header.frame_id) { //actual host
+                grp_el.prepend($('<h4>'+msg_by_host[host].header.frame_id+'</h4>'));
             }
+
+            let container_els = {};
+
+            msg_by_host[host].containers.forEach((cont)=>{
+                
+                let status = ''
+                switch (cont.status) {
+                    case 0: status = 'exited'; break;
+                    case 1: status = 'running'; break;
+                    case 2: status = 'paused'; break;
+                    case 3: status = 'restarting'; break;
+                }
+
+                let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '"></div>');
+                let cont_name_el = $('<span class="docker_cont_name">'+cont.name+'</span>');
+                let cont_status_el = $('<span class="docker_cont_status">['+status+']</span>');
+                let cont_cpu_el = $('<span class="docker_cpu" title="CPU"></span>');
+                let cont_io_el = $('<span class="docker_io" title="Block IO"></span>');
+                let cont_pids_el = $('<span class="docker_pids" title="PIDs"></span>');
+                cont_el.append([cont_name_el, cont_status_el, cont_cpu_el, cont_io_el, cont_pids_el]);
+
+                let btns_el = $('<div class="docker_btns"></div>');
+                let btn_run = $('<button class="docker_run" title="Start"></button>');
+                let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
+                let btn_restart = $('<button class="docker_restart" title="Restart"></button>');
+                btns_el.append( [btn_run, btn_stop, btn_restart ])
+            
+                btn_run.click(function (event) {
+                    call_docker_srv(host, cont.id, 1, this);
+                });
+                btn_stop.click(function (event) {
+                    call_docker_srv(host, cont.id, 0, this);
+                });
+                btn_restart.click(function (event) {
+                    call_docker_srv(host, cont.id, 2, this);
+                });
+                
+                btns_el.appendTo(cont_el)
+                cont_el.appendTo(grp_containers_el);
+
+                container_els[cont.id] = {
+                    cpu_el: cont_cpu_el,
+                    io_el: cont_io_el,
+                    pids_el: cont_pids_el
+                };
+
+                this.num_docker_containers++;
+            });
+            
+            grp_el.appendTo($('#docker_list'));
 
             this.docker_hosts[host] = {
                 grp_el: grp_el,
                 grp_containers_el: grp_containers_el,
-                containers: msg.containers
-            }
-        }
-
-        let grp_containers_el = this.docker_hosts[host].grp_containers_el;
-        grp_containers_el.empty();
-        msg.containers.forEach((cont)=>{
-            let status = ''
-            switch (cont.status) {
-                case 0: status = 'exited'; break;
-                case 1: status = 'running'; break;
-                case 2: status = 'paused'; break;
-                case 3: status = 'restarting'; break;
-            }
-            let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '" data-container="' + cont.id + '">'
-                // + '<input type="checkbox" class="enabled" id="cb_cont_'+i+'"'
-                //+ (!topic.robotTubscribed?' disabled':'')
-                // + (panels[camera_data.id] ? ' checked': '' )
-                // + '/> '
-                + '<span class="docker_cont_name">'
-                + cont.name
-                + '</span>' + ' [' + status + ']'
-                + '<span class="docker_cpu" title="CPU">'
-                + cont.cpu_percent.toFixed(1)+'%'
-                + '</span>'
-                + '<span class="docker_io" title="Block IO">'
-                + formatBytes(cont.block_io_read_bytes)+' / '+formatBytes(cont.block_io_write_bytes)
-                + '</span>'
-                + '<span class="docker_pids" title="PIDs">'
-                + cont.pids
-                + '</span>'
-                + '</div>'
-            );
-
-            let btns_el = $('<div class="docker_btns"></div>');
-            
-            let btn_run = $('<button class="docker_run" title="Start"></button>');
-            let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
-            let btn_restart = $('<button class="docker_restart" title="Restart"></button>');
-            btn_run.appendTo(btns_el);
-            btn_stop.appendTo(btns_el);
-            btn_restart.appendTo(btns_el);
-
-            function call_docker_srv(state, btn) {
-                if ($(btn).hasClass('working'))
-                    return;
-                $(btn).addClass('working');
-
-                that.client.service_call('/'+agent_node+'/docker_command', { id_container: cont.id, set_state: state }, true, (reply) =>{
-                    $(btn).removeClass('working');
-                    if (reply.err) {
-                        that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
-                    }
-                });
+                containers_els: container_els
             }
 
-            btn_run.click(function (event) {
-                call_docker_srv(1, this);
-            });
-            btn_stop.click(function (event) {
-                call_docker_srv(0, this);
-            });
-            btn_restart.click(function (event) {
-                call_docker_srv(2, this);
-            });
-            
-            btns_el.appendTo(cont_el)
-            cont_el.appendTo(grp_containers_el);
-        });
-
-        this.num_docker_containers = 0;
-        Object.values(this.docker_hosts).forEach((docker_host)=>{
-            this.num_docker_containers += Object.keys(docker_host.containers).length;
+            this.docker_menu_from_monitor_message(msg_by_host[host]); // update vals
         });
 
         if (this.num_docker_containers > 0) {
@@ -1219,6 +1209,23 @@ export class PanelUI {
 
         $('#docker_heading .full-w').html(this.num_docker_containers == 1 ? 'Container' : 'Containers');
         $('#docker_heading B').html(this.num_docker_containers);
+    }
+
+    docker_menu_from_monitor_message(msg) {
+
+        let host = msg.header.frame_id ? 'phntm_agent_'+msg.header.frame_id : 'phntm_agent'; // agent host
+    
+        if (!this.docker_hosts[host]) {
+            return; // wait for full update via socket
+        }
+
+        msg.containers.forEach((cont)=>{
+            if (!this.docker_hosts[host].containers_els[cont.id])
+                return;
+            this.docker_hosts[host].containers_els[cont.id].cpu_el.text(cont.cpu_percent.toFixed(1)+'%');
+            this.docker_hosts[host].containers_els[cont.id].io_el.text(formatBytes(cont.block_io_read_bytes)+' / '+formatBytes(cont.block_io_write_bytes));
+            this.docker_hosts[host].containers_els[cont.id].pids_el.text(cont.pids);
+        });
     }
 
     graph_from_nodes(nodes) {

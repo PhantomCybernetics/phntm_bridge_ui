@@ -433,19 +433,12 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on('docker', (docker_containers_data) => {
 
-            // if (!docker_containers_data[this.id_robot])
-            //     return;
+            if (!docker_containers_data[this.id_robot])
+                return;
 
-            // setTimeout(()=>{
-            //     this.discovered_docker_containers = {};
-
-            //     docker_containers_data[this.id_robot].forEach((cont_data) => {
-            //         this.discovered_docker_containers[cont_data.id] = cont_data
-            //     });
-
-            //     console.log('Got Docker containers:', this.discovered_docker_containers);
-            //     this.emit('docker', this.discovered_docker_containers);
-            // }, 0);
+            setTimeout(()=>{
+                this.emit('docker', docker_containers_data[this.id_robot]);
+            }, 0);
         });
 
         window.addEventListener("beforeunload", function(e){

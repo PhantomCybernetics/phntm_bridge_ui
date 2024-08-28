@@ -860,6 +860,10 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     border-bottom: 0px;
 }
 
+#docker_list .docker_cont_status {
+    margin-left: 5px;
+}
+
 #docker_list .docker_cpu,
 #docker_list .docker_io,
 #docker_list .docker_pids 
