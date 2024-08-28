@@ -343,7 +343,7 @@ export class PanelUI {
                     that.webrtc_uptime_el.html(that.last_connection_uptime);
                 }
             }, 1000);
-        })
+        });
 
         client.on('peer_disconnected', () => {
 
@@ -361,6 +361,10 @@ export class PanelUI {
             that.robot_wifi_info_el.empty().css('display', 'none');
 
             that.update_webrtc_status();
+        });
+
+        client.on('robot_peers', (peers_data) => {
+            that.update_num_peers(peers_data.num_connected);
         })
 
         // browser's Socket.io connection to the Cloud Bridge's server
@@ -2593,11 +2597,6 @@ export class PanelUI {
             '<span class="label">Level:</span> ' + msg.level + '<br> ' +
             '<span class="label">Noise:</span> ' + msg.noise + ' '
             ;
-
-        // $('#network-info-rtt').html();
-        this.update_num_peers(msg.num_peers);
-
-        // + ' ' + (msg.num_peers==1?'peer':'peers')
 
         $('#trigger_wifi_scan')
             .css('display', msg.supports_scanning && this.wifi_scan_enabled ? 'inline-block' : 'none')

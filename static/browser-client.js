@@ -260,6 +260,15 @@ export class PhntmBridgeClient extends EventTarget {
             }, 0)
         });
 
+        this.socket.on('robot_peers', (data) => {
+            if (!data[that.id_robot])
+                return;
+            setTimeout(()=>{
+                console.log('Got peers data', data[that.id_robot]);
+                that.emit('robot_peers', data[that.id_robot]);
+            }, 0)
+        });
+
         this.socket.on("robot:update", (update_data, return_callback) => {
             setTimeout(()=>{
                 that._process_robot_data(update_data, return_callback);
