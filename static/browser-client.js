@@ -227,11 +227,17 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on("error", (err) => {
-            console.error('Socket.io error', err);
+            console.error('Socket.io error: ' + err);
+            setTimeout(()=>{
+                that.emit('socket_disconnect'); // ui reconnects
+            }, 0);
         });
 
         this.socket.on("connect_error", (err) => {
-            console.error('Socket.io connect error:', err);
+            console.error('Socket.io connect error: ' + err);
+            setTimeout(()=>{
+                that.emit('socket_disconnect'); // ui reconnects
+            }, 0);
         });
 
         this.socket.on('instance', (id_instance) => {
@@ -1131,104 +1137,6 @@ export class PhntmBridgeClient extends EventTarget {
             }
             that._on_dc_message(reader, msg_evt);
         });
-
-    //     if (this.topic_dcs[topic]) {
-    //         console.log('DC already exists for '+topic);
-    //         // if (dc_id != this.topic_dcs[topic].id) {
-    //         //     console.warn('DC for '+topic+' has new id: '+dc_id+', old='+this.topic_dcs[topic].id);
-    //         //     this.topic_dcs[topic].close();
-    //         //     delete this.topic_dcs[topic];
-    //         // } else {
-    //         return; //we cool here
-    //         // }
-    //     }
-
-    //     console.log('Creating DC for '+topic+'; reliable='+reliable);
-
-    //     if (this.pc.signalingState == 'closed') {
-    //         return console.err('Cannot create read DC for '+topic+'; pc.signalingState=closed');
-    //     }
-
-    //     let dc = this.pc.createDataChannel(topic, {
-    //         negotiated: true,
-    //         ordered: reliable ? true : false,
-    //         maxRetransmits: reliable ? null : 0,
-    //         id: dc_id
-    //     });
-
-    //     let Reader = window.Serialization.MessageReader;
-    //     // console.warn('reader=', Reader);
-    //     let msg_type_class = this.find_message_type(msg_type, this.supported_msg_types)
-    //     let msg_reader = new Reader( [ msg_type_class ].concat(this.supported_msg_types) );
-    //     // console.warn('reader inst=', msg_reader);
-    //     this.topic_dcs[topic] = dc;
-
-    //     let that = this;
-
-    //     dc.addEventListener('open', (ev)=> {
-    //         console.warn('DC '+topic+' open', dc)
-    //     });
-    //     dc.addEventListener('close', (ev)=> {
-    //         console.warn('DC '+topic+' close')
-    //         delete that.topic_dcs[topic];
-    //     });
-    //     dc.addEventListener('error', (ev)=> {
-    //         console.error('DC '+topic+' error', ev)
-    //         delete that.topic_dcs[topic]
-    //     });
-    //     let dc_incomming_logged = false;
-    //     dc.addEventListener('message', (ev)=> {
-
-    //         let rawData = ev.data; 
-    //         let decoded = null;
-    //         let raw_len = 0;
-    //         let raw_type = ""
-
-    //         if (!dc_incomming_logged) {
-    //             console.info('Incoming data for '+topic);
-    //             dc_incomming_logged = true;
-    //         }
-
-    //         if (rawData instanceof ArrayBuffer ) {
-    //             raw_len = rawData.byteLength;
-    //             raw_type = 'ArrayBuffer';
-    //             if (msg_reader != null) {                    
-    //                 let v = new DataView(rawData)
-    //                 decoded = msg_reader.readMessage(v);
-    //             } else {
-    //                 decoded = buf2hex(rawData)
-    //             }
-    //         } else if (rawData instanceof Blob) { //firefox
-    //             raw_len = rawData.size;
-    //             raw_type = 'Blob';
-    //             if (msg_reader != null) {                    
-                
-    //                 new Response(rawData).arrayBuffer()
-    //                 .then((buff)=>{
-    //                     let v = new DataView(buff)
-    //                     decoded = msg_reader.readMessage(v);
-    //                     that.emit(topic, decoded, ev)
-    //                     that.latest[topic] = {
-    //                         msg: decoded,
-    //                         ev: ev
-    //                     };
-    //                 });
-    //                 return; //async
-
-    //             } else {
-    //                 decoded = buf2hex(rawData)
-    //             }
-                
-    //         } else { // fail => string
-    //             decoded = rawData; 
-    //         }
-
-    //         that.emit(topic, decoded, ev)
-    //         that.latest[topic] = {
-    //             msg: decoded,
-    //             ev: ev
-    //         };
-    //     });
     }
 
     _make_write_data_channel(topic, dc_id, msg_type) {
@@ -1244,9 +1152,8 @@ export class PhntmBridgeClient extends EventTarget {
             //     console.warn('Write DC for '+topic+' has new id: '+dc_id+', old='+this.topic_writers[topic].dc.id);
             //     this.topic_writers[topic].dc.close();
             //     delete this.topic_writers[topic].dc
-            // } else {
-             return; //we cool here
             // }
+            return; //we cool here
         }
 
         let dc = null;
@@ -1417,53 +1324,10 @@ export class PhntmBridgeClient extends EventTarget {
             })
         });
 
-        // connect data
+        // data channels opened by the app, not webrtc
         pc.addEventListener('datachannel', (evt) => {
-
             console.log('New read data channel added '+ch.label);
-
-            // let ch = evt.channel;
-            // let topic = ch.label;
-            // let msg_type = ch.protocol;
-            // let dc_id = ch.id;
-
-            // let dc = new TopicReader({
-            //     topic: topic,
-            //     msg_type: msg_type,
-            //     dc_id: dc_id,
-            //     ch: ch,
-            //     msg_reader: null,
-            //     msg_queue: [], //stores early messages until we have msg_type definition
-            //     logged: false,
-            // })
-            // that.topic_dcs[topic] = dc;
-
-            // console.log('New read data channel added '+topic, ch);
-
-            // ch.addEventListener("open", (open_evt) => {
-            //     console.log('Read channel open '+open_evt.target.label, open_evt)
-            // });
-            // ch.addEventListener("error", (err_evt) => {
-            //     console.error('Read channel error '+err_evt.target.label, err_evt)
-            // });
-            // ch.addEventListener("bufferedamountlow", (event) => {
-            //     console.warn('Read channel bufferedamountlow '+event.target.label, event)
-            // });
-
-            // ch.addEventListener("close", (close_evt) => {
-            //     console.log('Read channel close', close_evt)
-            //     delete that.topic_dcs[topic];
-            // });
-            
-            // ch.addEventListener("message", (msg_evt) => {
-            //     if (!dc.tryGetMessageReader(that)) {
-            //         dc.msg_queue.push(msg_evt);
-            //         return;
-            //     }
-            //     that._on_dc_message(dc, msg_evt);
-            // });
         });
-
         pc.addEventListener('negotiationneeded', (evt) => {
             console.warn('negotiationneeded!', evt);
         });
@@ -1495,7 +1359,7 @@ export class PhntmBridgeClient extends EventTarget {
                 }
             } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
-                console.error(`Peer disconnected, robot_socket_online=${that.robot_socket_online }`);
+                console.error(`Peer disconnected, robot_socket_online=${that.robot_socket_online}`);
 
                 let was_connected = pc.connected;
                 that.peer_stats_loop_running = false;
@@ -1519,11 +1383,45 @@ export class PhntmBridgeClient extends EventTarget {
                     that.emit('peer_disconnected');
                 }
             }
+
+            that.report_conection_state();
         });
 
         return pc;
     }
     
+    get_turn_connection_info() {
+        if (this.pc && this.pc.connectionState == 'connected' && this.pc.sctp && this.pc.sctp.transport && this.pc.sctp.transport.iceTransport) {
+            let selectedPair = this.pc.sctp.transport.iceTransport.getSelectedCandidatePair()
+            if (selectedPair && selectedPair.remote) {
+                return [
+                    selectedPair.remote.type == 'relay' ? true : false,
+                    selectedPair.remote.address
+                ]
+            } else {
+                return [ false, null ];
+            }
+        } else {
+            return [ false, null ];
+        }
+    }
+
+    // post connection update to cloud bridge
+    report_conection_state() {
+        let con_data = {
+            id_robot: this.id_robot,
+            state: this.pc ? this.pc.connectionState : 'n/a',
+        }
+        if (this.pc && this.pc.connectionState == 'connected') {
+            const [via_turn, turn_ip] = this.get_turn_connection_info();
+            con_data['method'] = via_turn ? 'turn' : 'p2p';
+            if (via_turn) {
+                con_data['turn_ip'] = turn_ip;
+            }
+        }
+        this.socket.emit('con-info', con_data);
+    }
+
     async get_peer_stats() {
         let that = this;
         return new Promise((resolve) => {
@@ -1551,8 +1449,6 @@ export class PhntmBridgeClient extends EventTarget {
     }
 
     async run_peer_stats_loop() {
-        // return;
-
         this.peer_stats_loop_running = true;
 
         while (this.peer_stats_loop_running) {
@@ -1588,19 +1484,6 @@ export class PhntmBridgeClient extends EventTarget {
             }
         });
     }
-
-    // wifi_scan(roam=true, cb) {
-    //     console.warn('Triggering wifi scan on robot '+this.id_robot+'; roam='+roam)
-    //     let agent_node = '';
-
-    //     this.service_call('/'+agent_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
-    //         if (reply.err) {
-    //             that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
-    //         }
-    //         if (cb)
-    //             cb(res.res);
-    //     });
-    // }
 
     find_message_type(search, msg_types) {
         if (msg_types === undefined)

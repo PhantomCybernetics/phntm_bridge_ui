@@ -154,14 +154,16 @@ export class PanelUI {
         });
 
         function reconnectSockerTimer() {
-            if (document.is_visible || that.run_in_background) {
-                console.log('Reconnection timer, UI visible='+that.is_visible+', document.visibilityState='+document.visibilityState);
+            if (that.is_visible || that.run_in_background) {
+                console.log('Reconnecting... UI visible='+that.is_visible);
                 that.client.connect();
             }
         }
 
         client.on('socket_disconnect', () => {
+            
             that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            console.log('UI got socket_disconnect, timer=', that.reconnection_timer);
 
             if (!that.reconnection_timer) {
                 that.reconnection_timer = setInterval(reconnectSockerTimer, that.reconnection_delay)
@@ -169,9 +171,9 @@ export class PanelUI {
         });
 
         client.on('socket_connect', () => {
-            if (this.reconnection_timer) {
-                clearInterval(this.reconnection_timer);
-                this.reconnection_timer = null;
+            if (that.reconnection_timer) {
+                clearInterval(that.reconnection_timer);
+                that.reconnection_timer = null;
             }
         });
 
@@ -477,6 +479,7 @@ export class PanelUI {
                 return;
             console.log('Delayed disconnect');
             that.client.disconnect();
+            document.title = '{zzZ) ' + client.name + ' @ PHNTM bridge';
         }
 
         const onUIVisibilityChange = async () => {
@@ -486,6 +489,7 @@ export class PanelUI {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = null;
                 that.client.connect();
+                document.title = client.name + ' @ PHNTM bridge';
             } else if (!visibility && that.is_visible && !that.run_in_background) {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = setTimeout(delayedDisconnectSockerTimer, that.background_disconnect_delay)
@@ -1828,23 +1832,12 @@ export class PanelUI {
 
     async update_webrtc_status() {
         let state = null;
-        let via_turn = null;
-        let ip = 'n/a';
+        const [via_turn, ip] = this.client.get_turn_connection_info();
         let pc = this.client.pc;
         if (pc) {
-            state = pc.connectionState
-            // console.log('pc.sctp:', pc.sctp)
-            if (pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
-                // console.log('pc.sctp.transport:', pc.sctp.transport)
-                // console.log('pc.sctp.transport.iceTransport:', pc.sctp.transport.iceTransport)
-                let selectedPair = pc.sctp.transport.iceTransport.getSelectedCandidatePair()
-                if (selectedPair && selectedPair.remote) {
-                    via_turn = selectedPair.remote.type == 'relay' ? true : false;
-                    ip = selectedPair.remote.address;
-                }
-            }
+            state = pc.connectionState            
         }
-
+       
         if (state != null)
             state = state.charAt(0).toUpperCase() + state.slice(1);
         else
@@ -1853,7 +1846,7 @@ export class PanelUI {
         let wrtc_info = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">'+this.last_connection_uptime+'</span>' ];
         if (via_turn)
             wrtc_info.push('<span class="label">TURN Server: </span> <span id="turn_ip" class="turn">'+ip+'</span>')
-        else if (ip.indexOf('redacted') === -1 && ip != 'n/a')
+        else if (ip && ip.indexOf('redacted') === -1)
             wrtc_info.push('<span class="label">IP: </span> <span id="robot_ip">'+ip+'</span>')
 
         this.webrtc_info_el.html(wrtc_info.join('<br>'));
