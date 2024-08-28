@@ -18,6 +18,7 @@ export class InputManager {
 
         this.profiles = null;
         this.current_profile = null;
+        this.last_profile_notification = null;
 
         this.loop_delay = 33.3; // ms, 30Hz updates
         this.input_repeat_delay = 200; // ms between button/key triggers 
@@ -344,8 +345,6 @@ export class InputManager {
             console.info(`Input manager got robot config, reload the page to update`); // ignoring input config updates
         }
         
-        this.show_input_profile_notification();
-
         this.make_profile_selector_ui();
 
         Object.values(this.controllers).forEach((c)=>{
@@ -358,6 +357,9 @@ export class InputManager {
             return;
         if (!force && Object.keys(this.profiles).length < 2)
             return;
+        if (!force && this.current_profile == this.last_profile_notification)
+            return;
+        this.last_profile_notification = this.current_profile;
         this.ui.show_notification('Input profile is '+this.profiles[this.current_profile].label);
     }
 
@@ -486,6 +488,8 @@ export class InputManager {
             else 
                 label = label.split('(')[0]; // remove (Vendor: xxx)
             this.ui.show_notification(label + (state ? ' enabled' : ' disabled'));
+            if (state)
+                this.show_input_profile_notification();
         }
 
         if (update_icons)
@@ -1539,7 +1543,6 @@ export class InputManager {
         this.close_profile_menu();
         this.ui.show_notification('Config JSON copied');
     }
-    
 
     register_driver(id_driver, driver_class) {
         if (this.registered_drivers[id_driver])
@@ -1693,12 +1696,6 @@ export class InputManager {
         this.make_touch_buttons_editable();
     }
 
-    // collect_profiles() {
-    //     Object.values(this.controllers).forEach(c=>{
-
-    //     });
-    // }
-
     make_controller_icons() {
         let icons = [];
         let that = this;
@@ -1810,7 +1807,6 @@ export class InputManager {
             this.input_status_icon.removeClass('error');
         }
     }
-
 
     make_ui() {
 
@@ -3838,8 +3834,6 @@ export class InputManager {
 
     on_keyboard_key_down(ev, c) {
         
-        //console.log('Down: '+ev.code, ev);
-
         if (ev.repeat)
             return;
 
@@ -3917,7 +3911,6 @@ export class InputManager {
     }
 
     on_keyboard_key_up(ev, c) {
-        //console.log('Up: '+ev.code, ev);
 
         if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
             return; // ignore input fields
@@ -3961,7 +3954,5 @@ export class InputManager {
             }
         }
     }
-
-   
 
 }

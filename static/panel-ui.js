@@ -1157,9 +1157,9 @@ export class PanelUI {
                 let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '"></div>');
                 let cont_name_el = $('<span class="docker_cont_name">'+cont.name+'</span>');
                 let cont_status_el = $('<span class="docker_cont_status">['+status+']</span>');
-                let cont_cpu_el = $('<span class="docker_cpu" title="CPU"></span>');
-                let cont_io_el = $('<span class="docker_io" title="Block IO"></span>');
-                let cont_pids_el = $('<span class="docker_pids" title="PIDs"></span>');
+                let cont_cpu_el = $('<span class="docker_cpu" title="Container CPU"></span>');
+                let cont_io_el = $('<span class="docker_io" title="Container Block IO"></span>');
+                let cont_pids_el = $('<span class="docker_pids" title="Container PIDs"></span>');
                 cont_el.append([cont_name_el, cont_status_el, cont_cpu_el, cont_io_el, cont_pids_el]);
 
                 let btns_el = $('<div class="docker_btns"></div>');
