@@ -840,9 +840,19 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
     right: 0px;
     width: 500px;
     max-height: 520px;
-    padding: 10px 5px 0px 10px;
+    padding: 10px 5px 5px 10px;
     border-radius: 5px 0px 5px 5px;
     border-top: 3px solid #de5a30;
+}
+
+#docker_list.narrow {
+    
+}
+
+#docker_list.narrow .docker_cont_status,
+#docker_list.narrow .docker_io,
+#docker_list.narrow .docker_pids {
+    display: none;
 }
 
 #docker_list h4 { /* docker host */
@@ -862,32 +872,7 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 
 #docker_list .docker_cont_status {
     margin-left: 5px;
-}
-
-#docker_list .docker_cpu,
-#docker_list .docker_io,
-#docker_list .docker_pids 
-{
-    position: absolute;
-    font-size: 12px;
-    opacity: 0.8;
-    cursor: help;
-}
-
-#docker_list .docker_cpu {
-    left: 220px;
-}
-
-#docker_list .docker_io {
-    left: 270px;
-    width: 100px;
-    text-align: center;
-}
-
-#docker_list .docker_pids {
-    left: 380px;
-    width: 20px;
-    text-align: center;
+    display: inline-block;
 }
 
 #cameras_list LABEL.camera,
@@ -917,8 +902,8 @@ BODY.desktop-ui #cameras_list .camera:hover {
 }
 
 BODY.desktop-ui #widget_list .widget:hover {
-    background-color: #112eb3;
     color: #fff;
+    background: #112eb391;
 }
 
 #cameras_list .camera INPUT,
@@ -932,6 +917,8 @@ BODY.desktop-ui #widget_list .widget:hover {
     color: #fff;
     line-height: 30px;
     position: relative;
+    clear: both;
+    height: 30px;
 }
 
 BODY.hamburger #docker_list {
@@ -940,11 +927,64 @@ BODY.hamburger #docker_list {
 
 BODY.hamburger #docker_list .docker_cont {
     line-height: 50px;
+    height: 50px;
     padding-left: 10px;
 }
 
 #docker_list .docker_cont_name {
     font-weight: bold;
+    text-overflow: ellipsis;
+    display: block;
+    float: left;
+    overflow: hidden;
+    max-width: calc(40% - 80px);
+}
+
+#docker_list.narrow .docker_cont_name {
+    max-width: 40%;
+}
+
+#docker_list .docker_cont_vars {
+    position: absolute;
+    height: 30px;
+    left: 40%;
+    right: 100px;
+}
+
+BODY.hamburger #docker_list .docker_cont_vars {
+    right: 150px;
+}
+
+#docker_list .docker_cpu,
+#docker_list .docker_io,
+#docker_list .docker_pids 
+{
+    position: absolute;
+    font-size: 12px;
+    opacity: 0.8;
+    cursor: help;
+}
+
+#docker_list .docker_cpu {
+    left: 0px;
+    width: 50px;
+    text-align: center;
+}
+
+#docker_list.narrow .docker_cpu {
+    left: calc(50% - 25px);
+}
+
+#docker_list .docker_io {
+    left: calc(50% - 40px);
+    width: 100px;
+    text-align: center;
+}
+
+#docker_list .docker_pids {
+    right: 0px;
+    width: 30px;
+    text-align: center;
 }
 
 #docker_list .running .docker_cont_name {
@@ -958,7 +998,7 @@ BODY.hamburger #docker_list .docker_cont {
 .docker_btns {
     position: absolute;
     right: -5px;
-    top: 0px;
+    top: 5px;
     display: block;
     width: 80px;
     height: 100%;
