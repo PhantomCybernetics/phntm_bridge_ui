@@ -4686,3 +4686,216 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     text-align: left;
     margin-left: 5px;
 }
+
+.panel_widget.system-load {
+    height: 100%;
+    background-color: black;
+
+}
+
+.panel_widget.system-load .cpu-line,
+.panel_widget.system-load .mem-line,
+.panel_widget.system-load .swp-line,
+.panel_widget.system-load .disk-line {
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.panel_widget.system-load .cpu-line {
+    padding-left: 25px;
+}
+
+.panel_widget.system-load .mem-line,
+.panel_widget.system-load .swp-line {
+    padding-left: 5px;
+}
+
+.panel_widget.system-load .disk-line {
+    padding-left: 5px;
+}
+
+.panel_widget.system-load.thin .cpu-line, 
+.panel_widget.system-load.thin .mem-line, 
+.panel_widget.system-load.thin .swp-line, 
+.panel_widget.system-load.thin .disk-line {
+    padding-left: 2px;
+}
+
+.panel_widget.system-load .cpu-line {
+}
+
+.panel_widget.system-load .mem-line {
+
+}
+
+.panel_widget.system-load .swp-line {
+
+}
+
+.panel_widget.system-load .disk-line {
+    
+}
+
+.panel_widget.system-load .label,
+.panel_widget.system-load .cpu-label,
+.panel_widget.system-load .disk-label,
+.panel_widget.system-load .total-label {
+    font-size: 12px;
+    position: absolute;
+    left: 5px;
+    top: calc(50% - 8px);
+    background: black;
+    display: block;
+    height: 16px;
+    line-height: 16px;
+    padding: 0px 6px;
+    border-radius: 5px;
+    z-index: 2;
+    color: #fff;
+    pointer-events: none;
+}
+
+.panel_widget.system-load.thin .label,
+.panel_widget.system-load.thin .cpu-label,
+.panel_widget.system-load.thin .disk-label,
+.panel_widget.system-load.thin .total-label {
+    display: none;
+}
+
+.panel_widget.system-load.narrow .disk-line .total-label,
+.panel_widget.system-load.narrow .mem-line .total-label,
+.panel_widget.system-load.narrow .swp-line .total-label {
+    display: none;
+}
+
+.panel_widget.system-load .disk-label {
+    left: 15px;
+    background: black;
+}
+
+.panel_widget.system-load .mem-line .label,
+.panel_widget.system-load .swp-line .label {
+    left: 15px;
+    background: black;
+}
+
+.panel_widget.system-load .cpu-label {
+    
+}
+
+.panel_widget.system-load .total-label {
+    left: unset;
+    right: 10px;
+}
+
+.panel_widget.system-load .total-label.warn {
+    background-color: rgb(255, 0, 0);
+    color: #fff;
+}
+
+.panel_widget.system-load .bar {
+    display: inline-block;
+    height: 80%;
+    top: 10%;
+    position: relative;
+    z-index: 1;
+    cursor: help;
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #fff 6px,
+        #fff 7px
+    );
+}
+
+.panel_widget.system-load.thin .bar {
+    height: 66% !important;
+    top: 2px !important;
+    min-height: 2px !important;
+    display: block;
+    float: left;
+}
+
+.panel_widget.system-load .bar.cpu-nice,
+.panel_widget.system-load .bar.mem-buffers {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #676CFA 6px,
+        #676CFA 7px
+    );
+    /* background-color: rgba(84, 27, 228, 1.0) */
+    
+}
+
+.panel_widget.system-load .bar.disk-used {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #00C6C7 6px,
+        #00C6C7 7px
+    );
+    /* background-color: rgba(0, 255, 255, 0.5); */
+}
+
+.panel_widget.system-load .bar.cpu-user,
+.panel_widget.system-load .bar.mem-used {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #00C52C 6px,
+        #00C52C 7px
+    );
+    /* background-color: rgba(0, 255, 0, 0.5); */
+}
+
+.panel_widget.system-load .bar.cpu-system,
+.panel_widget.system-load .bar.swp-used {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #C71702 6px,
+        #C71702 7px
+    );
+    /* background-color: rgba(255, 0, 0, 1.0); */
+}
+
+.panel_widget.system-load .bar.cpu-idle {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        rgba(128, 128, 128) 6px,
+        rgba(128, 128, 128) 7px
+    );
+    /* background-color: rgba(128, 128, 128, 0.5); */
+}
+
+.panel_widget.system-load .bar.mem-shared {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #C722BF 6px,
+        #C722BF 7px
+    );
+    /* background-color: rgba(255, 0, 255, 0.5); */
+}
+
+.panel_widget.system-load .bar.mem-cached,
+.panel_widget.system-load .bar.swp-cache {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 6px,
+        #C7C62D 6px,
+        #C7C62D 7px
+    );
+    /* background-color: rgba(255, 255, 0, 0.5); */
+}

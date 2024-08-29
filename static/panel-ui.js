@@ -1,3 +1,4 @@
+
 import { BatteryStateWidget } from '/static/widgets/battery.js';
 import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
 import { VideoWidget } from '/static/widgets/video.js';
@@ -5,6 +6,8 @@ import { RangeWidget } from '/static/widgets/range.js';
 import { LaserScanWidget } from '/static/widgets/laser-scan.js';
 import { ImuWidget } from '/static/widgets/imu.js';
 import { LogWidget } from '/static/widgets/log.js';
+import { SystemLoadWidget } from '/static/widgets/system-load.js';
+
 import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
@@ -36,6 +39,7 @@ export class PanelUI {
         'video': { widget: VideoWidget, w: 5, h: 4 },
         'sensor_msgs/msg/PointCloud2': { widget: PointCloudWidget, w: 4, h: 4 },
         'nav_msgs/msg/OccupancyGrid': { widget: OccupancyGrid, w: 7, h: 4 },
+        'phntm_interfaces/msg/SystemInfo': { widget: SystemLoadWidget, w: 7, h: 4 },
     };
     widgets = {}; // custom and/or compound
 

@@ -60,10 +60,12 @@ export class PointCloudWidget {
         } );
         this.points = null;
 
-        this.panel.resize_event_handler = function () {
-            // ResizeWidget(panel);
-            that.render();
-        };
+       
+    }
+
+    onResize () {
+        // ResizeWidget(panel);
+        this.render();
     }
 
     onClose() {

@@ -206,7 +206,7 @@
         panel_ui.add_service_type_widget('std_srvs/srv/Empty', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/Trigger', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
-        panel_ui.add_service_type_widget('astra_camera_msgs/srv/SetInt32', ServiceInput_Int);
+        //panel_ui.add_service_type_widget('astra_camera_msgs/srv/SetInt32', ServiceInput_Int);
 
         panel_ui.set_ignored_service_types([ // these will not be available in ui (?!)
             'rcl_interfaces/srv/DescribeParameters',
@@ -225,14 +225,6 @@
             console.error('Robot returned error: '+err, msg);
         })
 
-        //robot connected via Socket.io
-        // robot.on('robot-socket-connected', (state)=>{
-        //     if (state)
-        //         console.info('(Socket.io) Robot connected to Bridge server');
-        //     else
-        //         console.warn('(Socket.io) Robot disconnected from Bridge server');
-        // });
-
         // introspection running in the robot
         robot.on('introspection',  (state) => {
         });
@@ -246,43 +238,8 @@
             // console.warn('(Socket.io) got nodes:', nodes);
         });
 
-        // subscribes to /robot_description
-        // robot.on('/robot_description', (xml_str)=>{
-        //     console.warn('/robot_description:', xml_str)
-        // });
-
-        // robot.on('/rosout', (log_line)=>{
-        //     console.log('/rosout: ', log_line);
-        // });
-
-        // subscribes to /iw_status
-        // robot.on('/iw_status', (msg)=>{
-        //     console.log('Got /iw_status msg', msg);
-        // });
-
-        // subscribes to /battery
-        // robot.on('/battery', (msg)=>{
-
-        // });
-
-        // robot.on('media_stream', (stream)=>{
-        //     console.log('Got a stream', stream);
-        // });
-
-        // robot.on('/picam2/base/soc/i2c0mux/i2c@1/imx708@1a', (stream)=>{
-        //      console.log('Got picamera stream', stream);
-        // });
-
-        // robot.on('/htop', (msg)=>{
-        //     //TODO
-        // });
-        // robot.on('/docker_htop', (msg)=>{
-        //     //TODO
-        // });
-
         //connects socket.io, then runs handshake with the robot
         robot.connect();
-
 
         if (navigator.userAgent.toLowerCase().includes('firefox')) {
             panel_ui.show_page_error(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>');

@@ -77,10 +77,7 @@ export class LaserScanWidget {
         //     ResizeWidget(panel);
         //     RenderScan(panel);
         // });
-        panel.resize_event_handler = function () {
-            // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
-            that.renderDirty()
-        };
+        
 
         $('#panel_widget_'+panel.n).on('mousewheel', (ev) => {
             ev.preventDefault();
@@ -236,6 +233,11 @@ export class LaserScanWidget {
 
     onClose() {
         this.rendering = false; //kills the loop
+    }
+
+    onResize() {
+        // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
+        this.renderDirty()
     }
 
     //console.log('widget', [panel.widget_width, panel.widget_height], frame);

@@ -541,13 +541,17 @@ export class Panel {
         // }
 
         // auto scale THREE renderer & set camera aspect
-        if (this.display_widget && this.display_widget.renderer) {
+        if (this.display_widget) {
 
-            this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
-            this.display_widget.camera.updateProjectionMatrix();
+            if (this.display_widget.renderer) {
+                this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
+                this.display_widget.camera.updateProjectionMatrix();
+                this.display_widget.renderer.setSize( this.widget_width, this.widget_height );
+            }
 
-            this.display_widget.renderer.setSize( this.widget_width, this.widget_height );
-            // console.log('resize', this.widget_width, this.widget_height)
+            if (this.display_widget.onResize) {
+                this.display_widget.onResize();
+            }
         }
 
         // let h = $('#panel_content_'+this.n).parent().parent('.grid-stack-item-content').innerHeight();

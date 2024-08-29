@@ -95,10 +95,7 @@ export class ImuWidget {
         //     ResizeWidget(panel);
         //     RenderImu(panel);
         // });
-        this.panel.resize_event_handler = function () {
-            // ResizeWidget(panel);
-            that.render();
-        };
+       
 
         panel.widget_menu_cb = () => {
 
@@ -144,6 +141,11 @@ export class ImuWidget {
     }
 
     onClose() {
+    }
+
+    onResize () {
+        // ResizeWidget(panel);
+        this.render();
     }
 
     onData = (decoded) => {

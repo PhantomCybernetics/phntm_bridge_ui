@@ -8,79 +8,13 @@ export class RangeWidget {
         this.panel = panel;
         this.topic = topic;
 
-        // this.data_trace = [];
         this.max_range = 0.0;
         this.val = 0.0;
-
-        let that = this;
-
-        // let options = {
-        //     chart: {
-        //         height: '100%',
-        //         width: '100%',
-        //         type: "radialBar",
-        //         offsetY: 10,
-        //         redrawOnParentResize: true,
-        //     },
-        //     series: [ ],
-        //     colors: [ function(ev) {
-        //         return lerpColor('#259FFB', '#ff0000', ev.value / 100.0);
-        //     } ],
-
-        //     plotOptions: {
-        //         radialBar: {
-        //             hollow: {
-        //                 margin: 15,
-        //                 size: "70%"
-        //             },
-        //             track: {
-        //                 show: true,
-        //             },
-        //             startAngle: -135,
-        //             endAngle: 135,
-        //             dataLabels: {
-        //                 showOn: "always",
-        //                 name: {
-        //                     offsetY: -10,
-        //                     show: true,
-        //                     color: "#888",
-        //                     fontSize: "13px"
-        //                 },
-        //                 value: {
-        //                     color: "#111",
-        //                     fontSize: "20px",
-        //                     show: true,
-        //                     formatter: function(val) {
-
-        //                         if (val < 0.001)
-        //                             return "> "+that.max_range.toFixed(1) +" m";
-        //                         else
-        //                             return that.val.toFixed(3) + " m";
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     },
-        //     stroke: {
-        //         lineCap: "round",
-        //     },
-        //     labels: ["Distance"]
-        // };
 
         this.el = $('#panel_widget_'+panel.n);
         this.el.addClass('enabled range');
         this.elLabel = $('<div class="label"></div>');
         this.el.append(this.elLabel);
-
-        // this.chart = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
-        // this.chart.render();
-    }
-
-    onClose() {
-    }
-
-    colorFromVal() {
-        
     }
 
     onData(decoded) {
@@ -88,7 +22,6 @@ export class RangeWidget {
         let range = decoded.range ? decoded.range : decoded.max_range;
 
         this.max_range = decoded.max_range;
-        // this.data_trace[0] = range; // val in m
 
         //display gage pos
         this.val = range;
@@ -108,6 +41,5 @@ export class RangeWidget {
 
         this.el.css('background-color', color);
         this.elLabel.css('color', gageVal < .2 ? 'black' : 'white');
-        // this.chart.updateSeries([ gageVal ], false);
     }
 }

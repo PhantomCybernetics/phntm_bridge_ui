@@ -109,23 +109,26 @@ export function lerp(a, b, alpha) {
     return (1.0-alpha) * a + alpha * (b)
 }
 
-export function formatBytes(b, mib=false) {
+export function formatBytes(b, mib=false, short=false) {
         
   let unit = mib ? 1000 : 1024;
   let GB = unit * unit * unit 
   let MB = unit * unit 
   let KB = unit
+
+  if (typeof b === "bigint")
+    b = Number(b);
   
-  if (b > GB)
-      return (b / GB).toFixed(1) + (mib ? 'GiB' : 'GB')
-  else if (b > MB)
-    return (b / MB).toFixed(1) + (mib ? 'MiB' : 'MB')
-  else if (b > KB)
-    return (b / KB).toFixed(1) + (mib ? 'KiB' : 'KB')
-  else if (b > 0)
-      return b.toFixed(1) +'B'
-  else
-      return '0B';
+  if (b > GB) {
+    return (b / GB).toFixed(1) + (short?'G':(mib ? 'GiB' : 'GB'))
+  } else if (b > MB) {
+    return (b / MB).toFixed(1) + (short?'M':(mib ? 'MiB' : 'MB'))
+  } else if (b > KB) {
+    return (b / KB).toFixed(1) + (short?'K':(mib ? 'KiB' : 'KB'))
+  } else if (b > 0) {
+    return b.toFixed(1) +'B'
+  } else
+    return '0B';
 }
 
 export function roughSizeOfObject(object) {
