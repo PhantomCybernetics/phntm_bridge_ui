@@ -85,6 +85,11 @@ export function IsImageTopic(t) {
            t == 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket';
 }
 
+export function IsVideoTopic(t) {
+    return t == 'sensor_msgs/msg/Image' ||
+           t == 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket';
+}
+
 export function IsFastVideoTopic(t) {
     return t == 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket';
 }

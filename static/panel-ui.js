@@ -10,7 +10,7 @@ import { SystemLoadWidget } from '/static/widgets/system-load.js';
 
 import { GraphMenu } from '/static/graph-menu.js';
 import { PointCloudWidget } from '/static/widgets/pointcloud.js';
-import { IsImageTopic, IsFastVideoTopic } from '/static/browser-client.js';
+import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
@@ -1050,6 +1050,7 @@ export class PanelUI {
                 });
             });
         }
+
         // all other forwarded fast h.264 encoded topics for convenience
         if (this.latest_nodes) {
             let node_ids = Object.keys(this.latest_nodes);
@@ -1059,7 +1060,7 @@ export class PanelUI {
                     let topic_ids = Object.keys(node.publishers);
                     topic_ids.forEach((id_topic) => {
                         let msg_type = node.publishers[id_topic].msg_type;
-                        if (IsFastVideoTopic(msg_type)) {
+                        if (IsVideoTopic(msg_type)) { // all image topics minus compressed
                             cameras.push({
                                 src_id: id_topic,
                                 msg_type: msg_type

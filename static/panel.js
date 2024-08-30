@@ -1,5 +1,5 @@
 
-import { IsImageTopic, IsFastVideoTopic} from '/static/browser-client.js';
+import { IsImageTopic } from '/static/browser-client.js';
 
 import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
 
