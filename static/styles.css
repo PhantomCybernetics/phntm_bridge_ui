@@ -4708,11 +4708,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 
 .panel_widget.system-load .mem-line,
 .panel_widget.system-load .swp-line {
-    padding-left: 5px;
+    padding-left: 2px;
 }
 
 .panel_widget.system-load .disk-line {
-    padding-left: 5px;
+    padding-left: 2px;
 }
 
 .panel_widget.system-load.thin .cpu-line, 
@@ -4720,21 +4720,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .panel_widget.system-load.thin .swp-line, 
 .panel_widget.system-load.thin .disk-line {
     padding-left: 2px;
-}
-
-.panel_widget.system-load .cpu-line {
-}
-
-.panel_widget.system-load .mem-line {
-
-}
-
-.panel_widget.system-load .swp-line {
-
-}
-
-.panel_widget.system-load .disk-line {
-    
 }
 
 .panel_widget.system-load .label,
@@ -4769,24 +4754,36 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     display: none;
 }
 
+.panel_widget.system-load.narrower .cpu-label {
+    display: none;
+}
+
+.panel_widget.system-load.narrower .cpu-line .total-label {
+    left: 7px;
+    right: unset;
+}
+
+.panel_widget.system-load.narrower .cpu-line {
+    padding-left: 2px;
+}
+
 .panel_widget.system-load .disk-label {
-    left: 15px;
+    left: 7px;
     background: black;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .panel_widget.system-load .mem-line .label,
 .panel_widget.system-load .swp-line .label {
-    left: 15px;
+    left: 7px;
     background: black;
-}
-
-.panel_widget.system-load .cpu-label {
-    
 }
 
 .panel_widget.system-load .total-label {
     left: unset;
-    right: 10px;
+    right: 4px;
 }
 
 .panel_widget.system-load .total-label.warn {
@@ -4808,14 +4805,13 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #fff 6px,
         #fff 7px
     );
+    background-position: -3px 0px;
 }
 
 .panel_widget.system-load.thin .bar {
-    height: 66% !important;
-    top: 2px !important;
+    height: 100% !important;
+    top: -3px !important;
     min-height: 2px !important;
-    display: block;
-    float: left;
 }
 
 .panel_widget.system-load .bar.cpu-nice,
@@ -4826,9 +4822,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         transparent 6px,
         #676CFA 6px,
         #676CFA 7px
-    );
-    /* background-color: rgba(84, 27, 228, 1.0) */
-    
+    );    
 }
 
 .panel_widget.system-load .bar.disk-used {
@@ -4839,7 +4833,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #00C6C7 6px,
         #00C6C7 7px
     );
-    /* background-color: rgba(0, 255, 255, 0.5); */
 }
 
 .panel_widget.system-load .bar.cpu-user,
@@ -4851,7 +4844,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #00C52C 6px,
         #00C52C 7px
     );
-    /* background-color: rgba(0, 255, 0, 0.5); */
 }
 
 .panel_widget.system-load .bar.cpu-system,
@@ -4863,7 +4855,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #C71702 6px,
         #C71702 7px
     );
-    /* background-color: rgba(255, 0, 0, 1.0); */
 }
 
 .panel_widget.system-load .bar.cpu-idle {
@@ -4874,7 +4865,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         rgba(128, 128, 128) 6px,
         rgba(128, 128, 128) 7px
     );
-    /* background-color: rgba(128, 128, 128, 0.5); */
 }
 
 .panel_widget.system-load .bar.mem-shared {
@@ -4885,7 +4875,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #C722BF 6px,
         #C722BF 7px
     );
-    /* background-color: rgba(255, 0, 255, 0.5); */
 }
 
 .panel_widget.system-load .bar.mem-cached,
@@ -4897,5 +4886,4 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #C7C62D 6px,
         #C7C62D 7px
     );
-    /* background-color: rgba(255, 255, 0, 0.5); */
 }

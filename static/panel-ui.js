@@ -39,7 +39,7 @@ export class PanelUI {
         'video': { widget: VideoWidget, w: 5, h: 4 },
         'sensor_msgs/msg/PointCloud2': { widget: PointCloudWidget, w: 4, h: 4 },
         'nav_msgs/msg/OccupancyGrid': { widget: OccupancyGrid, w: 7, h: 4 },
-        'phntm_interfaces/msg/SystemInfo': { widget: SystemLoadWidget, w: 7, h: 4 },
+        'phntm_interfaces/msg/SystemInfo': { widget: SystemLoadWidget, w: 4, h: 2 },
     };
     widgets = {}; // custom and/or compound
 
