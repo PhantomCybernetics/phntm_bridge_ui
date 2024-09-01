@@ -471,12 +471,14 @@ export class PhntmBridgeClient extends EventTarget {
             console.warn('Failed creating writer for '+msg_type+'; message class not found (yet)');
             return false;
         }
-        console.log('Creating msg writer for '+msg_type+'; class loaded=', msg_class, this.supported_msg_types);
+        console.log('Creating msg writer for '+msg_type+'; class loaded=', msg_class);
         this.msg_writers[msg_type] = new Writer( [ msg_class ].concat(this.supported_msg_types) );
-        if (!this.msg_writers[this.msg_type] ) {
-            console.info('Failed creating writer for '+msg_type+'; message class was loaded');
+        if (this.msg_writers[msg_type] === undefined) {
+            console.error('Failed creating writer for '+msg_type+'; message class was loaded', msg_class, this.msg_writers[msg_type], this.supported_msg_types);
             return false;
         }
+
+        return this.msg_writers[msg_type];
     }
 
     on(event, cb) {
@@ -1479,6 +1481,10 @@ export class PhntmBridgeClient extends EventTarget {
             if (cb)
                 cb(reply);
         });
+    }
+
+    get_last_srv_call_data(service) {
+        return null;
     }
 
     run_introspection(state=true) {

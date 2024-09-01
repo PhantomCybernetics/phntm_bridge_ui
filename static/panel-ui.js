@@ -15,6 +15,9 @@ import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
 import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./lib.js";
+import { FallbackServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
+
+import { ServiceInputDialog } from "./widgets/inc/service_input_dialog.js"
 
 export class PanelUI {
 
@@ -105,6 +108,8 @@ export class PanelUI {
         this.num_docker_containers = 0;
         this.docker_hosts = {};
         this.num_widgets = 0;
+
+        this.service_input_dialog = new ServiceInputDialog(client);
 
         this.conn_dot_els = [];
         for (let i = 0; i < 3; i++) {
@@ -1472,9 +1477,9 @@ export class PanelUI {
 
                 this.num_services++; // activates menu
 
-                service.ui_handled = this.input_widgets[msg_type] != undefined;
-
-                let service_content = $('<div class="service ' + (service.ui_handled ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
+                // service.ui_handled = this.input_widgets[msg_type] != undefined;
+                let msg_class = this.client.find_message_type(service.msg_type+'_Request');
+                let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
                     + '<div '
                     + 'class="service_heading" '
                     + 'title="' + service.service + '\n' + msg_type + '"'
@@ -1486,14 +1491,20 @@ export class PanelUI {
                 service_contents.push(service_content);
                 // node_content.append(service_content);
 
-                let service_input = $('<div class="service_input" id="service_input_' + i + '"></div>');
+                let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
 
+                if (msg_class) {
 
-                if (service.ui_handled) {
-                    this.input_widgets[msg_type].MakeMenuControls(service_input, service, this.client);
+                    if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
+                        ServiceInput_Empty.MakeMenuControls(service_input_el, service, this.client);
+                    } else if (this.input_widgets[msg_type] != undefined) {
+                        this.input_widgets[msg_type].MakeMenuControls(service_input_el, service, this.client);
+                    } else {
+                        FallbackServiceInput.MakeMenuControls(service_input_el, service, this.client);
+                    }
                 }
 
-                service_content.append(service_input);
+                service_content.append(service_input_el);
             }
 
             if (service_contents.length) {

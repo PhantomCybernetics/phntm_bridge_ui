@@ -1125,7 +1125,7 @@ BODY.hamburger #docker_controls H3 {
 .service {
     margin-top: 5px;
     margin-bottom: 5px;
-    background: #bb61d0;
+    background: #e19fe6;;
     padding: 10px;
     border-radius: 5px;
     position: relative;
@@ -1133,6 +1133,8 @@ BODY.hamburger #docker_controls H3 {
 
 .service_heading {
     font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #services_gamepad_mapping_toggle {
@@ -1169,14 +1171,14 @@ BODY.hamburger #docker_controls H3 {
 .service.nonhandled  {
     font-size: 13px;
     padding: 5px 10px;
-    background: #bc61d06e;
+    background: #d68ee07e;
 }
 
 .service_input {
     position: absolute;
     top: 0px;
     right: 5px;
-    background: #bb61d0;
+    background: #e19fe6;
     height: 100%;
     padding-left: 5px;
 }
@@ -1188,6 +1190,11 @@ BODY.hamburger #docker_controls H3 {
     color: white;
     font-size: 12px;
 }
+
+.service.nonhandled  .service_input_type {
+    text-decoration: line-through;
+}
+
 
 .service_button {
     background: #0051ff;
@@ -1237,6 +1244,24 @@ BODY.hamburger #docker_controls H3 {
     margin-top: 9px;
     /* filter: drop-shadow(2px 0px 0px yellow); */
     /* border-spacing: revert; */
+}
+
+.service_button.data {
+    background: transparent;
+    color: white;
+    font-weight: normal;
+    width: 30px;
+}
+.service_button.data.has-data {
+    width: 50px;
+}
+.service_button.data SPAN.data-set{
+    color: green;
+}
+
+.service_button.data:hover {
+    background: white;
+    color: black;
 }
 
 .service_button:hover {
@@ -4887,3 +4912,241 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
         #C7C62D 7px
     );
 }
+
+#service-input-dialog {
+    display: none;
+    z-index: 200;
+    position: absolute;
+    /* width: 80vw;
+    height: 60vh; */
+    left: calc(50% - Min(40vw, 275px) - 15px);
+    top: calc(10vh - 10px);
+    /* background-color: #b311a3; */
+    background-color: #ecafed; 
+    border-radius: 10px;
+    padding: 10px 10px 55px 10px;
+} 
+
+#service-input-dialog H3 {
+    font-size: 20px;
+    display: block;
+    margin: 0px 0px 3px 0px;
+    padding: 0px;
+}
+
+#service-input-dialog .msg_type {
+    font-size: 12px;
+    display: block;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+#service-input-dialog BUTTON {
+    background: #0051ff;
+    color: white;
+    font-weight: bold;
+    border: 0px;
+    border-radius: 5px;
+    padding: 0px 10px;
+    margin: 0px 5px 0px 0px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    /* width: 65px; */
+    height: 35px;
+    line-height: 38px;
+    position: relative;
+    cursor: pointer;
+}
+
+#json-editor {
+    width:  calc(80vw);
+    height: calc(60vh - 100px);
+    background-color: #d78ee0;
+    color: #fff;
+    padding: 5px;;
+    font-size: 15px;
+    border-radius: 5px;
+    overflow: scroll;
+    overscroll-behavior: none;
+    scrollbar-width: none;
+    max-width: 550px;
+}
+
+#json-editor I {
+    display: block;
+    font-size: 28px;
+    font-style: normal;
+    font-family: serif;
+    line-height: 30px;
+    /* background: red; */
+    /* vertical-align: top; */
+    height: 30px;
+    opacity: 0.6;
+}
+
+#json-editor I B {
+    font-weight: normal;
+    /* display: none; */
+    font-size: 20px;
+}
+
+#json-editor  .inline {
+    display: inline-block;
+}
+
+#json-editor .end-line {
+    position: absolute;
+    right: 14px;
+    top: 0px;
+}
+
+#json-editor  .last-in-block .end-line,
+#json-editor  .last-in-block > B {
+    display: none;
+}
+
+#json-editor .line {
+    position: relative;
+    height: 34px;;
+}
+
+#json-editor .label {
+    line-height: 30px;
+    height: 30px;
+    margin: 2px 10px 2px 0px;
+    float: left;
+    clear: left;
+    /* font-weight: bold; */
+}
+
+/* #json-editor .hint {
+    color: #ecafed;
+    font-size: 12px;
+    display: inline;
+    line-height: 20px;
+    height: 20px;
+    margin: 2px 0px 2px 5px;
+} */
+
+#json-editor .cleaner {
+    display: block;
+    clear: both;
+
+}
+
+#json-editor  .block {
+    border-left: 1px dashed #ffffff3b;
+    padding-left: 25px;
+    margin-bottom: 5px;
+    margin-left: 5px;
+}
+
+#json-editor .add,
+#json-editor .remove {
+    background-color: #bb61d066;
+    color: white;
+    font-weight: bold;
+    display: inline-block;
+    line-height: 26px;
+    height: 24px;
+    padding: 0px 13px 0px 0px;
+    text-decoration: none;
+    /* margin: 0px 0px 0px 5px; */
+    border-radius: 8px;
+    position: relative;
+    top: 5px;
+    font-size: 12px;
+}
+
+#json-editor .remove.hidden {
+    display: none;
+}
+
+#json-editor .add:hover {
+    background-color: #2f8b63;
+}
+
+#json-editor .remove:hover {
+    background-color: #c10303;
+}
+
+#json-editor .remove {
+    margin-left: 5px;
+}
+
+#json-editor .add SPAN,
+#json-editor .remove SPAN {
+    display: block;
+    background-image: url(/static/graph/icon-plus.png);
+    width: 20px;
+    height: 24px;
+    /* background-color: red; */
+    float: left;
+    background-size: 12px;
+    background-repeat: no-repeat;
+    background-position: 2px 6px;
+    margin-left: 6px;
+}
+
+#json-editor .remove SPAN {
+    background-image: url(/static/graph/remove.png);
+}
+
+#json-editor .val_wrap {
+    height: 34px;
+    margin-right: 20px;
+    position: relative;
+    margin-left: 0px;
+    overflow: hidden;
+}
+
+#json-editor INPUT, #json-editor SELECT {
+    color: white;
+    background-color: #bb61d0;
+    font-weight: normal;
+    border-radius: 3px;
+    border: 0px;
+    display: block;
+    /* float: left; */
+    height: 30px;
+    line-height: 20px;
+    padding: 0px 10px 0px 10px;
+    margin: 2px 1px 2px 0px;
+    border: 0px;
+    border-radius: 5px;
+    outline: none;
+    font-size: 16px;
+    position: absolute;
+    left: 0px;
+    right: 0px;
+}
+
+#json-editor INPUT.err {
+    color: white;
+    background: red;
+}
+
+#json-editor .val_wrap .hint{
+    color: white;
+    font-size: 14px;
+    opacity: .3;
+    font-weight: normal;
+    position: absolute;
+    right: 8px;
+    top: 6px;
+    padding: 2px 5px;
+}
+
+#json-editor .val_wrap .hint.err {
+    color: white;
+    background: red;
+    opacity: 1;
+}
+
+#service-input-dialog .buttons {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+} 
+

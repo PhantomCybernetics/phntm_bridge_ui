@@ -1,6 +1,44 @@
+
+
 class ServiceInput {
     static MakeMenuControls(el, service, client) {};
     static MakeInputConfigControls(btn, on_change_cb) {};
+}
+
+export class FallbackServiceInput extends ServiceInput {
+
+    static MakeMenuControls(el, service, client) {
+
+        let last_call_data = client.get_last_srv_call_data(service.service);
+
+        let data_btn = $('<button class="service_button data" title="Set service call data">{}</button>');
+        data_btn.click((ev)=>{
+            client.ui.service_input_dialog.show(service);
+        });
+        if (last_call_data)
+            data_btn.addClass('has-data').text('{msg}');
+
+        let btn = $('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
+    
+        btn.click((ev)=>{
+            if (!last_call_data) {
+                client.ui.service_input_dialog.show(service);
+                return;
+            }
+            btn.addClass('working');
+            let call_data = {};
+            client.service_call(service.service, call_data, false, (reply) => {
+                client.ui.service_reply_notification(btn, service.service, reply);
+            });
+        });
+    
+        el.append([ data_btn, btn ]);
+    }
+
+    static MakeInputConfigControls() {
+        return $('<span class="static_val">{data}</span>');
+    }
+
 }
 
 export class ServiceInput_Empty extends ServiceInput {

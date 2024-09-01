@@ -138,23 +138,25 @@
 <div id="mapping-confirmation"></div>
 <div id="msg_type-dialog"></div>
 
-<div id="dialog-modal-confirm"></div>
-<div id="dialog-modal-confirm-underlay" class="prevent-select"></div>
+<div id="service-input-dialog"></div> <!-- z-index: 200 -->
 
-<div id="touch-ui-dialog">
+<div id="dialog-modal-confirm"></div> <!-- z-index: 200 -->
+<div id="dialog-modal-confirm-underlay" class="prevent-select"></div> <!-- z-index: 199 -->
+
+<div id="touch-ui-dialog">  <!-- z-index: 100 -->
     <div class="title"></div>
     <div class="content"></div>
     <button id="close-touch-ui-dialog" class="close">Close</button>
 </div>
-<div id="touch-ui-selector">
+<div id="touch-ui-selector"> <!-- z-index: 100 -->
     <div class="content"></div>
 </div>
-<div id="touch-ui-dialog-underlay" class="prevent-select"></div>
+<div id="touch-ui-dialog-underlay" class="prevent-select"></div> <!-- z-index: 91 -->
 
 <div id="topic-selector-dialog"></div>
 
-<div id="touch-gamepad-left"></div>
-<div id="touch-gamepad-right"></div>
+<div id="touch-gamepad-left"></div>  <!-- z-index: 15 -->
+<div id="touch-gamepad-right"></div>  <!-- z-index: 15 -->
 <ul id="touch-ui-bottom-buttons" class="touch_buttons"></ul>
 
 <script type="module">
