@@ -1472,8 +1472,8 @@ export class PhntmBridgeClient extends EventTarget {
             msg: data // data undefined => no msg
         }
         if (this.ui && !silent) {
-            let data_hr = (data !== null && data !== undefined) ? ': '+JSON.stringify(data) : ''; 
-            this.ui.show_notification('Calling service '+service + data_hr);
+            //let data_hr = (data !== null && data !== undefined); 
+            this.ui.show_notification('Calling '+service, null, 'Request data:<br><pre>'+JSON.stringify(data, null, 2)+'</pre>');
         }
         console.warn('Service call request', req);
         this.socket.emit('service', req, (reply)=> {

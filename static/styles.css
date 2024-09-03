@@ -528,19 +528,37 @@ BODY.narrower .narrower-w { display: inline; }
     font-size: 10px;
     line-height: 10px;
     cursor: help;
+    border-bottom: 1px dashed #ffffff94;
+    text-decoration: none;
+    position: relative;
+    left: 18px; /* move away from the checkbox to prevent misclicks on touch*/
 }
 
-#graph_topics .msg_type.video {
-    padding-right: 17px;
-    background-image: url(/static/graph/icon-video.png);
-    background-position: center right;
-    background-repeat: no-repeat;
-    background-size: auto 12px;
+#graph_topics .msg_type .icon {
+    display: none;
 }
 
 #graph_topics .msg_type.err {
     color: #cc0000b8;
     text-decoration: line-through;
+    border-color: transparent;
+}
+
+#graph_topics .msg_type.video {
+
+}
+
+#graph_topics .msg_type.video .icon {
+    width: 17px;
+    height: 17px;
+    display: block;
+    position: absolute;
+    right: -17px;
+    top: -2px;
+    background-image: url(/static/graph/icon-video.png);
+    background-position: center right;
+    background-repeat: no-repeat;
+    background-size: auto 12px;
 }
 
 #graph_topics::-webkit-scrollbar,
@@ -1189,12 +1207,17 @@ BODY.hamburger #docker_controls H3 {
 .service_input_type {
     color: white;
     font-size: 12px;
+    border-bottom: 1px dashed white;
+    display: inline;
+    cursor: help;
 }
 
-.service.nonhandled  .service_input_type {
+#service_list .nonhandled .service_input_type {
+    color: #cc0000b8;
     text-decoration: line-through;
-}
+    border-color: transparent;
 
+}
 
 .service_button {
     background: #0051ff;
@@ -1202,14 +1225,14 @@ BODY.hamburger #docker_controls H3 {
     font-weight: bold;
     border: 0px;
     border-radius: 5px;
-    padding: 0px 0px;
+    padding: 0px 10px;
     margin: 9px 5px 0px 1px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
-    width: 65px;
+    /* width: 60px; */
     height: 35px;
-    line-height: 35px;
+    line-height: 36px;
     position: relative;
 }
 
@@ -4504,11 +4527,10 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 #notifications {
     display: block;
     position: fixed;
-    z-index: 200;
-    width: calc(100% - 20px);
+    z-index: 220;
+    width: calc(100% - 20px); 
     left: 10px;
     top: 60px;
-    z-index: 40; /* below net / batt in top menu */
     pointer-events: none;
 }
 
@@ -4540,7 +4562,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     color: black;
     border-radius: 5px;
     overflow: hidden;
-    max-width: 30%;
+    max-width: 80%;
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-bottom: 2px;
@@ -4551,6 +4573,20 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     animation-iteration-count: 1;
 
     pointer-events: auto;
+    filter: drop-shadow(10px 10px 10px rgba(0, 0, 0, 0.2));
+
+    cursor: pointer;
+}
+
+#notifications .msg .detail {
+    display: block;
+    margin-top: 10px;
+    font-size: 12px;
+    
+}
+
+#notifications .msg .detail PRE {
+    font-family: monospace;
 }
 
 #notifications .msg.success {
@@ -4573,16 +4609,35 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 }
 
 #notifications .msg.open {
+    cursor: unset;
     white-space: unset;
-    overflow: scroll;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    scrollbar-width: none;
     padding-right: 40px;
     max-height: 300px;
     max-width: 80%;
-
     animation-name: unset;
     animation-duration: unset;
     animation-iteration-count: unset;
+    
 }
+
+/* #service-input-dialog BUTTON.close-dialog {
+    position: absolute;
+    right: -23px;
+    top: -19px;
+    background-image: url(/static/graph/remove.png);
+    background-size: 20px;
+    background-repeat: no-repeat;
+    background-position: 10px 10px;
+    background-color: black;
+    border-radius: 30px;
+    cursor: pointer;
+    width: 40px;
+    display: block;
+} */
 
 #notifications .msg.error {
     background-color: red;
@@ -4602,6 +4657,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     background-repeat: no-repeat;
     background-position: 5px 5px;
     filter: invert(1);
+    cursor: pointer;
 }
 
 #notifications .msg.error.open .close {
@@ -4693,6 +4749,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin: 0px 5px 0px 0px;
     position: relative;
     top: 1px;
+    outline: none;
 }
 
 .marker_label {
@@ -4925,24 +4982,47 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: #ecafed; 
     border-radius: 10px;
     padding: 10px 10px 55px 10px;
+    width: 80vw;
+    max-width: 550px;
 } 
+
+#service-input-dialog.narrow,
+#service-input-dialog.thin {
+    width: calc(100% - 40px);
+    left: 10px;
+    top: -40px;
+    max-width: unset; /* expand to full w*/
+}
 
 #service-input-dialog H3 {
     font-size: 20px;
     display: block;
     margin: 0px 0px 3px 0px;
     padding: 0px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #service-input-dialog .msg_type {
     font-size: 12px;
-    display: block;
+    display: inline-block;
     color: #fff;
     margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px dashed #fff;
 }
 
+#service-input-dialog .buttons {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+} 
+
+
 #service-input-dialog BUTTON {
-    background: #0051ff;
+    background: #b311a3;
     color: white;
     font-weight: bold;
     border: 0px;
@@ -4953,14 +5033,134 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
     /* width: 65px; */
-    height: 35px;
-    line-height: 38px;
+    height: 40px;
+    line-height: 42px;
     position: relative;
+    cursor: pointer;
+    float: right;
+}
+
+#service-input-dialog BUTTON:hover {
+    background-color: #dc31cb;
+}
+
+#service-input-dialog BUTTON.btn-close, #service-input-dialog BUTTON.btn-rem {
+    float: left;
+}
+
+#service-input-dialog BUTTON.btn-save {
+    padding-left: 20px;
+    padding-right: 20px;
+    background-color: green;
+}
+
+#service-input-dialog BUTTON.btn-save:hover {
+    background-color: rgb(7, 157, 7);
+}
+
+#service-input-dialog.narrow .wide,
+#service-input-dialog .narrow {
+    display: none;
+}
+
+#service-input-dialog.narrow BUTTON .narrow {
+    display: inline;
+}
+
+#service-input-dialog .btn-opts {
+    width: 100%;
+    margin-bottom: 5px;
+    /* background: red; */
+    clear: both;
+    height: 40px;
+}
+
+#service-input-dialog.narrow .btn-opts {
+    
+}
+
+#service-input-dialog .btn-opts label {
+    float: left;
+    margin-right: 5px;
+    /* background-image: url(/static/graph/icon-check.png); */
+    background-size: 22px;
+    background-position: 8px 10px;
+    cursor: pointer;
+    border-radius: 0px 10px 10px 0px;
+    background-repeat: no-repeat;
+    width: 30px;
+    position: relative;
+    height: 40px;
+}
+
+#service-input-dialog INPUT.btn-inp.blue,
+#service-input-dialog .btn-opts label.blue {
+    background-color: #0051ff;
+    border-color: #0051ff;
+}
+
+#service-input-dialog INPUT.btn-inp.green,
+#service-input-dialog .btn-opts label.green {
+    background-color: #008700;
+    border-color: #008700;
+}
+
+#service-input-dialog INPUT.btn-inp.red,
+#service-input-dialog .btn-opts label.red {
+    background-color: #a20101;
+    border-color: #a20101;
+}
+
+#service-input-dialog .btn-opts label INPUT { /* checkbox */
+    width: 20px;
+    height: 20px;
+    background: white;
+    position: absolute;
+    left: 2px;
+    top: 10px;
+    outline: none;
+}
+
+#service-input-dialog INPUT.btn-inp, 
+#service-input-dialog .btn-inp-wh {
+    position: relative;
+    float: left;
+    /* width: calc(100% - 40px); */
+    border: 5px solid black;
+    height: 28px;
+    border-radius: 10px 0px 0px 10px;
+    /* border: 0px; */
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    padding-left: 5px;
+    outline: none;
+}
+
+#service-input-dialog .btn-inp-wh {
+    position: absolute;
+    visibility: hidden;
+    /* z-index: -1; */
+    display: inline-block;
+    white-space: nowrap;
+}
+
+#service-input-dialog .add-btn {
+    display: inline-block;
+    height: 40px;
+    line-height: 40px;
+    padding: 0px 10px 0px 19px;
+    background-image: url(/static/graph/icon-plus.png);
+    background-repeat: no-repeat;
+    background-size: 17px;
+    background-position: 0px 11px;
+    font-size: 14px;
+    color: white;
+    text-decoration: underline;
     cursor: pointer;
 }
 
 #json-editor {
-    width:  calc(80vw);
     height: calc(60vh - 100px);
     background-color: #d78ee0;
     color: #fff;
@@ -4970,7 +5170,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     overflow: scroll;
     overscroll-behavior: none;
     scrollbar-width: none;
-    max-width: 550px;
+}
+
+#service-input-dialog.narrow #json-editor,
+#service-input-dialog.thin #json-editor {
+    height: calc(100vh - 210px);
 }
 
 #json-editor I {
@@ -5041,6 +5245,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin-bottom: 5px;
     margin-left: 5px;
 }
+
+#service-input-dialog.narrow #json-editor .block {
+    padding-left: 15px;
+}
+
 
 #json-editor .add,
 #json-editor .remove {
@@ -5144,9 +5353,4 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     opacity: 1;
 }
 
-#service-input-dialog .buttons {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-} 
 

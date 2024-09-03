@@ -284,7 +284,7 @@ export class GraphMenu {
             let box_el = $('<div class="box" style="height:'+h+'px;">'
                         + '<label for="topic_'+n+'" title="'+topic+'" class="prevent-select">' + topic + '</label><br>'
                         + '<a href="#" class="'+msg_type_classes.join(' ')+'" '
-                            + 'title="'+title+'">'+this.topics[topic].msg_type+'</a>'
+                            + 'title="'+title+'">'+this.topics[topic].msg_type+'<span class="icon"></span></a>'
                         + '</div>');
             let chb = $('<input type="checkbox" id="topic_'+n+'"/>');
             if (this.ui.panels[topic])

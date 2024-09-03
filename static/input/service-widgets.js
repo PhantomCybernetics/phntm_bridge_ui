@@ -12,27 +12,48 @@ export class FallbackServiceInput extends ServiceInput {
         let last_call_data = client.get_last_srv_call_data(service.service);
 
         let data_btn = $('<button class="service_button data" title="Set service call data">{}</button>');
+
+        let btns = [];
+
+        if (!btns.length) {
+            btns.push({
+                label: 'Call',
+                color: 'blue',
+                value: {}
+            });
+            btns.push({
+                label: 'Two',
+                color: 'green',
+                value: {}
+            });
+            btns.push({
+                label: 'Three',
+                color: 'red',
+                value: {}
+            });
+        }
+
         data_btn.click((ev)=>{
-            client.ui.service_input_dialog.show(service);
+            client.ui.service_input_dialog.show(service, btns);
         });
         if (last_call_data)
             data_btn.addClass('has-data').text('{msg}');
 
-        let btn = $('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
+        // let btn = $('<button class="service_button" id="service_btn_'+service.n+'" data-service="'+service.service+'" data-name="Btn_Call">Call</button>');
     
-        btn.click((ev)=>{
-            if (!last_call_data) {
-                client.ui.service_input_dialog.show(service);
-                return;
-            }
-            btn.addClass('working');
-            let call_data = {};
-            client.service_call(service.service, call_data, false, (reply) => {
-                client.ui.service_reply_notification(btn, service.service, reply);
-            });
-        });
+        // btn.click((ev)=>{
+        //     if (!last_call_data) {
+        //         client.ui.service_input_dialog.show(service);
+        //         return;
+        //     }
+        //     btn.addClass('working');
+        //     let call_data = {};
+        //     client.service_call(service.service, call_data, false, (reply) => {
+        //         client.ui.service_reply_notification(btn, service.service, reply);
+        //     });
+        // });
     
-        el.append([ data_btn, btn ]);
+        el.append([ data_btn ]);
     }
 
     static MakeInputConfigControls() {

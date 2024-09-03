@@ -723,9 +723,9 @@ export class PanelUI {
                     left: '-16px' /* slide in from the left */
                 }, 200);
             $('#notifications')
-                .css({left: '10px'})
+                .css({top: '60px'})
                 .stop().animate({
-                    left: (50+this.small_menu_width)+'px' /* slide in from the left */
+                    top: '10px'
                 }, 200);
 
         }
@@ -797,7 +797,7 @@ export class PanelUI {
                     });
                     $('#notifications')
                         .stop().animate({
-                            left: '10px'
+                            top: '60px'
                         }, 200);
             } else {
                 $('#menubar_items')
@@ -811,7 +811,7 @@ export class PanelUI {
                 });
                 $('#notifications')
                     .stop().css({
-                        left: '10px'
+                        top: '60px'
                     }, 200);
             }
 
@@ -1007,21 +1007,11 @@ export class PanelUI {
                     }, 200, () => {
                         // console.warn('set_min_burger_menu_width DONE');
                     });
-                $('#notifications')
-                    .stop()
-                    .animate({
-                        left: (w+50)+'px'
-                    });
             } else {
                 $('#menubar_items')
                     .stop()
                     .css({
                         width: w + 'px'
-                    });
-                $('#notifications')
-                    .stop()
-                    .css({
-                        left: (w+50)+'px'
                     });
             }
         }
@@ -1486,7 +1476,7 @@ export class PanelUI {
                     + '>'
                     + service.service
                     + '</div>'
-                    + '<div class="service_input_type" id="service_input_type_' + i + '">' + msg_type + '</div>'
+                    + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
                     + '</div>');
                 service_contents.push(service_content);
                 // node_content.append(service_content);
@@ -2196,6 +2186,8 @@ export class PanelUI {
     //on resize, robot name update
     update_layout() {
 
+        this.service_input_dialog.update_layout();
+
         let h_extra = 10 + 10 + 5; // 2x padding + margin right
         let menu_item_widths = {
             'full': {
@@ -2528,7 +2520,7 @@ export class PanelUI {
         }
     }
  
-    show_notification(msg, style) {
+    show_notification(msg, style, detail) {
 
         let msg_el = $('<span class="msg'+(style?' '+style:'')+'"><span class="icon"></span>'+msg+'</span>');
         
@@ -2536,16 +2528,22 @@ export class PanelUI {
 
         let timer = setTimeout(()=>{
             msg_el.remove();
-        }, 3000);
+        }, 3000); //after css fadeout
 
         msg_el.click((ev0)=>{
+            if (msg_el.hasClass('open'))
+                return;
             clearTimeout(timer);
             msg_el.addClass('open');
             let closeEl = $('<span class="close"></span>');
-            msg_el.append(closeEl);
             closeEl.click((ev1)=>{
                 msg_el.remove();
-            })
+            });
+            msg_el.append(closeEl);
+
+            if (detail) {
+                msg_el.append($('<span class="detail">'+detail+'</span>'));
+            }
         });
     }  
 

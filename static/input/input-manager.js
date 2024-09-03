@@ -1523,11 +1523,11 @@ export class InputManager {
     profile_json_to_clipboard(id_profile) {
         let profile_data = {};
         profile_data[id_profile] = this.get_profile_json_data(id_profile);
-
-        navigator.clipboard.writeText(JSON.stringify(profile_data, null, 4));
-        console.log('Copied profile json:', JSON.stringify(profile_data, null, 4));
+        let val = JSON.stringify(profile_data, null, 4);
+        navigator.clipboard.writeText(val);
+        console.log('Copied profile json:', val);
         this.close_profile_menu();
-        this.ui.show_notification('Profile JSON copied');
+        this.ui.show_notification('Profile JSON copied', null, '<pre>'+val+'</pre>');
     }
 
     full_json_to_clipboard() {
@@ -1538,10 +1538,11 @@ export class InputManager {
             config_data[id_profile] = this.get_profile_json_data(id_profile);
         });
 
-        navigator.clipboard.writeText(JSON.stringify(config_data, null, 4));
-        console.log('Copied full input json:', JSON.stringify(config_data, null, 4));
+        let val = JSON.stringify(config_data, null, 4);
+        navigator.clipboard.writeText(val);
+        console.log('Copied full input json:', val);
         this.close_profile_menu();
-        this.ui.show_notification('Config JSON copied');
+        this.ui.show_notification('Config JSON copied', null, '<pre>'+val+'</pre>');
     }
 
     register_driver(id_driver, driver_class) {
