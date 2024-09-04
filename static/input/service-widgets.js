@@ -21,16 +21,6 @@ export class FallbackServiceInput extends ServiceInput {
                 color: 'blue',
                 value: {}
             });
-            btns.push({
-                label: 'Two',
-                color: 'green',
-                value: {}
-            });
-            btns.push({
-                label: 'Three',
-                color: 'red',
-                value: {}
-            });
         }
 
         data_btn.click((ev)=>{
