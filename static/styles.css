@@ -3073,7 +3073,7 @@ BUTTON#delete-input-profile.warn .icon {
     width: 17px;
     height: 21px;
     right: 7px;
-    top: 6px;
+    top: 5px;
     position: absolute;
     background-image: url(/static/graph/icon-trash.png);
     background-repeat: no-repeat;
@@ -4340,7 +4340,7 @@ BODY.desktop-ui .editing_profile_basics #profile-buttons > .icon:hover {
     width: 100%;
     overflow: unset;
     height: 50px;
-    z-index: 16; /* above touch gamepad */
+    z-index: 17; /* above touch gamepad */
     overflow: unset;
     overflow-x: clip;
 }
@@ -5058,6 +5058,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: green;
 }
 
+#service-input-dialog BUTTON.btn-save.working {
+    cursor: default;
+    background: #ff8c00 !important;
+}
+
 #service-input-dialog BUTTON.btn-save:hover {
     background-color: rgb(7, 157, 7);
 }
@@ -5098,11 +5103,18 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin-right: 5px; */
 }
 
+
+#service-input-dialog .btn-tabs-sortable {
+    /* background-color: lime; */
+    float: left;
+}
+
 #service-input-dialog .btn-tab {
     display: inline-block;
-    padding: 5px 5px 10px 5px;
+    padding: 5px 5px 0px 5px;
     border-radius: 10px 10px 0px 0px;
     position: relative;
+    height: 60px;
 }
 
 #service-input-dialog .btn-tab.selected {
@@ -5299,8 +5311,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.blue .label,
 #service-input-dialog .btn-opts .btn-menu.blue,
 #service-input-dialog .btn-tab.blue .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.blue {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.blue,
+.service_button.blue {
     background-color: #0051ff;
+}
+.service_button.blue:hover {
+    background-color: #185df4;
 }
 
 #service-input-dialog .btn-tab.green INPUT.btn-inp {
@@ -5311,7 +5327,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.green .label,
 #service-input-dialog .btn-opts .btn-menu.green,
 #service-input-dialog .btn-tab.green .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.green {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.green,
+.service_button.green {
+    background-color: #008700;
+}
+.service_button.green:hover {
     background-color: #008700;
 }
 
@@ -5323,8 +5343,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.red .label,
 #service-input-dialog .btn-opts .btn-menu.red,
 #service-input-dialog .btn-tab.red .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.red {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.red,
+.service_button.red {
     background-color: #a20101;
+}
+.service_button.red:hover {
+    background-color: #b70505;
 }
 
 #service-input-dialog .btn-tab.orange INPUT.btn-inp {
@@ -5335,8 +5359,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.orange .label,
 #service-input-dialog .btn-opts .btn-menu.orange,
 #service-input-dialog .btn-tab.orange .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.orange {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.orange,
+.service_button.orange {
     background-color: #ff8400;
+}
+.service_button.orange:hover {
+    background-color: #f79124;
 }
 
 #service-input-dialog .btn-tab.magenta .btn-inp {
@@ -5347,8 +5375,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.magenta .label,
 #service-input-dialog .btn-opts .btn-menu.magenta,
 #service-input-dialog .btn-tab.magenta .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.magenta  {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.magenta,
+.service_button.magenta {
     background-color: #b311a3;
+}
+.service_button.magenta:hover {
+    background-color: #cb14b8;
 }
 
 #service-input-dialog .btn-tab.black INPUT.btn-inp {
@@ -5359,8 +5391,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.black .label,
 #service-input-dialog .btn-opts .btn-menu.black,
 #service-input-dialog .btn-tab.black .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.black  {
+#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.black,
+.service_button.black {
     background-color: #000000;
+}
+.service_button.black:hover {
+    background-color: #171717;
 }
 
 
@@ -5427,11 +5463,13 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     top: 50px;
     margin-bottom: 55px;
     position: relative;
+    border-top: 5px solid #d78ee0;
+    border-bottom: 5px solid #d78ee0;
 }
 
 #service-input-dialog.narrow #json-editor,
 #service-input-dialog.thin #json-editor {
-    height: calc(100vh - 215px);
+    height: calc(100vh - 225px);
 }
 
 #json-editor I {

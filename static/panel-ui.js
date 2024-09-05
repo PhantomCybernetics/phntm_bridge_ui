@@ -110,6 +110,8 @@ export class PanelUI {
         this.num_widgets = 0;
 
         this.service_input_dialog = new ServiceInputDialog(client);
+        this.service_btns = {}; //id srv => btn[]
+        this.service_btn_els = {};
 
         this.conn_dot_els = [];
         for (let i = 0; i < 3; i++) {
@@ -318,6 +320,7 @@ export class PanelUI {
 
         client.on('nodes', (nodes) => {
             setTimeout(()=>{
+                that.load_service_btns(nodes);
                 that.services_menu_from_nodes(nodes);
             }, 0);
             setTimeout(()=>{
@@ -1440,6 +1443,88 @@ export class PanelUI {
         });
     }
 
+    load_service_btns(nodes) {
+        let that = this;
+
+        Object.values(nodes).forEach((node) => {
+            Object.keys(node.services).forEach((service) => {
+                //TODO load robot's config too
+                if (that.service_btns[service] !== undefined)
+                    return; //don't overwrite
+
+                let stored_btns = localStorage.getItem('service-btns:' + that.client.id_robot+':'+service);
+                if (stored_btns) {
+                    stored_btns = JSON.parse(stored_btns); //arr
+                    stored_btns.forEach((one_btn)=>{
+                        if (!that.service_btns[service])
+                            that.service_btns[service] = [];
+                        that.service_btns[service].push(one_btn);
+                    });
+                    console.log('Loaded '+stored_btns.length+' user btns for '+service);
+                }
+            });    
+        });
+
+    }
+
+    save_service_buttons(service, btns) {
+        let btn_data = [];
+        btns.forEach((btn)=>{
+            btn_data.push({ //clear of el refs
+                label: btn.label,
+                color: btn.color,
+                in_menu: true, // until first called or saved
+                value: btn.value,
+                sort_index: btn.sort_index
+            });
+            btn.in_menu = true; // show
+        });
+        let json_btns = JSON.stringify(btn_data);
+        localStorage.setItem('service-btns:' + this.client.id_robot+':'+service, json_btns);
+        console.log('Saved '+btns.length+' btns for '+service, btns);
+    }
+
+    service_menu_btns(service, msg_class) {
+        if (!msg_class)
+            return;
+
+        let service_input_el = this.service_btn_els[service.service]
+        if (!service_input_el)
+            return;
+
+        service_input_el.empty();
+
+        if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
+            ServiceInput_Empty.MakeMenuControls(service_input_el, service, this.client);
+        } else if (this.input_widgets[msg_class.name] != undefined) {
+            this.input_widgets[msg_class.name].MakeMenuControls(service_input_el, service, this.client);
+        } else {
+            FallbackServiceInput.MakeMenuControls(service_input_el, service, this.client);
+        }
+    }
+
+    service_menu_btn_call(service, btn, btn_el) {
+        let that = this;
+        if (btn_el)
+            btn_el.addClass('working');
+        let show_request = true;
+        let show_reply = true;
+        this.client.service_call(service, btn.value, !show_request, (service_reply) => {
+            if (!show_reply)
+                return;
+            if (service_reply.err) {
+                that.show_notification('Service returned error', 'error', service+'<br><pre>'+service_reply.msg+'</pre>');
+            } else if (service_reply.success === false) {
+                that.show_notification('Service returned error', 'error', service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+            } else {
+                that.show_notification('Service replied: Success', null, service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+            }
+            if (btn_el)
+                btn_el.removeClass('working');
+        });
+    }
+    
+
     services_menu_from_nodes(nodes) {
        
         $('#service_list').empty();
@@ -1448,7 +1533,11 @@ export class PanelUI {
         // let nodes_with_handled_ui = [];
         // let unhandled_nodes = [];
 
-        Object.values(nodes).forEach((node) => {
+        let nodes_sorted = Object.values(nodes).sort((a, b)=>{
+            return a.node.toLowerCase().localeCompare(b.node.toLowerCase());
+        });
+
+        nodes_sorted.forEach((node) => {
             if (!node.services || !Object.keys(node.services).length)
                 return;
 
@@ -1469,12 +1558,13 @@ export class PanelUI {
 
                 // service.ui_handled = this.input_widgets[msg_type] != undefined;
                 let msg_class = this.client.find_message_type(service.msg_type+'_Request');
+                let service_short = service.service.replace('/'+node.node+'/', '');
                 let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
                     + '<div '
                     + 'class="service_heading" '
-                    + 'title="' + service.service + '\n' + msg_type + '"'
+                    + 'title="' + service.service + '"'
                     + '>'
-                    + service.service
+                    + service_short
                     + '</div>'
                     + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
                     + '</div>');
@@ -1482,17 +1572,9 @@ export class PanelUI {
                 // node_content.append(service_content);
 
                 let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
+                this.service_btn_els[service.service] = service_input_el;
 
-                if (msg_class) {
-
-                    if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
-                        ServiceInput_Empty.MakeMenuControls(service_input_el, service, this.client);
-                    } else if (this.input_widgets[msg_type] != undefined) {
-                        this.input_widgets[msg_type].MakeMenuControls(service_input_el, service, this.client);
-                    } else {
-                        FallbackServiceInput.MakeMenuControls(service_input_el, service, this.client);
-                    }
-                }
+                this.service_menu_btns(service, msg_class);
 
                 service_content.append(service_input_el);
             }

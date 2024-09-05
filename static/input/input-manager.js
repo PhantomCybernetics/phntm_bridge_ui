@@ -2620,6 +2620,10 @@ export class InputManager {
                     btn.touch_btn_el = btn_el;
                     
                     btn_el[0].addEventListener('touchstart', (ev) => {
+
+                        if (that.touch_buttons_editable)
+                            return; // don't trigger when sorting
+
                         btn.touch_started = Date.now();
                         btn.pressed = true;
                         btn.raw = 1.0;
@@ -2642,6 +2646,10 @@ export class InputManager {
                     }, {'passive':true});
             
                     btn_el[0].addEventListener('touchend', () => {
+
+                        if (that.touch_buttons_editable)
+                            return;
+
                         btn.pressed = false;
                         btn.raw = 0.0;
 

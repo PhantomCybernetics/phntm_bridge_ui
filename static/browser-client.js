@@ -354,7 +354,7 @@ export class PhntmBridgeClient extends EventTarget {
                             let msg_type = nodes_data[this.id_robot][node]['services'][service];
                             this.discovered_nodes[node].services[service] = {
                                 service: service,
-                                msg_type: msg_type,
+                                msg_type: msg_type
                             }
                         })
                     }
@@ -393,12 +393,14 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         this.socket.on('services', (services_data) => {
-
+            
             if (!services_data[this.id_robot])
                 return;
 
+            let that = this;
+
             setTimeout(()=>{
-                this.discovered_services = {};
+                this.discovered_services = {}; // reqrites all
 
                 // let i = 0;
                 services_data[this.id_robot].forEach((service_data) => {
@@ -410,8 +412,8 @@ export class PhntmBridgeClient extends EventTarget {
                     };
                 });
 
-                console.log('Got services:', this.discovered_services);
-                this.emit('services', this.discovered_services);
+                // console.log('Got services:', this.discovered_services);
+                that.emit('services', this.discovered_services);
             }, 0);
         });
 
@@ -1483,9 +1485,9 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    get_last_srv_call_data(service) {
-        return null;
-    }
+    // get_last_srv_call_data(service) {
+    //     return null;
+    // }
 
     run_introspection(state=true) {
         if (this.introspection == state)

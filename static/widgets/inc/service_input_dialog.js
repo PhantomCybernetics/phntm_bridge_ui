@@ -37,6 +37,7 @@ export class ServiceInputDialog {
     }
 
     select_button(btn) {
+        this.selected_btn = btn;
         this.confirm_edits();
         this.btns.forEach((b)=>{
 
@@ -57,6 +58,7 @@ export class ServiceInputDialog {
 
         let [ msg, block_before, block_el, block_after] = this.process_msg_template(this.service.msg_type+'_Request', btn.value, '', true); ; //$('<div class="block" style="margin-left:'+20+'px"></div>');
         this.msg = msg;
+        btn.value = msg;
 
         this.editor.append([ block_before, block_el, block_after] );
         this.editor.scrollTop(0);
@@ -65,6 +67,10 @@ export class ServiceInputDialog {
     show(service, btns) {
         this.service = service;
         this.btns = btns;
+
+        if (!this.btns.length) {
+            this.btns.push(this.make_default_btn());
+        }
 
         let that = this;
 
@@ -94,7 +100,7 @@ export class ServiceInputDialog {
         });
         // let btn_rem = $('<button class="btn-rem">Del</button>');
 
-        let btn_copy_json = $('<button><span class="wide">Copy </span>JSON</button>');
+        let btn_copy_json = $('<button>JSON</button>');
         btn_copy_json.click((ev) => {
             let val = JSON.stringify(this.msg, null, 4);
             navigator.clipboard.writeText(val);
@@ -104,26 +110,20 @@ export class ServiceInputDialog {
 
         let btn_call = $('<button>Call<span class="wide"> Service</span></button>');
         btn_call.click((ev) => {
-            that.client.service_call(this.service.service, this.msg, false, (service_reply) => {
-                if (service_reply.err) {
-                    that.client.ui.show_notification('Service returned error', 'error', this.service.service+'<br><pre>'+service_reply.msg+'</pre>');
-                } else {
-                    that.client.ui.show_notification('Service replied', null, 'Reply data:<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
-                }
-                
-            });
+            that.client.ui.service_menu_btn_call(service.service, that.selected_btn, btn_call);
         }); 
 
-        let btn_save = $('<button class="btn-save">Save</button>');
+        let btn_save = $('<button class="btn-save">Save Srv</button>');
         btn_save.click((ev) => {
-            // that.client.service_call(service.service, msg, false, (service_reply) => {
-            //     if (service_reply.err) {
-            //         that.client.ui.show_notification('Service returned error', 'error', service.service+'<br><pre>'+service_reply.msg+'</pre>');
-            //     } else {
-            //         that.client.ui.show_notification('Service replied', null, 'Reply data:<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
-            //     }
-                
-            // });
+        
+            btn_save.addClass('working');
+            that.client.ui.save_service_buttons(service.service, this.btns);
+            
+            that.client.ui.service_menu_btns(service, that.msg_type);
+
+            setTimeout(()=>{
+                btn_save.removeClass('working');
+            }, 100)
         }); 
 
         this.btns_line_el = $('<div class="btns-line"></div>');
@@ -198,6 +198,11 @@ export class ServiceInputDialog {
         let that = this;
 
         this.btns_line_el.empty();
+        this.btns_sortable_el = $('<div class="btn-tabs-sortable"></div>');
+
+        this.btns.sort((a, b) => {
+            return a.sort_index - b.sort_index;
+        });
 
         for (let i_btn = 0; i_btn < this.btns.length; i_btn++) {
 
@@ -205,9 +210,7 @@ export class ServiceInputDialog {
 
             let btn_tab = $('<div class="btn-tab '+btn.color+'"></div>');
             let btn_label = $('<span class="label">'+btn.label+'</span>');
-            btn_label.click(()=>{
-                that.select_button(btn); //init editor
-            });
+           
             btn_tab.append(btn_label);
 
             let btn_inp = $('<input type="text" class="btn-inp""></input>');
@@ -217,9 +220,14 @@ export class ServiceInputDialog {
                  btn_inp_wh.text(val);
                  btn_inp.width(btn_inp_wh.width() + 10);
             });
-            btn_inp.val(btn.label);
-
             let btn_edit_confirm = $('<span class="btn-edit-confirm"></span>');
+            btn_inp.on('keydown keypress keyup', (ev)=>{
+                if (ev.keyCode == 13 && btn.editing) {
+                    btn_edit_confirm.trigger('click');
+                }
+           });
+            btn_inp.val(btn.label);
+            
             btn_edit_confirm.click((ev)=>{
                 btn.label = btn_inp.val();
                 btn_label.text(btn.label);
@@ -267,11 +275,7 @@ export class ServiceInputDialog {
                 }
                 that.btns.splice(i_btn, 1);
                 if (!that.btns.length) {
-                    that.btns.push({
-                        label: 'Call',
-                        color: 'blue',
-                        value: {}
-                    });
+                    that.btns.push(that.make_default_btn()); // replace with default
                 }
                 that.render_button_tabs();
                 let btn_to_sel = i_btn;
@@ -299,6 +303,14 @@ export class ServiceInputDialog {
                 }
             });
 
+            btn_label.click(()=>{
+                if (btn_menu.hasClass('open')) {
+                    btn_menu_btn.trigger('click');
+                    return;
+                }
+                that.select_button(btn); //init editor
+            });
+
             btn_menu.appendTo(btn_menu_btn);
 
             btn_tab.append(btn_menu_btn);
@@ -312,21 +324,49 @@ export class ServiceInputDialog {
             btn.tab_el = btn_tab; 
             btn.label_el = btn_label;
 
-            this.btns_line_el.append(btn_tab);
+            this.btns_sortable_el.append(btn_tab);
         };
+
+        this.btns_line_el.append(this.btns_sortable_el);
 
         let btn_add = $('<span class="add-btn">Add<span class="wide"> button</span></span>');
         btn_add.click((ev)=>{
             that.confirm_edits();
-            that.btns.push({
-                label: 'Call',
-                color: 'blue',
-                value: {}
-            });
+            let new_btn = this.make_default_btn(that.btns);
+            new_btn.sort_index = Object.keys(that.btns).length-1;
+            that.btns.push(new_btn);
             that.render_button_tabs();
             that.select_button(that.btns[that.btns.length-1]);
         });
         this.btns_line_el.append(btn_add);
+
+        this.make_tabs_sortable();
+    }
+
+    make_default_btn() {
+        return {
+            label: 'Call',
+            color: 'blue',
+            in_menu: false, // until first called or saved
+            value: {},
+            sort_index: 0
+        };
+    }
+
+    make_tabs_sortable(c) {
+        let that = this;
+        this.btns_sortable_el.sortable({
+            axis: "x",
+            handle: '.label',
+            cursor: "move",
+            stop: () => {
+                for (let i = 0; i < that.btns.length; i++) {
+                    let btn = that.btns[i];
+                    let index = btn.tab_el.index();
+                    btn.sort_index = index;
+                }
+            }
+        });
     }
 
     validate(val, type, val_inp, type_hint) {
@@ -418,7 +458,7 @@ export class ServiceInputDialog {
 
         let val = def_val;
         if (default_value)
-            val = set_default;
+            val = default_value;
 
         let val_inp = null;
         let type_hint = $('<span class="hint">'+field.type+'</span>');
@@ -523,12 +563,17 @@ export class ServiceInputDialog {
 
                         let vals_block = $('<div></div>');
 
-                        msg[field.name] = [];
-                        const arrayLength = field.arrayLength ?? 0;
+                        if (!msg[field.name])
+                            msg[field.name] = [];
+                        else
+                            msg[field.name].length = 0;
+
+                        const arrayLength = field.arrayLength ?? (value && value[field.name] ? value[field.name].length : 0);
+                        console.log()
                         for (let j = 0; j < arrayLength; j++) {                            
-                            const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.process_msg_template(field.type, value[field.name], null, j == arrayLength-1);
+                            const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.process_msg_template(field.type, value && value[field.name] && value[field.name][j] !== undefined ? value[field.name][j] : null, null, j == arrayLength-1);
                             let nested_block = $('<div></div>').append([ nestedBefore, nestedBlock, nestedAfter ]);
-                            msg[field.name].push(nestedMsg);
+                            msg[field.name][j] = (nestedMsg);
                             vals_block.append(nested_block);
                         }
 
@@ -590,14 +635,18 @@ export class ServiceInputDialog {
                         
                         let vals_block = $('<div></div>');
                         
-                        msg[field.name] = [];
-                        const arrayLength = field.arrayLength ?? 0;
+                        if (!msg[field.name])
+                            msg[field.name] = [];
+                        else
+                            msg[field.name].length = 0;
+
+                        const arrayLength = field.arrayLength ?? (value && value[field.name] ? value[field.name].length : 0);
                         for (let j = 0; j < arrayLength; j++) {
-                            let i = msg[field.name].length;
-                            const r = this.make_primitive_type(field, null, false, j == arrayLength-1, (val) => {
-                                msg[field.name][i] = val;    
+                            // let i = msg[field.name].length;
+                            const r = this.make_primitive_type(field, value[field.name] && value[field.name][j] ? value[field.name][j] : null, false, j == arrayLength-1, (val) => {
+                                msg[field.name][j] = val;    
                             });
-                            msg[field.name].push(r.val);
+                            msg[field.name][j] = r.val;
                             vals_block.append(r.line);
                         }
 
@@ -614,7 +663,7 @@ export class ServiceInputDialog {
 
                         add_btn.click((ev)=>{
                             let i = msg[field.name].length;
-                            const r = this.make_primitive_type(field, null, false, true, (val) => {
+                            const r = this.make_primitive_type(field, value && value[field.name] && value[field.name][i] ? value[field.name][i] : null, false, true, (val) => {
                                 msg[field.name][i] = val;    
                             });
                             msg[field.name].push(r.val);
