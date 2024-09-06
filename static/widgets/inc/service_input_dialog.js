@@ -142,43 +142,80 @@ export class ServiceInputDialog {
         json_menu.click((ev)=>{
             ev.stopPropagation();
         });
-        let btn_json_copy_btn = $('<button>Copy this Button</button>');
+        let btn_json_copy_btn = $('<button>Copy this Message</button>');
         btn_json_copy_btn.click(()=>{
-            that.menu_underlay.unbind().hide()
-            btn_menu.removeClass('open');
-            btn_tab.addClass('editing');
-            btn_inp.trigger('change');
-            btn_inp.focus();
-            btn.editing = true;
+            btn_json.trigger('click'); // hide
+
+            let val = JSON.stringify(that.msg, null, 4);
+            navigator.clipboard.writeText(val);
+            console.log('Copied button call json:', val);
+            that.client.ui.show_notification('Message JSON copied', null, '<pre>'+val+'</pre>');
         });
         let btn_json_copy_service_btns = $('<button>Copy this Service</button>');
         btn_json_copy_service_btns.click(()=>{
-            // that.menu_underlay.unbind().hide()
-            // btn_menu.removeClass('open');
-            // btn_tab.addClass('editing');
-            // btn_inp.trigger('change');
-            // btn_inp.focus();
-            // btn.editing = true;
+            btn_json.trigger('click'); // hide
+
+            let val = {}
+
+            val[service.service] = [];
+            that.btns.forEach((btn)=>{
+                val[service.service].push({
+                    label: btn.label,
+                    color: btn.color,
+                    show_request: btn.show_request,
+                    show_reply: btn.show_reply,
+                    value: btn.value,
+                    sort_index: btn.sort_index
+                });
+            });
+
+            val = JSON.stringify(val, null, 4);
+            navigator.clipboard.writeText(val);
+            console.log('Copied service call settings json:', val);
+            that.client.ui.show_notification('Service JSON config copied', null, '<pre>'+val+'</pre>');
         });
         let btn_json_copy_all_services = $('<button>Copy all Services</button>');
         btn_json_copy_all_services.click(()=>{
-            // that.menu_underlay.unbind().hide()
-            // btn_menu.removeClass('open');
-            // btn_tab.addClass('editing');
-            // btn_inp.trigger('change');
-            // btn_inp.focus();
-            // btn.editing = true;
+            btn_json.trigger('click'); // hide
+
+            let val = {}
+
+            Object.keys(that.client.ui.service_btns).forEach((srv)=>{
+                if (!that.client.ui.service_btns[srv].length)
+                    return;
+                val[srv] = [];
+                that.client.ui.service_btns[srv].forEach((btn)=>{
+                    val[srv].push({
+                        label: btn.label,
+                        color: btn.color,
+                        show_request: btn.show_request,
+                        show_reply: btn.show_reply,
+                        value: btn.value,
+                        sort_index: btn.sort_index
+                    });
+                });
+            });
+
+            val[service.service] = []; // this service from edit vals
+            that.btns.forEach((btn)=>{
+                val[service.service].push({
+                    label: btn.label,
+                    color: btn.color,
+                    show_request: btn.show_request,
+                    show_reply: btn.show_reply,
+                    value: btn.value,
+                    sort_index: btn.sort_index
+                });
+            });
+
+            val = JSON.stringify(val, null, 4);
+            navigator.clipboard.writeText(val);
+            console.log('Copied all services call settings json:', val);
+            that.client.ui.show_notification('Services JSON config copied', null, '<pre>'+val+'</pre>');
         });
 
         json_menu.append( [ btn_json_copy_btn, btn_json_copy_service_btns, btn_json_copy_all_services ]);
         json_menu.appendTo(btn_json);
-
-        // btn_copy_json.click((ev) => {
-        //     let val = JSON.stringify(this.msg, null, 4);
-        //     navigator.clipboard.writeText(val);
-        //     console.log('Copied service call json:', val);
-        //     that.client.ui.show_notification('Message JSON copied', null, '<pre>'+val+'</pre>');
-        // }); 
 
         let btn_call = $('<button class="btn-call">Call<span class="wide"> Service</span></button>');
         btn_call.click((ev) => {
