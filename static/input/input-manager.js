@@ -3137,7 +3137,7 @@ export class InputManager {
                 }
                 if (!btn.ros_srv_msg_type) {
                     console.error('Service msg_type not set');
-                    this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, { err: 1, msg: 'Service not yet discovered, missing message type'});
+                    this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, true, { err: 1, msg: 'Service not yet discovered, missing message type'});
                     return;
                 }
                 if (btn.service_blocked) {
@@ -3151,9 +3151,9 @@ export class InputManager {
                     btn.touch_btn_el.addClass('working');
 
                 btn.service_blocked = true;
-                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, false, (reply) => {
+                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, !btn.show_service_request, (reply) => {
                     btn.service_blocked = false;
-                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, reply);
+                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, btn.show_service_reply, reply);
                 });
                 
                 break;

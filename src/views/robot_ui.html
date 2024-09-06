@@ -173,7 +173,7 @@
     import { JoyInputDriver } from '/static/input/joy-driver.js';
     import { TwistInputDriver } from '/static/input/twist-driver.js';
 
-    import { ServiceInput_Empty, ServiceInput_Bool, ServiceInput_Int } from '/static/input/service-widgets.js'
+    import { ServiceInput_Empty, ServiceInput_Bool } from '/static/input/service-widgets.js'
 
     $(document).ready(function() {
 
@@ -209,7 +209,6 @@
         panel_ui.add_service_type_widget('std_srvs/srv/Empty', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/Trigger', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
-        //panel_ui.add_service_type_widget('astra_camera_msgs/srv/SetInt32', ServiceInput_Int);
 
         panel_ui.set_ignored_service_types([ // these will not be available in ui (?!)
             'rcl_interfaces/srv/DescribeParameters',

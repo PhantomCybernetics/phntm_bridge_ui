@@ -1286,26 +1286,6 @@ BODY.hamburger #docker_controls H3 {
     color: black;
 }
 
-.service_button:hover {
-    background: #006dff;
-}
-.service_button.true {
-    background: #008700;
-}
-.service_button.true:hover {
-    background: #00a100;
-}
-.service_button.false {
-    background: #a20101;
-}
-.service_button.false:hover {
-    background: #c20000;
-}
-
-.service_button.working,
-.service_button.working:hover {
-    background: #ff8c00 !important;
-}
 
 #battery-info {
     display: none;
@@ -1560,6 +1540,7 @@ BUTTON#trigger_wifi_scan {
 
 BUTTON#trigger_wifi_scan.working {
     background: #ff8c00;
+    cursor: wait;
 }
 
 /* #robot_stats {
@@ -5025,7 +5006,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 } 
 
 
-#service-input-dialog BUTTON {
+#service-input-dialog .buttons BUTTON {
     background: #b311a3;
     color: white;
     font-weight: bold;
@@ -5044,7 +5025,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     float: right;
 }
 
-#service-input-dialog BUTTON:hover {
+#service-input-dialog BUTTON:hover,
+#service-input-dialog BUTTON.open {
     background-color: #dc31cb;
 }
 
@@ -5058,8 +5040,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: green;
 }
 
-#service-input-dialog BUTTON.btn-save.working {
-    cursor: default;
+.service_button.working,
+.service_button.working:hover,
+#service-input-dialog BUTTON.btn-save.working,
+#service-input-dialog BUTTON.btn-call.working {
+    cursor: wait;
     background: #ff8c00 !important;
 }
 
@@ -5075,9 +5060,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog.narrow BUTTON .narrow {
     display: inline;
 }
-
-
-
 
 #service-input-dialog .btns-line {
        /* width: 100%; */
@@ -5144,8 +5126,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 #service-input-dialog .btn-tab.selected .label {
     /* border-radius: 10px 0px 0px 10px; */
     padding-right: 40px;
-    z-index: 2;
     position: relative;
+}
+
+#service-input-dialog .btn-tab.selected.menu-open .label {
+    z-index: 2;
 }
 
 #service-input-dialog .btn-tab .btn-menu-btn,
@@ -5165,8 +5150,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     display: none;
     right: 4px;
     top: 5px;
+}
+
+#service-input-dialog .btn-tab.menu-open .btn-menu-btn {
     z-index: 3;
 }
+
 
 #service-input-dialog .btn-tab .btn-edit-confirm {
     background-image: url(/static/graph/icon-check.png);
@@ -5183,7 +5172,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     display: block;
 }
 
-#service-input-dialog .btns-line .btn-menu {
+#service-input-dialog .btns-line .btn-menu,
+#service-input-dialog .btn-json .json-menu {
     position: absolute;
     left: -27px;
     top: 49px;
@@ -5195,6 +5185,19 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     display: none;
     padding: 3px 5px 5px 5px;
     cursor: default;
+}
+
+#service-input-dialog .btn-json.open {
+    z-index: 2; /* above underlay */
+}
+
+#service-input-dialog .btn-json.open .json-menu {
+    display: block;
+    display: block;
+    top: unset;
+    bottom: 60px;
+    left: 50%;
+    translate: -50% 0px;
 }
 
 #service-input-dialog #service-input-dialog-menu-underlay {
@@ -5227,7 +5230,21 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     z-index: 1;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON {
+#service-input-dialog .json-menu .arrow {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    display: block;
+    background: #fec2ff;
+    rotate: 45deg;
+    left: calc(50% - 15px);
+    bottom: -5px;
+    z-index: 1;
+}
+
+#service-input-dialog .btns-line .btn-menu BUTTON,
+#service-input-dialog .btns-line .btn-menu LABEL,
+#service-input-dialog .json-menu BUTTON {
     text-align: left;
     line-height: 23px;
     padding: 5px 10px;
@@ -5236,9 +5253,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: #bb61d07a;
     font-size: 13px;
     margin: 2px 0px 0px 0px;
-    /* float: right; */
-    /* height: 40px; */
-    /* font-weight: bold; */
     display: block;
     width: 100%;
     z-index: 2;
@@ -5250,9 +5264,24 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     -webkit-text-select: none;
     -ms-user-select: none; /* IE 10 and IE 11 */
     -moz-user-select: none;
+
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+}
+#service-input-dialog .btns-line .btn-menu LABEL {
+    padding-right: 30px;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON:hover {
+#service-input-dialog .btns-line .btn-menu LABEL INPUT[type="checkbox"] {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}
+
+#service-input-dialog .btns-line .btn-menu BUTTON:hover,
+#service-input-dialog .btns-line .btn-menu LABEL:hover,
+#service-input-dialog .json-menu BUTTON:hover {
     background-color: #c879da;
 }
 
@@ -5267,21 +5296,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 
 #service-input-dialog .btns-line .btn-menu .arrow {
     display: block;
-}
-
-#service-input-dialog .btns-line label {
-    float: left;
-    /* margin-right: 5px; */
-    /* background-image: url(/static/graph/icon-check.png); */
-    background-size: 22px;
-    background-position: 8px 10px;
-    cursor: pointer;
-    border-radius: 10px 0px 0px 10px;
-    background-repeat: no-repeat;
-    width: 30px;
-    position: relative;
-    height: 40px;
-    
 }
 
 #service-input-dialog .btns-line .btn-menu .colors {
@@ -5316,7 +5330,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: #0051ff;
 }
 .service_button.blue:hover {
-    background-color: #185df4;
+    background-color: #2468f9;
 }
 
 #service-input-dialog .btn-tab.green INPUT.btn-inp {
@@ -5332,7 +5346,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: #008700;
 }
 .service_button.green:hover {
-    background-color: #008700;
+    background-color: #01a601;
 }
 
 #service-input-dialog .btn-tab.red .btn-inp {
@@ -5364,7 +5378,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: #ff8400;
 }
 .service_button.orange:hover {
-    background-color: #f79124;
+    background-color: #fa9c37;
 }
 
 #service-input-dialog .btn-tab.magenta .btn-inp {

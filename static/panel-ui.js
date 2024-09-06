@@ -111,6 +111,7 @@ export class PanelUI {
 
         this.service_input_dialog = new ServiceInputDialog(client);
         this.service_btns = {}; //id srv => btn[]
+        this.service_btns_edited = {}; // editor's working copy
         this.service_btn_els = {};
 
         this.conn_dot_els = [];
@@ -1468,23 +1469,28 @@ export class PanelUI {
     }
 
     save_service_buttons(service, btns) {
-        let btn_data = [];
+        let saved_btn_data = [];
+
+        this.service_btns[service].length = 0;
+
         btns.forEach((btn)=>{
-            btn_data.push({ //clear of el refs
+            let one_btn_data = { //clear of el refs
                 label: btn.label,
                 color: btn.color,
-                in_menu: true, // until first called or saved
-                value: btn.value,
+                show_request: btn.show_request,
+                show_reply: btn.show_reply,
+                value: JSON.parse(JSON.stringify(btn.value)),
                 sort_index: btn.sort_index
-            });
-            btn.in_menu = true; // show
+            };
+            saved_btn_data.push(one_btn_data);
+            this.service_btns[service].push(one_btn_data);
         });
-        let json_btns = JSON.stringify(btn_data);
+        let json_btns = JSON.stringify(saved_btn_data);
         localStorage.setItem('service-btns:' + this.client.id_robot+':'+service, json_btns);
         console.log('Saved '+btns.length+' btns for '+service, btns);
     }
 
-    service_menu_btns(service, msg_class) {
+    render_service_menu_btns(service, msg_class) {
         if (!msg_class)
             return;
 
@@ -1494,34 +1500,15 @@ export class PanelUI {
 
         service_input_el.empty();
 
+        let msg_type = msg_class.name.endsWith('_Request') ? msg_class.name.replace('_Request', '') : msg_class.name;
+
         if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
             ServiceInput_Empty.MakeMenuControls(service_input_el, service, this.client);
-        } else if (this.input_widgets[msg_class.name] != undefined) {
-            this.input_widgets[msg_class.name].MakeMenuControls(service_input_el, service, this.client);
+        } else if (this.input_widgets[msg_type] != undefined) {
+            this.input_widgets[msg_type].MakeMenuControls(service_input_el, service, this.client);
         } else {
             FallbackServiceInput.MakeMenuControls(service_input_el, service, this.client);
         }
-    }
-
-    service_menu_btn_call(service, btn, btn_el) {
-        let that = this;
-        if (btn_el)
-            btn_el.addClass('working');
-        let show_request = true;
-        let show_reply = true;
-        this.client.service_call(service, btn.value, !show_request, (service_reply) => {
-            if (!show_reply)
-                return;
-            if (service_reply.err) {
-                that.show_notification('Service returned error', 'error', service+'<br><pre>'+service_reply.msg+'</pre>');
-            } else if (service_reply.success === false) {
-                that.show_notification('Service returned error', 'error', service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
-            } else {
-                that.show_notification('Service replied: Success', null, service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
-            }
-            if (btn_el)
-                btn_el.removeClass('working');
-        });
     }
     
 
@@ -1574,7 +1561,7 @@ export class PanelUI {
                 let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
                 this.service_btn_els[service.service] = service_input_el;
 
-                this.service_menu_btns(service, msg_class);
+                this.render_service_menu_btns(service, msg_class);
 
                 service_content.append(service_input_el);
             }
@@ -2327,13 +2314,10 @@ export class PanelUI {
 
         let max_label_w = w_body - w_right - w_netinfo - w_battery - 50;
 
-        // console.log(`max_label_w=${max_label_w}\nw_body=${w_body}\nw_right=${w_right}\nw_netinfo=${w_netinfo}\nw_battery=${w_battery}`)
-        // w_left += w_netinfo;
-
         label_el.css({
             'max-width': max_label_w + 'px'
         });
-        // let w_left_is_2rows = label_el.hasClass('hamburger');
+      
         if (w_body < full_menubar_w + w_right + w_left) {
             label_el.addClass('smaller');
         }
@@ -2366,21 +2350,19 @@ export class PanelUI {
             cls.push('hamburger');
             hamburger = true;
             available_w_center = w_body; //uses full page width
-            // if (this.menu_overlay_el) {
-
-            // }
-        } else if (available_w_center < narrow_menubar_w) { // .narrow menubar
+        }
+        else if (available_w_center < narrow_menubar_w) { // .narrow menubar
             cls.push('narrower');
             cls.push('top-menu');
         }
         else if (available_w_center < full_menubar_w) { // full menubar
             cls.push('narrow');
             cls.push('top-menu');
-        } else {
+        }
+        else {
             cls.push('full-width');
             cls.push('top-menu');
         }
-
 
         if (hamburger) {
 
@@ -2395,7 +2377,6 @@ export class PanelUI {
                 height: (h-60) + 'px' // bg fills screenheight
             });
             $('#menubar_scrollable').css('height', h-74);
-            //  let graph_w = $('#graph_display').innerWidth();
             
             let hh = h - 95;
             $('#service_list').css('height', hh);
@@ -2414,25 +2395,11 @@ export class PanelUI {
                     .removeClass('hidden');
             }
 
-            // if (!$('BODY').hasClass('hamburger') || $('#introspection_state').hasClass('hidden')) { // switched
-            //     $('#introspection_state')
-            //         .appendTo('#fixed-right') // move to the right icons
-            //         .removeClass('hidden');
-            // }
-
             if (h < 520) {
                 $('#bottom-links').addClass('inline');
             } else {
                 $('#bottom-links').removeClass('inline');
             }
-
-            // if (window.innerHeight < 425) {
-            //     console.log('hiding bottom links, window.innerHeight='+window.innerHeight)
-            //     $('#bottom-links').css('display', 'none');
-            // } else {
-            //     console.log('showig bottom links, window.innerHeight='+window.innerHeight)
-            //     $('#bottom-links').css('display', 'block');
-            // }
 
         } else { // top menu on desktop
 
@@ -2465,12 +2432,6 @@ export class PanelUI {
                     .css('display', 'block')
                     .removeClass(['inline', 'hidden']);
             }
-
-            // if ($('BODY').hasClass('hamburger') || $('#introspection_state').hasClass('hidden')) { // switched
-            //     $('#introspection_state')
-            //         .appendTo('#menubar') // move center part
-            //         .removeClass('hidden');
-            // }
         };
 
         $('BODY.touch-ui #touch-ui-dialog .content').css({
@@ -2481,70 +2442,11 @@ export class PanelUI {
             this.maximized_panel.maximize(true); //resize
         }
 
-        //this.update_graph_menu_size();
-
-        // let w_graph_menu = w_body+20;
-        // let enough_room_for_graph = w_graph_menu > 800;
-
-        // if (hb && !enough_room_for_graph && this.menu_overlay_el) {
-        //     // let cnt = $('#menubar_content');
-        //     $('#menubar_items')
-        //         .addClass('narrow');
-        //     // $('#service_list').appendTo(cnt);
-        //     // $('#cameras_list').appendTo(cnt);
-        //     // $('#docker_list').appendTo(cnt);
-        //     // $('#widget_list').appendTo(cnt);
-        // } else {
-        //     $('#menubar_items')
-        //         .removeClass('narrow');
-        //     // $('#service_list').appendTo($('#service_controls'));
-        //     // $('#cameras_list').appendTo($('#camera_controls'));
-        //     // $('#docker_list').appendTo($('#docker_controls'));
-        //     // $('#widget_list').appendTo($('#widget_controls'));
-        // }
-
-        // if (enough_room_for_graph) {
-        //     w_graph_menu = 800;
-        // }
-
-        // if ($('#graph_display').hasClass('menu-overlay')) {
-        //     $('#graph_display').css({
-        //         'width': w_graph_menu+'px'
-        //     });
-        // } 
-
-        // // if (this.hamburger_menu_full_width) {
-        // if ($('#menubar_items').hasClass('narrow')) {
-        //     $('#menubar_items').css({
-        //         'width': (w_body+30)+'px', 
-        //     });
-        // } else {
-        //     $('#menubar_items').css({
-        //         'width': '', 
-        //     });
-        // }
-
-        //}
-
-        // let direct_editing_enabled = true;
         if (isTouchDevice()) {
-            // direct_editing_enabled = false;
             cls.push('touch-ui');
         } else {
             cls.push('desktop-ui');
         }
-
-        // Object.values(this.panels).forEach((p)=>{
-        //     if (p.editing)
-        //         return;
-
-        //     if (direct_editing_enabled) 
-        //         $(p.grid_widget).addClass('editing');
-        //     else
-        //         $(p.grid_widget).removeClass('editing');
-        //     this.grid.resizable(p.grid_widget, direct_editing_enabled);
-        //     this.grid.movable(p.grid_widget, direct_editing_enabled);
-        // });
 
         this.set_body_classes(cls);
 
@@ -2561,44 +2463,63 @@ export class PanelUI {
                 .css('width', ''); // unset
         }
 
-        // console.log('Layout: body='+w_body+'; left='+w_left+'; right='+w_right+'; net='+w_netinfo+'; av center='+available_w_center);
-
-        // console.info('body.width='+w+'px');
-        // if (w < 1500)
-        //     $('#robot_wifi_info').addClass('narrow_screen')
-        // else
-        //     $('#robot_wifi_info').removeClass('narrow_screen')
-
         Object.values(this.panels).forEach((panel) => {
             panel.onResize();
         });
-
     }
 
-    service_reply_notification(btn_el, id_service, reply) {
+    service_menu_btn_call(service, btn, btn_el) {
+        let that = this;
+        if (btn_el)
+            btn_el.addClass('working');
+        let show_request = btn.show_request;
+        let show_reply = btn.show_reply;
+        this.client.service_call(service, btn.value, !show_request, (service_reply) => {
+            that.service_reply_notification(btn_el, service, show_reply, service_reply);
+        });
+    }
+
+    service_menu_auto_btn_call(service, btn_el, value) {
+        let that = this;
+        if (btn_el)
+            btn_el.addClass('working');
+        let show_request = false;
+        let show_reply = null; // auto = if err or reply data
+        this.client.service_call(service, value, !show_request, (service_reply) => {
+            that.service_reply_notification(btn_el, service, show_reply, service_reply);
+        });
+    }
+
+    service_reply_notification(btn_el, id_service, show_reply, service_reply) {
         let id_parts = id_service.split('/');
         let short_id = id_parts[id_parts.length-1];
-        console.log('service handled w reply', reply);
-        if (reply.err) {
-            if (btn_el) {
-                btn_el.addClass('btn_err');
-                setTimeout(()=>{
-                    btn_el
-                        .removeClass('btn_err')
-                        .removeClass('working');
-                }, 600); 
+        
+        if (btn_el)
+            btn_el.removeClass('working');
+
+        let is_err = false;
+        if (service_reply.err) { // showing errors always
+            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
+            is_err = true;
+        } else if (service_reply.success === false || service_reply.error)  { // showing errors always
+            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+            is_err = true;
+        } else if (service_reply.success === true) { //std set bool & trugger
+            if (show_reply === true || (show_reply === null && service_reply.message && service_reply.message.length)) { 
+                this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
             }
-            this.show_notification('Error ('+reply.err+') in '+short_id+': '+reply.msg, 'error');
         } else {
-            if (btn_el) {
-                btn_el.removeClass('working');
+            if (show_reply === true || (show_reply === null && Object.keys(service_reply).length > 0)) {
+                this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
             }
-            if (reply.message) {
-                this.show_notification(short_id+': '+reply.message);
-            }
-            // else /*if (reply.success) */ {
-            //     this.show_notification(short_id, 'success');    
-            // }
+        }
+
+        if (is_err && btn_el) { // do the error wobble
+            btn_el.addClass('btn_err');
+            setTimeout(()=>{
+                btn_el
+                    .removeClass('btn_err');
+            }, 600); 
         }
     }
  
