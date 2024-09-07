@@ -1,15 +1,5 @@
 
-import { BatteryStateWidget } from '/static/widgets/battery.js';
-import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
-import { VideoWidget } from '/static/widgets/video.js';
-import { RangeWidget } from '/static/widgets/range.js';
-import { LaserScanWidget } from '/static/widgets/laser-scan.js';
-import { ImuWidget } from '/static/widgets/imu.js';
-import { LogWidget } from '/static/widgets/log.js';
-import { SystemLoadWidget } from '/static/widgets/system-load.js';
-
 import { GraphMenu } from '/static/graph-menu.js';
-import { PointCloudWidget } from '/static/widgets/pointcloud.js';
 import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from '/static/browser-client.js';
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
@@ -30,29 +20,20 @@ export class PanelUI {
     topic_widgets = {
         // '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
     };
-    type_widgets = {
-        'sensor_msgs/msg/BatteryState': { widget: BatteryStateWidget, w: 4, h: 2 },
-        'sensor_msgs/msg/Range': { widget: RangeWidget, w: 1, h: 1 },
-        'sensor_msgs/msg/LaserScan': { widget: LaserScanWidget, w: 7, h: 4 },
-        'sensor_msgs/msg/Imu': { widget: ImuWidget, w: 2, h: 2 },
-        'rcl_interfaces/msg/Log': { widget: LogWidget, w: 10, h: 2 },
-        'sensor_msgs/msg/Image': { widget: VideoWidget, w: 5, h: 4 },
-        'sensor_msgs/msg/CompressedImage': { widget: VideoWidget, w: 5, h: 4 },
-        'ffmpeg_image_transport_msgs/msg/FFMPEGPacket': { widget: VideoWidget, w: 5, h: 4 },
-        'video': { widget: VideoWidget, w: 5, h: 4 },
-        'sensor_msgs/msg/PointCloud2': { widget: PointCloudWidget, w: 4, h: 4 },
-        'nav_msgs/msg/OccupancyGrid': { widget: OccupancyGrid, w: 7, h: 4 },
-        'phntm_interfaces/msg/SystemInfo': { widget: SystemLoadWidget, w: 4, h: 2 },
-    };
+    type_widgets = {}
+    add_type_widget(msg_type, widget_class) {
+        this.type_widgets[msg_type] = {
+            widget: widget_class,
+            w: widget_class.default_width,
+            h: widget_class.default_height
+        }
+    }
+    
     widgets = {}; // custom and/or compound
 
     input_widgets = {};
     add_service_type_widget(srv_msg_type, widget_class) {
         this.input_widgets[srv_msg_type] = widget_class;
-    }
-    ignored_service_types = [];
-    set_ignored_service_types(service_types) {
-        this.ignored_service_types = service_types;
     }
 
     constructor(client, grid_cell_height, input_manager) {
@@ -98,6 +79,8 @@ export class PanelUI {
         this.lastAP = null;
         this.lastESSID = null;
         this.wifi_scan_enabled = false;
+        this.wifi_roam_enabled = false;
+        
         let wifi_scan_warning_suppressed = localStorage.getItem('wifi-scan-warning-suppressed:'+this.client.id_robot);
         this.wifi_scan_warning_suppressed = wifi_scan_warning_suppressed == 'true';
 
@@ -109,7 +92,10 @@ export class PanelUI {
         this.docker_hosts = {};
         this.num_widgets = 0;
 
+        this.collapse_services = null; // str [] when received
+        this.collapse_unhandled_services = false;
         this.service_input_dialog = new ServiceInputDialog(client);
+        this.default_service_btns = null; // from the robot
         this.service_btns = {}; //id srv => btn[]
         this.service_btns_edited = {}; // editor's working copy
         this.service_btn_els = {};
@@ -246,9 +232,15 @@ export class PanelUI {
 
         this.update_layout();
 
+        // triggered before ui_config
+        client.on('input_config', (drivers, default_profiles, robot_service_buttons) => {
+            console.log('got robot service buttons', robot_service_buttons)
+            this.default_service_btns = robot_service_buttons; // {} if undef
+        });
+
+        // triggered after input_config
         client.on('ui_config', (robot_ui_config) => {
-            //battery
-            // let battery_shown = false;
+            // battery optional
             if (that.battery_topic && that.battery_topic != robot_ui_config['battery_topic']) {
                 client.off(that.battery_topic, battery_status_wrapper);
                 that.battery_topic = null;
@@ -264,6 +256,8 @@ export class PanelUI {
                 that.battery_shown = false;
             }
             that.save_last_robot_battery_shown(that.battery_shown);
+
+            // docker control optional
             if (robot_ui_config['docker_monitor_topic']) {
                 that.docker_monitor_topic = robot_ui_config['docker_monitor_topic'];
             }
@@ -285,7 +279,7 @@ export class PanelUI {
                 that.update_layout();
             }
 
-            //wifi status
+            // wifi status
             let wifi_shown = false;
             if (that.iw_topic && that.iw_topic != robot_ui_config['wifi_monitor_topic']) {
                 client.off(that.iw_topic, iw_status_wrapper);
@@ -305,9 +299,21 @@ export class PanelUI {
             }
             that.save_last_robot_wifi_signal_shown(wifi_shown);
 
+            // wifi scan & roam
             if (robot_ui_config['enable_wifi_scan'])
                 this.wifi_scan_enabled = robot_ui_config['enable_wifi_scan'];
+            if (robot_ui_config['enable_wifi_roam'])
+                this.wifi_roam_enabled = robot_ui_config['enable_wifi_roam'];
 
+            // collapsed services
+            if (robot_ui_config['collapse_services']) {
+                this.collapse_services = robot_ui_config['collapse_services'];
+                this.services_menu_from_nodes();
+            }
+
+            if (robot_ui_config['collapse_unhandled_services']) 
+                this.collapse_unhandled_services = robot_ui_config['collapse_unhandled_services'];
+            
             that.input_manager.on_ui_config();
         });
 
@@ -321,8 +327,7 @@ export class PanelUI {
 
         client.on('nodes', (nodes) => {
             setTimeout(()=>{
-                that.load_service_btns(nodes);
-                that.services_menu_from_nodes(nodes);
+                that.services_menu_from_nodes();
             }, 0);
             setTimeout(()=>{
                 that.graph_from_nodes(nodes);
@@ -433,17 +438,6 @@ export class PanelUI {
             }
 
             client.run_introspection(!is_active);
-        });
-
-        $('#services_gamepad_mapping_toggle').click(function (event) {
-            event.preventDefault();
-            if (!$('#service_controls').hasClass('setting_shortcuts')) {
-                $('#service_controls').addClass('setting_shortcuts');
-                $('#services_gamepad_mapping_toggle').html('[cancel]');
-            } else {
-                $('#service_controls').removeClass('setting_shortcuts');
-                $('#services_gamepad_mapping_toggle').html('[shortcuts]');
-            }
         });
 
         $('#fullscreen-toggle').click(()=>{
@@ -1447,18 +1441,22 @@ export class PanelUI {
     load_service_btns(nodes) {
         let that = this;
 
+        this.service_btns = {};
         Object.values(nodes).forEach((node) => {
             Object.keys(node.services).forEach((service) => {
-                //TODO load robot's config too
-                if (that.service_btns[service] !== undefined)
-                    return; //don't overwrite
-
+                
+                // defaults from the robot
+                if (that.default_service_btns[service]) {
+                    that.service_btns[service] = that.default_service_btns[service];
+                    console.log('Loaded '+that.service_btns[service].length+' default btns for '+service); 
+                }
+                    
+                // overwrite w local saved (edited version untouched here)
                 let stored_btns = localStorage.getItem('service-btns:' + that.client.id_robot+':'+service);
                 if (stored_btns) {
+                    that.service_btns[service] = []; 
                     stored_btns = JSON.parse(stored_btns); //arr
                     stored_btns.forEach((one_btn)=>{
-                        if (!that.service_btns[service])
-                            that.service_btns[service] = [];
                         that.service_btns[service].push(one_btn);
                     });
                     console.log('Loaded '+stored_btns.length+' user btns for '+service);
@@ -1512,13 +1510,22 @@ export class PanelUI {
     }
     
 
-    services_menu_from_nodes(nodes) {
-       
+    services_menu_from_nodes() {
+        
+        let nodes = this.client.discovered_nodes;
+        if (!Object.keys(nodes).length)
+            return;
+
+        if (this.collapse_services === null) // empty loaded is []
+            return;
+
+        if (this.default_service_btns === null) // emty loaded is {}
+            return;
+        
+        this.load_service_btns(nodes); // reloads all, keeping edit untouched
+
         $('#service_list').empty();
         this.num_services = 0;
-
-        // let nodes_with_handled_ui = [];
-        // let unhandled_nodes = [];
 
         let nodes_sorted = Object.values(nodes).sort((a, b)=>{
             return a.node.toLowerCase().localeCompare(b.node.toLowerCase());
@@ -1529,23 +1536,21 @@ export class PanelUI {
                 return;
 
             let node_content = $('<div class="node" data-node="' + node.node + '">' + node.node + '</div>');
-            let service_contents = [];
+            let prefered_services = [];
+            let collapsed_services = [];
             let service_ids = Object.keys(node.services);
-            // let some_ui_handled = false;
+            
             for (let i = 0; i < service_ids.length; i++) {
 
                 let id_service = service_ids[i];
                 let service = node.services[id_service];
                 let msg_type = node.services[id_service].msg_type;
-
-                if (this.ignored_service_types.includes(msg_type))
-                    continue; // not rendering internals (?!)
-
                 this.num_services++; // activates menu
 
-                // service.ui_handled = this.input_widgets[msg_type] != undefined;
                 let msg_class = this.client.find_message_type(service.msg_type+'_Request');
-                let service_short = service.service.replace('/'+node.node+'/', '');
+                let service_name_parts = service.service.split('/');
+                let service_short = service_name_parts[service_name_parts.length-1];
+
                 let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
                     + '<div '
                     + 'class="service_heading" '
@@ -1555,7 +1560,7 @@ export class PanelUI {
                     + '</div>'
                     + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
                     + '</div>');
-                service_contents.push(service_content);
+                
                 // node_content.append(service_content);
 
                 let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
@@ -1564,12 +1569,46 @@ export class PanelUI {
                 this.render_service_menu_btns(service, msg_class);
 
                 service_content.append(service_input_el);
+
+                if ((!msg_class && this.collapse_unhandled_services)
+                || this.collapse_services.indexOf(msg_type) > -1 
+                || this.collapse_services.indexOf(id_service) > -1)
+                    collapsed_services.push(service_content);
+                else
+                    prefered_services.push(service_content);
             }
 
-            if (service_contents.length) {
+            if (prefered_services.length || collapsed_services.length) {
                 $('#service_list').append(node_content);
-                for (let i = 0; i < service_contents.length; i++)
-                    $('#service_list').append(service_contents[i]);
+
+                if (prefered_services.length) {
+                    for (let i = 0; i < prefered_services.length; i++)
+                        $('#service_list').append(prefered_services[i]);
+                }
+
+                if (collapsed_services.length) {
+                    let collapsed_cont = $('<div class="collapsed-cont"></div>')
+                    for (let i = 0; i < collapsed_services.length; i++)
+                        collapsed_cont.append(collapsed_services[i]);
+                    let more_label = prefered_services.length ? 'Show more' : 'Show services'
+                    let cls = !prefered_services.length ? 'only-collapsed': '';
+                    let handle = $('<div class="collapse-handle '+cls+'">'+more_label+'</div>');
+                    handle.click(()=>{
+                        if (!handle.hasClass('open')) {
+                            handle.addClass('open');
+                            handle.removeClass(cls);
+                            collapsed_cont.addClass('open');
+                            handle.text('Show less');
+                        } else {
+                            handle.removeClass('open');
+                            handle.addClass(cls);
+                            collapsed_cont.removeClass('open');
+                            handle.text(more_label);
+                        }
+                    });
+                    $('#service_list').append([ collapsed_cont, handle, $('<span class="cleaner"></span>') ]);
+                }
+                
             }
         });
 
@@ -2261,21 +2300,21 @@ export class PanelUI {
         let menu_item_widths = {
             'full': {
                 'graph_controls':  210,
-                'service_controls':  105,
+                'service_controls':  115,
                 'camera_controls':  95,
                 'docker_controls':  115,
                 'widget_controls':  10,
             },
             'narrow': {
                 'graph_controls':  210,
-                'service_controls':  65,
+                'service_controls':  70,
                 'camera_controls':  60,
                 'docker_controls':  65,
                 'widget_controls':  10,
             },
             'narrower' : {
                 'graph_controls':  170,
-                'service_controls':  65,
+                'service_controls':  70,
                 'camera_controls':  60,
                 'docker_controls':  65,
                 'widget_controls':  10,
@@ -2346,6 +2385,8 @@ export class PanelUI {
                 this.toggleTouchGamepad(); // off on rotate
         }
 
+        let set_dimensions = null;
+
         if (portrait || available_w_center < narrower_menubar_w || isTouchDevice()) { // .narrower menubar
             cls.push('hamburger');
             hamburger = true;
@@ -2354,15 +2395,30 @@ export class PanelUI {
         else if (available_w_center < narrow_menubar_w) { // .narrow menubar
             cls.push('narrower');
             cls.push('top-menu');
+            set_dimensions = 'narrower';
         }
         else if (available_w_center < full_menubar_w) { // full menubar
             cls.push('narrow');
             cls.push('top-menu');
+            set_dimensions = 'narrow';
         }
         else {
             cls.push('full-width');
             cls.push('top-menu');
+            set_dimensions = 'full';
         }
+
+        if (set_dimensions) {
+            let widths = menu_item_widths[set_dimensions];
+            Object.keys(widths).forEach((key) => {
+                $('#'+key).css('width', widths[key]+'px')
+            });
+        } else {
+            Object.keys(menu_item_widths['full']).forEach((key) => {
+                $('#'+key).css('width', '')
+            });
+        }
+
 
         if (hamburger) {
 
@@ -2493,7 +2549,7 @@ export class PanelUI {
     service_reply_notification(btn_el, id_service, show_reply, service_reply) {
         let id_parts = id_service.split('/');
         let short_id = id_parts[id_parts.length-1];
-        
+
         if (btn_el)
             btn_el.removeClass('working');
 

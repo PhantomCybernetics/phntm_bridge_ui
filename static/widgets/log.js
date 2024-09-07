@@ -1,5 +1,8 @@
 export class LogWidget {
 
+    static default_width = 10;
+    static default_height = 2;
+
     constructor(panel, topic ) {
 
         this.panel = panel;

@@ -151,7 +151,7 @@ export class ServiceInputDialog {
             console.log('Copied button call json:', val);
             that.client.ui.show_notification('Message JSON copied', null, '<pre>'+val+'</pre>');
         });
-        let btn_json_copy_service_btns = $('<button>Copy this Service</button>');
+        let btn_json_copy_service_btns = $('<button>Copy this Service Config</button>');
         btn_json_copy_service_btns.click(()=>{
             btn_json.trigger('click'); // hide
 
@@ -169,12 +169,19 @@ export class ServiceInputDialog {
                 });
             });
 
+            val[service.service].sort((a, b) =>{ // sort and remove sort index
+                return a.sort_index - b.sort_index;
+            })
+            Object.values(val[service.service]).forEach((one_srv_btn)=>{
+                delete one_srv_btn.sort_index;
+            });
+
             val = JSON.stringify(val, null, 4);
             navigator.clipboard.writeText(val);
             console.log('Copied service call settings json:', val);
             that.client.ui.show_notification('Service JSON config copied', null, '<pre>'+val+'</pre>');
         });
-        let btn_json_copy_all_services = $('<button>Copy all Services</button>');
+        let btn_json_copy_all_services = $('<button>Copy all Services Config</button>');
         btn_json_copy_all_services.click(()=>{
             btn_json.trigger('click'); // hide
 
@@ -208,7 +215,18 @@ export class ServiceInputDialog {
                 });
             });
 
-            val = JSON.stringify(val, null, 4);
+            let val_sorted = Object.keys(val).sort().reduce((result, key) => {
+                result[key] = val[key];
+                result[key].sort((a, b) =>{ // sort and remove sort index
+                    return a.sort_index - b.sort_index;
+                })
+                Object.values(result[key]).forEach((one_srv_btn)=>{
+                    delete one_srv_btn.sort_index;
+                });
+                return result;
+              }, {});
+
+            val = JSON.stringify(val_sorted, null, 4);
             navigator.clipboard.writeText(val);
             console.log('Copied all services call settings json:', val);
             that.client.ui.show_notification('Services JSON config copied', null, '<pre>'+val+'</pre>');

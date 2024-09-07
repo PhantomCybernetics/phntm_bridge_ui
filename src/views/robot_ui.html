@@ -162,6 +162,16 @@
 
 <script type="module">
 
+    import { BatteryStateWidget } from '/static/widgets/battery.js';
+    import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
+    import { VideoWidget } from '/static/widgets/video.js';
+    import { RangeWidget } from '/static/widgets/range.js';
+    import { LaserScanWidget } from '/static/widgets/laser-scan.js';
+    import { ImuWidget } from '/static/widgets/imu.js';
+    import { LogWidget } from '/static/widgets/log.js';
+    import { SystemLoadWidget } from '/static/widgets/system-load.js';
+    import { PointCloudWidget } from '/static/widgets/pointcloud.js';
+
     import { PhntmBridgeClient } from '/static/browser-client.js';
     import { InputManager } from '/static/input/input-manager.js';
     import { PanelUI } from '/static/panel-ui.js';
@@ -201,6 +211,23 @@
         input_manager.register_driver('Twist', TwistInputDriver);
 
         let panel_ui = new PanelUI(robot, 119, input_manager);
+
+        panel_ui.add_type_widget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
+        panel_ui.add_type_widget('sensor_msgs/msg/Range', RangeWidget),
+        panel_ui.add_type_widget('sensor_msgs/msg/LaserScan', LaserScanWidget);
+        panel_ui.add_type_widget('sensor_msgs/msg/Imu', ImuWidget);
+        panel_ui.add_type_widget('rcl_interfaces/msg/Log', LogWidget);
+
+        panel_ui.add_type_widget('video', VideoWidget);
+        panel_ui.add_type_widget('sensor_msgs/msg/Image', VideoWidget);
+        panel_ui.add_type_widget('sensor_msgs/msg/CompressedImage', VideoWidget);
+        panel_ui.add_type_widget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
+        
+        // TODO:
+        // panel_ui.add_type_widget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
+        // panel_ui.add_type_widget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
+        panel_ui.add_type_widget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
+
         panel_ui.add_widget(Everything3DWidget);
         panel_ui.add_widget(NavigationWidget);
         panel_ui.add_widget(DescriptionTFWidget);
@@ -209,15 +236,6 @@
         panel_ui.add_service_type_widget('std_srvs/srv/Empty', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/Trigger', ServiceInput_Empty);
         panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
-
-        panel_ui.set_ignored_service_types([ // these will not be available in ui (?!)
-            'rcl_interfaces/srv/DescribeParameters',
-            'rcl_interfaces/srv/GetParameterTypes',
-            'rcl_interfaces/srv/GetParameters',
-            'rcl_interfaces/srv/ListParameters',
-            'rcl_interfaces/srv/SetParameters',
-            'rcl_interfaces/srv/SetParametersAtomically'
-        ]);
 
         // init panel setup from url
         // also subscribes to topics and cameras required by panel widgets

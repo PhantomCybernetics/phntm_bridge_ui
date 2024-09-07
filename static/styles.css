@@ -707,20 +707,20 @@ BODY.hamburger #graph_controls {
     /* width: 150px; */
 }
 
-#graph_controls { width: 210px; background-color: white; }
-#service_controls { width: 105px; background-color: #b311a3; }
-#camera_controls { width: 95px; background-color: #82b727; }
-#docker_controls { width: 115px; background-color: #de5a30; }
-#widget_controls { width: 10px; background-color: #112fb3; }
+#graph_controls { background-color: white; }
+#service_controls { background-color: #b311a3; }
+#camera_controls { background-color: #82b727; }
+#docker_controls { background-color: #de5a30; }
+#widget_controls { background-color: #112fb3; }
 
-BODY.narrow #service_controls { width: 65px;}
+/* BODY.narrow #service_controls { width: 65px;}
 BODY.narrow #camera_controls { width: 60px;}
 BODY.narrow #docker_controls { width: 65px;}
 
 BODY.narrower #graph_controls { width: 170px; }
 BODY.narrower #service_controls { width: 65px;}
 BODY.narrower #camera_controls { width: 60px;}
-BODY.narrower #docker_controls { width: 65px;}
+BODY.narrower #docker_controls { width: 65px;} */
 
 #topic_list {
     overflow-x: hidden;
@@ -1083,14 +1083,27 @@ BODY.desktop-ui .docker_btns button:hover,
     border-top: 3px solid #b311a3;
 }
 
-#topic_list .node,
 #service_list .node {
-    font-size: 10px;
+    font-size: 15px;
     font-weight: bold;
     display: inline-block;
     margin-bottom: 3px;
     margin-top: 3px;
+    padding: 5px;
+    border-radius: 5px;
+    background: #5b5252;
+    color: #fff;
+    margin-left: 5px;
 }
+
+#service_list .collapsed-cont {
+    display: none;
+}
+
+#service_list .collapsed-cont.open {
+    display: block;
+}
+
 
 BODY.top-menu #service_controls.active:hover #service_list,
 BODY.top-menu #topic_controls.active:hover #topic_list,
@@ -1142,34 +1155,58 @@ BODY.hamburger #docker_controls H3 {
 .service {
     margin-top: 5px;
     margin-bottom: 5px;
-    background: #e19fe6;;
+    background: #e19fe6;
     padding: 10px;
     border-radius: 5px;
     position: relative;
+    text-align: left;
+}
+
+.service.nonhandled  {
+    font-size: 13px;
+    padding: 5px 10px;
+    background: #d68ee07e;
+}
+
+#service_list .collapse-handle {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    position: relative;
+    text-align: right;
+    font-size: 13px;
+    padding: 5px 10px;
+    background: #d68ee03b;;
+    color: #ffffff80;
+    text-decoration: none;
+    cursor: pointer;
+    float: right;
+}
+
+#service_list .collapse-handle {
+    display: block;
+    margin-top: 0px;
+}
+
+#service_list .collapse-handle.open {
+    display: block;
+}
+
+#service_list .collapse-handle.only-collapsed {
+    margin-top: 5px;
+    text-align: right;
+    float: none;
+}
+
+#service_list .collapse-handle:hover {
+    text-decoration: underline;
+    color: white;
 }
 
 .service_heading {
     font-weight: bold;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-#services_gamepad_mapping_toggle {
-    position: absolute;
-    right: 0px;
-    top: 0px;
-    display: none;
-    color: #fff6;
-    top: 13px;
-    right: 10px;
-    font-size: 13px;
-    text-decoration: none;
-}
-
-
-#service_controls.active:hover #services_gamepad_mapping_toggle,
-#service_controls.active.setting_shortcuts #services_gamepad_mapping_toggle {
-    display: block
 }
 
 #mapping-confirmation #current-key {
@@ -1183,12 +1220,6 @@ BODY.hamburger #docker_controls H3 {
     font-size: 30px;
     line-height: 80px;
     text-align: center;
-}
-
-.service.nonhandled  {
-    font-size: 13px;
-    padding: 5px 10px;
-    background: #d68ee07e;
 }
 
 .service_input {

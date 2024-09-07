@@ -4,6 +4,9 @@ import { deg2rad } from "../lib.js";
 //TODO turn into class
 export class LaserScanWidget {
 
+    static default_width = 7;
+    static default_height = 4;
+
     constructor(panel, topic) {
 
         this.panel = panel;

@@ -4,6 +4,9 @@ import '/static/canvasjs-charts/canvasjs.min.js';
 // BATTERY VISUALIZATION
 export class BatteryStateWidget {
 
+    static default_width = 4;
+    static default_height = 2;
+
     constructor(panel, topic) {
         this.panel = panel;
         this.topic = topic;

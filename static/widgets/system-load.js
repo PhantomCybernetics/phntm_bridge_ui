@@ -2,6 +2,9 @@ import { formatBytes } from "../lib.js";
 
 export class SystemLoadWidget {
 
+    static default_width = 4;
+    static default_height = 2;
+
     constructor (panel, topic) {
 
         this.panel = panel;

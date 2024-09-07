@@ -314,7 +314,7 @@ export class PhntmBridgeClient extends EventTarget {
             if (!nodes_data[this.id_robot])
                 return;
 
-            console.warn('Raw nodes: ', nodes_data);
+            // console.warn('Raw nodes: ', nodes_data);
 
             setTimeout(()=>{
                 this.discovered_nodes = {};
@@ -932,8 +932,9 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (robot_data['input_drivers'] || robot_data['input_defaults']) {
             let drivers = robot_data['input_drivers'];
-            let defaults = robot_data['input_defaults'];
-            this.emit('input_config', drivers, defaults);
+            let default_profiles = robot_data['input_defaults'] && robot_data['input_defaults']['input_profiles'] ? robot_data['input_defaults']['input_profiles'] : {};
+            let service_buttons = robot_data['input_defaults'] && robot_data['input_defaults']['service_buttons'] ? robot_data['input_defaults']['service_buttons'] : {}; 
+            this.emit('input_config', drivers, default_profiles, service_buttons);  // service_buttons must trigger before ui
         }
 
         if (robot_data['read_data_channels']) {
@@ -989,9 +990,9 @@ export class PhntmBridgeClient extends EventTarget {
             });
         }
 
-        if (robot_data['ui']) {
-            console.log('ui got config: ', robot_data['ui']);
-            this.emit('ui_config', robot_data['ui']);
+        if (robot_data['ui']) { 
+            console.log('UI got config: ', robot_data['ui']);
+            this.emit('ui_config', robot_data['ui']); // must trigger after service_buttons
         }
 
         if (robot_data['read_video_streams']) {

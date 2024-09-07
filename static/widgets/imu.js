@@ -3,6 +3,9 @@ import * as THREE from 'three';
 //IMU VISUALIZATION
 export class ImuWidget {
 
+    static default_width = 2;
+    static default_height = 2;
+
     constructor (panel, topic) {
         
         this.panel = panel;

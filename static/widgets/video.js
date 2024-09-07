@@ -3,6 +3,8 @@ import { MultiTopicSource } from "./inc/multitopic.js";
 export class VideoWidget {
 
     is_video = true;
+    static default_width = 5;
+    static default_height = 4;
 
     constructor (panel, id_source)  {
 

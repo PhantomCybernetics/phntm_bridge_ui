@@ -2165,8 +2165,8 @@ export class InputManager {
             let node_opts = [];
             service_ids.forEach((id_srv)=>{
                 let msg_type = node.services[id_srv].msg_type;
-                if (that.ui.ignored_service_types.includes(msg_type))
-                    return; // not rendering ignored
+                // if (that.ui.ignored_service_types.includes(msg_type))
+                //     return; // not rendering ignored
 
                 node_opts.push('<option value="'+id_srv+':'+msg_type+'"'+(btn.ros_srv_id == id_srv?' selected':'')+'>'+id_srv+'</option>');
             });
