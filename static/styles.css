@@ -1096,6 +1096,12 @@ BODY.desktop-ui .docker_btns button:hover,
     margin-left: 5px;
 }
 
+#service_list .node.only-collapsed {
+    float: left;
+    overflow: hidden;
+    margin-right: 5px;
+}
+
 #service_list .collapsed-cont {
     display: none;
 }
@@ -1177,7 +1183,7 @@ BODY.hamburger #docker_controls H3 {
     font-size: 13px;
     padding: 5px 10px;
     background: #d68ee03b;;
-    color: #ffffff80;
+    color: #ffffffd4;
     text-decoration: none;
     cursor: pointer;
     float: right;
@@ -1196,6 +1202,7 @@ BODY.hamburger #docker_controls H3 {
     margin-top: 5px;
     text-align: right;
     float: none;
+    overflow: hidden;
 }
 
 #service_list .collapse-handle:hover {
@@ -2564,7 +2571,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     transform: translateY(-50%) translateX(-50%);
     left: 50%;
     width: 100%;
-    border-radius: 5px;
+    /* border-radius: 5px; */
 }
 
 .video_overlay {

@@ -1535,7 +1535,7 @@ export class PanelUI {
             if (!node.services || !Object.keys(node.services).length)
                 return;
 
-            let node_content = $('<div class="node" data-node="' + node.node + '">' + node.node + '</div>');
+            let node_label_el = $('<div class="node">' + node.node + '</div>');
             let prefered_services = [];
             let collapsed_services = [];
             let service_ids = Object.keys(node.services);
@@ -1579,7 +1579,10 @@ export class PanelUI {
             }
 
             if (prefered_services.length || collapsed_services.length) {
-                $('#service_list').append(node_content);
+                $('#service_list').append(node_label_el);
+                if (collapsed_services.length && !prefered_services.length) {
+                    node_label_el.addClass('only-collapsed');
+                }
 
                 if (prefered_services.length) {
                     for (let i = 0; i < prefered_services.length; i++)
@@ -1599,11 +1602,15 @@ export class PanelUI {
                             handle.removeClass(cls);
                             collapsed_cont.addClass('open');
                             handle.text('Show less');
+                            node_label_el.removeClass('only-collapsed');
                         } else {
                             handle.removeClass('open');
                             handle.addClass(cls);
                             collapsed_cont.removeClass('open');
                             handle.text(more_label);
+                            if (!prefered_services.length) {
+                                node_label_el.addClass('only-collapsed');
+                            }
                         }
                     });
                     $('#service_list').append([ collapsed_cont, handle, $('<span class="cleaner"></span>') ]);
@@ -2554,10 +2561,22 @@ export class PanelUI {
             btn_el.removeClass('working');
 
         let is_err = false;
+        let err_in_resuls = false;
+        if (service_reply.results && Array.isArray(service_reply.results)) {
+            service_reply.results.forEach((res)=>{
+                if (res.successful === false) {
+                    err_in_resuls = true;
+                    return
+                }
+            }); 
+        }
+        if (service_reply.result && service_reply.result.successful === false)
+            err_in_resuls = true;
+        
         if (service_reply.err) { // showing errors always
             this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
             is_err = true;
-        } else if (service_reply.success === false || service_reply.error)  { // showing errors always
+        } else if (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)  { // showing errors always
             this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
             is_err = true;
         } else if (service_reply.success === true) { //std set bool & trugger
