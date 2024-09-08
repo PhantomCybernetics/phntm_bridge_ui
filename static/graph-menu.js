@@ -237,6 +237,17 @@ export class GraphMenu {
             node_offset += h + 2 + 16;
             let node_el = $('<div class="graph_node"></div>');
             let box_el = $('<div class="box" style="height:'+h+'px;">'+id_node+'</div>')
+            
+            if (this.ui.client.discovered_nodes[id_node] && this.ui.client.discovered_nodes[id_node].params_editable) {  
+                let params_icon_el = $('<span class="params-edit-icon" title="Edit runtime ROS parameters"></span>')
+                params_icon_el.click((e)=>{
+                    e.cancelBubble = true;
+                    e.stopPropagation();
+                    that.ui.node_params_dialog.show(this.ui.client.discovered_nodes[id_node]);
+                });
+                node_el.append(params_icon_el);
+            }
+            
             node_el.prepend(box_el);
             this.nodes[id_node].el = box_el;
             this.node_container_el.append(node_el);

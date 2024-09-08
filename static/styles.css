@@ -581,6 +581,28 @@ BODY.narrower .narrower-w { display: inline; }
     /* height: 27px; */
 }
 
+.graph_node .params-edit-icon {
+    display: block;
+    width: 35px;
+    height: 28px;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    /* background-color: red; */
+    background-image: url(/static/graph/icon-config.png);
+    background-repeat: no-repeat;
+    background-position: -37px center;
+    background-size: 134px;
+    cursor: pointer;
+    max-height: calc(100% - 2px);
+    border-radius: 5px;
+}
+
+.graph_node .params-edit-icon:hover {
+    background-color: black;
+    /* background-position: -83px center; */
+}
+
 .graph_node .box.dimmed,
 .graph_topic .box.dimmed {
     opacity: 50%;
@@ -606,6 +628,7 @@ BODY.desktop-ui .narrow .graph_topic .box:hover {
 .graph_topic,
 .graph_node {
     padding-bottom: 2px;
+    position: relative;
 }
 
 .graph_topic .box {
@@ -5040,7 +5063,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     position: absolute;
     bottom: 10px;
     left: 10px;
-    right: 10px;
+    right: 5px;
 } 
 
 
@@ -5081,12 +5104,14 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .service_button.working,
 .service_button.working:hover,
 #service-input-dialog BUTTON.btn-save.working,
-#service-input-dialog BUTTON.btn-call.working {
+#service-input-dialog BUTTON.btn-call.working,
+#node-params-dialog BUTTON.btn-save.btn.working {
     cursor: wait;
     background: #ff8c00 !important;
 }
 
-#service-input-dialog BUTTON.btn-save:hover {
+#service-input-dialog BUTTON.btn-save:hover,
+#node-params-dialog BUTTON.btn-save:hover {
     background-color: rgb(7, 157, 7);
 }
 
@@ -5694,4 +5719,135 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     opacity: 1;
 }
 
+
+
+#node-params-dialog {
+    display: none;
+    z-index: 200;
+    position: absolute;
+    /* width: 80vw;
+    height: 60vh; */
+    left: calc(50% - Min(40vw, 275px) - 15px);
+    top: calc(10vh - 10px);
+    /* background-color: #b311a3; */
+    background-color: #b1adad; 
+    border-radius: 10px;
+    padding: 10px 10px 10px 10px;
+    width: 80vw;
+    max-width: 550px;
+} 
+
+#node-params-dialog.narrow,
+#node-params-dialog.thin {
+    width: calc(100% - 40px);
+    left: 10px;
+    top: -40px;
+    max-width: unset; /* expand to full w*/
+}
+
+#node-params-dialog H3 {
+    font-size: 20px;
+    display: block;
+    margin: 0px 0px 3px 0px;
+    padding: 0px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+}
+
+#node-params-dialog .title {
+    font-size: 12px;
+    display: inline-block;
+    color: #fff;
+    margin-bottom: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#node-params-dialog .buttons {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 5px;
+} 
+
+
+#node-params-dialog .buttons BUTTON {
+    background: #332f2f;
+    color: white;
+    font-weight: bold;
+    border: 0px;
+    border-radius: 5px;
+    padding: 0px 10px;
+    margin: 0px 5px 0px 0px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    /* width: 65px; */
+    height: 40px;
+    line-height: 42px;
+    position: relative;
+    cursor: pointer;
+    float: right;
+}
+
+#node-params-dialog BUTTON:hover {
+    background-color: #433e3e;
+}
+
+#node-params-dialog BUTTON.btn-close {
+    float: left;
+}
+
+#node-params-dialog BUTTON.btn-save {
+    padding-left: 20px;
+    padding-right: 20px;
+    background-color: green;
+}
+
+#node-params-dialog .params-list {
+    height: calc(60vh - 60px);
+    background-color: #5b5252;
+    color: #fff;
+    padding: 5px;
+    font-size: 15px;
+    border-radius: 5px;
+    overflow: scroll;
+    overscroll-behavior: none;
+    scrollbar-width: none;
+    top: 0px;
+    margin-bottom: 45px;
+    position: relative;
+    border-top: 5px solid #5b5252;
+    border-bottom: 5px solid #5b5252;
+}
+
+#node-params-dialog.narrow .params-list,
+#node-params-dialog.thin .params-list {
+    height: calc(100vh - 175px);
+}
+
+#node-params-dialog .param-name {
+    font-weight: bold;
+    line-height: 30px;
+    padding: 0px 4px;
+    cursor: pointer;
+}
+
+#node-params-dialog .param-name:hover {
+    background-color: rgba(255, 255, 255, 0.01);
+}
+
+#node-params-dialog .param-name:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.064);
+}
+#node-params-dialog .param-name:nth-child(even):hover {
+    background-color: rgba(255, 255, 255, 0.105);
+}
+
+#node-params-dialog .param-type {
+    font-weight: normal;
+    float: right;
+    opacity: 0.5;
+}
 

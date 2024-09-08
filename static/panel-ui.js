@@ -8,6 +8,7 @@ import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "
 import { FallbackServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
 
 import { ServiceInputDialog } from "./widgets/inc/service_input_dialog.js"
+import { NodeParamsDialog } from "./widgets/inc/node_params_dialog.js"
 
 export class PanelUI {
 
@@ -95,6 +96,7 @@ export class PanelUI {
         this.collapse_services = null; // str [] when received
         this.collapse_unhandled_services = false;
         this.service_input_dialog = new ServiceInputDialog(client);
+        this.node_params_dialog = new NodeParamsDialog(client);
         this.default_service_btns = null; // from the robot
         this.service_btns = {}; //id srv => btn[]
         this.service_btns_edited = {}; // editor's working copy
@@ -2302,6 +2304,7 @@ export class PanelUI {
     update_layout() {
 
         this.service_input_dialog.update_layout();
+        this.node_params_dialog.update_layout();
 
         let h_extra = 10 + 10 + 5; // 2x padding + margin right
         let menu_item_widths = {

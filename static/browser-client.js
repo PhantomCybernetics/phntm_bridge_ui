@@ -325,6 +325,7 @@ export class PhntmBridgeClient extends EventTarget {
                         publishers: {},
                         subscribers: {},
                         services: {},
+                        params_editable: false
                     }
                     if (nodes_data[this.id_robot][node]['publishers']) {
                         let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
@@ -355,6 +356,20 @@ export class PhntmBridgeClient extends EventTarget {
                             this.discovered_nodes[node].services[service] = {
                                 service: service,
                                 msg_type: msg_type
+                            }
+
+                            if (msg_type == 'rcl_interfaces/srv/ListParameters')
+                                this.discovered_nodes[node]['_srvListParameters'] = service;
+                            if (msg_type == 'rcl_interfaces/srv/GetParameters')
+                                this.discovered_nodes[node]['_srvGetParameters'] = service;
+                            if (msg_type == 'rcl_interfaces/srv/SetParameters')
+                                this.discovered_nodes[node]['_srvSetParameters'] = service;
+
+                            if (this.discovered_nodes[node]['_srvListParameters'] &&
+                                this.discovered_nodes[node]['_srvGetParameters'] &&
+                                this.discovered_nodes[node]['_srvSetParameters']
+                            ) {
+                                this.discovered_nodes[node].params_editable = true;
                             }
                         })
                     }

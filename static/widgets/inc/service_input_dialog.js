@@ -796,7 +796,6 @@ export class ServiceInputDialog {
     }
 
     hide() {
-
         this.cont_el.hide();
         this.bg.unbind().hide();
         $('BODY').removeClass('no-scroll');
