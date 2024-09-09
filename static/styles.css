@@ -5105,7 +5105,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .service_button.working:hover,
 #service-input-dialog BUTTON.btn-save.working,
 #service-input-dialog BUTTON.btn-call.working,
-#node-params-dialog BUTTON.btn-save.btn.working {
+#node-params-dialog BUTTON.working {
     cursor: wait;
     background: #ff8c00 !important;
 }
@@ -5527,7 +5527,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin-left: 5px;
 }
 
-#json-editor {
+#service-input-dialog .json-editor,
+#node-params-dialog .json-editor {
     height: calc(60vh - 100px);
     background-color: #d78ee0;
     color: #fff;
@@ -5544,12 +5545,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     border-bottom: 5px solid #d78ee0;
 }
 
-#service-input-dialog.narrow #json-editor,
-#service-input-dialog.thin #json-editor {
+#service-input-dialog.narrow .json-editor,
+#service-input-dialog.thin .json-editor {
     height: calc(100vh - 225px);
 }
 
-#json-editor I {
+.json-editor I {
     display: block;
     font-size: 28px;
     font-style: normal;
@@ -5561,33 +5562,33 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     opacity: 0.6;
 }
 
-#json-editor I B {
+.json-editor I B {
     font-weight: normal;
     /* display: none; */
     font-size: 20px;
 }
 
-#json-editor  .inline {
+.json-editor  .inline {
     display: inline-block;
 }
 
-#json-editor .end-line {
+.json-editor .end-line {
     position: absolute;
     right: 14px;
     top: 0px;
 }
 
-#json-editor  .last-in-block .end-line,
-#json-editor  .last-in-block > B {
+.json-editor  .last-in-block .end-line,
+.json-editor  .last-in-block > B {
     display: none;
 }
 
-#json-editor .line {
+.json-editor .line {
     position: relative;
     height: 34px;;
 }
 
-#json-editor .label {
+.json-editor .label {
     line-height: 30px;
     height: 30px;
     margin: 2px 10px 2px 0px;
@@ -5596,29 +5597,20 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     /* font-weight: bold; */
 }
 
-/* #json-editor .hint {
-    color: #ecafed;
-    font-size: 12px;
-    display: inline;
-    line-height: 20px;
-    height: 20px;
-    margin: 2px 0px 2px 5px;
-} */
-
-#json-editor  .block {
+.json-editor  .block {
     border-left: 1px dashed #ffffff3b;
     padding-left: 25px;
     margin-bottom: 5px;
     margin-left: 5px;
 }
 
-#service-input-dialog.narrow #json-editor .block {
+#service-input-dialog.narrow .json-editor .block,
+#node-params-dialog .narrow .json-editor .block {
     padding-left: 15px;
 }
 
-
-#json-editor .add,
-#json-editor .remove {
+.json-editor .add,
+.json-editor .remove {
     background-color: #bb61d066;
     color: white;
     font-weight: bold;
@@ -5634,24 +5626,24 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     font-size: 12px;
 }
 
-#json-editor .remove.hidden {
+.json-editor .remove.hidden {
     display: none;
 }
 
-#json-editor .add:hover {
-    background-color: #2f8b63;
+.json-editor .add:hover {
+    background-color: #2f8b63 !important;
 }
 
-#json-editor .remove:hover {
-    background-color: #c10303;
+.json-editor .remove:hover {
+    background-color: #c10303 !important;
 }
 
-#json-editor .remove {
+.json-editor .remove {
     margin-left: 5px;
 }
 
-#json-editor .add SPAN,
-#json-editor .remove SPAN {
+.json-editor .add SPAN,
+.json-editor .remove SPAN {
     display: block;
     background-image: url(/static/graph/icon-plus.png);
     width: 20px;
@@ -5664,11 +5656,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin-left: 6px;
 }
 
-#json-editor .remove SPAN {
+.json-editor .remove SPAN {
     background-image: url(/static/graph/remove.png);
 }
 
-#json-editor .val_wrap {
+.json-editor .val_wrap {
     height: 34px;
     margin-right: 20px;
     position: relative;
@@ -5676,7 +5668,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     overflow: hidden;
 }
 
-#json-editor INPUT, #json-editor SELECT {
+.json-editor INPUT, .json-editor SELECT {
     color: white;
     background-color: #bb61d0;
     font-weight: normal;
@@ -5697,12 +5689,13 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     right: 0px;
 }
 
-#json-editor INPUT.err {
+#service-input-dialog .json-editor INPUT.err,
+#node-params-dialog .json-editor INPUT.err {
     color: white;
     background: red;
 }
 
-#json-editor .val_wrap .hint{
+.json-editor .val_wrap .hint{
     color: white;
     font-size: 14px;
     opacity: .3;
@@ -5713,12 +5706,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     padding: 2px 5px;
 }
 
-#json-editor .val_wrap .hint.err {
-    color: white;
-    background: red;
+.json-editor .val_wrap .hint.err {
+    color: white !important;
+    background: red !important;
     opacity: 1;
 }
-
 
 
 #node-params-dialog {
@@ -5771,6 +5763,20 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     right: 5px;
 } 
 
+#node-params-dialog .pram-buttons {
+    position: absolute;
+    top: -5px;
+    right: 5px;
+    display: none;
+    border-radius: 0px 0px 5px 5px;
+    background-color: black;
+    padding: 0px 2px 8px 7px;
+    border-radius: 0px 0px 10px 10px;
+} 
+
+#node-params-dialog .pram-buttons.editor-open {
+    display: block;
+}
 
 #node-params-dialog .buttons BUTTON {
     background: #332f2f;
@@ -5822,9 +5828,54 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     border-bottom: 5px solid #5b5252;
 }
 
+#node-params-dialog .json-editor { /* half split editor */
+    display: none;
+    background-color: black;
+    color: #fff;
+    top: unset;
+    border-top: 6px solid black;
+    border-bottom: 6px solid black;
+    height: calc(30vh - 30px - 40px - 12px);
+    margin-bottom: 45px;
+    border-radius: 5px 5px 0px 5px;
+    padding: 20px 10px 20px 20px;
+    margin-top: -5px;
+}
+
+#node-params-dialog .params-list.editor-open { /* half split list */
+    height: calc(30vh - 30px + 5px); 
+    margin-bottom: 0px;
+    border-radius: 5px 5px 0px 0px;
+}
+
+#node-params-dialog .params-list.editor-open.one-line-editor { /* one line editor list */
+    height: calc(60vh - 60px + 5px - 34px - 20px);
+}
+
+#node-params-dialog .json-editor.open {
+    display: block;
+}
+
+#node-params-dialog .json-editor.one-line {  /* one line editor */
+    height: 34px;
+    padding: 10px;
+    border-top: unset;
+    border-bottom: unset;
+}
+
 #node-params-dialog.narrow .params-list,
 #node-params-dialog.thin .params-list {
     height: calc(100vh - 175px);
+}
+
+#node-params-dialog.narrow .params-list.editor-open ,
+#node-params-dialog.thin .params-list.editor-open  {
+    height: calc(50vh - 88px - 0px);
+}
+
+#node-params-dialog.narrow .json-editor.open ,
+#node-params-dialog.thin .json-editor.open  {
+    height: calc(50vh - 87px);
 }
 
 #node-params-dialog .param-name {
@@ -5832,17 +5883,27 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     line-height: 30px;
     padding: 0px 4px;
     cursor: pointer;
+    position: relative;
 }
 
 #node-params-dialog .param-name:hover {
-    background-color: rgba(255, 255, 255, 0.01);
+    background-color: #ffffff3b !important;
+}
+
+#node-params-dialog .param-name.selected, #node-params-dialog .param-name.selected:hover  {
+     background-color: #ff8c00 !important;
+}
+
+#node-params-dialog .param-name:first-child {
+    margin-top: -5px;
+}
+
+#node-params-dialog .param-name:last-child {
+    margin-bottom: -5px;
 }
 
 #node-params-dialog .param-name:nth-child(even) {
     background-color: rgba(255, 255, 255, 0.064);
-}
-#node-params-dialog .param-name:nth-child(even):hover {
-    background-color: rgba(255, 255, 255, 0.105);
 }
 
 #node-params-dialog .param-type {
@@ -5851,3 +5912,43 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     opacity: 0.5;
 }
 
+#node-params-dialog .load-err {
+    background-color: red;
+    position: absolute;
+    left: 50%;
+    top: calc(50% - 15px);
+    line-height: 20px;
+    text-align: center;
+    display: inline-block;
+    transform: translate(-50%, 0px);
+    padding: 5px;
+    border-radius: 5px;
+}
+
+#node-params-dialog .loader {
+    background-image: url(/static/graph/spinner-params.svg);
+    width: 50px;
+    height: 50px;
+    display: block;
+    position: absolute;
+    left: calc(50% - 25px);
+    top: calc(50% - 25px);
+    background-size: 50px;
+}
+
+#node-params-dialog .json-editor INPUT, #node-params-dialog .json-editor SELECT {
+    background-color: white;
+    color: black;
+}
+
+#node-params-dialog .json-editor.one-line .val_wrap {
+    margin-right: unset;
+}
+
+#node-params-dialog .json-editor .val_wrap .hint {
+    color: black;
+}
+
+#node-params-dialog .json-editor .add, #node-params-dialog  .json-editor .remove {
+    background-color: #675d5d7a;
+}

@@ -116,7 +116,7 @@ export class ServiceInputDialog {
         this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
         this.cont_el.append(this.menu_underlay);
 
-        this.editor = $('<div id="json-editor"></div>');
+        this.editor = $('<div class="json-editor"></div>');
 
         this.bottom_btns_el = $('<div class="buttons"></div>');
         
@@ -447,7 +447,7 @@ export class ServiceInputDialog {
         });
     }
 
-    validate(val, type, val_inp, type_hint) {
+    static Validate(val, type, val_inp, type_hint) {
         let err = false;
         let res = null;
         switch (type) {
@@ -508,7 +508,7 @@ export class ServiceInputDialog {
         return res;
     }
 
-    make_primitive_type(field, default_value, make_label, last_in_block, onVal) {
+    static MakePrimitiveType(field, default_value, make_label, last_in_block, onVal) {
         let line = $('<div class="line"></div>')
         if (make_label)
             line.append($('<div class="label">'+field.name+':</div>'));
@@ -544,21 +544,21 @@ export class ServiceInputDialog {
             val_inp = $('<input type="text"/>');
             val_inp.val(val);
             val_inp.change((ev)=>{
-                val = that.validate($(ev.target).val(), field.type, val_inp, type_hint);
+                val = ServiceInputDialog.Validate($(ev.target).val(), field.type, val_inp, type_hint);
                 onVal(val);
             });
         } else if (inp_type_grp == 'int') {
             val_inp = $('<input type="text"/>');
             val_inp.val(val);
             val_inp.change((ev)=>{
-                val = that.validate($(ev.target).val(), field.type, val_inp, type_hint);
+                val = ServiceInputDialog.Validate($(ev.target).val(), field.type, val_inp, type_hint);
                 onVal(val);
             });
         } else if (inp_type_grp == 'float') {
             val_inp = $('<input type="text"/>');
             val_inp.val(val.toFixed(1));
             val_inp.change((ev)=>{
-                val = that.validate($(ev.target).val(), field.type, val_inp, type_hint);
+                val = ServiceInputDialog.Validate($(ev.target).val(), field.type, val_inp, type_hint);
                 onVal(val);
             });
         } else if (inp_type_grp == 'bool') {
@@ -566,7 +566,7 @@ export class ServiceInputDialog {
             val_inp.val(val ? 'true' : 'false');
             type_hint = null;
             val_inp.change((ev)=>{
-                val = that.validate($(ev.target).val(), field.type);
+                val = ServiceInputDialog.Validate($(ev.target).val(), field.type);
                 onVal(val);
             });
         } else if (inp_type_grp == 'time' || inp_type_grp == 'duration') { // UNTESTED
@@ -578,12 +578,12 @@ export class ServiceInputDialog {
             val_inp.append( [ val_inp_sec, val_inp_nsec ] );
             type_hint = $('<span class="hint">int32 / int32</span>');
             val_inp_sec.change((ev)=>{
-                let sec_val = that.validate($(ev.target).val(), 'int32', val_inp_sec, type_hint);
+                let sec_val = ServiceInputDialog.Validate($(ev.target).val(), 'int32', val_inp_sec, type_hint);
                 val.sec = sec_val;
                 onVal(val);
             });
             val_inp_nsec.change((ev)=>{
-                let nsec_val = that.validate($(ev.target).val(), 'int32', val_inp_nsec, type_hint);;
+                let nsec_val = ServiceInputDialog.Validate($(ev.target).val(), 'int32', val_inp_nsec, type_hint);;
                 val.nsec = nsec_val;
                 onVal(val);
             });
@@ -598,6 +598,77 @@ export class ServiceInputDialog {
         line.append($('<div class="cleaner"/>'));
 
         return { 'val': val, 'line':line };
+    }
+
+    static MakePrimitiveArray(field, default_value, block, is_last_in_block, onVal) {
+        let arr_label = $('<div class="label">'+field.name+':</div><i class="array-open inline">[</i><div class="cleaner"/>');
+        let arr_block = $('<div class="block"></div>');
+        
+        let vals_block = $('<div></div>');
+    
+        let arrayLength = field.arrayLength ?? (default_value ? default_value.length : 0);
+        console.log('init; arrayLength: '+arrayLength, default_value);
+        for (let j = 0; j < arrayLength; j++) {
+            // let i = msg[field.name].length;
+            let one_default_value = default_value && default_value[j] ? default_value[j] : null;
+            const r = ServiceInputDialog.MakePrimitiveType(field, one_default_value, false, j == arrayLength-1, (val) => {
+                onVal(j, val);
+            });
+            onVal(j, one_default_value);
+            vals_block.append(r.line);
+            console.log('j: '+j+'; arrayLength: '+arrayLength);
+        }
+
+        arr_block.append(vals_block);
+
+        arr_block.append($('<div class="cleaner"/>'));
+        let add_btn = ($('<a href="#" class="add"/><span></span>Add</a>'));
+        arr_block.append(add_btn);
+        let rem_btn = ($('<a href="#" class="remove"/><span></span>Trim</a>'));
+        if (!arrayLength)
+            rem_btn.addClass('hidden');
+        arr_block.append([add_btn, rem_btn]);
+        arr_block.append($('<div class="cleaner"/>'));
+
+        add_btn.click((ev)=>{
+            arrayLength++;
+            let j = arrayLength-1;
+            let one_default_value = null;
+            const r = ServiceInputDialog.MakePrimitiveType(field, one_default_value, false, true, (val) => {
+                onVal(j, val);
+            });
+            onVal(j, one_default_value);
+            // msg[field.name].push(r.val);
+            vals_block.append(r.line);
+            vals_block.children('.last-in-block').removeClass('last-in-block');
+            r.line.addClass('last-in-block');
+
+            rem_btn.removeClass('hidden');
+
+            return false
+        });
+
+        rem_btn.click((ev)=>{
+            if (arrayLength) {
+                // msg[field.name].pop();
+                arrayLength--;
+
+                console.log('arrayLength: ', arrayLength);
+
+                vals_block.children().last().remove();
+                onVal(); //pop last
+
+                if (arrayLength) {
+                    vals_block.children().last().addClass('last-in-block');
+                } else {
+                    rem_btn.addClass('hidden');
+                }
+            }
+            
+            return false;
+        });
+        
+        block.append( [arr_label, arr_block, $('<i class="array-close">]'+(!is_last_in_block ? '<b>,</b>' : '')+'</i>')] );
     }
 
     process_msg_template(msg_type, value, label, last_in_block = true) {
@@ -708,73 +779,21 @@ export class ServiceInputDialog {
                     
                     if (field.isArray === true) { // array of primitives
                         
-                        let arr_label = $('<div class="label">'+field.name+':</div><i class="array-open inline">[</i><div class="cleaner"/>');
-                        let arr_block = $('<div class="block"></div>');
-                        
-                        let vals_block = $('<div></div>');
-                        
                         if (!msg[field.name])
-                            msg[field.name] = [];
+                            msg[field.name] = []; //make ref here
                         else
-                            msg[field.name].length = 0;
+                            msg[field.name].length = 0; //reset
 
-                        const arrayLength = field.arrayLength ?? (value && value[field.name] ? value[field.name].length : 0);
-                        for (let j = 0; j < arrayLength; j++) {
-                            // let i = msg[field.name].length;
-                            const r = this.make_primitive_type(field, value[field.name] && value[field.name][j] ? value[field.name][j] : null, false, j == arrayLength-1, (val) => {
-                                msg[field.name][j] = val;    
-                            });
-                            msg[field.name][j] = r.val;
-                            vals_block.append(r.line);
-                        }
-
-                        arr_block.append(vals_block);
-
-                        arr_block.append($('<div class="cleaner"/>'));
-                        let add_btn = ($('<a href="#" class="add"/><span></span>Add</a>'));
-                        arr_block.append(add_btn);
-                        let rem_btn = ($('<a href="#" class="remove"/><span></span>Trim</a>'));
-                        if (!arrayLength)
-                            rem_btn.addClass('hidden');
-                        arr_block.append([add_btn, rem_btn]);
-                        arr_block.append($('<div class="cleaner"/>'));
-
-                        add_btn.click((ev)=>{
-                            let i = msg[field.name].length;
-                            const r = this.make_primitive_type(field, value && value[field.name] && value[field.name][i] ? value[field.name][i] : null, false, true, (val) => {
-                                msg[field.name][i] = val;    
-                            });
-                            msg[field.name].push(r.val);
-                            vals_block.append(r.line);
-                            vals_block.children('.last-in-block').removeClass('last-in-block');
-                            r.line.addClass('last-in-block');
-
-                            rem_btn.removeClass('hidden');
-
-                            return false
+                        ServiceInputDialog.MakePrimitiveArray(field, value ? value[field.name] : null, block, i == msg_class.definitions.length-1, (index, val) => {
+                            if (index === undefined && val === undefined)
+                                msg[field.name].pop(); // trimmed
+                            else
+                                msg[field.name][index] = val; 
                         });
-
-                        rem_btn.click((ev)=>{
-                            if (msg[field.name].length) {
-                                msg[field.name].pop();
-
-                                vals_block.children().last().remove();
-                                if (msg[field.name].length) {
-                                    vals_block.children().last().addClass('last-in-block');
-                                } else {
-                                    rem_btn.addClass('hidden');
-                                }
-                            }
-                            
-                            return false;
-                        });
-                        
-                        block.append( [arr_label, arr_block, $('<i class="array-close">]'+(i < msg_class.definitions.length-1 ? '<b>,</b>' : '')+'</i>')] );
-                        
                     }
                     else { // single primitive type
                         
-                        const r = this.make_primitive_type(field, value ? value[field.name] : null, true, i == msg_class.definitions.length-1, (val) => {
+                        const r = ServiceInputDialog.MakePrimitiveType(field, value ? value[field.name] : null, true, i == msg_class.definitions.length-1, (val) => {
                             msg[field.name] = val;
                         });
                         msg[field.name] = r.val;
