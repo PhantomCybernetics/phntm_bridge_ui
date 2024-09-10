@@ -620,7 +620,7 @@ export class ServiceInputDialog {
             });
             onVal(j, one_default_value);
             vals_block.append(r.line);
-            console.log('j: '+j+'; arrayLength: '+arrayLength);
+            // console.log('j: '+j+'; arrayLength: '+arrayLength);
         }
 
         arr_block.append(vals_block);

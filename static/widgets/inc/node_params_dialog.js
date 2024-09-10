@@ -40,6 +40,8 @@ export class NodeParamsDialog {
 
         param_label_el.addClass('selected');
         this.selected_param_label = param_label_el;
+        this.selected_param_name = name;
+        this.selected_param_detail = detail;
 
         this.render_param(name, detail, i_list_param);
     }
@@ -50,7 +52,11 @@ export class NodeParamsDialog {
             type: null,
             name: name,
         }
+
+        console.log('rendering param input for '+name, detail)
+
         let default_value = null;
+
         let is_array = false;
         switch (detail['type']) {
             case 1: field.type = 'bool'; default_value = detail.bool_value; break;
@@ -58,52 +64,56 @@ export class NodeParamsDialog {
             case 3: field.type = 'float64'; default_value = detail.double_value; break;
             case 4: field.type = 'string'; default_value = detail.string_value; break;
 
-            case 5: field.type = 'int8'; is_array = true; default_value = detail.byte_array_value; break;
-            case 6: field.type = 'bool'; is_array = true; default_value = detail.bool_array_value; break;
-            case 7: field.type = 'int64'; is_array = true; default_value = detail.integer_array_value; break;
-            case 8: field.type = 'float64'; is_array = true; default_value = detail.double_array_value; break;
-            case 9: field.type = 'string'; is_array = true; default_value = detail.string_array_value; break;
+            case 5: field.type = 'uint8'; is_array = true; default_value = [].concat(detail.byte_array_value); break;
+            case 6: field.type = 'bool'; is_array = true; default_value = [].concat(detail.bool_array_value); break;
+            case 7: field.type = 'int64'; is_array = true; default_value = [].concat(detail.integer_array_value); break;
+            case 8: field.type = 'float64'; is_array = true; default_value = [].concat(detail.double_array_value); break;
+            case 9: field.type = 'string'; is_array = true; default_value = [].concat(detail.string_array_value); break;
         }
 
+        this.output_value = default_value;
+
         this.editor_el.empty();
+        // this.param_value = 
 
         let editor_size = this.editor_size;
         
+        let that = this;
+
         if (is_array) {
             editor_size = 2;
-            // this.list_el.addClass('param-array');
+            
             this.list_el.removeClass('one-line-editor');
             this.editor_el.removeClass('one-line');
 
-            // let block = $('<div class="block"></div>');
             ServiceInputDialog.MakePrimitiveArray(field, default_value, this.editor_el, true, (index, val) => {
-                console.log('Val ['+index+'] changed to ', val);
+                console.log('Output val ['+index+'] changed to ', val);
+                if (index === undefined && val === undefined)
+                    that.output_value.pop(); // trimmed
+                else
+                    that.output_value[index] = val;
             });
-            
-            // this.editor_el.append(block);
-
-            // this.editor_el.append();
+    
         } else {
             editor_size = 1;
-            // this.list_el.removeClass('param-array');
             this.list_el.addClass('one-line-editor');
             this.editor_el.addClass('one-line');
             const r = ServiceInputDialog.MakePrimitiveType(field, default_value, true, true, (val) => {
-                console.log('Val changed to ', val);
+                console.log('Output val changed to ', val);
+                that.output_value = val;
                 // msg[field.name] = val;
             });
             // msg[field.name] = r.val;
             this.editor_el.append(r.line);
         }
 
-        if (editor_size > this.editor_size) { //fix scroll when list gets smaller
+        //fix scroll when list gets smaller
+        if (editor_size > this.editor_size) { 
             let scroll_offset = i_list_param * 30 - this.list_el.height()/2.0;
-            // console.log('scroll_offset:', scroll_offset);
+            console.log('scroll_offset:', scroll_offset);
             this.list_el.scrollTop(scroll_offset);
         }
         this.editor_size = editor_size;
-            
-
     }
 
     show(node) {
@@ -155,8 +165,6 @@ export class NodeParamsDialog {
             });
         });
 
-
-
         this.bottom_btns_el = $('<div class="buttons"></div>');
         let btn_close = $('<button class="btn-close">Close</button>');
         btn_close.click((ev)=>{
@@ -170,12 +178,41 @@ export class NodeParamsDialog {
         
             btn_reload.addClass('working');
 
-            // that.client.ui.save_service_buttons(service.service, this.btns);
-            // that.client.ui.render_service_menu_btns(service, that.msg_type);
-
-            setTimeout(()=>{
+            this.client.service_call(node['_srvGetParameters'], { "names": [ that.selected_param_name ] }, true, (detail_reply) =>{
+                that.client.ui.service_reply_notification(btn_reload, node['_srvGetParameters'], false, detail_reply);
                 btn_reload.removeClass('working');
-            }, 100)
+
+                if (detail_reply.err) {
+                    that.editor_el.empty();
+                    that.editor_el.append($('<div class="load-err">'+(detail_reply.msg?detail_reply.msg:'Error while fetching param')+'</div>'));
+                    return;
+                }
+                
+                that.selected_param_detail.bool_value = detail_reply.values[0].bool_value;
+                that.selected_param_detail.integer_value = detail_reply.values[0].integer_value;
+                that.selected_param_detail.double_value = detail_reply.values[0].double_value;
+                that.selected_param_detail.string_value = detail_reply.values[0].string_value;
+
+                that.selected_param_detail.byte_array_value.length = 0;
+                that.selected_param_detail.byte_array_value.push(...detail_reply.values[0].byte_array_value)
+
+                that.selected_param_detail.bool_array_value.length = 0;
+                that.selected_param_detail.bool_array_value.push(...detail_reply.values[0].bool_array_value)
+                
+                that.selected_param_detail.integer_array_value.length = 0;
+                that.selected_param_detail.integer_array_value.push(...detail_reply.values[0].integer_array_value)
+
+                that.selected_param_detail.double_array_value.length = 0;
+                that.selected_param_detail.double_array_value.push(...detail_reply.values[0].double_array_value)
+
+                that.selected_param_detail.string_array_value.length = 0;
+                that.selected_param_detail.string_array_value.push(...detail_reply.values[0].string_array_value)
+
+                console.log('local detail val set to', that.selected_param_detail);
+
+                that.render_param(that.selected_param_name, that.selected_param_detail, -1);
+            });
+
         }); 
 
         let btn_set = $('<button class="btn-save">Set</button>');
@@ -183,12 +220,64 @@ export class NodeParamsDialog {
         
             btn_set.addClass('working');
 
-            // that.client.ui.save_service_buttons(service.service, this.btns);
-            // that.client.ui.render_service_menu_btns(service, that.msg_type);
+            console.log('setting val ', that.output_value);
 
-            setTimeout(()=>{
+            let param_val = {
+                name: that.selected_param_name,
+                value: {
+                    type: that.selected_param_detail.type,
+                    bool_value: false,
+                    integer_value: 0,
+                    double_value: 0.0,
+                    string_value: '',
+                    byte_array_value: [],
+                    bool_array_value: [],
+                    integer_array_value: [],
+                    double_array_value: [],
+                    string_array_value: [],
+                }
+            }
+            switch (param_val.value.type) {
+                case 1: param_val.value.bool_value = that.output_value; break;
+                case 2: param_val.value.integer_value = that.output_value; break;
+                case 3: param_val.value.double_value = that.output_value; break;
+                case 4: param_val.value.string_value = that.output_value; break;
+                case 5:
+                    param_val.value.byte_array_value = that.output_value;
+                    for (let j = 0; j < param_val.value.byte_array_value.length; j++)
+                        param_val.value.byte_array_value[j] = param_val.value.byte_array_value[j] === null ? 0 : param_val.value.byte_array_value[j];
+                    break;
+                case 6:
+                    param_val.value.bool_array_value = that.output_value;
+                    for (let j = 0; j < param_val.value.bool_array_value.length; j++)
+                        param_val.value.bool_array_value[j] = param_val.value.bool_array_value[j] === null ? false : param_val.value.bool_array_value[j];
+                    break;
+                case 7:
+                    param_val.value.integer_array_value = that.output_value;
+                    for (let j = 0; j < param_val.value.integer_array_value.length; j++)
+                        param_val.value.integer_array_value[j] = param_val.value.integer_array_value[j] === null ? 0 : param_val.value.integer_array_value[j];
+                    break;
+                case 8:
+                    param_val.value.double_array_value = that.output_value;
+                    for (let j = 0; j < param_val.value.double_array_value.length; j++)
+                        param_val.value.double_array_value[j] = param_val.value.double_array_value[j] === null ? 0.0 : param_val.value.double_array_value[j];
+                    break;
+                case 9:
+                    param_val.value.string_array_value = that.output_value;
+                    for (let j = 0; j < param_val.value.string_array_value.length; j++)
+                        param_val.value.string_array_value[j] = param_val.value.string_array_value[j] === null ? '' : param_val.value.string_array_value[j];
+                    break;
+            }
+            
+            console.log('param val ', param_val);
+
+            that.client.service_call(node['_srvSetParameters'], { 'parameters' : [ param_val ] } , true, (set_reply) =>{
+                that.client.ui.service_reply_notification(btn_set, node['_srvSetParameters'], false, set_reply);
                 btn_set.removeClass('working');
-            }, 100)
+                if (set_reply['results'] && set_reply['results'].length == 1 && set_reply['results'][0]['successful'] === true) {
+                    btn_reload.trigger('click');
+                }
+            });
         }); 
 
         this.param_btns_el.append([ btn_set, btn_reload ]);
