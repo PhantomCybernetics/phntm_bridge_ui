@@ -5737,14 +5737,16 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 }
 
 .json-editor .val_wrap .hint{
-    color: white;
+    color: rgba(255, 255, 255, 0.3);
     font-size: 14px;
-    opacity: .3;
     font-weight: normal;
     position: absolute;
-    right: 8px;
-    top: 6px;
-    padding: 2px 5px;
+    right: 0px;
+    top: 2px;
+    padding: 0px 13px 0px 5px;
+    line-height: 30px;
+    border-radius: 0px 5px 5px 0px;
+    background-color: #bb61d0;
 }
 
 .json-editor .val_wrap .hint.err {
@@ -5995,7 +5997,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 }
 
 #node-params-dialog .json-editor .val_wrap .hint {
-    color: black;
+    color: rgba(0, 0, 0, 0.3);
+    background: #ffffff;
 }
 
 #node-params-dialog .json-editor .add, #node-params-dialog  .json-editor .remove {
