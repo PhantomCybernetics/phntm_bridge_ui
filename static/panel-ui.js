@@ -1490,24 +1490,140 @@ export class PanelUI {
         console.log('Saved '+btns.length+' btns for '+service, btns);
     }
 
-    render_service_menu_btns(service, msg_class) {
+
+    render_node_services_menu(node, node_cont_el) {
+
+        node_cont_el.empty();
+
+        if (!node.services || !Object.keys(node.services).length)
+            return 0;
+
+        let node_label_el = $('<div class="node">' + node.node + '</div>');
+        let prefered_services = [];
+        let collapsed_services = [];
+        let service_ids = Object.keys(node.services);
+        let num_services = 0;
+
+        for (let i = 0; i < service_ids.length; i++) {
+
+            let id_service = service_ids[i];
+            let service = node.services[id_service];
+            let msg_type = node.services[id_service].msg_type;
+            num_services++; // activates menu
+
+            let msg_class = this.client.find_message_type(service.msg_type+'_Request');
+            let service_name_parts = service.service.split('/');
+            let service_short = service_name_parts[service_name_parts.length-1];
+
+            let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
+                + '<div '
+                + 'class="service_heading" '
+                + 'title="' + service.service + '"'
+                + '>'
+                + service_short
+                + '</div>'
+                + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
+                + '</div>');
+            
+            // node_content.append(service_content);
+
+            let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
+            this.service_btn_els[service.service] = service_input_el;
+
+            this.render_service_menu_btns(service, msg_class, node, node_cont_el);
+
+            service_content.append(service_input_el);
+
+            let has_user_defs = this.service_btns[service.service] && this.service_btns[service.service].length;
+            if (!has_user_defs
+                && (
+                    (!msg_class && this.collapse_unhandled_services)
+                    || this.collapse_services.indexOf(msg_type) > -1
+                    || this.collapse_services.indexOf(id_service) > -1
+                )
+            )
+                collapsed_services.push(service_content);
+            else
+                prefered_services.push(service_content);
+        }
+
+        if (prefered_services.length || collapsed_services.length) {
+            node_cont_el.append(node_label_el);
+
+            if (prefered_services.length) {
+                let preferred_cont = $('<div class="preferred-cont"></div>')
+                for (let i = 0; i < prefered_services.length; i++)
+                    preferred_cont.append(prefered_services[i]);
+                node_cont_el.append(preferred_cont);
+            }
+
+            if (collapsed_services.length) {
+                let collapsed_cont = $('<div class="collapsed-cont"></div>')
+                for (let i = 0; i < collapsed_services.length; i++)
+                    collapsed_cont.append(collapsed_services[i]);
+                let more_label = prefered_services.length ? 'Show more' : 'Show services'
+                let cls = !prefered_services.length ? 'only-collapsed': '';
+                let handle = $('<div class="collapse-handle '+cls+'">'+more_label+'</div>');
+            
+                handle.click(()=>{
+                    if (!handle.hasClass('open')) {
+                        handle.addClass('open');
+                        node_cont_el.addClass('uncollapsed');
+                        node_label_el.addClass('open');
+                        handle.removeClass(cls);
+                        collapsed_cont.addClass('open');
+                        handle.text('Show less');
+                        
+                    } else {
+                        handle.removeClass('open');
+                        handle.addClass(cls);
+                        node_cont_el.removeClass('uncollapsed');
+                        node_label_el.removeClass('open');
+                        collapsed_cont.removeClass('open');
+                        handle.text(more_label);
+                        
+                    }
+                });
+                if (node_cont_el.hasClass('uncollapsed')) {
+                    handle.trigger('click');
+                }
+                node_cont_el.append([ collapsed_cont, handle, $('<span class="cleaner"></span>') ]);
+
+                if (!prefered_services.length) {
+                    node_label_el.addClass('only-collapsed');
+                    let compact_handle_el = $('<span class="collapse-compact-handle">Show services</span>')
+                    node_label_el.append(compact_handle_el);
+                    compact_handle_el.click(()=>{
+                        handle.trigger('click');
+                    });
+                }
+            } else {
+                node_cont_el.removeClass('uncollapsed');
+            }
+        }
+
+        return num_services;
+    }
+
+
+    render_service_menu_btns(service, msg_class, node, node_cont) {
         if (!msg_class)
             return;
 
-        let service_input_el = this.service_btn_els[service.service]
-        if (!service_input_el)
+        let service_input_btns_el = this.service_btn_els[service.service]
+        if (!service_input_btns_el)
             return;
 
-        service_input_el.empty();
+        service_input_btns_el.empty();
 
         let msg_type = msg_class.name.endsWith('_Request') ? msg_class.name.replace('_Request', '') : msg_class.name;
 
         if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
-            ServiceInput_Empty.MakeMenuControls(service_input_el, service, this.client);
-        } else if (this.input_widgets[msg_type] != undefined) {
-            this.input_widgets[msg_type].MakeMenuControls(service_input_el, service, this.client);
-        } else {
-            FallbackServiceInput.MakeMenuControls(service_input_el, service, this.client);
+            ServiceInput_Empty.MakeMenuControls(service_input_btns_el, service, this.client);
+        } else if (this.input_widgets[msg_type] != undefined) { // btn by known service type
+            this.input_widgets[msg_type].MakeMenuControls(service_input_btns_el, service, this.client);
+        } else { // custom user btns
+            FallbackServiceInput.MakeMenuControls(service_input_btns_el, service, this.client, node, node_cont);
         }
     }
     
@@ -1534,91 +1650,10 @@ export class PanelUI {
         });
 
         nodes_sorted.forEach((node) => {
-            if (!node.services || !Object.keys(node.services).length)
-                return;
-
-            let node_label_el = $('<div class="node">' + node.node + '</div>');
-            let prefered_services = [];
-            let collapsed_services = [];
-            let service_ids = Object.keys(node.services);
-            
-            for (let i = 0; i < service_ids.length; i++) {
-
-                let id_service = service_ids[i];
-                let service = node.services[id_service];
-                let msg_type = node.services[id_service].msg_type;
-                this.num_services++; // activates menu
-
-                let msg_class = this.client.find_message_type(service.msg_type+'_Request');
-                let service_name_parts = service.service.split('/');
-                let service_short = service_name_parts[service_name_parts.length-1];
-
-                let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
-                    + '<div '
-                    + 'class="service_heading" '
-                    + 'title="' + service.service + '"'
-                    + '>'
-                    + service_short
-                    + '</div>'
-                    + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
-                    + '</div>');
-                
-                // node_content.append(service_content);
-
-                let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
-                this.service_btn_els[service.service] = service_input_el;
-
-                this.render_service_menu_btns(service, msg_class);
-
-                service_content.append(service_input_el);
-
-                if ((!msg_class && this.collapse_unhandled_services)
-                || this.collapse_services.indexOf(msg_type) > -1 
-                || this.collapse_services.indexOf(id_service) > -1)
-                    collapsed_services.push(service_content);
-                else
-                    prefered_services.push(service_content);
-            }
-
-            if (prefered_services.length || collapsed_services.length) {
-                $('#service_list').append(node_label_el);
-                if (collapsed_services.length && !prefered_services.length) {
-                    node_label_el.addClass('only-collapsed');
-                }
-
-                if (prefered_services.length) {
-                    for (let i = 0; i < prefered_services.length; i++)
-                        $('#service_list').append(prefered_services[i]);
-                }
-
-                if (collapsed_services.length) {
-                    let collapsed_cont = $('<div class="collapsed-cont"></div>')
-                    for (let i = 0; i < collapsed_services.length; i++)
-                        collapsed_cont.append(collapsed_services[i]);
-                    let more_label = prefered_services.length ? 'Show more' : 'Show services'
-                    let cls = !prefered_services.length ? 'only-collapsed': '';
-                    let handle = $('<div class="collapse-handle '+cls+'">'+more_label+'</div>');
-                    handle.click(()=>{
-                        if (!handle.hasClass('open')) {
-                            handle.addClass('open');
-                            handle.removeClass(cls);
-                            collapsed_cont.addClass('open');
-                            handle.text('Show less');
-                            node_label_el.removeClass('only-collapsed');
-                        } else {
-                            handle.removeClass('open');
-                            handle.addClass(cls);
-                            collapsed_cont.removeClass('open');
-                            handle.text(more_label);
-                            if (!prefered_services.length) {
-                                node_label_el.addClass('only-collapsed');
-                            }
-                        }
-                    });
-                    $('#service_list').append([ collapsed_cont, handle, $('<span class="cleaner"></span>') ]);
-                }
-                
-            }
+            let node_cont_el = $('<div class="node-cont"></div>');
+            let num_node_services = this.render_node_services_menu(node, node_cont_el);
+            node_cont_el.appendTo($('#service_list'));
+            this.num_services += num_node_services;
         });
 
         $('#services_heading .full-w').html(this.num_services == 1 ? 'Service' : 'Services');
@@ -2713,7 +2748,7 @@ export class PanelUI {
             ;
 
         $('#trigger_wifi_scan')
-            .css('display', msg.supports_scanning && this.wifi_scan_enabled ? 'inline-block' : 'none')
+            .css('display', msg.supports_scanning && this.wifi_roam_enabled ? 'inline-block' : 'none')
         // $('#robot_wifi_info').removeClass('offline');
 
         if (msg.supports_scanning)

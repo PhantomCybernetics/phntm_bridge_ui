@@ -86,7 +86,7 @@ export class ServiceInputDialog {
         this.editor.scrollTop(0);
     }
 
-    show(service) {
+    show(service, node, node_cont_el) {
         this.service = service;
 
         // clone edit btns, written back on save
@@ -246,7 +246,7 @@ export class ServiceInputDialog {
             btn_save.addClass('working');
 
             that.client.ui.save_service_buttons(service.service, this.btns);
-            that.client.ui.render_service_menu_btns(service, that.msg_type);
+            that.client.ui.render_node_services_menu(node, node_cont_el);
 
             setTimeout(()=>{
                 btn_save.removeClass('working');
@@ -606,8 +606,12 @@ export class ServiceInputDialog {
         
         let vals_block = $('<div></div>');
     
+        if (field.name == 'byte_array_value' && field.type == 'int8')  {
+            field.type = 'uint8'; // fix type for byte arrays
+        }
+
         let arrayLength = field.arrayLength ?? (default_value ? default_value.length : 0);
-        console.log('init; arrayLength: '+arrayLength, default_value);
+        // console.log('init; arrayLength: '+arrayLength, default_value);
         for (let j = 0; j < arrayLength; j++) {
             // let i = msg[field.name].length;
             let one_default_value = default_value && default_value[j] ? default_value[j] : null;

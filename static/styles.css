@@ -44,6 +44,7 @@ body::after{
         url('/static/graph/user-input.png')
         url('/static/graph/wifi.png')
         url('/static/graph/warning.svg')
+        url('/static/graph/spinner-params.svg')
     ;
  }
 
@@ -1109,20 +1110,25 @@ BODY.desktop-ui .docker_btns button:hover,
 #service_list .node {
     font-size: 15px;
     font-weight: bold;
-    display: inline-block;
+    display: block;
     margin-bottom: 3px;
-    margin-top: 3px;
-    padding: 5px;
+    margin-top: 5px;
+    padding: 5px 10px;
     border-radius: 5px;
     background: #5b5252;
     color: #fff;
-    margin-left: 5px;
+    margin-left: 0px;
+    width: unset;
+}
+
+#service_list DIV:first-child .node {
+    /* margin-top: 5px;    */
 }
 
 #service_list .node.only-collapsed {
-    float: left;
+    /* float: left;
     overflow: hidden;
-    margin-right: 5px;
+    margin-right: 5px; */
 }
 
 #service_list .collapsed-cont {
@@ -1184,37 +1190,75 @@ BODY.hamburger #docker_controls H3 {
 .service {
     margin-top: 5px;
     margin-bottom: 5px;
-    background: #e19fe6;
+    background: #ec9cef;
     padding: 10px;
     border-radius: 5px;
     position: relative;
     text-align: left;
 }
 
+#service_list .preferred-cont,
+#service_list .collapsed-cont {
+    margin-bottom: 20px;
+}
+
+#service_list .node-cont:last-child .preferred-cont,
+#service_list .node-cont:last-child .collapsed-cont {
+    margin-bottom: 0px;
+}
+
+#service_list .uncollapsed .preferred-cont {
+    margin-bottom: 0px;
+}
+
 .service.nonhandled  {
     font-size: 13px;
     padding: 5px 10px;
-    background: #d68ee07e;
+    /* background: #d68ee07e; */
 }
 
 #service_list .collapse-handle {
-    margin-top: 5px;
     margin-bottom: 5px;
     border-radius: 5px;
     position: relative;
-    text-align: right;
+    text-align: center;
     font-size: 13px;
     padding: 5px 10px;
-    background: #d68ee03b;;
+    background: #ec9cef;;
     color: #ffffffd4;
     text-decoration: none;
     cursor: pointer;
+    display: block;
+    margin-top: 0px;
+    position: relative;
+    top: -15px;
+}
+
+#service_list .node-cont:last-child .collapse-handle {
+    top: 0px;
+}
+
+#service_list .collapse-compact-handle {
+    position: relative;
+    font-size: 13px;
+    color: #ffffff69;
+    text-decoration: none;
+    cursor: pointer;
     float: right;
+    font-weight: normal;
+}
+
+#service_list .collapse-compact-handle:hover {
+    text-decoration: underline;
+    color: #fff;
+}
+
+#service_list .node.open .collapse-compact-handle {
+    display: none;
 }
 
 #service_list .collapse-handle {
-    display: block;
-    margin-top: 0px;
+    
 }
 
 #service_list .collapse-handle.open {
@@ -1222,10 +1266,7 @@ BODY.hamburger #docker_controls H3 {
 }
 
 #service_list .collapse-handle.only-collapsed {
-    margin-top: 5px;
-    text-align: right;
-    float: none;
-    overflow: hidden;
+    display: none;
 }
 
 #service_list .collapse-handle:hover {
@@ -1256,7 +1297,7 @@ BODY.hamburger #docker_controls H3 {
     position: absolute;
     top: 0px;
     right: 5px;
-    background: #e19fe6;
+    background: #ec9cef;
     height: 100%;
     padding-left: 5px;
 }
@@ -5769,7 +5810,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     right: 5px;
     display: none;
     border-radius: 0px 0px 5px 5px;
-    background-color: black;
+    background-color: #332f2f;
     padding: 0px 2px 8px 7px;
     border-radius: 0px 0px 10px 10px;
 } 
@@ -5811,6 +5852,14 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: green;
 }
 
+#node-params-dialog BUTTON.btn-reload {
+    background-color: #525151;
+}
+
+#node-params-dialog BUTTON.btn-reload:hover {
+    background-color: #626161;
+}
+
 #node-params-dialog .params-list {
     height: calc(60vh - 60px);
     background-color: #5b5252;
@@ -5830,15 +5879,15 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 
 #node-params-dialog .json-editor { /* half split editor */
     display: none;
-    background-color: black;
+    background-color: #332f2f;
     color: #fff;
     top: unset;
-    border-top: 6px solid black;
-    border-bottom: 6px solid black;
-    height: calc(30vh - 30px - 40px - 12px);
+    border-top: 6px solid #332f2f;
+    border-bottom: 6px solid #332f2f;
+    height: calc(30vh - 30px - 20px - 12px);
     margin-bottom: 45px;
     border-radius: 5px 5px 0px 5px;
-    padding: 20px 10px 20px 20px;
+    padding: 10px 10px 10px 20px;
     margin-top: -5px;
 }
 

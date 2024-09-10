@@ -7,17 +7,14 @@ class ServiceInput {
 
 export class FallbackServiceInput extends ServiceInput {
 
-    static MakeMenuControls(el, service, client) {
+    static MakeMenuControls(el, service, client, node, node_cont) {
 
         if (!client.ui.service_btns[service.service])
             client.ui.service_btns[service.service] = [];
 
-       
-
         let data_editor_btn = $('<button class="service_button data" title="Set service call data">{}</button>');
         data_editor_btn.click((ev)=>{
-
-            client.ui.service_input_dialog.show(service);
+            client.ui.service_input_dialog.show(service, node, node_cont);
         });
         el.append(data_editor_btn);
 
