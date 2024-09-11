@@ -2638,24 +2638,52 @@ export class PanelUI {
  
     show_notification(msg, style, detail) {
 
-        let msg_el = $('<span class="msg'+(style?' '+style:'')+'"><span class="icon"></span>'+msg+'</span>');
+        let msg_el = $('<span class="msg'+(style?' '+style:'')+'"><span class="icon"></span><span class="title">'+msg+'</span></span>');
         
         $('#notifications').prepend(msg_el);
 
         let timer = setTimeout(()=>{
             msg_el.remove();
-        }, 3000); //after css fadeout
+        }, 4000); // remove after css fadeout
 
         msg_el.click((ev0)=>{
             if (msg_el.hasClass('open'))
                 return;
             clearTimeout(timer);
             msg_el.addClass('open');
-            let closeEl = $('<span class="close"></span>');
+            let closeEl = $('<span class="close" title="Close"></span>');
             closeEl.click((ev1)=>{
                 msg_el.remove();
             });
-            msg_el.append(closeEl);
+            let pinEl = $('<span class="pin" title="Unpin"></span>');
+            pinEl.click((ev1)=>{
+                console.log('pin');
+                let pos = msg_el.position();
+                msg_el
+                    .css({
+                        width: msg_el.width(),
+                        height: msg_el.height(),
+                    })
+                    .addClass('unpinned')
+                    .draggable({
+                        handle: '.title',
+                        cursor: 'move',
+                        snap: true,
+                        snapMode: 'outer',
+                        containment: 'document',
+                        snapTolerance: 20,
+                        grid: [20, 20]
+                    })
+                    .resizable({
+                        grid: [20, 20]
+                    })
+                    .animate({
+                        left: pos.left + 10,
+                        top: pos.top + 10
+                    }, 300);
+                // msg_el.remove();
+            });
+            msg_el.append([ pinEl, closeEl ]);
 
             if (detail) {
                 msg_el.append($('<span class="detail">'+detail+'</span>'));

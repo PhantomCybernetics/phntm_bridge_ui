@@ -45,6 +45,7 @@ body::after{
         url('/static/graph/wifi.png')
         url('/static/graph/warning.svg')
         url('/static/graph/spinner-params.svg')
+        url('/static/graph/icon-unpin.svg')
     ;
  }
 
@@ -4651,8 +4652,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     margin-bottom: 2px;
     width: max-content;
 
-    animation-name: msg_fade_in_out;
-    animation-duration: 3s;
+    animation-name: msg_fade_in_out; /* fades out msg before js removes it */
+    animation-duration: 4s;
     animation-iteration-count: 1;
 
     pointer-events: auto;
@@ -4661,18 +4662,39 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     cursor: pointer;
 }
 
+#notifications .msg .title {
+    display: block;
+    margin-right: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    /* background-color: blue; */
+}
+
+#notifications .msg.unpinned {
+    position: absolute;
+    z-index: 1; /* above pinned */
+}
+
+#notifications .msg.unpinned .title {
+    cursor: move;
+    margin-right: 25px;
+}
+
 #notifications .msg .detail {
     display: block;
     margin-top: 10px;
     font-size: 12px;
-    max-height: 300px;
-    /* background: red; */
     overflow: scroll;
     scrollbar-width: none;
     max-height: 300px;
     overflow: scroll;
     overscroll-behavior: none;
     scrollbar-width: none;
+}
+
+#notifications .msg.unpinned .detail{
+    height: calc(100% - 30px);
+    max-height: 90vh;
 }
 
 #notifications .msg .detail PRE {
@@ -4702,36 +4724,21 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     cursor: unset;
     white-space: unset;
 
-    padding-right: 40px;
+    /* padding-right: 40px; */
     
     max-width: 80%;
     animation-name: unset;
     animation-duration: unset;
     animation-iteration-count: unset;
-    
 }
-
-/* #service-input-dialog BUTTON.close-dialog {
-    position: absolute;
-    right: -23px;
-    top: -19px;
-    background-image: url(/static/graph/remove.png);
-    background-size: 20px;
-    background-repeat: no-repeat;
-    background-position: 10px 10px;
-    background-color: black;
-    border-radius: 30px;
-    cursor: pointer;
-    width: 40px;
-    display: block;
-} */
 
 #notifications .msg.error {
     background-color: red;
     color: white;
 }
 
-#notifications .msg.open .close {
+#notifications .msg.open .close,
+#notifications .msg.open .pin {
     display: block;
     width: 30px;
     height: 30px;
@@ -4743,12 +4750,33 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     background-size: 20px;
     background-repeat: no-repeat;
     background-position: 5px 5px;
-    filter: invert(1);
+    filter: invert(1); /* black on yellow */
     cursor: pointer;
 }
 
-#notifications .msg.error.open .close {
-    filter: unset;
+#notifications .msg.open .close:hover,
+#notifications .msg.open .pin:hover {
+    background-color: black;
+    filter: unset; /* white on black */
+    border-radius: 5px;
+}
+
+#notifications .msg.open .pin {
+    right: 32px;
+    background-image: url(/static/graph/icon-unpin.svg);
+    background-size: 20px;
+    background-repeat: no-repeat;
+    background-position: 5px 5px;
+}
+
+#notifications .msg.unpinned .pin {
+    display: none;   
+}
+
+
+#notifications .msg.error.open .close,
+#notifications .msg.error.open .pin {
+    filter: unset; /* white on red */
 }
 
 #dialog-modal-confirm {
