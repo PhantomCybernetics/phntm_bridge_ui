@@ -360,12 +360,15 @@ export class PhntmBridgeClient extends EventTarget {
 
                             if (msg_type == 'rcl_interfaces/srv/ListParameters')
                                 this.discovered_nodes[node]['_srvListParameters'] = service;
+                            if (msg_type == 'rcl_interfaces/srv/DescribeParameters')
+                                this.discovered_nodes[node]['_srvDescribeParameters'] = service;
                             if (msg_type == 'rcl_interfaces/srv/GetParameters')
                                 this.discovered_nodes[node]['_srvGetParameters'] = service;
                             if (msg_type == 'rcl_interfaces/srv/SetParameters')
                                 this.discovered_nodes[node]['_srvSetParameters'] = service;
 
                             if (this.discovered_nodes[node]['_srvListParameters'] &&
+                                this.discovered_nodes[node]['_srvDescribeParameters'] &&
                                 this.discovered_nodes[node]['_srvGetParameters'] &&
                                 this.discovered_nodes[node]['_srvSetParameters']
                             ) {

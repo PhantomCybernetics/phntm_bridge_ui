@@ -46,6 +46,7 @@ body::after{
         url('/static/graph/warning.svg')
         url('/static/graph/spinner-params.svg')
         url('/static/graph/icon-unpin.svg')
+        url('/static/graph/icon-info.svg')
     ;
  }
 
@@ -5170,6 +5171,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-color: green;
 }
 
+#node-params-dialog BUTTON.btn-save.read-only {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .service_button.working,
 .service_button.working:hover,
 #service-input-dialog BUTTON.btn-save.working,
@@ -5180,7 +5186,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 }
 
 #service-input-dialog BUTTON.btn-save:hover,
-#node-params-dialog BUTTON.btn-save:hover {
+#node-params-dialog BUTTON.btn-save:not(.read-only):hover {
     background-color: rgb(7, 157, 7);
 }
 
@@ -5619,6 +5625,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     height: calc(100vh - 225px);
 }
 
+
 .json-editor I {
     display: block;
     font-size: 28px;
@@ -5655,6 +5662,19 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .json-editor .line {
     position: relative;
     height: 34px;;
+}
+
+.json-editor .hint-line {
+    display: block;
+    line-height: 34px;
+    white-space: nowrap;
+    overflow: hidden;
+    background-image: url(/static/graph/icon-info.svg);
+    background-size: 20px;
+    background-repeat: no-repeat;
+    background-position: 1px 7px;
+    padding-left: 32px;
+    color: #ffffff80;
 }
 
 .json-editor .label {

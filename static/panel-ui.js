@@ -2611,19 +2611,38 @@ export class PanelUI {
         if (service_reply.result && service_reply.result.successful === false)
             err_in_resuls = true;
         
+        const replacer = (key, value) => {
+            // if (key == 'byte_array_value') return 'byte_array_value';
+            
+            if (key == 'byte_array_value' && Array.isArray(value)) {
+                let new_value = [];
+                for (let i = 0; i < value.length; i++)
+                    if (value[i] instanceof ArrayBuffer) {
+                        let uint8arr = new Uint8Array(value[i]);
+                        new_value.push(uint8arr[0]);
+                    }
+                    else
+                        new_value.push(value[i]);
+                return new_value;
+            }
+            // if (value instanceof ArrayBuffer) return '<ArrayBuffer>';
+
+            return value;
+          };
+
         if (service_reply.err) { // showing errors always
             this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
             is_err = true;
         } else if (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)  { // showing errors always
-            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
             is_err = true;
         } else if (service_reply.success === true) { //std set bool & trugger
             if (show_reply === true || (show_reply === null && service_reply.message && service_reply.message.length)) { 
-                this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+                this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
             }
         } else {
             if (show_reply === true || (show_reply === null && Object.keys(service_reply).length > 0)) {
-                this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, null, 2)+'</pre>');
+                this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
             }
         }
 
