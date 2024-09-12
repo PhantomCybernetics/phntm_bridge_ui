@@ -58,9 +58,7 @@ BODY.no-scroll,
 BODY.touch-gamepad,
 BODY.touch-ui.gamepad-editing {
     overflow: hidden;
-    height: 100%;
     touch-action: none;
-    padding-bottom: 0px;
 }
 
 .msgTypes {
@@ -5086,24 +5084,34 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     );
 }
 
-#service-input-dialog {
+#service-input-dialog,
+#node-params-dialog {
     display: none;
     z-index: 200;
-    position: absolute;
-    /* width: 80vw;
-    height: 60vh; */
-    left: calc(50% - Min(40vw, 275px) - 15px);
-    top: calc(10vh - 10px);
-    /* background-color: #b311a3; */
-    background-color: #ecafed; 
-    border-radius: 10px;
-    padding: 10px 10px 55px 10px;
+    position: fixed;
+    top: calc(10% - 10px);
     width: 80vw;
     max-width: 550px;
+    left: calc(50% - Min(40vw, 275px) - 15px);
+    border-radius: 10px;
+}
+
+#service-input-dialog {
+    background-color: #ecafed; 
+    padding: 10px 10px 55px 10px;
+   
 } 
 
+#node-params-dialog {
+    background-color: #b1adad; 
+    padding: 10px 10px 10px 10px;
+} 
+
+
 #service-input-dialog.narrow,
-#service-input-dialog.thin {
+#service-input-dialog.thin,
+#node-params-dialog.narrow,
+#node-params-dialog.thin  {
     width: calc(100% - 40px);
     left: 10px;
     top: -40px;
@@ -5801,31 +5809,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     color: white !important;
     background: red !important;
     opacity: 1;
-}
-
-
-#node-params-dialog {
-    display: none;
-    z-index: 200;
-    position: absolute;
-    /* width: 80vw;
-    height: 60vh; */
-    left: calc(50% - Min(40vw, 275px) - 15px);
-    top: calc(10vh - 10px);
-    /* background-color: #b311a3; */
-    background-color: #b1adad; 
-    border-radius: 10px;
-    padding: 10px 10px 10px 10px;
-    width: 80vw;
-    max-width: 550px;
-} 
-
-#node-params-dialog.narrow,
-#node-params-dialog.thin {
-    width: calc(100% - 40px);
-    left: 10px;
-    top: -40px;
-    max-width: unset; /* expand to full w*/
 }
 
 #node-params-dialog H3 {
