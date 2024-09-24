@@ -347,12 +347,14 @@ export class PhntmBridgeClient extends EventTarget {
                             let msg_type = nodes_data[this.id_robot][node]['subscribers'][topic]['msg_type'];
                             let qos = nodes_data[this.id_robot][node]['subscribers'][topic]['qos'];
                             let qos_error = nodes_data[this.id_robot][node]['subscribers'][topic]['qos_error'];
+                            let qos_warning = nodes_data[this.id_robot][node]['subscribers'][topic]['qos_warning'];
                             this.discovered_nodes[node].subscribers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
                                 msg_type_supported: this.find_message_type(msg_type) != null,
                                 qos: qos,
-                                qos_error: qos_error
+                                qos_error: qos_error,
+                                qos_warning: qos_warning
                             }
                         })
                     }

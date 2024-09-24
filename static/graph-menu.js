@@ -219,9 +219,8 @@ export class GraphMenu {
 
         let tooltip = (link.group == 1 ? 'Publisher QoS:' : 'Subscriber QoS:');
     
-        if (link.qos_error) {
+        if (link.qos_error || link.qos_warning) {
             el.addClass('error');
-            tooltip = 'Subscriber QoS mismatch';
         } else {
             el.removeClass('error');
         }
@@ -236,6 +235,23 @@ export class GraphMenu {
             + 'Deadline: ' + (link.qos.deadline < 0 ? 'INFINITE' : (link.qos.deadline / NS_TO_SEC) + 's') + "<br>\n"
             + 'History: ' + history + "<br>\n"
             + 'Depth: ' + link.qos.depth;
+
+        if (link.qos_error) {
+            tooltip += '<br><span class="err">';
+            let lines = link.qos_error.split(';');
+            lines.forEach((l)=>{
+                tooltip += '<br>' + l;
+            });
+            tooltip += '</span>';
+        }
+        if (link.qos_warning) {
+            tooltip += '<br><span class="warn">';
+            let lines = link.qos_warning.split(';');
+            lines.forEach((l)=>{
+                tooltip += '<br>' + l;
+            });
+            tooltip += '</span>';
+        }
 
         el.html(tooltip);
     }
@@ -287,8 +303,7 @@ export class GraphMenu {
                         node: id_node,
                         topic: id_topic,
                         group: 1, // write
-                        qos: nodes[id_node].publishers[id_topic].qos,
-                        qos_error: false
+                        qos: nodes[id_node].publishers[id_topic].qos
                     });
                 });
             }
@@ -310,7 +325,8 @@ export class GraphMenu {
                         topic: id_topic,
                         group: 2, // read
                         qos: nodes[id_node].subscribers[id_topic].qos,
-                        qos_error: nodes[id_node].subscribers[id_topic].qos_error
+                        qos_error: nodes[id_node].subscribers[id_topic].qos_error,
+                        qos_warning: nodes[id_node].subscribers[id_topic].qos_warning
                     });
                 });
             }
@@ -342,7 +358,7 @@ export class GraphMenu {
                 params_icon_el.appendTo(node_icons_el);
 
                 node_links.forEach((node_link)=>{
-                    if (node_link.qos_error) {
+                    if (node_link.qos_error || node_link.qos_warning) {
                         let icon_err = $('<span class="link-err-icon" tabindex="0"></span>');
                         let icon_tooltip_el = $('<span class="tooltip"></span>');
                         icon_tooltip_el.appendTo(icon_err);
@@ -512,7 +528,7 @@ export class GraphMenu {
             link.path = this.svg
                 .append("path")
                 .attr("d", this.get_link_path(link))
-                .style("stroke", link.qos_error ? this.color_err : (link.group == 1 ? this.color_write : this.color_read))
+                .style("stroke", link.qos_error || link.qos_warning ? this.color_err : (link.group == 1 ? this.color_write : this.color_read))
                 .style("class", link.group == 1 ? 'write-link' : 'read-link')
                 .style("cursor", 'help')
                 .attr('fill', 'none')
@@ -549,24 +565,24 @@ export class GraphMenu {
                 if (link.path.attr('class') && link.path.attr('class').indexOf('dimmed') > -1)
                     return;
                 that.hovered_path = null;
-                let c = link.qos_error ? that.color_err : (link.group == 1 ? that.color_write : that.color_read);
+                let c = link.qos_error || link.qos_warning ? that.color_err : (link.group == 1 ? that.color_write : that.color_read);
                 d3.select(this).style("stroke", c)
                 if (link.group == 1) {
                     link.path.attr('marker-end', 'url(#marker-write)')
                 } else {
-                    link.path.attr('marker-start', link.qos_error ? 'url(#marker-err-read)' : 'url(#marker-read)')
+                    link.path.attr('marker-start', link.qos_error || link.qos_warning ? 'url(#marker-err-read)' : 'url(#marker-read)')
                 }
                 that.tooltip_el.css('display', 'none');
             });
 
-            if (link.qos_error) {
+            if (link.qos_error || link.qos_warning) {
                 link.path.style('stroke-dasharray', '3,5');
             }
 
             if (link.group == 1) {
                 link.path.attr('marker-end', 'url(#marker-write)')
             } else {
-                link.path.attr('marker-start', link.qos_error ? 'url(#marker-err-read)' : 'url(#marker-read)')
+                link.path.attr('marker-start', link.qos_error || link.qos_warning ? 'url(#marker-err-read)' : 'url(#marker-read)')
             }
             
         });

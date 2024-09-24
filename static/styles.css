@@ -501,6 +501,17 @@ BODY.narrower .narrower-w { display: inline; }
     display: none;
     pointer-events: none;
     border-radius: 5px;
+    max-width: 200px;
+    white-space: unset;
+}
+
+#graph_display .tooltip .warn, #graph_display .tooltip .err {
+    white-space: unset;
+    text-wrap: wrap;
+}
+
+#graph_display .graph_node .tooltip {
+    pointer-events: unset;
 }
 
 #graph_display .tooltip.error {
