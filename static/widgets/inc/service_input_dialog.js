@@ -261,6 +261,11 @@ export class ServiceInputDialog {
         this.bottom_btns_el.append([ btn_save, btn_call, btn_json, btn_close ]);
         this.cont_el.append([ this.btns_line_el, $('<div class="cleaner"/>'), this.editor, this.bottom_btns_el ]);
 
+        this.cont_el.draggable({
+            handle: 'h3',
+            cursor: 'move'
+        });
+
         this.cont_el.show();
         this.select_button(this.btns[0]);
 

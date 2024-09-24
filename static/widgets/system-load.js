@@ -38,7 +38,6 @@ export class SystemLoadWidget {
     }
 
     onResize () {
-        console.log('resized to '+this.panel.widget_width+' x '+this.panel.widget_height);
         this.initiated = false; //rebuild
         if (this.last_data)
             this.onData(this.last_data)
@@ -130,7 +129,6 @@ export class SystemLoadWidget {
         if (this.is_thin) {
             line_h = Math.round((h-3) / this.num_lines) + 'px';
         }
-        console.log('line height '+line_h)
 
         for (let i = 0; i < decoded.cpu.length; i++) {
             let cpu_el = $('<div class="cpu-line" style="height: '+line_h+'"><span class="cpu-label">'+i+'</span></div>');

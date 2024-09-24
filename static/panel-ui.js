@@ -384,23 +384,31 @@ export class PanelUI {
         });
 
         client.on('robot_peers', (peers_data) => {
-            that.update_num_peers(peers_data.num_connected);
+            setTimeout(()=>{
+                that.update_num_peers(peers_data.num_connected);
+            }, 0);
         })
 
         // browser's Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect', () => {
-            $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
-            that.set_dot_state(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
+            setTimeout(()=>{
+                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
+                that.set_dot_state(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
+            }, 0);
         });
 
         client.socket.on('disconnect', () => {
-            $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected (Socket.io)</span>');
-            that.set_dot_state(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
+            setTimeout(()=>{
+                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected (Socket.io)</span>');
+                that.set_dot_state(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
+            }, 0);
         });
 
         client.on('peer_stats', (stats) => {
             that.last_pc_stats = stats;
-            that.update_video_stats(stats);
+            setTimeout(()=>{
+                that.update_video_stats(stats);
+            }, 0);
         });
 
         this.grid.on('added removed change', function (e, items) {
@@ -1450,7 +1458,7 @@ export class PanelUI {
                 // defaults from the robot
                 if (that.default_service_btns[service]) {
                     that.service_btns[service] = that.default_service_btns[service];
-                    console.log('Loaded '+that.service_btns[service].length+' default btns for '+service); 
+                    // console.log('Loaded '+that.service_btns[service].length+' default btns for '+service); 
                 }
                     
                 // overwrite w local saved (edited version untouched here)
@@ -1461,7 +1469,7 @@ export class PanelUI {
                     stored_btns.forEach((one_btn)=>{
                         that.service_btns[service].push(one_btn);
                     });
-                    console.log('Loaded '+stored_btns.length+' user btns for '+service);
+                    // console.log('Loaded '+stored_btns.length+' user btns for '+service);
                 }
             });    
         });
@@ -1842,10 +1850,18 @@ export class PanelUI {
                             }
                         }
                     });
-                    if (panel.display_widget && panel.display_widget.video_stats_el)
-                        panel.display_widget.video_stats_el.html(statsString);
-                    if (panel.display_widget && panel.display_widget.video_fps_el)
-                        panel.display_widget.video_fps_el.html(fps + ' FPS');
+
+                    if (panel.display_widget) {
+                        panel.display_widget.last_stats_string = statsString;
+                        panel.display_widget.last_fps_string = fps + ' FPS';
+
+                        if (!panel.paused) {
+                            if (panel.display_widget.video_stats_el && panel.display_widget.video_stats_el.hasClass('enabled'))
+                                panel.display_widget.video_stats_el.html(statsString);
+                            if (panel.display_widget.video_fps_el && panel.display_widget.video_fps_el.hasClass('enabled'))
+                                panel.display_widget.video_fps_el.text(fps + ' FPS');
+                        }
+                    }                
                 }
             });
         });
@@ -2463,7 +2479,6 @@ export class PanelUI {
                 $('#'+key).css('width', '')
             });
         }
-
 
         if (hamburger) {
 

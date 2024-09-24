@@ -300,9 +300,9 @@ BODY.hamburger #menubar_scrollable.open {
 
 
 #menubar_items #graph_display.narrow #graph_topics {
-    width: auto;
+    width: 300px;
     padding-left: 0px !important;
-    float: none;
+    float: right;
 }
 
 /* affect menu scaling */
@@ -491,11 +491,28 @@ BODY.narrower .narrower-w { display: inline; }
     border-radius: 0px 5px 5px 5px;
 }
 
+#graph_display .tooltip {
+    position: absolute;
+    z-index: 3;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 12px;
+    padding: 5px;
+    display: none;
+    pointer-events: none;
+    border-radius: 5px;
+}
+
+#graph_display .tooltip.error {
+    background-color: rgba(255, 0, 0, 0.6);
+}
+
 #graph_display svg {
     /* position: relative;
     margin-top: -10px; */
     position: relative;
     z-index: 1;
+    overscroll-behavior: none;
 }
 
 
@@ -508,16 +525,22 @@ BODY.narrower .narrower-w { display: inline; }
     scrollbar-width: none;
 }
 
-#graph_topics {
-    width: 300px;
-    padding-left: 200px;
-    z-index: 2;
+#graph_topics_scrolling {
+    width: auto;
+    padding-left: 0px;
+    /* z-index: 2; */
     position: relative;
     height: 100%;
     float: right;
     overflow-y: scroll;
     overscroll-behavior: none;
     scrollbar-width: none;
+}
+
+#graph_topics {
+    width: 300px;
+    position: relative;
+    float: right;
 }
 
 #graph_topics input {
@@ -582,13 +605,18 @@ BODY.narrower .narrower-w { display: inline; }
     /* height: 27px; */
 }
 
+.graph_node .icons {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    background-color: #5b5252;
+}
+
 .graph_node .params-edit-icon {
     display: block;
     width: 35px;
     height: 28px;
-    position: absolute;
-    right: 5px;
-    top: 5px;
+    
     /* background-color: red; */
     background-image: url(/static/graph/icon-config.png);
     background-repeat: no-repeat;
@@ -597,6 +625,8 @@ BODY.narrower .narrower-w { display: inline; }
     cursor: pointer;
     max-height: calc(100% - 2px);
     border-radius: 5px;
+    float: right;
+    margin-left: 3px;
 }
 
 .graph_node .params-edit-icon:hover {
@@ -604,12 +634,43 @@ BODY.narrower .narrower-w { display: inline; }
     /* background-position: -83px center; */
 }
 
-.graph_node .box.dimmed,
-.graph_topic .box.dimmed {
+.graph_node .link-err-icon {
+    display: block;
+    width: 28px;
+    height: 28px;
+    background-color: red;
+    background-image: url(/static/graph/warning.svg);
+    background-repeat: no-repeat;
+    background-position: 4px center;
+    background-size: 20px;
+    cursor: help;
+    max-height: calc(100% - 2px);
+    border-radius: 5px;
+    float: right;
+    margin-left: 3px;
+    position: relative;
+}
+
+#graph_display .graph_node .link-err-icon .tooltip {
+    right: -10px;
+    top: 30px;
+}
+
+BODY.desktop-ui #graph_display .graph_node .link-err-icon:hover .tooltip,
+BODY.touch-ui #graph_display .graph_node .link-err-icon.active .tooltip {
+    display: block;
+}
+
+.graph_node.dimmed .box,
+.graph_topic.dimmed .box {
     opacity: 50%;
 }
 
-.narrow .graph_topic .box.dimmed {
+.graph_node.dimmed .icons {
+    background-color: #b1adad;
+}   
+
+.narrow .graph_topic.dimmed .box {
     opacity: unset;
 }
 
@@ -617,13 +678,39 @@ BODY.desktop-ui .narrow .graph_topic .box:hover {
     background-color: #ff8c00;
 }
 
-.graph_node .box.focused,
-.graph_topic .box.focused {
+.graph_node.focused .box,
+.graph_topic.focused .box {
     background-color: #ff8c00;
 }
 
+.graph_node.focused .icons {
+    background-color: #ff8c00;
+}   
+
+#graph_display svg {
+    position: sticky;
+    left: 0px;
+    top: 0px;
+    /* pointer-events: none; */
+}
+
 #graph_display svg .dimmed {
-    opacity: 10%;
+    opacity: 5%;
+    cursor: default !important;
+    z-index: 1 !important;
+    pointer-events: none;
+}
+
+#graph_display svg .read-link{
+    z-index: 3;    
+}
+
+#graph_display svg .write-link{
+    z-index: 2;
+}
+
+#graph_display svg .write-link:hover {
+    color: lime;
 }
 
 .graph_topic,
@@ -2691,6 +2778,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     overflow: scroll;
     scrollbar-width: none;
     max-width: 50%;
+    color: white;
 }
 .grid-stack-item.maximized .video_stats {
     top: 90px;
@@ -5095,6 +5183,12 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     left: calc(50% - Min(40vw, 275px) - 15px);
     border-radius: 10px;
 }
+
+#service-input-dialog H3,
+#node-params-dialog H3 {
+    cursor: move;
+}
+
 
 #service-input-dialog {
     background-color: #ecafed; 

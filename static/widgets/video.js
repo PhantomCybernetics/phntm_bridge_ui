@@ -21,7 +21,9 @@ export class VideoWidget {
 
         this.el = $('#panel_video_'+panel.n);
         this.overlay_el = $('#video_overlay_'+panel.n);
+        this.last_stats_string = '';
         this.video_stats_el = $('#video_stats_' + panel.n);
+        this.last_fps_string = '0 FPS';
         this.video_fps_el = $('#video_fps_' + panel.n);
 
         this.videoWidth = -1;
@@ -54,6 +56,9 @@ export class VideoWidget {
         this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1,
                                  (t, d) => { that.onOverlayData(t, d); },
                                  (t) => { that.clearOverlay(t); });
+        this.overlay_sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
+                                (t, d) => { that.onOverlayData(t, d); },
+                                (t) => { that.clearOverlay(t); });
 
         this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
         // this.panel.ui.client.on('topic_config', (t, c) => that.onTopicConfigUpdate(t, c))
@@ -163,6 +168,7 @@ export class VideoWidget {
         let that = this;
         $('#video_fps_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
+                that.video_fps_el.text(that.last_fps_string);
                 that.video_fps_el.addClass('enabled');
             } else {
                 that.video_fps_el.removeClass('enabled');
@@ -178,6 +184,7 @@ export class VideoWidget {
 
         $('#video_stats_cb_'+this.panel.n).change(function(ev) {
             if ($(this).prop('checked')) {
+                that.video_stats_el.html(that.last_stats_string);
                 that.video_stats_el.addClass('enabled');
             } else {
                 that.video_stats_el.removeClass('enabled');
@@ -251,15 +258,23 @@ export class VideoWidget {
         for (let i = 0; i < data.detections.length; i++) {
             let d = data.detections[i];
             let labels = [];
+            let distances = [];
             for (let j = 0; j < d.results.length; j++) {
                 let c = d.results[j].hypothesis.class_id;
                 let l = 'Class ' + c;
                 if (this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
                     && this.overlays[topic].config['nn_detection_labels'][c])
                     l = this.overlays[topic].config['nn_detection_labels'][c];
-                labels.push(l + ' (' + d.results[j].hypothesis.score.toFixed(2)+')');
+                l += ' (' + d.results[j].hypothesis.score.toFixed(2)+')';
+
+                // 3d distance
+                if (d.results[j]['pose'] && d.results[j]['pose']['pose'] && d.results[j]['pose']['pose']['position'] && d.results[j]['pose']['pose']['position']['z'])
+                    distances.push(d.results[j]['pose']['pose']['position']['z'].toFixed(2) + 'm');
+                else
+                    distances.push(null);
+                labels.push(l);
             }
-            let label = labels.join("\n");
+            // let label = labels.join("<br/>\n");
 
             let sx = this.overlays[topic].display_w / this.overlays[topic].nn_w;
             let sy = this.overlays[topic].display_h / this.overlays[topic].nn_h;
@@ -267,10 +282,17 @@ export class VideoWidget {
             let bbcx = d.bbox.center.position.x * sx;
             let bbcy = d.bbox.center.position.y * sy;
 
-            let bbwidth = d.bbox.size_x * sx;
-            let bbheight = d.bbox.size_y * sy;
+            // console.log('d.bbox.center.position=['+d.bbox.center.position.x + ';'+ d.bbox.center.position.y+'] s=['+sx+';'+sy+']')
+
+            let bb_size_x = d.bbox.size_x != undefined ? d.bbox.size_x : d.bbox.size.x; // 3d has size.x/y
+            let bb_size_y = d.bbox.size_y != undefined ? d.bbox.size_y : d.bbox.size.y;
+
+            let bbwidth = bb_size_x * sx;
+            let bbheight = bb_size_y * sy;
             let bbleft = bbcx - (bbwidth/2.0);
             let bbtop = bbcy - (bbheight/2.0);
+
+            // console.log('bb=['++']')
 
             let centerpath = svg
                 .append("rect")
@@ -292,16 +314,30 @@ export class VideoWidget {
                     .style('stroke-width', 2)
                 ;
 
-            svg.append('text')
-                .attr('class', 'detection-res')
-                .attr('x', bbleft+5.0)
-                .attr('y', bbtop+5.0)
-                .style("stroke", 'white')
-                .style("fill", 'white')
-                .style('font-size', 20)
-                .attr('dy', 20)
-                .text(label);
-            }
+            for (let j = 0; j < labels.length; j++) {
+                svg.append('text')
+                    .attr('class', 'detection-res')
+                    .attr('x', bbleft+5.0)
+                    .attr('y', bbtop+5.0+15.0)
+                    .style("stroke", 'white')
+                    .style("fill", 'white')
+                    .style('font-size', 20)
+                    .attr('dy',  (j*2)+'em')
+                    .text(labels[j]);
+
+                if (distances[j]) {
+                    svg.append('text')
+                        .attr('class', 'detection-res')
+                        .attr('x', bbleft+5.0)
+                        .attr('y', bbtop+5.0+15.0)
+                        .style("stroke", 'yellow')
+                        .style("fill", 'white')
+                        .style('font-size', 20)
+                        .attr('dy', (j*2+1)+'em')
+                        .text(distances[j]);
+                }
+            }   
+        }
     }
 
     getUrlHashParts (out_parts) {

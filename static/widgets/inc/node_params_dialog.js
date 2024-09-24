@@ -353,6 +353,11 @@ export class NodeParamsDialog {
         this.bottom_btns_el.append([ this.param_btns_el,  btn_close ]);
         this.cont_el.append([ this.list_el, $('<div class="cleaner"/>'), this.editor_el, $('<div class="cleaner"/>'), this.bottom_btns_el ]);
 
+        this.cont_el.draggable({
+            handle: 'h3',
+            cursor: 'move'
+        });
+
         this.cont_el.show();
 
         this.bg.unbind().show().click((ev)=>this.hide());

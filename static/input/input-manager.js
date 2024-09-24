@@ -1007,7 +1007,7 @@ export class InputManager {
 
                             // update ros-srv btn config ui
                             if (that.edited_controller == c && that.current_profile == id_profile) {
-                                console.log('Updating btn confid ui (services changed)', btn);
+                                // console.log('Updating btn config ui (services changed)', btn);
                                 that.render_btn_config(d, btn);
                             }
                         }

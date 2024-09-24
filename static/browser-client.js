@@ -179,7 +179,7 @@ export class PhntmBridgeClient extends EventTarget {
             autoConnect: this.socket_auto_connect,
             reconnection: false, 
             forceNew: true,
-            transport: 'websocket'
+            // transport: 'websocket'
         });
 
         this.socket.on("connect", () => {
@@ -223,6 +223,7 @@ export class PhntmBridgeClient extends EventTarget {
             console.log('Socket.io disconnected, reason: ', reason);
             // io client disconnect
             that.robot_socket_online = false;
+            that.init_complete = false; 
             if (that.pc && that.pc.signalingState == 'closed') {
                 that._clear_connection();
             }
@@ -314,7 +315,7 @@ export class PhntmBridgeClient extends EventTarget {
             if (!nodes_data[this.id_robot])
                 return;
 
-            // console.warn('Raw nodes: ', nodes_data);
+            console.warn('Raw nodes: ', nodes_data);
 
             setTimeout(()=>{
                 this.discovered_nodes = {};
@@ -330,22 +331,28 @@ export class PhntmBridgeClient extends EventTarget {
                     if (nodes_data[this.id_robot][node]['publishers']) {
                         let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
                         topics.forEach((topic) => {
-                            let msg_type = nodes_data[this.id_robot][node]['publishers'][topic];
+                            let msg_type = nodes_data[this.id_robot][node]['publishers'][topic]['msg_type'];
+                            let qos = nodes_data[this.id_robot][node]['publishers'][topic]['qos'];
                             this.discovered_nodes[node].publishers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
                                 msg_type_supported: this.find_message_type(msg_type) != null,
+                                qos: qos
                             }
                         })
                     }
                     if (nodes_data[this.id_robot][node]['subscribers']) {
                         let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
                         topics.forEach((topic) => {
-                            let msg_type = nodes_data[this.id_robot][node]['subscribers'][topic];
+                            let msg_type = nodes_data[this.id_robot][node]['subscribers'][topic]['msg_type'];
+                            let qos = nodes_data[this.id_robot][node]['subscribers'][topic]['qos'];
+                            let qos_error = nodes_data[this.id_robot][node]['subscribers'][topic]['qos_error'];
                             this.discovered_nodes[node].subscribers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
                                 msg_type_supported: this.find_message_type(msg_type) != null,
+                                qos: qos,
+                                qos_error: qos_error
                             }
                         })
                     }
@@ -723,7 +730,7 @@ export class PhntmBridgeClient extends EventTarget {
             sources: this.queued_unsubs
         }, (res) => {
             console.warn('Res unsub', res);
-            this.requested_subscription_change = false; //unlock
+            // this.requested_subscription_change = false; //unlock
         });
         this.queued_unsubs = [];
         this.remove_subscribers_timeout = null;
@@ -858,7 +865,7 @@ export class PhntmBridgeClient extends EventTarget {
                     that.heartbeat_logged = true;
                 }
 
-            }, 3000);
+            }, 10000);
         }
     }
 
@@ -945,6 +952,7 @@ export class PhntmBridgeClient extends EventTarget {
         if (!this.robot_socket_online) {
             // in case of socket connection loss this webrtc stays up transmitting p2p
             console.warn('Server reports robot disconnected from socket.io')
+            this._clear_connection();
             return;
         }
 
@@ -1108,9 +1116,12 @@ export class PhntmBridgeClient extends EventTarget {
 
     _make_read_data_channel(topic, dc_id, msg_type, reliable) {
 
-        if (this.topic_readers[topic]) {
-            console.log('Reader already exists for '+topic+'; ');
+        if (this.topic_readers[topic] && dc_id == this.topic_readers[topic].dc_id) { 
+            console.log('Reader already exists for '+topic+'; dc_id='+dc_id);
             return;
+        }
+        else if (this.topic_readers[topic]) { //non-matching dc id
+            delete this.topic_readers[topic];
         }
 
         if (this.pc.signalingState == 'closed') {
@@ -1225,16 +1236,22 @@ export class PhntmBridgeClient extends EventTarget {
     }
 
     _clear_connection() {
-        console.warn('Socket and webrtc disconnected; clearing session');
+        console.warn('Peer disconnected; clearing session');
         this.session = null;
-        this.init_complete = false; 
+        // this.init_complete = false; 
         let that = this;
-        Object.keys(that.topic_writers).forEach((topic)=>{
+        Object.keys(this.topic_writers).forEach((topic)=>{
             if (that.topic_writers[topic].dc) {
-                that.topic_writers[topic].dc.close();
-                // delete that.topic_writers[topic].dc;
+                that.topic_writers[topic].dc.close(); // deleted in dc close handler
             }
         });
+        Object.keys(this.topic_readers).forEach((topic)=>{
+            if (that.topic_readers[topic].dc) {
+                that.topic_readers[topic].dc.close(); // deleted in dc close handler
+            }
+        });
+        this.media_streams = {};
+        this.topic_streams = {};
         if (this.pc != null) {
             this.pc.close(); // make new pc
             this.pc = null;

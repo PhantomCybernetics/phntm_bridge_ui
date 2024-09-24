@@ -369,12 +369,13 @@ export class Panel {
             return;
         }
 
-        if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage', 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'].indexOf(this.msg_type) > -1) {
-            this.on_stream(stream);
-        } else {
-            this.on_data(msg, ev);
-        }
-
+        setTimeout(()=>{
+            if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage', 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'].indexOf(this.msg_type) > -1) {
+                this.on_stream(stream);
+            } else {
+                this.on_data(msg, ev);
+            }
+        }, 0);
     }
 
     setMenu() {
@@ -706,6 +707,7 @@ export class Panel {
         //     this.ui.type_widgets[this.msg_type].widget(this, msg);
 
         if (this.display_widget) {
+
             this.display_widget.onData(msg);
         }
 
