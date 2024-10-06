@@ -5796,6 +5796,9 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     margin: 2px 10px 2px 0px;
     float: left;
     clear: left;
+    max-width: 60%;
+    text-overflow: ellipsis;
+    overflow: hidden;
     /* font-weight: bold; */
 }
 

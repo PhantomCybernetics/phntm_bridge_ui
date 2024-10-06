@@ -516,7 +516,7 @@ export class ServiceInputDialog {
     static MakePrimitiveType(field, default_value, make_label, last_in_block, onVal) {
         let line = $('<div class="line"></div>')
         if (make_label)
-            line.append($('<div class="label">'+field.name+':</div>'));
+            line.append($('<div class="label" title="'+field.name+'">'+field.name+':</div>'));
        
         let that = this;
 
