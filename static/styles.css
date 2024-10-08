@@ -673,7 +673,7 @@ BODY.touch-ui #graph_display .graph_node .link-err-icon.active .tooltip {
 }
 
 .graph_node.dimmed .box,
-.graph_topic.dimmed .box {
+.graph_topic .box.dimmed {
     opacity: 50%;
 }
 
@@ -681,7 +681,7 @@ BODY.touch-ui #graph_display .graph_node .link-err-icon.active .tooltip {
     background-color: #b1adad;
 }   
 
-.narrow .graph_topic.dimmed .box {
+.narrow .graph_topic .box.dimmed {
     opacity: unset;
 }
 
