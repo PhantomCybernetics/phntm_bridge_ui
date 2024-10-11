@@ -500,7 +500,7 @@ export class PanelUI {
                 return;
             console.log('Delayed disconnect');
             that.client.disconnect();
-            document.title = '{zzZ) ' + client.name + ' @ PHNTM bridge';
+            document.title = '{Zzz) ' + client.name + ' @ PHNTM bridge';
         }
 
         const onUIVisibilityChange = async () => {

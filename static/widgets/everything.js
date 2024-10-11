@@ -12,10 +12,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
     constructor(panel) {
         super(panel, false); // don't start rendering loop yet
 
-        // this.laser_msg_type = 'sensor_msgs/msg/LaserScan';
-        // this.rage_msg_type = 'sensor_msgs/msg/Range';
-        // this.costmap_msg_type = '';
-
         let that = this;
 
         this.addEventListener('pg_updated', (e) => this.on_pg_updated(e));
@@ -109,10 +105,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
     on_laser_data (topic, scan) {
 
-        // console.log('Has laser!');
-
         if (!this.robot || this.panel.paused) {
-            // console.log('!', this);
             return;
         }
 
@@ -147,22 +140,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 this.laser_frames_error_logged = {};
             if (!this.laser_frames_error_logged[topic]) {
                 this.laser_frames_error_logged[topic] = true;  //only log once
+                this.panel.ui.show_notification('Frame '+frame_id+' not found in robot model for laser data from '+topic, 'error');
                 console.error('Frame '+frame_id+' not found in robot model for laser data from '+topic);
             }
             return;
         }
-
-        // if (!this.base_link_frame) 
-        //     this.base_link_frame = this.robot.getFrame('base_link');
-
-        // if (!this.base_link_frame) {
-        //     console.error('Frame base_link not found in robot model for laser data');
-        //     return;
-        // }
-
-        // let base_to_laser_mat = this.base_link_frame.matrixWorld.clone()
-        //                             .invert()
-        //                             .multiply(this.laser_frames[frame_id].matrixWorld);
 
         let laser_points = [];
         const rot_axis = new THREE.Vector3(0, 0, 1); // +z is up
@@ -179,13 +161,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 p.applyAxisAngle(rot_axis, a);
                 laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
                 laser_points.push(center);
-                
-            }
-            
+            }  
         };
-
-        // if (!this.dirty_laser_points[topic])
-        //     this.dirty_laser_points[topic] = 
 
         this.dirty_laser_points[topic] = laser_points;
 
@@ -212,8 +189,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
 
     on_pg_updated(ev) {
-        // console.log('on_pg_updated', e);
-        // this.render_queued_laser_data(e.detail.topic, e.detail.pg_node.ns_stamp);
+        // console.log('Pose grapth updated', e);
     }
 
     clear_laser(topic) {
@@ -233,7 +209,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let frame_id = range.header.frame_id;
         let f = this.robot.getFrame(frame_id);
         if (!f) {
-            console.error('Frame '+frame_id+' not found in robot model for range data');
+            this.panel.ui.show_notification('Frame '+frame_id+' not found in robot model for range data from '+topic, 'error');
+            console.error('Frame '+frame_id+' not found in robot model for range data from '+topic);
             return;
         }
             
@@ -257,8 +234,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
             f.add(cone);
         }
 
-        
-        // let s = range.max_range / range.range;
         let gageVal = (Math.min(Math.max(range.range, 0), range.max_range) * 100.0 / range.max_range);
         gageVal = gageVal / 100.0;
         let color = null;
@@ -276,7 +251,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
         
         this.renderDirty();
-        // console.log('got range for '+frame_id, range, f);
     }
 
     clear_range(topic) {
@@ -290,15 +264,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         
     }
 
-    // getUrlHashParts (out_parts) {
-    //     super.getUrlHashParts(out_parts);
-    // }
-
     setupMenu () {
         super.setupMenu();
-
-        // this.sources.makeEmptyButton('', this.laser_msg_type);
-        // this.sources.makeEmptyButton('', this.rage_msg_type,);
-        // this.sources.makeEmptyButton('', this.costmap_msg_type);
     }
 }
