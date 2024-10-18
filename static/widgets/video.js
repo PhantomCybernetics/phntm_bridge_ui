@@ -29,7 +29,6 @@ export class VideoWidget {
         this.videoWidth = -1;
         this.videoHeight = -1;
     
-        // this.overlay_extra_controls_rendered = false;
         this.display_overlay_input_crop = false;
 
         let that = this;
@@ -61,7 +60,6 @@ export class VideoWidget {
                                 (t) => { that.clearOverlay(t); });
 
         this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
-        // this.panel.ui.client.on('topic_config', (t, c) => that.onTopicConfigUpdate(t, c))
         this.onOverlaySourcesChange(this.overlay_sources.getSources());
     }
 

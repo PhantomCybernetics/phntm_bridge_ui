@@ -2,6 +2,7 @@ import { DescriptionTFWidget } from './description-tf.js'
 import { MultiTopicSource } from "./inc/multitopic.js";
 import * as THREE from 'three';
 import { lerpColor, deg2rad } from '../lib.js'
+import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 
 export class Everything3DWidget extends DescriptionTFWidget {
 
@@ -16,9 +17,22 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.addEventListener('pg_updated', (e) => this.on_pg_updated(e));
 
-        this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1, (t, s) => this.on_laser_data(t, s), (t) => this.clear_laser(t));
-        this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1, (t, r) => this.on_range_data(t, r), (t) => this.clear_range(t));
-        this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
+        this.overlays = {};
+        this.sources.on('change', (topics) => this.on_sources_change(topics));
+
+        this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1,
+            (t, s) => this.on_laser_data(t, s),
+            (t) => this.clear_laser(t)
+        );
+        this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1,
+            (t, r) => this.on_range_data(t, r),
+            (t) => this.clear_range(t)
+        );
+        // this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
+        this.sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
+            (t, d) => { that.on_detections_data(t, d); },
+            (t) => { that.clear_detections(t); }
+        );
 
         this.parseUrlParts(this.panel.custom_url_vars);
 
@@ -31,32 +45,59 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.laser_frames = {};
         this.dirty_laser_points = {}; // topic => vector3[]
         this.clear_laser_timeout = {}; // timer refs
+        
+        this.dirty_detection_results = {}; // topic => []
+        this.detection_frames = {}; // topic => frame obj
+        this.detection_labels = {}; // topic => []
+        this.detection_visuals = {}; // topic => []
+        this.detection_visuals_geometry = {};
+        this.clear_detections_timeout = {}; // timer refs
+
         this.base_link_frame = null;
         
         panel.widget_menu_cb = () => {
             that.setupMenu();
         }
 
+        this.on_sources_change(this.sources.getSources());
+
         this.rendering = true;
         this.renderDirty();
         requestAnimationFrame((t) => this.rendering_loop());  
     }
     
+    on_sources_change(source_topics) {
+
+        let that = this;
+        let client = this.panel.ui.client;
+
+        source_topics.forEach((topic)=>{
+            if (!that.overlays[topic]) {
+                that.overlays[topic] = {};
+                that.overlays[topic].config_update_cb = (config) => {
+                    console.warn('onTopicConfigUpdate', topic, config);
+                    that.overlays[topic].config = config;
+                    // that.setupOverlay(topic, config);
+                }
+                client.on_topic_config(topic, that.overlays[topic].config_update_cb);
+            }
+        });
+    }
+
     async rendering_loop() {
 
         if (!this.rendering)
             return;
         
-        let dirty_lasers = Object.keys(this.dirty_laser_points);
-
         let that = this;
-        dirty_lasers.forEach((topic)=>{
+        let dirty_laser_topics = Object.keys(this.dirty_laser_points);
+        dirty_laser_topics.forEach((topic)=>{
             let laser_points = that.dirty_laser_points[topic];
             if (!laser_points)
                 return;
             delete that.dirty_laser_points[topic];
 
-            if (!this.sources.topicSubscribed(topic))
+            if (!that.sources.topicSubscribed(topic))
                 return;
 
             if (!that.laser_visuals[topic]) {
@@ -80,6 +121,48 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.laser_geometry[topic].setFromPoints(laser_points);
             }
         });
+
+        let dirty_detection_topics = Object.keys(this.dirty_detection_results);
+        dirty_detection_topics.forEach((topic) => {
+            let results = that.dirty_detection_results[topic];
+            if (!results)
+                return;
+            delete that.dirty_detection_results[topic];
+
+            if (!that.sources.topicSubscribed(topic))
+                return;
+
+            let detection_points = []; //all for this topic
+            let frame_base = new THREE.Vector3(0.0,0.0,0.0);
+            for (let i = 0; i < results.length; i++) {
+                detection_points.push(frame_base);
+                detection_points.push(results[i].points[0]);
+                // detection_points.push(frame_base);
+            }
+
+            if (!that.detection_visuals[topic]) {
+    
+                let color = new THREE.Color(0xff00ff);
+                const material = new THREE.LineBasicMaterial( {
+                    color: color,
+                    transparent: true,
+                    opacity: .95
+                } );
+              
+                that.detection_visuals_geometry[topic] = new THREE.BufferGeometry().setFromPoints(detection_points);
+    
+                that.detection_visuals[topic] = new THREE.LineSegments(that.detection_visuals_geometry[topic], material);
+                that.detection_visuals[topic].castShadow = false;
+                that.detection_visuals[topic].receiveShadow = false;
+                if (that.detection_frames[topic]) {
+                    that.detection_frames[topic].add(that.detection_visuals[topic]);
+                }
+            } else {
+                that.detection_visuals_geometry[topic].setFromPoints(detection_points);
+            }
+
+            // console.log('Rendering '+results.length+' detections for '+topic, that.detection_visuals[topic], detection_points);
+        });
         
         super.rendering_loop(); //description-tf render
     }
@@ -87,20 +170,30 @@ export class Everything3DWidget extends DescriptionTFWidget {
     on_model_removed() {
         super.on_model_removed();
         let that = this;
+
+        this.base_link_frame = null;
+
         let laser_topics = this.laser_visuals ? Object.keys(this.laser_visuals) : [];
         if (this.laser_frames)
             laser_topics = laser_topics.concat(Object.keys(this.laser_frames));
-        this.base_link_frame = null;
         console.log('Robot removed, clearing laser topics', laser_topics)
-
         laser_topics.forEach((topic) => {
             that.clear_laser(topic);
         });
+
         let range_topics = this.range_visuals ? [].concat(Object.keys(this.range_visuals)) : [];
         console.log('Robot removed, clearing range topics', range_topics)
         range_topics.forEach((topic) => {
             that.clear_range(topic);
         });
+
+        let detection_topics = this.detection_visuals ? [].concat(Object.keys(this.detection_visuals)) : [];
+        console.log('Robot removed, clearing detection topics', detection_topics)
+        detection_topics.forEach((topic) => {
+            that.clear_detections(topic);
+        });
+
+
     }
 
     on_laser_data (topic, scan) {
@@ -187,11 +280,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }, 300);
     }
 
-
-    on_pg_updated(ev) {
-        // console.log('Pose grapth updated', e);
-    }
-
     clear_laser(topic) {
         if (this.laser_visuals[topic]) {
             this.laser_visuals[topic].removeFromParent();
@@ -200,6 +288,10 @@ export class Everything3DWidget extends DescriptionTFWidget {
         if (this.laser_frames[topic]) {
             delete this.laser_frames[topic];
         }
+    }
+
+    on_pg_updated(ev) {
+        // console.log('Pose grapth updated', e);
     }
 
     on_range_data (topic, range) {
@@ -258,6 +350,137 @@ export class Everything3DWidget extends DescriptionTFWidget {
             this.range_visuals[topic].cone.removeFromParent();
             delete this.range_visuals[topic];
         }
+    }
+
+    on_detections_data(topic, data) {
+        if (!this.robot || this.panel.paused)
+            return;
+
+        let frame_id = data.header.frame_id;
+        let f = this.robot.getFrame(frame_id);
+        if (!f) {
+            this.panel.ui.show_notification('Frame '+frame_id+' not found in robot model for detection data from '+topic, 'error');
+            console.error('Frame '+frame_id+' not found in robot model for detection data from '+topic);
+            return;
+        }
+        this.detection_frames[topic] = f;
+
+        // const center = new THREE.Vector3(0, 0, 0);
+
+        this.dirty_detection_results[topic] = [];
+        
+        console.log(data);
+
+        for (let i = 0; i < data.detections.length; i++) {
+
+            // console.log(data.detections[i]);
+
+            let res = data.detections[i].results[0];
+            let center = new THREE.Vector3(
+                res['pose']['pose']['position']['x'],
+                res['pose']['pose']['position']['y'],
+                res['pose']['pose']['position']['z']
+            );
+            // console.log(res['pose']['pose']['position']);
+            let d = {
+                class_id: res.hypothesis.class_id,
+                score: res.hypothesis.score,
+                points: [ center ]
+            }
+
+            this.dirty_detection_results[topic].push(d);
+
+            if (!this.detection_labels[topic])
+                this.detection_labels[topic] = [];
+
+            let l = 'Class '+d.class_id;
+            if (this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
+                && this.overlays[topic].config['nn_detection_labels'][d.class_id])
+                l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
+            l += '\n['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
+            console.log(l);
+            let label_el = null;
+            if (!this.detection_labels[topic][i]) {
+                const el = document.createElement('div');
+                el.className = 'detection_label';
+                // el.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                // el.style.color = '#ffffff';
+                // el.style.fontSize = '12px';
+                label_el = new CSS2DObject(el);
+                label_el.center.set(0.5, 0);
+                f.add(label_el);
+                label_el.position.set(center.x, center.y, center.z);
+                this.detection_labels[topic][i] = label_el;
+            } else {
+                label_el = this.detection_labels[topic][i];
+            }
+            label_el.element.textContent = l;
+            label_el.element.hidden = false;
+            label_el.position.set(center.x, center.y, center.z);
+        }
+
+        for (let i = data.detections.length; i < this.detection_labels[topic].length; i++) {
+            this.detection_labels[topic][i].element.hidden = true;
+        }
+
+        // let a_tan = Math.tan(range.field_of_view/2.0);
+        // let r = a_tan * range.max_range * 2.0;
+        // const geometry = new THREE.ConeGeometry(r, range.max_range, 32); 
+        // geometry.rotateZ(90 * Math.PI/180);
+        // geometry.translate(range.max_range/2.0, 0, 0);
+        // let color = new THREE.Color(0xffff00);
+        // const material = new THREE.MeshBasicMaterial({
+        //     color: color, transparent: true, opacity: .85
+        // } );
+        // const cone = new THREE.Mesh(geometry, material );
+        // cone.castShadow = false;
+        // this.range_visuals[topic] = {
+        //     cone: cone,
+        //     color: color,
+        //     material: material
+        // };
+        // f.add(cone);
+        
+        // if (data.detections.length)
+        //     console.log('Detection data for '+topic, data);
+
+        this.clear_detections_on_timeout(topic);
+    }
+
+    clear_detections_on_timeout(topic) {
+        if (this.clear_detections_timeout[topic])
+            clearTimeout(this.clear_detections_timeout[topic])
+
+        let that = this;
+        this.clear_detections_timeout[topic] = setTimeout(()=>{
+            if (that.panel.paused) { //don't clear while paused
+                that.clear_detections_on_timeout(topic);
+                return;
+            }
+
+            that.dirty_detection_results[topic] = [];
+            if (this.detection_labels[topic]) {
+                for (let i = 0; i < this.detection_labels[topic].length; i++) {
+                    this.detection_labels[topic][i].element.hidden = true;
+                }
+            }
+            that.renderDirty();
+        }, 300);
+    }
+
+    clear_detections(topic) {
+        if (this.detection_visuals[topic]) {
+            this.detection_visuals[topic].removeFromParent();
+            delete this.detection_visuals[topic];
+        }
+        if (this.detection_frames[topic])
+            delete this.detection_frames[topic];
+        if (this.detection_visuals_geometry[topic])
+            delete this.detection_visuals_geometry[topic];
+        if (this.dirty_detection_results[topic])
+            delete this.dirty_detection_results[topic];
+        if (this.detection_labels[topic])
+            delete this.detection_labels[topic];
     }
 
     on_costmap_data(topic, costmap) {

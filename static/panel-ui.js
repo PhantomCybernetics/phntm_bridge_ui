@@ -2641,27 +2641,33 @@ export class PanelUI {
                 return new_value;
             }
             // if (value instanceof ArrayBuffer) return '<ArrayBuffer>';
-
             return value;
-          };
+        };
 
+        if (show_reply === null) { //auto (only show when there is something interesting in the reply)
+            let reply_keys = Object.keys(service_reply);
+            reply_keys = reply_keys.filter(item => ['success', 'successful', 'err', 'error'].indexOf(item) === -1);
+            if (service_reply.message && service_reply.message.length) {
+                show_reply = true;
+            } else if (reply_keys.length) {
+                show_reply = true;
+            } else {
+                show_reply = false;
+            }
+        }
         if (service_reply.err) { // showing errors always
             this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
             is_err = true;
         } else if (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)  { // showing errors always
             this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
             is_err = true;
-        } else if (service_reply.success === true) { //std set bool & trugger
-            if (show_reply === true || (show_reply === null && service_reply.message && service_reply.message.length)) { 
-                this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
-            }
-        } else {
-            if (show_reply === true || (show_reply === null && Object.keys(service_reply).length > 0)) {
-                this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
-            }
+        } else if (service_reply.success === true && show_reply) { //std set bool & trugger
+            this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+        } else if (show_reply) {
+            this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
         }
 
-        if (is_err && btn_el) { // do the error wobble
+        if (is_err && btn_el) { // do the error btn wobble
             btn_el.addClass('btn_err');
             setTimeout(()=>{
                 btn_el

@@ -166,11 +166,11 @@ export class DescriptionTFWidget extends EventTarget {
     
         this.camera_target_pos = new THREE.Vector3(0.0,0.0,0.0);
         this.camera.lookAt(this.camera_target_pos);
-        this.camera_target_robot_joint = null;
+        this.camera_target = null;
         // this.camera_anchor_joint = null;
 
         this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
-        this.renderer.domElement.addEventListener( 'pointerdown', (ev) => {
+        this.renderer.domElement.addEventListener('pointerdown', (ev) => {
             ev.preventDefault(); // stop from moving the panel
         } );
         this.controls.addEventListener('change', () => { this.controls_changed(); });
@@ -647,7 +647,7 @@ export class DescriptionTFWidget extends EventTarget {
             let joint_world_pos = new THREE.Vector3();
             focus_joint.getWorldPosition(joint_world_pos);
             console.log('Focusing cam on joint: '+focus_joint_key+'; ['+joint_world_pos.x+';'+joint_world_pos.y+';'+joint_world_pos.z+']');
-            this.camera_target_robot_joint = focus_joint;
+            this.camera_target = focus_joint;
             // that.camera_anchor_joint = focus_joint;
             // that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
         }
@@ -737,7 +737,7 @@ export class DescriptionTFWidget extends EventTarget {
 
             for (let i = 0; i < cluster.length; i++) {
                 let mm = cluster[i];
-                let v_center_offset = ((cluster.length-1)/2)-i;
+                let v_center_offset = (((cluster.length-1)/2)-i) * 1.1; // 1 is height of one label, adding small margin
                 const [ axis_el, label_el] = that.make_mark(frames[mm.key], mm.key,
                     layer_axes, layer_labels,
                     .02, h_center, v_center_offset
@@ -752,8 +752,8 @@ export class DescriptionTFWidget extends EventTarget {
 
     make_mark(target, label_text, layer_axes, layer_labels, axis_size = .02, h_center = true, v_center = 0) {
 
-        if (label_text == 'base_link') {
-            axis_size = .15;
+        if (target != this.camera_target) {
+             axis_size = .0015;
         }
   
         const axesHelper = new THREE.AxesHelper(axis_size);       
@@ -763,24 +763,28 @@ export class DescriptionTFWidget extends EventTarget {
         axesHelper.material.depthWrite = false;
 
         target.add(axesHelper);
-        axesHelper.layers.set(layer_axes);        
+        axesHelper.layers.set(layer_axes);  
 
         let label_el = null;
         if (label_text) {
             const el = document.createElement('div');
             el.className = 'marker_label';
+            el.title = 'Focus camera here';
+            if (target == this.camera_target)
+                el.className += ' focused';
             if (!h_center)
                 el.className += (layer_labels == DescriptionTFWidget.L_JOINT_LABELS ? ' joint' : ' link');
             el.textContent = label_text;
-            el.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            el.style.color = '#ffffff';
-            el.style.fontSize = '12px';
-
+            
             label_el = new CSS2DObject(el);
+            let that = this;
+            el.addEventListener('pointerdown', function(ev) {
+                that.set_camera_target(target);
+                ev.preventDefault();
+            });
             target.add(label_el);
-            // label.center.set(layer_labels == 4 ? 1.1 : -0.1, 0); // joints left, links right
-            label_el.center.set(h_center ? 0.5 : (layer_labels == DescriptionTFWidget.L_JOINT_LABELS ? 1.0 : 0.0),
-                                v_center); // joints left, links right
+            label_el.center.set(h_center ? 0.5 : (layer_labels == DescriptionTFWidget.L_JOINT_LABELS ? 1.0 : 0.0),  // joints left, links right
+                                v_center);
             label_el.position.set(0, 0, 0);
             label_el.layers.set(layer_labels);
 
@@ -788,6 +792,11 @@ export class DescriptionTFWidget extends EventTarget {
         }
 
         return [ axesHelper, label_el];
+    }
+
+    set_camera_target(new_target) {
+        this.camera_target = new_target;
+        this.make_robot_markers(this.robot);
     }
 
     controls_changed() {
@@ -907,9 +916,9 @@ export class DescriptionTFWidget extends EventTarget {
                 this.camera.position.copy(this.camera_pos);
             }
             
-            if (this.camera_target_robot_joint) {
+            if (this.camera_target) {
                 let new_target_pos = new THREE.Vector3();
-                this.camera_target_robot_joint.getWorldPosition(new_target_pos);
+                this.camera_target.getWorldPosition(new_target_pos);
                 if (this.camera_pose_initialized) {
                     this.camera_target_pos.copy(this.camera_target_pos.lerp(new_target_pos, cam_lerp_amount));
                 } else {
