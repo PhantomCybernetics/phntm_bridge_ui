@@ -952,6 +952,7 @@ export class InputManager {
                         new_btn.assigned = true;
                         new_btn.set_ctrl_profile = default_config.profile;
                         break;
+                    case 'wifi-scan':
                     case 'wifi-roam':
                         new_btn.action = default_config.action;
                         new_btn.assigned = true;
@@ -2936,7 +2937,10 @@ export class InputManager {
         ];
         
         if (this.ui.wifi_scan_enabled) {
-            opts.push('<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-fi scan &amp; Roam</option>');
+            opts.push('<option value="wifi-scan"'+(btn.action == 'wifi-scan' ? ' selected': '')+'>Wi-Fi Scan</option>');
+        }
+        if (this.ui.wifi_roam_enabled) {
+            opts.push('<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-Fi Scan &amp; Roam</option>');
         }
         // let dri = profile.driver_instance;
         let dri_btns = driver.get_buttons();
@@ -3188,11 +3192,20 @@ export class InputManager {
                 //TODO
                 console.error('UI profiles TBD')
                 break;
+            case 'wifi-scan': 
+                console.log('WIFI SCAN');
+                if (btn.touch_btn_el)
+                    btn.touch_btn_el.addClass('working');
+                that.ui.trigger_wifi_scan(false, ()=>{
+                    if (btn.touch_btn_el)
+                        btn.touch_btn_el.removeClass('working');
+                });
+                break;
             case 'wifi-roam': 
                 console.log('WIFI SCAN & ROAM');
                 if (btn.touch_btn_el)
                     btn.touch_btn_el.addClass('working');
-                that.ui.trigger_wifi_scan(()=>{
+                that.ui.trigger_wifi_scan(true, ()=>{
                     if (btn.touch_btn_el)
                         btn.touch_btn_el.removeClass('working');
                 });

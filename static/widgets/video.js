@@ -266,7 +266,7 @@ export class VideoWidget {
                 l += ' (' + d.results[j].hypothesis.score.toFixed(2)+')';
 
                 // 3d distance
-                if (d.results[j]['pose'] && d.results[j]['pose']['pose'] && d.results[j]['pose']['pose']['position'] && d.results[j]['pose']['pose']['position']['z'])
+                if (d.results[j]['pose'] && d.results[j]['pose']['pose'] && d.results[j]['pose']['pose']['position'] && d.results[j]['pose']['pose']['position']['z'] !== undefined)
                     distances.push(d.results[j]['pose']['pose']['position']['z'].toFixed(2) + 'm');
                 else
                     distances.push(null);

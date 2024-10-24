@@ -419,10 +419,12 @@ export class Everything3DWidget extends DescriptionTFWidget {
             label_el.position.set(center.x, center.y, center.z);
         }
 
-        for (let i = data.detections.length; i < this.detection_labels[topic].length; i++) {
-            this.detection_labels[topic][i].element.hidden = true;
+        if (this.detection_labels[topic]) {
+            for (let i = data.detections.length; i < this.detection_labels[topic].length; i++) {
+                this.detection_labels[topic][i].element.hidden = true;
+            }
         }
-
+    
         // let a_tan = Math.tan(range.field_of_view/2.0);
         // let r = a_tan * range.max_range * 2.0;
         // const geometry = new THREE.ConeGeometry(r, range.max_range, 32); 

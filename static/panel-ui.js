@@ -459,7 +459,10 @@ export class PanelUI {
         });
 
         $('#trigger_wifi_scan').click(() => {
-            that.trigger_wifi_scan();
+            that.trigger_wifi_scan(false);
+        });
+        $('#trigger_wifi_roam').click(() => {
+            that.trigger_wifi_scan(true);
         });
 
         $('#graph_controls').on('mouseenter', (e) => {
@@ -1171,7 +1174,7 @@ export class PanelUI {
                 }
 
                 let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '"></div>');
-                let cont_name_el = $('<span class="docker_cont_name">'+cont.name+'</span>');
+                let cont_name_el = $('<span class="docker_cont_name" title="'+cont.name+'">'+cont.name+'</span>');
                 let cont_status_el = $('<span class="docker_cont_status">['+status+']</span>');
 
                 let cont_vars_el = $('<span class="docker_cont_vars"></span>')
@@ -1728,25 +1731,14 @@ export class PanelUI {
             ;
     }
 
-    do_wifi_scan_roam(callback) {
-        console.warn('Triggering wifi scan');
-        let that = this;
-        $('#trigger_wifi_scan').addClass('working');
-        this.client.service_call('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: true }, true, (reply) =>{
-            $('#trigger_wifi_scan').removeClass('working');
-            console.info('Wifi scan reply:', reply);
-            if (reply.err) {
-                that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
-            }
-            if (callback)
-                callback(reply);
-        });
-    }
-
-    trigger_wifi_scan(callback=null) {
-        if (!this.wifi_scan_enabled || $('#trigger_wifi_scan').hasClass('working')) {
-            if (!this.wifi_scan_enabled) {
-                console.warn('Wi-fi scan disabled on the robot');
+    trigger_wifi_scan(roam, callback=null) {
+        let btn = roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
+        let enabled = roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
+        let what = roam ? 'roaming' : 'scanning';
+        if (!enabled || btn.hasClass('working')) {
+            if (!enabled) {
+                this.show_notification('Wifi '+what+' disabled by robot', 'error');
+                console.warn('Wi-fi '+what+' disabled by the robot');
             }
             if (callback)
                 callback();
@@ -1755,7 +1747,7 @@ export class PanelUI {
 
         if (!this.wifi_scan_node) {
             this.show_notification('Error: Wifi scan node unknown', 'error');
-
+            console.warn('Wifi scan node unknown');
             if (callback)
                 callback();
             return;
@@ -1763,25 +1755,65 @@ export class PanelUI {
 
         let that = this;
         if (!this.wifi_scan_warning_suppressed) {
-            this.confirm_dialog('<span class="warn-icon"></span>Depending on your hardware &amp; software setup, '
-                + 'this action can leave your robot offline. See <a href="https://github.com/PhantomCybernetics/phntm_agent?tab=readme-ov-file#wireless-network-scanning-and-roaming" target="_blank">more info here</a><br><br>'
-                + 'Before attempting to roam, make sure you have local console access and/or can reboot the system if necessary.',
+            let btn_label = roam ? 'Scan &amp; Roam' : 'Scan Wi-Fi';
+            this.confirm_dialog('<span class="warn-icon"></span>Depending on your hardware setup, '
+                + 'this action can leave your machine offline. See <a href="https://docs.phntm.io/bridge/wifi-scan-roam" target="_blank">more info here</a><br><br>'
+                + 'Before attempting to scan or roam, make sure you have local console access and can reboot the system if necessary.',
                 'warn',
-                'Scan &amp; Roam', (dont_show_again) => { // confirm
+                btn_label, (dont_show_again) => { // confirm
                     if (dont_show_again) {
                         that.wifi_scan_warning_suppressed = true;
                         localStorage.setItem('wifi-scan-warning-suppressed:'+that.client.id_robot, true); // warning won't be shown any more
                     }
-                    that.do_wifi_scan_roam(callback);
+                    that.do_wifi_scan_roam(roam, callback);
                 }, 
                 'Cancel', () => { // cancel
-                    console.log('roaming cancelled');
                     if (callback)
                         callback();
                 });
         } else {
-            that.do_wifi_scan_roam(callback);
+            that.do_wifi_scan_roam(roam, callback);
         }
+    }
+
+    do_wifi_scan_roam(roam, callback) {
+        let signal_monitor = $('#signal-monitor')
+        if (signal_monitor.hasClass('working'))
+            return;
+        let btn = roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
+        let enabled = roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
+        let what = roam ? 'roam' : 'scan';
+        console.warn('Triggering wifi '+what);
+        let that = this;
+        btn.addClass('working');
+        signal_monitor.addClass('working');
+        this.client.service_call('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
+            btn.removeClass('working');
+            signal_monitor.removeClass('working');
+            console.info('Wifi '+what+' reply:', reply);
+            if (reply.err) {
+                that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+            }
+            else if (!roam) {
+                if (reply.scan_results && reply.scan_results.length) {
+                    let val = JSON.stringify(reply.scan_results, null, 4);
+                    let num = reply.scan_results.length;
+                    that.show_notification('Wi-Fi scan returned '+num+' result'+(num != 1 ? 's' : ''), null, '<pre>'+val+'</pre>');
+                } else {
+                    that.show_notification('Wi-Fi scan returned no results', 'error');
+                }
+            } else if (roam) {
+                if (reply.scan_results && reply.scan_results.length) {
+                    let val = JSON.stringify(reply.scan_results, null, 4);
+                    let num = reply.scan_results.length;
+                    that.show_notification(reply.msg, null, '<pre>Scan results:\n'+val+'</pre>');
+                } else {
+                    that.show_notification(reply.msg, null);
+                }
+            }
+            if (callback)
+                callback(reply);
+        });
     }
 
     //widget_opts = {};
@@ -2079,10 +2111,12 @@ export class PanelUI {
     }
 
     async update_wifi_signal(percent) {
-        if (percent < 0)
+        if (percent < 0) {
             this.wifi_signal_el.attr('title', 'Robot disconnected');
-        else
+            this.wifi_signal_el.removeClass('working');
+        } else {
             this.wifi_signal_el.attr('title', 'Robot\'s wi-fi signal quality: ' + Math.round(percent) + '%');
+        }
 
         this.wifi_signal_el.removeClass(['q25', 'q50', 'q75', 'q100']);
         if (percent < 5)
@@ -2816,7 +2850,9 @@ export class PanelUI {
             ;
 
         $('#trigger_wifi_scan')
-            .css('display', msg.supports_scanning && this.wifi_roam_enabled ? 'inline-block' : 'none')
+            .css('display', msg.supports_scanning && this.wifi_scan_enabled ? 'inline-block' : 'none');
+        $('#trigger_wifi_roam')
+            .css('display', msg.supports_scanning && this.wifi_roam_enabled ? 'inline-block' : 'none');
         // $('#robot_wifi_info').removeClass('offline');
 
         if (msg.supports_scanning)

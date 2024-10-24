@@ -1598,6 +1598,22 @@ BODY.hamburger #docker_controls H3 {
     background-position: -100px 0px;
 }
 
+#network-info #signal-monitor.working {
+    /* display: block; */
+    animation: wifi-anim-working 1.0s ease-in infinite;
+}
+
+@keyframes wifi-anim-working {
+    0% {
+      /* transform: scale(0); */
+      opacity: 1;
+    }
+    100% {
+      /* transform: scale(1); */
+      opacity: 0;
+    }
+  } 
+
 #network-info .network-info-dot {
     display: block;
     background-color: red;
@@ -1725,20 +1741,27 @@ BODY.hamburger #docker_controls H3 {
     margin-top: 10px;
  }
 
-BUTTON#trigger_wifi_scan {
-    /* margin-left: 5px; */
+#wifi_scan_roam_cont {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+}
+
+BUTTON#trigger_wifi_scan,
+BUTTON#trigger_wifi_roam {
+    margin-left: 5px;
     border: 0px;
     border-radius: 5px;
     color: #fff;
     background-color: #0051ff;
-    display: none;
-    position: absolute;
-    right: 10px;
-    bottom: 10px;
+    display: none; /* hidden until iw_stats msg */
     padding: 5px 10px;
+    position: relative;
+    float: left;
 }
 
-BUTTON#trigger_wifi_scan.working {
+BUTTON#trigger_wifi_scan.working,
+BUTTON#trigger_wifi_roam.working {
     background: #ff8c00;
     cursor: wait;
 }
