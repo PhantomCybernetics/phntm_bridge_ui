@@ -369,7 +369,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.dirty_detection_results[topic] = [];
         
-        console.log(data);
+        // console.log(data);
 
         for (let i = 0; i < data.detections.length; i++) {
 
@@ -398,7 +398,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 && this.overlays[topic].config['nn_detection_labels'][d.class_id])
                 l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
             l += '\n['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
-            console.log(l);
+            // console.log(l);
             let label_el = null;
             if (!this.detection_labels[topic][i]) {
                 const el = document.createElement('div');

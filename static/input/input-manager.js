@@ -2323,6 +2323,10 @@ export class InputManager {
         btn.config_details_el.append(profile_el);
     }
 
+    render_wifi_scan_button_config (driver, btn) {      
+        btn.config_details_el.append(this.make_btn_trigger_sel(btn));
+    }
+
     render_wifi_roam_button_config (driver, btn) {      
         btn.config_details_el.append(this.make_btn_trigger_sel(btn));
     }
@@ -2800,6 +2804,9 @@ export class InputManager {
                         break;
                     case 'ui-profile': 
                         this.render_ui_profile_button_config(driver, btn);
+                        break;
+                    case 'wifi-scan':     
+                        this.render_wifi_scan_button_config(driver, btn);
                         break;
                     case 'wifi-roam': 
                         this.render_wifi_roam_button_config(driver, btn);
