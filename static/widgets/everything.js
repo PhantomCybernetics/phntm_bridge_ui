@@ -397,6 +397,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
                 && this.overlays[topic].config['nn_detection_labels'][d.class_id])
                 l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
+            l += ' (' + d.score.toFixed(2)+')';
             l += '\n['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
             // console.log(l);
             let label_el = null;
