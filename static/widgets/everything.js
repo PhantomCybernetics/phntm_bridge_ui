@@ -77,7 +77,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.overlays[topic].config_update_cb = (config) => {
                     console.warn('onTopicConfigUpdate', topic, config);
                     that.overlays[topic].config = config;
-                    // that.setupOverlay(topic, config);
                 }
                 client.on_topic_config(topic, that.overlays[topic].config_update_cb);
             }

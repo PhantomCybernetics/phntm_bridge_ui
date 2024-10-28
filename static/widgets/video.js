@@ -86,9 +86,13 @@ export class VideoWidget {
     setupOverlay(topic, config) {
 
         if (config) {
-            this.overlays[topic].nn_cropped_square = config['nn_input_cropped_square'] ? config['nn_input_cropped_square'] : false;
-            this.overlays[topic].nn_w = config['nn_input_w'] ? config['nn_input_w'] : 0;
-            this.overlays[topic].nn_h = config['nn_input_h'] ? config['nn_input_h'] : 0;
+            if (config['nn_input_w'] && config['nn_input_h']) {
+                this.overlays[topic].nn_w = config['nn_input_w'];
+                this.overlays[topic].nn_h = config['nn_input_h'];
+                this.overlays[topic].overlay_aspect = config['nn_input_w'] / config['nn_input_h'];
+            } else {
+                this.overlays[topic].overlay_aspect = -1;
+            }
             this.overlays[topic].config = config;
         } else if (!this.overlays[topic].config) {
             return;
@@ -96,9 +100,21 @@ export class VideoWidget {
         
         if (this.videoWidth < 0 || this.videoHeight < 0)
             return; //video dimenstions still unknown
-
-        this.overlays[topic].display_w = this.overlays[topic].nn_cropped_square ? this.videoHeight : this.videoWidth;
-        this.overlays[topic].display_h = this.videoHeight;
+        
+        if (this.overlays[topic].overlay_aspect > -1) {
+            let w = this.videoHeight * this.overlays[topic].overlay_aspect;
+            if (w <= this.videoWidth) {
+                this.overlays[topic].display_w = w;
+                this.overlays[topic].display_h = this.videoHeight;
+            } else {
+                this.overlays[topic].display_w = this.videoWidth;
+                this.overlays[topic].display_h = this.videoWidth / this.overlays[topic].overlay_aspect;
+            }
+        } else {
+            this.overlays[topic].display_w = this.videoWidth;
+            this.overlays[topic].display_h = this.videoHeight;
+        }
+            
         this.overlays[topic].xoff = (this.videoWidth-this.overlays[topic].display_w) / 2.0;
 
         if (this.overlays[topic].container_el) {
@@ -195,20 +211,20 @@ export class VideoWidget {
 
     renderOverlayMenuControls() {
 
-        let some_overlay_is_cropped = false;
+        let show_nn_crop_control = false;
         Object.keys(this.overlays).forEach((topic)=>{
-            if (this.overlays[topic].nn_cropped_square) {
-                some_overlay_is_cropped = true;
+            if (this.overlays[topic].nn_w || this.overlays[topic].nn_h) {
+                show_nn_crop_control = true;
                 return;
             }
         });
 
-        if (some_overlay_is_cropped && !this.overlay_crop_display_control_menu_el) {
+        if (show_nn_crop_control && !this.overlay_crop_display_control_menu_el) {
 
             this.overlay_crop_display_control_menu_el = $('<div class="menu_line overlay_menu_ctrl"><label for="video_overlay_input_crop_cb_'+this.panel.n+'">'
                 +'<input type="checkbox"'
                 + (this.display_overlay_input_crop?' checked':'')
-                + ' id="video_overlay_input_crop_cb_'+this.panel.n+'" title="Display overlay input cropping"> Show overlay input cropping</label></div>'
+                + ' id="video_overlay_input_crop_cb_'+this.panel.n+'" title="Display overlay input cropping"> Highlight overlay input area</label></div>'
             );
             this.overlay_crop_display_control_menu_el.insertBefore($('#close_panel_menu_'+this.panel.n));
             
@@ -232,7 +248,7 @@ export class VideoWidget {
                 });
             });
 
-        } else if (!some_overlay_is_cropped && this.overlay_crop_display_control_menu_el) {
+        } else if (!show_nn_crop_control && this.overlay_crop_display_control_menu_el) {
             this.overlay_crop_display_control_menu_el.remove();
             this.overlay_crop_display_control_menu_el = null;
         }
