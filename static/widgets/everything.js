@@ -49,8 +49,9 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.dirty_detection_results = {}; // topic => []
         this.detection_frames = {}; // topic => frame obj
         this.detection_labels = {}; // topic => []
-        this.detection_visuals = {}; // topic => []
-        this.detection_visuals_geometry = {};
+        this.detection_labels = {}; // topic => []
+        this.detection_lines = {}; // topic => []
+        this.detection_lines_geometry = {};
         this.clear_detections_timeout = {}; // timer refs
 
         this.base_link_frame = null;
@@ -139,7 +140,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 // detection_points.push(frame_base);
             }
 
-            if (!that.detection_visuals[topic]) {
+            if (!that.detection_lines[topic]) {
     
                 let color = new THREE.Color(0xff00ff);
                 const material = new THREE.LineBasicMaterial( {
@@ -148,19 +149,19 @@ export class Everything3DWidget extends DescriptionTFWidget {
                     opacity: .95
                 } );
               
-                that.detection_visuals_geometry[topic] = new THREE.BufferGeometry().setFromPoints(detection_points);
+                that.detection_lines_geometry[topic] = new THREE.BufferGeometry().setFromPoints(detection_points);
     
-                that.detection_visuals[topic] = new THREE.LineSegments(that.detection_visuals_geometry[topic], material);
-                that.detection_visuals[topic].castShadow = false;
-                that.detection_visuals[topic].receiveShadow = false;
+                that.detection_lines[topic] = new THREE.LineSegments(that.detection_lines_geometry[topic], material);
+                that.detection_lines[topic].castShadow = false;
+                that.detection_lines[topic].receiveShadow = false;
                 if (that.detection_frames[topic]) {
-                    that.detection_frames[topic].add(that.detection_visuals[topic]);
+                    that.detection_frames[topic].add(that.detection_lines[topic]);
                 }
             } else {
-                that.detection_visuals_geometry[topic].setFromPoints(detection_points);
+                that.detection_lines_geometry[topic].setFromPoints(detection_points);
             }
 
-            // console.log('Rendering '+results.length+' detections for '+topic, that.detection_visuals[topic], detection_points);
+            // console.log('Rendering '+results.length+' detections for '+topic, that.detection_lines[topic], detection_points);
         });
         
         super.rendering_loop(); //description-tf render
@@ -186,7 +187,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             that.clear_range(topic);
         });
 
-        let detection_topics = this.detection_visuals ? [].concat(Object.keys(this.detection_visuals)) : [];
+        let detection_topics = this.detection_lines ? [].concat(Object.keys(this.detection_lines)) : [];
         console.log('Robot removed, clearing detection topics', detection_topics)
         detection_topics.forEach((topic) => {
             that.clear_detections(topic);
@@ -236,6 +237,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 console.error('Frame '+frame_id+' not found in robot model for laser data from '+topic);
             }
             return;
+        } else if (this.laser_frames_error_logged && this.laser_frames_error_logged[topic]) {
+            delete this.laser_frames_error_logged[topic]
         }
 
         let laser_points = [];
@@ -358,9 +361,16 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let frame_id = data.header.frame_id;
         let f = this.robot.getFrame(frame_id);
         if (!f) {
-            this.panel.ui.show_notification('Frame '+frame_id+' not found in robot model for detection data from '+topic, 'error');
-            console.error('Frame '+frame_id+' not found in robot model for detection data from '+topic);
+            if (!this.detection_frames_error_logged)
+                this.detection_frames_error_logged = {};
+            if (!this.detection_frames_error_logged[topic]) {
+                this.detection_frames_error_logged[topic] = true;  //only log once
+                this.panel.ui.show_notification('Frame '+frame_id+' not found in robot model for detection data from '+topic, 'error');
+                console.error('Frame '+frame_id+' not found in robot model for detection data from '+topic);
+            }
             return;
+        } else if (this.detection_frames_error_logged && this.detection_frames_error_logged[topic]) {
+            delete this.detection_frames_error_logged[topic]
         }
         this.detection_frames[topic] = f;
 
@@ -393,7 +403,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 this.detection_labels[topic] = [];
 
             let l = 'Class '+d.class_id;
-            if (this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
+            if (this.overlays[topic] && this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
                 && this.overlays[topic].config['nn_detection_labels'][d.class_id])
                 l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
             l += ' (' + d.score.toFixed(2)+')';
@@ -471,18 +481,23 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
     clear_detections(topic) {
-        if (this.detection_visuals[topic]) {
-            this.detection_visuals[topic].removeFromParent();
-            delete this.detection_visuals[topic];
+        if (this.detection_lines[topic]) {
+            this.detection_lines[topic].removeFromParent();
+            delete this.detection_lines[topic];
         }
         if (this.detection_frames[topic])
             delete this.detection_frames[topic];
-        if (this.detection_visuals_geometry[topic])
-            delete this.detection_visuals_geometry[topic];
+        if (this.detection_lines_geometry[topic])
+            delete this.detection_lines_geometry[topic];
         if (this.dirty_detection_results[topic])
             delete this.dirty_detection_results[topic];
-        if (this.detection_labels[topic])
+        if (this.detection_labels[topic]) {
+            for (let i = 0; i < this.detection_labels[topic].length; i++) {
+                this.detection_labels[topic][i].removeFromParent();
+            }
             delete this.detection_labels[topic];
+        }
+            
     }
 
     on_costmap_data(topic, costmap) {

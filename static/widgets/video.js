@@ -45,6 +45,7 @@ export class VideoWidget {
         }
 
         this.overlays = {};
+        this.clear_overlays_timeout = {}
         this.next_overlay_id = 0;
         this.overlay_crop_display_control_menu_el = null;
 
@@ -146,21 +147,6 @@ export class VideoWidget {
         overlay_topics.forEach((t) => {
             this.setupOverlay(t, null);
         });
-    }
-
-    clearOverlay (topic) {
-        if (this.overlays[topic]) {
-            console.log('Removing overlay', this.overlays[topic]);
-            let client = this.panel.ui.client;
-            if (this.overlays[topic].container_el) {
-                this.overlays[topic].container_el.remove();
-            }
-            if (this.overlays[topic].config_update_cb) {
-                client.remove_topic_config_handler(topic, this.overlays[topic].config_update_cb);
-            }
-            delete this.overlays[topic];
-        }
-        this.renderOverlayMenuControls();
     }
 
     onClose() {
@@ -352,6 +338,42 @@ export class VideoWidget {
                 }
             }   
         }
+
+        this.clearOverlayOnTimeout(topic);
+    }
+
+    clearOverlayOnTimeout(topic) {
+        if (this.clear_overlays_timeout[topic])
+            clearTimeout(this.clear_overlays_timeout[topic])
+
+        let that = this;
+        this.clear_overlays_timeout[topic] = setTimeout(()=>{
+            if (that.panel.paused) { //don't clear while paused
+                that.clearOverlayOnTimeout(topic);
+                return;
+            }
+
+            if (that.overlays[topic]) {
+                let svg = this.overlays[topic].svg;
+                svg.selectAll("rect").remove();
+                svg.selectAll("text").remove();
+            }
+        }, 300);
+    }
+
+    clearOverlay (topic) {
+        if (this.overlays[topic]) {
+            console.log('Removing overlay', this.overlays[topic]);
+            let client = this.panel.ui.client;
+            if (this.overlays[topic].container_el) {
+                this.overlays[topic].container_el.remove();
+            }
+            if (this.overlays[topic].config_update_cb) {
+                client.remove_topic_config_handler(topic, this.overlays[topic].config_update_cb);
+            }
+            delete this.overlays[topic];
+        }
+        this.renderOverlayMenuControls();
     }
 
     getUrlHashParts (out_parts) {
