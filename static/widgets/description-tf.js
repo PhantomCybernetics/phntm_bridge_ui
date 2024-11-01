@@ -167,6 +167,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.camera_target_pos = new THREE.Vector3(0.0,0.0,0.0);
         this.camera.lookAt(this.camera_target_pos);
         this.camera_target = null;
+        this.camera_target_key = null;
         // this.camera_anchor_joint = null;
 
         this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
@@ -611,6 +612,17 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     init_camera_pose(robot) {
+
+        // keep focus between model reloads
+        if (this.camera_target_key && robot.joints[this.camera_target_key]) {
+            this.set_camera_target(robot.joints[this.camera_target_key], this.camera_target_key);
+            return;
+        }
+        if (this.camera_target_key && robot.links[this.camera_target_key]) {
+            this.set_camera_target(robot.links[this.camera_target_key], this.camera_target_key);
+            return;
+        }
+
         let wp = new Vector3();
         let farthest_pt_dist = 0;
         
@@ -644,10 +656,11 @@ export class DescriptionTFWidget extends EventTarget {
                 }        
             });
             
-            let joint_world_pos = new THREE.Vector3();
-            focus_joint.getWorldPosition(joint_world_pos);
-            console.log('Focusing cam on joint: '+focus_joint_key+'; ['+joint_world_pos.x+';'+joint_world_pos.y+';'+joint_world_pos.z+']');
-            this.camera_target = focus_joint;
+            // let joint_world_pos = new THREE.Vector3();
+            // focus_joint.getWorldPosition(joint_world_pos);
+            // this.camera_target = focus_joint;
+            // this.camera_target_key = focus_joint_key;
+            this.set_camera_target(focus_joint, focus_joint_key);
             // that.camera_anchor_joint = focus_joint;
             // that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
         }
@@ -759,6 +772,7 @@ export class DescriptionTFWidget extends EventTarget {
         const axesHelper = new THREE.AxesHelper(axis_size);       
         axesHelper.material.transparent = true;
         axesHelper.material.opacity = 0.9;
+        axesHelper.material.width = 1;
         axesHelper.material.depthTest = false;
         axesHelper.material.depthWrite = false;
 
@@ -779,7 +793,7 @@ export class DescriptionTFWidget extends EventTarget {
             label_el = new CSS2DObject(el);
             let that = this;
             el.addEventListener('pointerdown', function(ev) {
-                that.set_camera_target(target);
+                that.set_camera_target(target, label_text); // label=key
                 ev.preventDefault();
             });
             target.add(label_el);
@@ -794,8 +808,10 @@ export class DescriptionTFWidget extends EventTarget {
         return [ axesHelper, label_el];
     }
 
-    set_camera_target(new_target) {
+    set_camera_target(new_target, new_target_key) {
+        console.log('Focusing cam on: '+new_target_key);
         this.camera_target = new_target;
+        this.camera_target_key = new_target_key;
         this.make_robot_markers(this.robot);
     }
 

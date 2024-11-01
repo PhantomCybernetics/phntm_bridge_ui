@@ -34,6 +34,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
             (t) => { that.clear_detections(t); }
         );
 
+        this.sources.add('sensor_msgs/msg/CameraInfo', 'Camera Info', null, -1,
+            (t, d) => { that.on_camera_info_data(t, d); },
+            (t) => { that.clear_camera_info(t); }
+        );
+
         this.parseUrlParts(this.panel.custom_url_vars);
 
         this.range_visuals = {};
@@ -49,10 +54,15 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.dirty_detection_results = {}; // topic => []
         this.detection_frames = {}; // topic => frame obj
         this.detection_labels = {}; // topic => []
-        this.detection_labels = {}; // topic => []
+        this.detection_markers = {}; // topic => []
         this.detection_lines = {}; // topic => []
         this.detection_lines_geometry = {};
         this.clear_detections_timeout = {}; // timer refs
+
+        this.camera_frames = {};
+        this.dirty_camera_frustums = {};
+        this.camera_frustum_visuals = {};
+        this.camera_frustum_geometry = {};
 
         this.base_link_frame = null;
         
@@ -90,6 +100,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
             return;
         
         let that = this;
+
+        // laser from LaserScan
         let dirty_laser_topics = Object.keys(this.dirty_laser_points);
         dirty_laser_topics.forEach((topic)=>{
             let laser_points = that.dirty_laser_points[topic];
@@ -122,6 +134,43 @@ export class Everything3DWidget extends DescriptionTFWidget {
             }
         });
 
+        //cam frustums from CameraInfo
+        let dirty_camera_frustum_topics = Object.keys(this.dirty_camera_frustums);
+        dirty_camera_frustum_topics.forEach((topic)=>{
+
+            let frustum_points = that.dirty_camera_frustums[topic];
+            if (!frustum_points)
+                return;
+            delete that.dirty_camera_frustums[topic];
+
+            if (!that.sources.topicSubscribed(topic))
+                return;
+
+            if (!that.camera_frustum_visuals[topic]) {
+    
+                let color = new THREE.Color(that.overlays[topic] && that.overlays[topic].config && that.overlays[topic].config['frustum_color'] ? that.overlays[topic].config['frustum_color'] : 0x00ffff);
+                const material = new THREE.LineBasicMaterial( {
+                    color: color,
+                    linewidth: 1,
+                    transparent: true,
+                    opacity: .85
+                } );
+                
+                that.camera_frustum_geometry[topic] = new THREE.BufferGeometry().setFromPoints( frustum_points );
+    
+                that.camera_frustum_visuals[topic] = new THREE.LineSegments(that.camera_frustum_geometry[topic], material);
+                that.camera_frustum_visuals[topic].castShadow = false;
+                that.camera_frustum_visuals[topic].receiveShadow = false;
+                if (that.camera_frames[topic]) {
+                    that.camera_frames[topic].add(that.camera_frustum_visuals[topic]);
+                }
+            } else {
+                that.camera_frustum_geometry[topic].setFromPoints(frustum_points);
+            }
+            
+        });
+
+        // detections from Detection3DArray
         let dirty_detection_topics = Object.keys(this.dirty_detection_results);
         dirty_detection_topics.forEach((topic) => {
             let results = that.dirty_detection_results[topic];
@@ -137,7 +186,6 @@ export class Everything3DWidget extends DescriptionTFWidget {
             for (let i = 0; i < results.length; i++) {
                 detection_points.push(frame_base);
                 detection_points.push(results[i].points[0]);
-                // detection_points.push(frame_base);
             }
 
             if (!that.detection_lines[topic]) {
@@ -145,6 +193,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 let color = new THREE.Color(0xff00ff);
                 const material = new THREE.LineBasicMaterial( {
                     color: color,
+                    linewidth: 1,
                     transparent: true,
                     opacity: .95
                 } );
@@ -191,6 +240,12 @@ export class Everything3DWidget extends DescriptionTFWidget {
         console.log('Robot removed, clearing detection topics', detection_topics)
         detection_topics.forEach((topic) => {
             that.clear_detections(topic);
+        });
+
+        let camera_frustum_visuals = this.camera_frustum_visuals ? [].concat(Object.keys(this.camera_frustum_visuals)) : [];
+        console.log('Robot removed, clearing camera frustums', camera_frustum_visuals)
+        camera_frustum_visuals.forEach((topic) => {
+            that.clear_camera_info(topic);
         });
 
 
@@ -382,15 +437,23 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         for (let i = 0; i < data.detections.length; i++) {
 
-            // console.log(data.detections[i]);
-
             let res = data.detections[i].results[0];
             let center = new THREE.Vector3(
                 res['pose']['pose']['position']['x'],
                 res['pose']['pose']['position']['y'],
                 res['pose']['pose']['position']['z']
             );
-            // console.log(res['pose']['pose']['position']);
+            let scale = new THREE.Vector3(
+                data.detections[i]['bbox']['size']['x'],
+                data.detections[i]['bbox']['size']['y'],
+                data.detections[i]['bbox']['size']['z']
+            );
+            let rotation = new THREE.Quaternion(
+                res['pose']['pose']['orientation']['x'],
+                res['pose']['pose']['orientation']['y'],
+                res['pose']['pose']['orientation']['z'],
+                res['pose']['pose']['orientation']['w']
+            );
             let d = {
                 class_id: res.hypothesis.class_id,
                 score: res.hypothesis.score,
@@ -406,55 +469,51 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (this.overlays[topic] && this.overlays[topic].config && this.overlays[topic].config['nn_detection_labels']
                 && this.overlays[topic].config['nn_detection_labels'][d.class_id])
                 l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
-            l += ' (' + d.score.toFixed(2)+')';
-            l += '\n['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
-            // console.log(l);
+            l += ' (' + d.score.toFixed(2)+')\n';
+               + '['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
             let label_el = null;
             if (!this.detection_labels[topic][i]) {
                 const el = document.createElement('div');
                 el.className = 'detection_label';
-                // el.style.backgroundColor = 'rgba(0,0,0,0.5)';
-                // el.style.color = '#ffffff';
-                // el.style.fontSize = '12px';
-                label_el = new CSS2DObject(el);
-                label_el.center.set(0.5, 0);
-                f.add(label_el);
-                label_el.position.set(center.x, center.y, center.z);
-                this.detection_labels[topic][i] = label_el;
-            } else {
-                label_el = this.detection_labels[topic][i];
+                const label2d = new CSS2DObject(el);
+                label2d.center.set(0.5, 0);
+                f.add(label2d);
+                this.detection_labels[topic][i] = label2d;
             }
+            label_el = this.detection_labels[topic][i];
             label_el.element.textContent = l;
             label_el.element.hidden = false;
             label_el.position.set(center.x, center.y, center.z);
+
+            if (!this.detection_markers[topic])
+                this.detection_markers[topic] = [];
+
+            let marker_el = null;
+            if (!this.detection_markers[topic][i]) {
+                const geometry = new THREE.BoxGeometry( 1, 1, 1 ); 
+                const material = new THREE.MeshBasicMaterial( {color: 0x00ffff, transparent: true, opacity: 0.5} ); 
+                const cube = new THREE.Mesh( geometry, material ); 
+                f.add(cube);
+                this.detection_markers[topic][i] = cube;
+            }       
+            marker_el = this.detection_markers[topic][i];
+            marker_el.visible = true;
+            marker_el.position.copy(center);
+            marker_el.quaternion.copy(rotation);
+            marker_el.scale.copy(scale);
         }
 
+        // hide excess instances of labels and markers rather than destroying them
         if (this.detection_labels[topic]) {
             for (let i = data.detections.length; i < this.detection_labels[topic].length; i++) {
                 this.detection_labels[topic][i].element.hidden = true;
             }
         }
-    
-        // let a_tan = Math.tan(range.field_of_view/2.0);
-        // let r = a_tan * range.max_range * 2.0;
-        // const geometry = new THREE.ConeGeometry(r, range.max_range, 32); 
-        // geometry.rotateZ(90 * Math.PI/180);
-        // geometry.translate(range.max_range/2.0, 0, 0);
-        // let color = new THREE.Color(0xffff00);
-        // const material = new THREE.MeshBasicMaterial({
-        //     color: color, transparent: true, opacity: .85
-        // } );
-        // const cone = new THREE.Mesh(geometry, material );
-        // cone.castShadow = false;
-        // this.range_visuals[topic] = {
-        //     cone: cone,
-        //     color: color,
-        //     material: material
-        // };
-        // f.add(cone);
-        
-        // if (data.detections.length)
-        //     console.log('Detection data for '+topic, data);
+        if (this.detection_markers[topic]) {
+            for (let i = data.detections.length; i < this.detection_markers[topic].length; i++) {
+                this.detection_markers[topic][i].visible = false;
+            }
+        }
 
         this.clear_detections_on_timeout(topic);
     }
@@ -474,6 +533,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (this.detection_labels[topic]) {
                 for (let i = 0; i < this.detection_labels[topic].length; i++) {
                     this.detection_labels[topic][i].element.hidden = true;
+                }
+            }
+            if (this.detection_markers[topic]) {
+                for (let i = 0; i < this.detection_markers[topic].length; i++) {
+                    this.detection_markers[topic][i].visible = false;
                 }
             }
             that.renderDirty();
@@ -497,7 +561,100 @@ export class Everything3DWidget extends DescriptionTFWidget {
             }
             delete this.detection_labels[topic];
         }
-            
+        if (this.detection_markers[topic]) {
+            for (let i = 0; i < this.detection_markers[topic].length; i++) {
+                this.detection_markers[topic][i].removeFromParent();
+            }
+            delete this.detection_markers[topic];
+        }
+    }
+
+    // this model ignores distorion (is it a problem or good enough?)
+    calculate_pinhole_frustum_corners(cameraInfo, near, far) {
+
+        const fx = cameraInfo.k[0];
+        const fy = cameraInfo.k[4];
+        const cx = cameraInfo.k[2];
+        const cy = cameraInfo.k[5];
+
+        const width = cameraInfo.width;
+        const height = cameraInfo.height;
+
+        const aspectRatio = width / height;
+        const fovY = 2 * Math.atan(height / (2 * fy));
+        const fovX = 2 * Math.atan((width * fy) / (2 * fx * height));
+      
+        const nearHeight = 2 * Math.tan(fovY / 2) * near;
+        const nearWidth = nearHeight * aspectRatio;
+        const farHeight = 2 * Math.tan(fovY / 2) * far;
+        const farWidth = farHeight * aspectRatio;
+      
+        return {
+          nearTopLeft: new THREE.Vector3(-nearWidth/2, nearHeight/2, near),
+          nearTopRight: new THREE.Vector3(nearWidth/2, nearHeight/2, near),
+          nearBottomLeft: new THREE.Vector3(-nearWidth/2, -nearHeight/2, near),
+          nearBottomRight: new THREE.Vector3(nearWidth/2, -nearHeight/2, near),
+          farTopLeft: new THREE.Vector3(-farWidth/2, farHeight/2, far),
+          farTopRight: new THREE.Vector3(farWidth/2, farHeight/2, far),
+          farBottomLeft: new THREE.Vector3(-farWidth/2, -farHeight/2, far),
+          farBottomRight: new THREE.Vector3(farWidth/2, -farHeight/2, far)
+        };
+    }
+
+    on_camera_info_data(topic, data) {
+        if (!this.robot || this.panel.paused)
+            return;
+
+        let frame_id = data.header.frame_id;
+        if (this.overlays[topic] && this.overlays[topic].config && this.overlays[topic].config['force_frame_id'])
+            frame_id = this.overlays[topic].config['force_frame_id'];
+        let f = frame_id ? this.robot.getFrame(frame_id) : null;
+        if (!frame_id || !f) {
+            if (!this.camera_info_error_logged)
+                this.camera_info_error_logged = {};
+            if (!this.camera_info_error_logged[topic]) {
+                this.camera_info_error_logged[topic] = true;  //only log once
+                let msg = !frame_id ? 'Frame id missing in '+topic : 'Frame '+frame_id+' not found in camera info from '+topic;
+                this.panel.ui.show_notification(msg, 'error');
+                console.error(msg);
+            }
+            return;
+        } else if (this.camera_info_error_logged && this.camera_info_error_logged[topic]) {
+            delete this.camera_info_error_logged[topic]
+        }
+        
+        this.camera_frames[topic] = f;
+
+        let near = this.overlays[topic].config && this.overlays[topic].config['frustum_near'] ? this.overlays[topic].config['frustum_near'] : 0.01;
+        let far = this.overlays[topic].config && this.overlays[topic].config['frustum_far'] ? this.overlays[topic].config['frustum_far'] : 2.0;
+
+        let frustum = this.calculate_pinhole_frustum_corners(data, near, far);
+
+        let frustum_pts = [
+            frustum.nearTopLeft, frustum.nearTopRight,
+            frustum.nearTopRight, frustum.nearBottomRight,
+            frustum.nearBottomRight, frustum.nearBottomLeft,
+            frustum.nearBottomLeft, frustum.nearTopLeft,
+
+            frustum.nearTopLeft, frustum.farTopLeft,
+            frustum.nearTopRight, frustum.farTopRight,
+            frustum.nearBottomLeft, frustum.farBottomLeft,
+            frustum.nearBottomRight, frustum.farBottomRight,
+
+            frustum.farTopLeft, frustum.farTopRight,
+            frustum.farTopRight, frustum.farBottomRight,
+            frustum.farBottomRight, frustum.farBottomLeft,
+            frustum.farBottomLeft, frustum.farTopLeft
+        ];
+        this.dirty_camera_frustums[topic] = frustum_pts;
+        this.renderDirty();
+    }
+
+    clear_camera_info(topic) {
+        if (this.camera_frustum_visuals[topic]) {
+            this.camera_frustum_visuals[topic].removeFromParent();
+            delete this.camera_frustum_visuals[topic];
+        }
     }
 
     on_costmap_data(topic, costmap) {
