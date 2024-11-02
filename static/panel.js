@@ -62,6 +62,7 @@ export class Panel {
             '<div class="grid_panel" data-source="'+id_source+'">' +
                 '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
+                '<span class="panel_btns" id="panel_btns_'+this.n+'""></span>' +
                 '<div class="monitor_menu prevent-select" id="monitor_menu_'+this.n+'">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
@@ -112,10 +113,12 @@ export class Panel {
             panels[id_source].onResize()
         }, 300); // resize at the end of the animation
 
+        this.panel_btns = $('#panel_btns_'+this.n);
+
         if (!this.editBtn) {
             // pause panel updates
             this.editBtn = $('<span id="edit_panel_'+this.n+'" class="edit-panel-button" title="Edit panel"></span>');
-            this.editBtn.insertBefore('#monitor_menu_'+this.n);
+            this.editBtn.appendTo(this.panel_btns);
         }
 
         let that = this;
@@ -454,8 +457,8 @@ export class Panel {
             ev.cancelBubble = true;
             ev.preventDefault();
         });
-        if (els.length == 0)
-            closeEl.addClass('solo');
+        // if (els.length == 0)
+        //     closeEl.addClass('solo');
         els.push(closeEl);
         this.close_el = closeEl;
 

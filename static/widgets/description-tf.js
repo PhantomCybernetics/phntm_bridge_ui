@@ -28,12 +28,14 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.panel = panel;
 
+        // defaults overwritten by url params
         this.render_collisions = true;
         this.render_visuals = true;
         this.render_labels = false;
         this.render_links = true;
         this.render_joints = true;
         this.follow_target = true;
+        this.perspective_camera = true;
 
         this.pose_graph = [];
         this.pose_graph_size = 100; // keeps this many nodes in pg
@@ -45,7 +47,8 @@ export class DescriptionTFWidget extends EventTarget {
         // this.latest_tf_stamps = {};
         // this.transforms_queue = [];
         this.smooth_transforms_queue = {};
-        this.camera_pose_initialized = false;
+        this.camera_pose_initialized = false; // first hard set pose, then smooth lerp
+        this.camera_distance_initialized = false; // only once (if target autodetected)
         // this.last_tf_stamps = {};
 
         let that = this;
@@ -78,7 +81,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
 
-            console.log('loaded mesh from '+path);
+            console.log('Loaded mesh from '+path);
 
             if (/\.stl$/i.test(path)) {
     
@@ -93,7 +96,6 @@ export class DescriptionTFWidget extends EventTarget {
                      } );
                    
                     const mesh = new THREE.Mesh(geom, stl_base_mat);
-                    
                     done_cb(mesh);
                 });
     
@@ -128,12 +130,16 @@ export class DescriptionTFWidget extends EventTarget {
        
         $('#panel_widget_'+panel.n).addClass('enabled imu');
         $('#panel_widget_'+panel.n).data('gs-no-move', 'yes');
+        
+        // camera controls
+        this.perspective_btn = $('<span class="panel-btn perspective-btn" title="Perspective"></span>')
+        this.panel.panel_btns.append(this.perspective_btn);
+        this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
+        this.panel.panel_btns.append(this.focus_btn);
 
         [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
 
         this.scene = new THREE.Scene();
-        
-        this.camera = new THREE.PerspectiveCamera(75, panel.widget_width / panel.widget_height, 0.01, 1000);
 
         this.renderer = new THREE.WebGLRenderer({
             antialias : false,
@@ -150,34 +156,9 @@ export class DescriptionTFWidget extends EventTarget {
         this.labelRenderer.domElement.style.top = '0px';
         document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
 
-        // this.model = new THREE.Object3D()
-        // this.scene.add(this.model);
-        // this.model.position.y = 0
-
         this.camera_pos = new THREE.Vector3(1,.5,1);
-        
-        // this.camera_container = new THREE.Object3D();
-        // this.scene.attach(this.camera_container);
-        // this.camera_container.position.set(0,0,0);
-        // this.camera_container.quaternion.set(0,0,0,1);
-        
-        this.scene.add(this.camera);
-        this.camera.position.copy(this.camera_pos);
-    
-        this.camera_target_pos = new THREE.Vector3(0.0,0.0,0.0);
-        this.camera.lookAt(this.camera_target_pos);
         this.camera_target = null;
         this.camera_target_key = null;
-        // this.camera_anchor_joint = null;
-
-        this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
-        this.renderer.domElement.addEventListener('pointerdown', (ev) => {
-            ev.preventDefault(); // stop from moving the panel
-        } );
-        this.controls.addEventListener('change', () => { this.controls_changed(); });
-        this.controls_dirty = false;
-        this.controls.target = this.camera_target_pos;
-        this.controls.update();
 
         this.world = new THREE.Object3D();
         this.world.rotation.set(-Math.PI/2.0, 0.0, 0.0); //+z up
@@ -187,7 +168,6 @@ export class DescriptionTFWidget extends EventTarget {
         light.castShadow = true; // default false
         this.scene.add(light);
         light.position.set(0, 5, 0); // will stay 5m above the model
-        light.lookAt(this.camera_target_pos);
         light.shadow.mapSize.width = 5 * 1024; // default
         light.shadow.mapSize.height = 5 * 1024; // default
         light.shadow.camera.near = 0.5; // default
@@ -202,6 +182,7 @@ export class DescriptionTFWidget extends EventTarget {
         
         panel.resize_event_handler = () => {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
+            that.update_ortho_camera_aspect();
             that.renderDirty();
         };
 
@@ -212,12 +193,72 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.parseUrlParts(this.panel.custom_url_vars);
 
-        // if (this.follow_target)
-        //     this.camera_container.attach(this.camera);
+        // - url vars parsed here - //
+
+        // cam follow action
+        if (this.follow_target) {
+            this.focus_btn.addClass('on');
+        }
+        this.focus_btn.click(function(ev) {
+            that.follow_target = !$(this).hasClass('on');
+            if (that.follow_target) {
+                $(this).addClass('on');
+                that.controls.enablePan = false;
+            } else {
+                $(this).removeClass('on');
+                that.controls.enablePan = true;
+            }
+            that.make_robot_markers(that.robot);
+            that.panel.ui.update_url_hash(); 
+            that.renderDirty();
+        });
+
+        if (this.perspective_camera) {
+            this.perspective_btn.addClass('on');
+        } else {
+            this.perspective_btn.removeClass('on');
+        }
+        this.perspective_btn.click(function(ev) {
+            that.perspective_camera = !$(this).hasClass('on');
+            if (that.perspective_camera) {
+                $(this).addClass('on');
+            } else {
+                $(this).removeClass('on');
+            }
+            that.make_camera();
+            that.panel.ui.update_url_hash(); 
+            that.renderDirty();
+        });
+
+        // make camera (persp/orto) when type, pos and focus is determined
+        this.make_camera();
+        this.camera.position.copy(this.camera_pos);
+        
+        const camera_target_pos_geometry = new THREE.SphereGeometry( 0.005, 32, 16 ); 
+        const camera_target_pos_material = new THREE.MeshBasicMaterial( { color: 0xffff00 } ); 
+        this.camera_target_pos = new THREE.Mesh(camera_target_pos_geometry, camera_target_pos_material);
+        this.camera_target_pos.position.set(0,0,0);
+        this.camera_target_pos.visible = false;
+        this.scene.add(this.camera_target_pos);
+
+        this.camera.lookAt(this.camera_target_pos);
+
+        this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
+        this.controls.enablePan = !this.follow_target;
+        this.renderer.domElement.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault(); // stop from moving the panel
+        });
+        this.controls.addEventListener('change', () => { this.controls_changed(); });
+        this.controls_dirty = false;
+
+        this.controls.target = this.camera_target_pos.position; // panning moves the target
+        this.controls.update();
+
+        light.lookAt(this.camera_target_pos);
 
         const plane_geometry = new THREE.PlaneGeometry( 100, 100 );
 
-        //ground plane
+        // make ground plane
         this.tex_loader.load('/static/graph/tiles.png', (plane_tex) => {
             const plane_material = new THREE.MeshPhongMaterial( {color: 0xffffff, side: THREE.BackSide } );
             plane_tex.wrapS = THREE.RepeatWrapping;
@@ -234,9 +275,6 @@ export class DescriptionTFWidget extends EventTarget {
         });
         
         // this.make_mark(this.scene, '[0,0,0]', 1, 1, 1.0);
-
-        // if (this.follow_target)
-        //     this.model.add(this.camera);
     
         this.camera.layers.enableAll();
         if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -272,6 +310,80 @@ export class DescriptionTFWidget extends EventTarget {
         }
     }
 
+    make_camera() {
+
+        let old_camera = this.camera;
+
+        let aspect = this.panel.widget_width / this.panel.widget_height;
+
+        if (this.perspective_camera) {
+            this.camera = new THREE.PerspectiveCamera(75,
+                                                      aspect,
+                                                      0.01, 1000);
+        } else {
+            const frustumSize = 1.0;
+            this.camera = new THREE.OrthographicCamera(frustumSize * aspect / -2.0,
+                                                       frustumSize * aspect / 2.0,
+                                                       frustumSize / 2.0,
+                                                       frustumSize / -2.0,
+                                                       -1000, 1000); // negative near to prvent clipping while keeping the zoom functionality
+        }
+        
+        this.scene.add(this.camera);
+        if (old_camera) {
+            let old_type = old_camera.isOrthographicCamera ? 'ORTHO' : 'PERSP';
+            console.log('Old '+old_type+' camera pos was ['+old_camera.position.x+';'+old_camera.position.y+';'+old_camera.position.z+']; zoom '+old_camera.zoom)
+
+            this.camera.position.copy(old_camera.position);
+            this.camera.quaternion.copy(old_camera.quaternion);
+            this.camera.zoom = 1.0;
+
+            if (this.perspective_camera) {
+                if (old_camera.isOrthographicCamera) { // compensate for ortho > persp
+                    const targetDistance = this.camera.position.distanceTo(this.camera_target_pos.position);
+                    const visibleHeight = (old_camera.top - old_camera.bottom) / old_camera.zoom;
+                    const fovRadians = THREE.MathUtils.degToRad(this.camera.fov);
+                    const requiredDistance = (visibleHeight / 2) / Math.tan(fovRadians / 2);
+                    const moveDistance = requiredDistance - targetDistance;
+                    const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(this.camera.quaternion);
+                    this.camera.position.add(forwardVector.multiplyScalar(moveDistance));
+                }
+            } else {
+                if (old_camera.isOrthographicCamera) {
+                    this.camera.zoom = old_camera.zoom; // keep ortho zoom
+                } else { // compensate for perp > ortho
+                    const targetDistance = this.camera.position.distanceTo(this.camera_target_pos.position);
+                    const fovRadians = THREE.MathUtils.degToRad(old_camera.fov);
+                    const visibleHeight = 2 * Math.tan(fovRadians / 2) * targetDistance;
+  
+                    // Calculate the zoom factor for the orthographic camera
+                    this.camera.zoom = 2 * this.camera.top / visibleHeight;
+                }
+            }
+    
+            old_camera.removeFromParent();
+            this.camera.lookAt(this.camera_target_pos);
+            this.camera.updateProjectionMatrix();
+            this.camera.layers = old_camera.layers;
+            this.controls.object = this.camera;
+            this.controls.update();
+        }
+            
+    }
+
+    update_ortho_camera_aspect() {
+        if (this.camera.isOrthographicCamera) {
+            const aspect = this.panel.widget_width / this.panel.widget_height;
+            const frustumSize = 1.0;
+            this.camera.left = frustumSize * aspect / -2.0;
+            this.camera.right = frustumSize * aspect / 2.0;
+            this.camera.top = frustumSize / 2.0;
+            this.camera.bottom = frustumSize / -2.0;
+            this.camera.updateProjectionMatrix();
+            this.renderDirty();
+        }
+    }
+
     setupMenu() {
        
         if (this.sources) {
@@ -279,14 +391,6 @@ export class DescriptionTFWidget extends EventTarget {
         }
 
         let that = this;
-
-        $('<div class="menu_line"><label for="follow_target_'+this.panel.n+'"><input type="checkbox" '+(this.follow_target?'checked':'')+' id="follow_target_'+this.panel.n+'" title="Follow target"> Follow target</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#follow_target_'+this.panel.n).change(function(ev) {
-            that.follow_target = $(this).prop('checked');         
-            // that.panel.ui.update_url_hash();
-            that.renderDirty();
-        });
 
         $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
@@ -364,7 +468,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix base</label></div>')
+        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix robot base</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#fix_base_'+this.panel.n).change(function(ev) {
             that.fix_base = $(this).prop('checked');
@@ -408,6 +512,7 @@ export class DescriptionTFWidget extends EventTarget {
 
     getUrlHashParts (out_parts) {
         out_parts.push('f='+(this.follow_target ? '1' : '0'));
+        out_parts.push('cam='+(this.perspective_camera ? '1' : '0'));
         out_parts.push('jnt='+(this.render_joints ? '1' : '0'));
         out_parts.push('lnk='+(this.render_links ? '1' : '0'));        
         out_parts.push('lbl='+(this.render_labels ? '1' : '0'));
@@ -428,6 +533,7 @@ export class DescriptionTFWidget extends EventTarget {
             // console.warn('DRF got ' + arg +" > "+val);
             switch (arg) {
                 case 'f':   this.follow_target = parseInt(val) == 1; break;
+                case 'cam': this.perspective_camera = parseInt(val) == 1; break;
                 case 'jnt': this.render_joints = parseInt(val) == 1; break;
                 case 'lnk': this.render_links = parseInt(val) == 1; break;
                 case 'lbl': this.render_labels = parseInt(val) == 1; break;
@@ -444,9 +550,6 @@ export class DescriptionTFWidget extends EventTarget {
     async on_tf_data (topic, tf) {
         if (this.panel.paused)
             return;
-
-        // console.log(tf);
-        // debugger;
 
         for (let i = 0; i < tf.transforms.length; i++) {
 
@@ -590,18 +693,18 @@ export class DescriptionTFWidget extends EventTarget {
 
         if (this.robot) {
             console.warn('Removing old robot model')
-            this.world.clear();//this.world.remove(this.robot);
-            this.on_model_removed();
+            this.world.clear(); // this.world.remove(this.robot);
             this.robot = null;
             while (this.labelRenderer.domElement.children.length > 0) {
                 this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
             }
+            this.on_model_removed();
         }
 
         console.warn('Parsing robot description...');
         this.robot = this.urdf_loader.parse(desc.data);
         this.robot.visible = false; // show when all loading is done and model cleaned
-        this.init_camera_pose(this.robot);
+        this.get_autofocus_target(this.robot);
         this.world.clear();
         this.world.add(this.robot);
         
@@ -611,41 +714,37 @@ export class DescriptionTFWidget extends EventTarget {
         this.renderDirty();
     }
 
-    init_camera_pose(robot) {
+    get_autofocus_target(robot) {
 
-        // keep focus between model reloads
         if (this.camera_target_key && robot.joints[this.camera_target_key]) {
-            this.set_camera_target(robot.joints[this.camera_target_key], this.camera_target_key);
+            this.set_camera_target(robot.joints[this.camera_target_key], this.camera_target_key, false);
             return;
         }
         if (this.camera_target_key && robot.links[this.camera_target_key]) {
-            this.set_camera_target(robot.links[this.camera_target_key], this.camera_target_key);
+            this.set_camera_target(robot.links[this.camera_target_key], this.camera_target_key, false);
             return;
         }
 
         let wp = new Vector3();
         let farthest_pt_dist = 0;
-        
-        let that = this;
-
-        let joints_avg = new Vector3();
+        let joints_avg = new Vector3(0,0,0);
         let joints_num = 0;
+        let focus_joint = null;
+        let focus_joint_key = null;
+
+        // find the joint closest to avg center and set as target
+        // also find the farthest for initial camera distance
         Object.keys(robot.joints).forEach((key)=>{
             robot.joints[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
-
             joints_avg.add(wp);
             joints_num++;
         });
-
         if (joints_num) {
-            // find the joint closest to avg center
             joints_avg.divideScalar(joints_num);
             let closest_joint_dist = Number.POSITIVE_INFINITY;
-            let focus_joint = null;
-            let focus_joint_key = null;
             Object.keys(robot.joints).forEach((key)=>{
                 robot.joints[key].getWorldPosition(wp);
                 let d = wp.distanceTo(joints_avg);
@@ -655,29 +754,13 @@ export class DescriptionTFWidget extends EventTarget {
                     focus_joint_key = key;
                 }        
             });
-            
-            // let joint_world_pos = new THREE.Vector3();
-            // focus_joint.getWorldPosition(joint_world_pos);
-            // this.camera_target = focus_joint;
-            // this.camera_target_key = focus_joint_key;
-            this.set_camera_target(focus_joint, focus_joint_key);
-            // that.camera_anchor_joint = focus_joint;
-            // that.camera_anchor_joint.getWorldPosition(that.camera_target_pos);
         }
-        
         Object.keys(robot.links).forEach((key)=>{
             robot.links[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
         });
-
-        if (robot.links['base_footprint']) {
-            let v = new THREE.Vector3();
-            robot.links['base_footprint'].getWorldPosition(v);
-            this.world.position.copy(v.negate());
-        }
-
         Object.keys(robot.frames).forEach((key)=>{
             robot.frames[key].getWorldPosition(wp);
             let wp_magnitude = wp.length();
@@ -685,11 +768,36 @@ export class DescriptionTFWidget extends EventTarget {
                 farthest_pt_dist = wp_magnitude;
         });
 
-        if (this.follow_target) {
+        // was this needed? and universal enough?
+        // if (robot.links['base_footprint']) {
+        //     let v = new THREE.Vector3();
+        //     robot.links['base_footprint'].getWorldPosition(v);
+        //     this.world.position.copy(v.negate());
+        // }
+
+        if (focus_joint && focus_joint_key)
+            this.set_camera_target(focus_joint, focus_joint_key, false);
+
+        if (this.follow_target && !this.camera_distance_initialized) {
+            this.camera_distance_initialized = true;
             let initial_dist = farthest_pt_dist * 3.0; // initial distance proportional to model size
             this.camera_pos.normalize().multiplyScalar(initial_dist);
             this.camera.position.copy(this.camera_pos);
         }
+    }
+
+    set_camera_target(new_target, new_target_key, force_follow=false) {
+
+        console.log('Setting cam target to: '+new_target_key);
+        this.camera_target = new_target;
+        this.camera_target_key = new_target_key;
+
+        if (!this.follow_target && force_follow) {
+            this.follow_target = true;
+            this.focus_btn.addClass('on');
+        }
+
+        this.make_robot_markers(this.robot);
     }
 
     make_robot_markers(robot) {
@@ -763,9 +871,11 @@ export class DescriptionTFWidget extends EventTarget {
         return markers;
     }
 
-    make_mark(target, label_text, layer_axes, layer_labels, axis_size = .02, h_center = true, v_center = 0) {
+    make_mark(target, label_text, layer_axes, layer_labels, axis_size=.02, h_center=true, v_center=0) {
 
-        if (target != this.camera_target) {
+        let is_selected = this.follow_target && target == this.camera_target;
+
+        if (!is_selected) {
              axis_size = .0015;
         }
   
@@ -784,7 +894,7 @@ export class DescriptionTFWidget extends EventTarget {
             const el = document.createElement('div');
             el.className = 'marker_label';
             el.title = 'Focus camera here';
-            if (target == this.camera_target)
+            if (is_selected)
                 el.className += ' focused';
             if (!h_center)
                 el.className += (layer_labels == DescriptionTFWidget.L_JOINT_LABELS ? ' joint' : ' link');
@@ -793,7 +903,7 @@ export class DescriptionTFWidget extends EventTarget {
             label_el = new CSS2DObject(el);
             let that = this;
             el.addEventListener('pointerdown', function(ev) {
-                that.set_camera_target(target, label_text); // label=key
+                that.set_camera_target(target, label_text, true); // label=key, turns on following
                 ev.preventDefault();
             });
             target.add(label_el);
@@ -806,13 +916,6 @@ export class DescriptionTFWidget extends EventTarget {
         }
 
         return [ axesHelper, label_el];
-    }
-
-    set_camera_target(new_target, new_target_key) {
-        console.log('Focusing cam on: '+new_target_key);
-        this.camera_target = new_target;
-        this.camera_target_key = new_target_key;
-        this.make_robot_markers(this.robot);
     }
 
     controls_changed() {
@@ -936,9 +1039,9 @@ export class DescriptionTFWidget extends EventTarget {
                 let new_target_pos = new THREE.Vector3();
                 this.camera_target.getWorldPosition(new_target_pos);
                 if (this.camera_pose_initialized) {
-                    this.camera_target_pos.copy(this.camera_target_pos.lerp(new_target_pos, cam_lerp_amount));
+                    this.camera_target_pos.position.copy(this.camera_target_pos.position.lerp(new_target_pos, cam_lerp_amount));
                 } else {
-                    this.camera_target_pos.copy(new_target_pos);
+                    this.camera_target_pos.position.copy(new_target_pos);
                 }
                 // this.camera.lookAt(this.camera_target_pos);
                 // console.log('Focusing on ['+new_target_pos.x+';'+new_target_pos.y+';'+new_target_pos.z+']');
@@ -960,25 +1063,11 @@ export class DescriptionTFWidget extends EventTarget {
             try {
                 this.renderer.render(this.scene, this.camera);
                 this.labelRenderer.render(this.scene, this.camera);
-
-                if (this.error_logged) {
-                    this.error_logged = false;
-
-                    console.warn('All good here now, scene:');
-                    this.scene.traverse(function(obj) {
-                        var s = '';
-                        var obj2 = obj;
-                        while(obj2 !== that.scene) {
-                            s += '-';
-                            obj2 = obj2.parent;
-                        }
-                        console.log(s + obj.type + ' ' + obj.name+ ' mat: '+obj.material);
-                    });
-                }
+                this.rendering_error_logged = false;
             } catch (e) {
 
-                if (!this.error_logged) {
-                    this.error_logged = true;
+                if (!this.rendering_error_logged) {
+                    this.rendering_error_logged = true;
                     console.error('Error caught while rendering', e);
 
                     this.scene.traverse(function(obj) {
@@ -990,10 +1079,7 @@ export class DescriptionTFWidget extends EventTarget {
                         }
                         console.log(s + obj.type + ' ' + obj.name+ ' mat: '+obj.material);
                     });
-
-                } else {
-                    console.error('Same error caught while rendering');
-                }
+                } 
                 
             }
         }        

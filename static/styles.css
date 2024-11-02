@@ -47,7 +47,10 @@ body::after{
         url('/static/graph/spinner-params.svg')
         url('/static/graph/icon-unpin.svg')
         url('/static/graph/icon-info.svg')
-    ;
+        url('/static/graph/icon-focus.svg')
+        url('/static/graph/icon-focus-on.svg')
+        url('/static/graph/icon-isometric.svg')
+        url('/static/graph/icon-perspective.svg')
  }
 
 BODY.desktop-ui {
@@ -1790,7 +1793,7 @@ BUTTON#trigger_wifi_roam.working {
 .monitor_menu {
     position: absolute;
     display: block;
-    width: 27px;
+    width: 34px;
     height: 26px;
     right: 0px;
     top: -1px;
@@ -1798,7 +1801,7 @@ BUTTON#trigger_wifi_roam.working {
     background-image: url(/static/graph/icon-menu.png);
     background-size: 59px;
     background-repeat: no-repeat;
-    background-position: -31px 1px;
+    background-position: -26px 1px;
     cursor: pointer;
 }
 
@@ -1819,15 +1822,17 @@ BODY.touch-ui .monitor_menu{
     background-position: -44px 12px;
 }
 
-.monitor_menu .hover_keeper { /* makes the hover area bigger for your conveninence */
+/* makes the hover area bigger for your conveninence */
+/* .monitor_menu .hover_keeper { 
     display: none;
     position: absolute;
     left: -5%;
     top: -13%;
-    width: 115%;
+    width: 107%;
     height: 120%;
     background-color: transparent;
     z-index: -1;
+    background-color: red;
 }
 .monitor_menu.right .hover_keeper {
     left: -10%;
@@ -1835,7 +1840,7 @@ BODY.touch-ui .monitor_menu{
 
 BODY.touch-ui .monitor_menu .hover_keeper {
     display: none;
-}
+} */
 
 BODY.touch-ui .monitor_menu_content .menu_content_underlay { /* makes the hover area bigger for your conveninence */
     display: none;
@@ -1854,8 +1859,8 @@ BODY.touch-ui .monitor_menu_content .menu_content_underlay.open {
 
 BODY.desktop-ui .monitor_menu:hover,
 BODY.desktop-ui .monitor_menu.hover_waiting {
-    border-radius: 0px 5px 5px 0px;
-    width: 32px;
+    border-radius: 5px 5px 0px 0px;
+    width: 34px;
     background-position: -26px 1px;
 }
 
@@ -1881,8 +1886,8 @@ BODY.desktop-ui .monitor_menu.hover_waiting .hover_keeper {
 .monitor_menu_content {
     display: none;
     position: absolute;
-    right: 30px;
-    top: 0px;
+    right: 0px;
+    top: 26px;
     border-radius: 5px 0px 5px 5px;
     padding: 3px 5px 5px 5px;;
     font-size: 13px;
@@ -2645,14 +2650,61 @@ BODY.touch-ui .pause-panel-button.paused {
     background-position: 13px 7px;
 }
 
+.panel_btns {
+    position: absolute;
+    right: 35px;
+    top: -9px;
+    height: 39px;
+    z-index: 3; /* above title */
+}
+
+.panel-btn {
+    width: 30px;
+    height: 27px;
+    /* background-color: black; */
+    display: block;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-size: 20px 20px;
+    border-radius: 5px;
+    background-position: center;
+    margin-top: 8px;
+    background-repeat: no-repeat;
+    float: left;
+}
+
+.panel-btn.focus-btn {
+    background-image: url('/static/graph/icon-focus.svg');
+    background-size: 20px 20px;
+}
+
+.panel-btn:hover {
+    background-color: black;
+}
+
+.panel-btn.focus-btn.on {
+    background-image: url('/static/graph/icon-focus-on.svg');
+}
+
+.panel-btn.perspective-btn,
+.panel-btn.perspective-btn.on:hover {
+    background-image: url('/static/graph/icon-isometric.svg');
+    background-size: 20px 20px;
+}
+
+.panel-btn.perspective-btn.on,
+.panel-btn.perspective-btn:hover {
+    background-image: url('/static/graph/icon-perspective.svg');
+}
+
 .edit-panel-button {
     display: none;
     cursor: pointer;
     position: absolute;
     width: 40px;
     height: 40px;
-    right: 40px;
-    top: -8px;
+    right: 0px;
+    top: 0px;
     z-index: 2;
     background-image: url(/static/graph/icon-edit.png);
     background-repeat: no-repeat;

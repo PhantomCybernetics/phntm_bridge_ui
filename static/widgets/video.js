@@ -56,9 +56,9 @@ export class VideoWidget {
         this.overlay_sources.add('vision_msgs/msg/Detection2DArray', 'Detection 2D Array', null, -1,
                                  (t, d) => { that.onOverlayData(t, d); },
                                  (t) => { that.clearOverlay(t); });
-        this.overlay_sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
-                                (t, d) => { that.onOverlayData(t, d); },
-                                (t) => { that.clearOverlay(t); });
+        // this.overlay_sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
+        //                         (t, d) => { that.onOverlayData(t, d); },
+        //                         (t) => { that.clearOverlay(t); });
 
         this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
         this.onOverlaySourcesChange(this.overlay_sources.getSources());
