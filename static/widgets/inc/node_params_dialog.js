@@ -11,7 +11,7 @@ export class NodeParamsDialog {
         
     }
 
-    update_layout() {
+    updateLayout() {
         let vW = window.innerWidth;
         let vH = window.innerHeight;
 
@@ -26,7 +26,7 @@ export class NodeParamsDialog {
             this.cont_el.removeClass('thin');
     }
 
-    select_param(name, value, description, i_list_param, param_label_el) {
+    selectParam(name, value, description, i_list_param, param_label_el) {
 
         this.list_el.addClass('editor-open');
 
@@ -191,20 +191,20 @@ export class NodeParamsDialog {
             "depth": 0
         }
 
-        this.client.service_call(node['_srvListParameters'], list_msg, true, (list_reply) =>{
+        this.client.serviceCall(node['_srvListParameters'], list_msg, true, (list_reply) =>{
             if (list_reply.err) {
                 that.list_el.empty();
                 that.list_el.append($('<div class="load-err">'+(list_reply.msg?list_reply.msg:'Error while fetching params')+'</div>'));
                 return;
             }
             list_reply.result.names.sort()
-            this.client.service_call(node['_srvDescribeParameters'], { "names": list_reply.result.names }, true, (descriptions_reply) =>{
+            this.client.serviceCall(node['_srvDescribeParameters'], { "names": list_reply.result.names }, true, (descriptions_reply) =>{
                 if (descriptions_reply.err) {
                     that.list_el.empty();
                     that.list_el.append($('<div class="load-err">'+(descriptions_reply.msg?descriptions_reply.msg:'Error while fetching param descriptions')+'</div>'));
                     return;
                 }
-                this.client.service_call(node['_srvGetParameters'], { "names": list_reply.result.names }, true, (vals_reply) =>{
+                this.client.serviceCall(node['_srvGetParameters'], { "names": list_reply.result.names }, true, (vals_reply) =>{
                     if (vals_reply.err) {
                         that.list_el.empty();
                         that.list_el.append($('<div class="load-err">'+(vals_reply.msg?vals_reply.msg:'Error while fetching params')+'</div>'));
@@ -221,7 +221,7 @@ export class NodeParamsDialog {
                         let param_label_el = $('<div class="param-name prevent-select">'+name+'<span class="param-type">'+type_hr+'</span></div>');
                         that.list_el.append(param_label_el);
                         param_label_el.click((ev)=>{
-                            that.select_param(name, value, description, i, param_label_el);
+                            that.selectParam(name, value, description, i, param_label_el);
                         });
                     }
 
@@ -242,8 +242,8 @@ export class NodeParamsDialog {
         
             btn_reload.addClass('working');
 
-            this.client.service_call(node['_srvGetParameters'], { "names": [ that.selected_param_name ] }, true, (value_reply) =>{
-                that.client.ui.service_reply_notification(btn_reload, node['_srvGetParameters'], false, value_reply);
+            this.client.serviceCall(node['_srvGetParameters'], { "names": [ that.selected_param_name ] }, true, (value_reply) =>{
+                that.client.ui.serviceReplyNotification(btn_reload, node['_srvGetParameters'], false, value_reply);
                 btn_reload.removeClass('working');
 
                 if (value_reply.err) {
@@ -339,8 +339,8 @@ export class NodeParamsDialog {
             
             console.log('param val ', param_val);
 
-            that.client.service_call(node['_srvSetParameters'], { 'parameters' : [ param_val ] } , true, (set_reply) =>{
-                that.client.ui.service_reply_notification(btn_set, node['_srvSetParameters'], false, set_reply);
+            that.client.serviceCall(node['_srvSetParameters'], { 'parameters' : [ param_val ] } , true, (set_reply) =>{
+                that.client.ui.serviceReplyNotification(btn_set, node['_srvSetParameters'], false, set_reply);
                 btn_set.removeClass('working');
                 if (set_reply['results'] && set_reply['results'].length == 1 && set_reply['results'][0]['successful'] === true) {
                     btn_reload.trigger('click');

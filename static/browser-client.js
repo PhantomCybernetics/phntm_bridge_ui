@@ -1505,7 +1505,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
     }
 
-    service_call(service, data, silent, cb) { 
+    serviceCall(service, data, silent, cb) { 
         let req = {
             id_robot: this.id_robot,
             service: service,
@@ -1513,7 +1513,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
         if (this.ui && !silent) {
             //let data_hr = (data !== null && data !== undefined); 
-            this.ui.show_notification('Calling '+service, null, 'Request data:<br><pre>'+JSON.stringify(data, null, 2)+'</pre>');
+            this.ui.showNotification('Calling '+service, null, 'Request data:<br><pre>'+JSON.stringify(data, null, 2)+'</pre>');
         }
         console.log('Service call request', req);
         this.socket.emit('service', req, (reply)=> {

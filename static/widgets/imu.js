@@ -100,7 +100,7 @@ export class ImuWidget {
         // });
        
 
-        panel.widget_menu_cb = () => {
+        panel.widgetMenuCb = () => {
 
             $('<div class="menu_line"><label for="display_rot_'+panel.n+'"><input type="checkbox" id="display_rot_'+panel.n+'" '
                 + (that.display_rot?'checked ':'')

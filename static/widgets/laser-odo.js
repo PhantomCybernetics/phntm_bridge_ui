@@ -48,11 +48,11 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
         this.sources = new MultiTopicSource(this);
 
-        this.sources.add('nav_msgs/msg/Odometry', 'Odometry source', null, 1, this.on_odometry_data);
-        this.sources.add('sensor_msgs/msg/LaserScan', 'Scan source', null, 1, this.on_scan_data);
+        this.sources.add('nav_msgs/msg/Odometry', 'Odometry source', null, 1, this.onOdometryData);
+        this.sources.add('sensor_msgs/msg/LaserScan', 'Scan source', null, 1, this.onScanData);
 
         //zoom menu control
-        panel.widget_menu_cb = () => {
+        panel.widgetMenuCb = () => {
             that.setupMenu();
         }
 
@@ -69,7 +69,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         // panel.ui.client.on(this.topic_odo, this.on_odometry_data);
         // panel.ui.client.on(this.topic_scan, this.on_scan_data);
        
-        this.rendering_loop();
+        this.renderingLoop();
     }
 
     setupMenu () {
@@ -95,7 +95,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         });
     } //widget menu end
 
-    on_odometry_data = (topic, odo) => {
+    onOdometryData = (topic, odo) => {
 
         if (this.panel.paused)
             return;
@@ -138,14 +138,14 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             console.log('late processing scan'+ns_stamp);
             let scan = this.scans_to_process[ns_stamp];
             delete this.scans_to_process[ns_stamp];
-            this.on_scan_data(scan, ns_stamp, this.pose_graph.length-1);
+            this.onScanData(scan, ns_stamp, this.pose_graph.length-1);
         }
 
         // that.last_odo = odo;
         this.render();
     }
 
-    on_scan_data = (topic, scan, ns_stamp=null, k = -1) => {
+    onScanData = (topic, scan, ns_stamp=null, k = -1) => {
 
         if (this.panel.paused)
             return;
@@ -245,7 +245,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
             this.clear_scan = clear_scan;
     }
      
-    rendering_loop() {
+    renderingLoop() {
 
         if (!this.rendering)
             return; // loop killed
@@ -304,7 +304,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
         if (!this.render_dirty) {
             return window.requestAnimationFrame((step)=>{
-                that.rendering_loop();
+                that.renderingLoop();
             });
         }
 
@@ -484,7 +484,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
     
 
         window.requestAnimationFrame((step)=>{
-            that.rendering_loop();
+            that.renderingLoop();
         });
 
     }

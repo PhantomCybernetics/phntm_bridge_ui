@@ -30,7 +30,7 @@ export class BatteryStateWidget {
         // make chart when we have topic config
         this.panel.ui.client.on_topic_config(topic, this.onTopicConfigUpdate); //', (t, c) => that.onTopicConfigUpdate(t, c))
     
-        panel.resize_event_handler = () => { that.onResize() } ; //no need here
+        panel.resizeEventHandler = () => { that.onResize() } ; //no need here
     }
 
     makeChart() {

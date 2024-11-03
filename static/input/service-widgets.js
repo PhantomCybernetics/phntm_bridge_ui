@@ -26,7 +26,7 @@ export class FallbackServiceInput extends ServiceInput {
             let btn_val_hr = JSON.stringify(btn.value, null, 2).replaceAll("\n", '&#10;').replaceAll('"', '&quot;');
             let btn_el = $('<button class="service_button '+btn.color+'" title="'+btn_val_hr+'">'+btn.label+'</button>');
             btn_el.click((ev)=>{
-                client.ui.service_menu_btn_call(service.service, btn, btn_el);
+                client.ui.serviceMenuBtnCall(service.service, btn, btn_el);
             });
             el.append(btn_el);
         });
@@ -45,7 +45,7 @@ export class ServiceInput_Empty extends ServiceInput {
         let btn = $('<button class="service_button blue">Call</button>');
     
         btn.click((ev)=>{
-            client.ui.service_menu_auto_btn_call(service.service, btn, null);
+            client.ui.serviceMenuAutoBtnCall(service.service, btn, null);
         });
     
         el.append(btn);
@@ -66,11 +66,11 @@ export class ServiceInput_Bool extends ServiceInput  {
         let btn_false = $('<button class="service_button red">False</button>');
 
         btn_true.click((ev)=>{
-            client.ui.service_menu_auto_btn_call(service.service, btn_true, { data: true });
+            client.ui.serviceMenuAutoBtnCall(service.service, btn_true, { data: true });
         });
 
         btn_false.click((ev)=>{
-            client.ui.service_menu_auto_btn_call(service.service, btn_false, { data: false });
+            client.ui.serviceMenuAutoBtnCall(service.service, btn_false, { data: false });
         });
 
         el.append(btn_true);

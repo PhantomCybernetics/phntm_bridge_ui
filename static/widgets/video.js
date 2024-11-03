@@ -49,7 +49,7 @@ export class VideoWidget {
         this.next_overlay_id = 0;
         this.overlay_crop_display_control_menu_el = null;
 
-        this.panel.widget_menu_cb = () => that.setupMenu();
+        this.panel.widgetMenuCb = () => that.setupMenu();
 
         this.overlay_sources = new MultiTopicSource(this);
         this.overlay_sources.on('change', (topics) => that.onOverlaySourcesChange(topics));
@@ -218,10 +218,10 @@ export class VideoWidget {
             $('#video_overlay_input_crop_cb_'+this.panel.n).change((ev) => {
                 if ($(ev.target).prop('checked')) {
                     that.display_overlay_input_crop = true;
-                    that.panel.ui.update_url_hash();
+                    that.panel.ui.updateUrlHash();
                 } else {
                     that.display_overlay_input_crop = false;
-                    that.panel.ui.update_url_hash();
+                    that.panel.ui.updateUrlHash();
                 }
 
                 Object.keys(that.overlays).forEach((topic)=>{

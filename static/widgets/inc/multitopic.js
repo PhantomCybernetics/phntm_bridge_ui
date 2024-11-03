@@ -368,7 +368,7 @@ export class MultiTopicSource extends EventTarget {
                 return;
             }
             
-            that.widget.panel.ui.message_type_dialog(slot.msg_type);
+            that.widget.panel.ui.messageTypeDialog(slot.msg_type);
         });
 
         btn[0].addEventListener('touchstart', (e) => {
@@ -426,7 +426,7 @@ export class MultiTopicSource extends EventTarget {
                         .removeClass('open')
                         .unbind();
             }
-            that.panel.ui.update_url_hash();
+            that.panel.ui.updateUrlHash();
             if (ev) {
                 ev.preventDefault();
                 ev.stopPropagation();
@@ -456,7 +456,7 @@ export class MultiTopicSource extends EventTarget {
                     that.assignSlotTopic(slot);
                     that.updateSlots(slot.src);
                     that.updateMenuContent();
-                    that.panel.ui.update_url_hash();
+                    that.panel.ui.updateUrlHash();
                     that.emit('change', that.getSources());
                 },
                 () => { //onclose

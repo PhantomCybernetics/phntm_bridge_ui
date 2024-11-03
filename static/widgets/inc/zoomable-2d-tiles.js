@@ -59,7 +59,7 @@ export class Zoomable2DTiles {
 
         let that = this;
 
-        panel.resize_event_handler = function () {
+        panel.resizeEventHandler = function () {
             // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
             // that.render(true);
         };
@@ -155,7 +155,7 @@ export class Zoomable2DTiles {
         panel.zoom = zoom;
         $('#zoom_ctrl_'+panel.n+' .val')
             .html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        panel.ui.update_url_hash();
+        panel.ui.updateUrlHash();
         let oldPos = $(this.img).offset();
         
         $(this.canvas_container).css({scale: panel.zoom});

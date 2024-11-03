@@ -22,7 +22,7 @@ export class PanelUI {
         // '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
     };
     type_widgets = {}
-    add_type_widget(msg_type, widget_class) {
+    addTypeWidget(msg_type, widget_class) {
         this.type_widgets[msg_type] = {
             widget: widget_class,
             w: widget_class.default_width,
@@ -33,7 +33,7 @@ export class PanelUI {
     widgets = {}; // custom and/or compound
 
     input_widgets = {};
-    add_service_type_widget(srv_msg_type, widget_class) {
+    addServiceTypeWidget(srv_msg_type, widget_class) {
         this.input_widgets[srv_msg_type] = widget_class;
     }
 
@@ -109,7 +109,7 @@ export class PanelUI {
         this.wifi_signal_el = $('#network-info #signal-monitor');
         this.network_peers_el = $('#network-info-peers');
         this.network_rtt_el = $('#network-info-rtt');
-        this.webrtc_status_el = null; // made in update_webrtc_status()
+        this.webrtc_status_el = null; // made in updateWebrtcStatus()
         this.webrtc_uptime_el = null; // -//-
         this.webrtc_info_el = $('#webrtc_info');
         this.trigger_wifi_scan_el = $('#trigger_wifi_scan');
@@ -143,14 +143,14 @@ export class PanelUI {
                 + '<span class="label">Robot IP (public):</span> ' + (client.robot_socket_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>')
             );
 
-            that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
             if (!client.robot_socket_online) {
-                that.update_wifi_signal(-1);
-                that.update_num_peers(-1);
-                that.update_rtt(-1);
+                that.updateWifiSignal(-1);
+                that.updateNumPeers(-1);
+                that.updateRTT(-1);
             }
-            that.update_webrtc_status()
-            that.update_layout(); // robot name length affects layout
+            that.updateWebrtcStatus()
+            that.updateLayout(); // robot name length affects layout
         });
 
         function reconnectSockerTimer() {
@@ -162,7 +162,7 @@ export class PanelUI {
 
         client.on('socket_disconnect', () => {
             
-            that.set_dot_state(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
             console.log('UI got socket_disconnect, timer=', that.reconnection_timer);
 
             if (!that.reconnection_timer) {
@@ -200,19 +200,19 @@ export class PanelUI {
         }
 
         window.addEventListener("resize", (event) => {
-            that.update_layout()
+            that.updateLayout()
         });
 
-        let battery_status_wrapper = (msg) => {
-            that.update_battery_status(msg);
+        let batteryStatusWrapper = (msg) => {
+            that.updateBatteryStatus(msg);
         }
 
-        let iw_status_wrapper = (msg) => {
-            that.update_wifi_status(msg);
+        let iwStatusWrapper = (msg) => {
+            that.updateWifiStatus(msg);
         }
 
-        let docker_monitor_wrapper = (msg) => {
-            that.docker_menu_from_monitor_message(msg);
+        let dockerMonitorWrapper = (msg) => {
+            that.dockerMenuFromMonitorMessage(msg);
         } 
 
         this.battery_topic = null;
@@ -232,7 +232,7 @@ export class PanelUI {
         this.docker_control_shown = this.load_last_robot_docker_control_shown();
         $('#docker_controls').css('display', this.docker_control_shown ? '' : 'none');
 
-        this.update_layout();
+        this.updateLayout();
 
         // triggered before ui_config
         client.on('input_config', (drivers, default_profiles, robot_service_buttons) => {
@@ -244,12 +244,12 @@ export class PanelUI {
         client.on('ui_config', (robot_ui_config) => {
             // battery optional
             if (that.battery_topic && that.battery_topic != robot_ui_config['battery_topic']) {
-                client.off(that.battery_topic, battery_status_wrapper);
+                client.off(that.battery_topic, batteryStatusWrapper);
                 that.battery_topic = null;
             }
             if (robot_ui_config['battery_topic']) {
                 that.battery_topic = robot_ui_config['battery_topic'];
-                client.on(that.battery_topic, battery_status_wrapper);
+                client.on(that.battery_topic, batteryStatusWrapper);
                 console.warn('battery topic is '+that.battery_topic)
                 $('#battery-info').css('display', 'block');
                 that.battery_shown = true;
@@ -267,30 +267,30 @@ export class PanelUI {
             if (robot_ui_config['docker_control'] && that.docker_monitor_topic) {
                 that.docker_control_shown = true;
                 that.subscribed_docker_monitor_topic = that.docker_monitor_topic;
-                client.on(that.subscribed_docker_monitor_topic, docker_monitor_wrapper);
+                client.on(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
             } else if (that.docker_control_shown) {
                 that.docker_control_shown = false;
                 if (that.subscribed_docker_monitor_topic) {
-                    client.off(that.subscribed_docker_monitor_topic, docker_monitor_wrapper);
+                    client.off(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
                 }
                 that.subscribed_docker_monitor_topic = null;
             }
             that.save_last_robot_docker_control_shown(that.docker_control_shown);
             if (old_docker_control_shown != that.docker_control_shown) {
                 $('#docker_controls').css('display', that.docker_control_shown ? '' : 'none');
-                that.update_layout();
+                that.updateLayout();
             }
 
             // wifi status
             let wifi_shown = false;
             if (that.iw_topic && that.iw_topic != robot_ui_config['wifi_monitor_topic']) {
-                client.off(that.iw_topic, iw_status_wrapper);
+                client.off(that.iw_topic, iwStatusWrapper);
                 that.iw_topic = null;
                 wifi_shown = false;
             }
             if (robot_ui_config['wifi_monitor_topic']) {
                 that.iw_topic = robot_ui_config['wifi_monitor_topic'];
-                client.on(that.iw_topic, iw_status_wrapper);
+                client.on(that.iw_topic, iwStatusWrapper);
                 $('#signal-monitor').css('display', 'block');
                 $('#network-details').css('display', '');
                 wifi_shown = true;
@@ -299,7 +299,7 @@ export class PanelUI {
                 $('#network-details').css('display', 'none !important');
                 wifi_shown = false;
             }
-            that.save_last_robot_wifi_signal_shown(wifi_shown);
+            that.saveLastRobotWifiSignalShown(wifi_shown);
 
             // wifi scan & roam
             if (robot_ui_config['enable_wifi_scan'])
@@ -310,7 +310,7 @@ export class PanelUI {
             // collapsed services
             if (robot_ui_config['collapse_services']) {
                 this.collapse_services = robot_ui_config['collapse_services'];
-                this.services_menu_from_nodes();
+                this.servicesMenuFromNodes();
             }
 
             if (robot_ui_config['collapse_unhandled_services']) 
@@ -321,36 +321,36 @@ export class PanelUI {
 
         // we must open at least one webrtc channel to establish connection, 
         // so this subscribes every time
-        // client.on('/iw_status', iw_status_wrapper);
+        // client.on('/iw_status', iwStatusWrapper);
        
         client.on('topics', (topics) => {
-            that.init_panels(topics);
+            that.initPanels(topics);
         });
 
         client.on('nodes', (nodes) => {
             setTimeout(()=>{
-                that.services_menu_from_nodes();
+                that.servicesMenuFromNodes();
             }, 0);
             setTimeout(()=>{
                 that.graph_from_nodes(nodes);
                 that.latest_nodes = nodes;
             }, 0);
             setTimeout(()=>{
-                that.cameras_menu_from_nodes_and_devices();
+                that.camerasMenuFromNodesAndDevices();
             }, 0);
         });
 
         client.on('cameras', (cameras) => {
             that.latest_cameras = cameras;
-            that.cameras_menu_from_nodes_and_devices();
+            that.camerasMenuFromNodesAndDevices();
         });
 
         client.on('docker', (containers_by_host) => {
-             that.docker_menu_from_all_hosts(containers_by_host);
+             that.dockerMenuFromAllHosts(containers_by_host);
         });
 
         client.on('peer_connected', () => {
-            that.update_webrtc_status();
+            that.updateWebrtcStatus();
 
             that.last_connected_time = Date.now();
             
@@ -372,20 +372,20 @@ export class PanelUI {
 
             $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
 
-            that.set_dot_state(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
-            that.update_wifi_signal(-1);
-            that.update_num_peers(-1);
-            that.update_rtt(-1);
-            // this.update_wifi_status();
+            that.setDotState(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
+            that.updateWifiSignal(-1);
+            that.updateNumPeers(-1);
+            that.updateRTT(-1);
+            // this.updateWifiStatus();
             that.trigger_wifi_scan_el.css('display', 'none');
             that.robot_wifi_info_el.empty().css('display', 'none');
 
-            that.update_webrtc_status();
+            that.updateWebrtcStatus();
         });
 
         client.on('robot_peers', (peers_data) => {
             setTimeout(()=>{
-                that.update_num_peers(peers_data.num_connected);
+                that.updateNumPeers(peers_data.num_connected);
             }, 0);
         })
 
@@ -393,21 +393,21 @@ export class PanelUI {
         client.socket.on('connect', () => {
             setTimeout(()=>{
                 $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
-                that.set_dot_state(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
+                that.setDotState(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
             }, 0);
         });
 
         client.socket.on('disconnect', () => {
             setTimeout(()=>{
                 $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected (Socket.io)</span>');
-                that.set_dot_state(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
+                that.setDotState(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
             }, 0);
         });
 
         client.on('peer_stats', (stats) => {
             that.last_pc_stats = stats;
             setTimeout(()=>{
-                that.update_video_stats(stats);
+                that.updateVideoStats(stats);
             }, 0);
         });
 
@@ -427,7 +427,10 @@ export class PanelUI {
                     }
                 });
             }
-            that.update_url_hash();
+
+            // must be only called on user action
+            if (e.type == 'change')
+                that.updateUrlHash();
         });
 
         this.grid.on('resizestart resize resizestop', function (e, el) {
@@ -459,10 +462,10 @@ export class PanelUI {
         });
 
         $('#trigger_wifi_scan').click(() => {
-            that.trigger_wifi_scan(false);
+            that.triggerWifiScan(false);
         });
         $('#trigger_wifi_roam').click(() => {
-            that.trigger_wifi_scan(true);
+            that.triggerWifiScan(true);
         });
 
         $('#graph_controls').on('mouseenter', (e) => {
@@ -536,7 +539,7 @@ export class PanelUI {
                 }
                 console.log('win scroll', ev);
 
-                that.panel_menu_touch_toggle(); //off
+                that.panelMenuTouchToggle(); //off
             }
         });
 
@@ -558,7 +561,7 @@ export class PanelUI {
                 if ($('#touch-ui-selector').hasClass('src_selection')) {
                     $('#touch-ui-dialog-underlay').trigger('click');
                 }
-                that.panel_menu_touch_toggle(); //off
+                that.panelMenuTouchToggle(); //off
             }
         });
 
@@ -635,14 +638,14 @@ export class PanelUI {
             panel.menu_content_el.removeClass('noscroll');
     }
 
-    panel_menu_touch_toggle(panel) {
+    panelMenuTouchToggle(panel) {
 
         if (!panel && this.panel_menu_on) {
             panel = this.panel_menu_on;
         }
 
         if (this.panel_menu_on && this.panel_menu_on != panel) {
-            this.panel_menu_touch_toggle(this.panel_menu_on) //turn off previous
+            this.panelMenuTouchToggle(this.panel_menu_on) //turn off previous
         }
 
         if (!panel.menu_el.hasClass('open')) {
@@ -663,7 +666,7 @@ export class PanelUI {
                         return;
                     }
                     //console.log('overlay clicked')
-                    that.panel_menu_touch_toggle();
+                    that.panelMenuTouchToggle();
                 });
         } else {
             panel.menu_el.removeClass('open');
@@ -688,7 +691,7 @@ export class PanelUI {
         }
     }
 
-    async show_page_error(error, msg) {
+    showPageError(error, msg) {
         // console.log('Showing error', msg, error);
         $('#page_message')
             .html(msg)
@@ -883,7 +886,7 @@ export class PanelUI {
         }
 
         if (what == '#graph_display') {
-            this.graph_menu.set_dimensions(menu_w, h); // h passed from update_layout is graph height
+            this.graph_menu.set_dimensions(menu_w, h); // h passed from updateLayout is graph height
         }
 
         this.set_burger_menu_width(menu_w);
@@ -1030,7 +1033,7 @@ export class PanelUI {
         // return content_width;
     }
 
-    init_panels(topics) {
+    initPanels(topics) {
         let that = this;
         let topic_ids = Object.keys(topics);
         topic_ids.forEach((id_topic) => {
@@ -1041,7 +1044,7 @@ export class PanelUI {
         });
     }
 
-    cameras_menu_from_nodes_and_devices() {
+    camerasMenuFromNodesAndDevices() {
 
         $('#cameras_list').empty();
 
@@ -1126,7 +1129,7 @@ export class PanelUI {
         }
     }
 
-    docker_menu_from_all_hosts(msg_by_host) {
+    dockerMenuFromAllHosts(msg_by_host) {
         console.warn('Got full Docker containers: ', msg_by_host);
         this.docker_hosts = {}; // always redraw completely
         this.num_docker_containers = 0;
@@ -1137,15 +1140,15 @@ export class PanelUI {
         }
 
         let that = this;
-        function call_docker_srv(agent_node, id_container, state, btn) {
+        function callDockerSrv(agent_node, id_container, state, btn) {
             if ($(btn).hasClass('working'))
                 return;
             $(btn).addClass('working');
 
-            that.client.service_call('/'+agent_node+'/docker_command', { id_container: id_container, set_state: state }, true, (reply) =>{
+            that.client.serviceCall('/'+agent_node+'/docker_command', { id_container: id_container, set_state: state }, true, (reply) =>{
                 $(btn).removeClass('working');
                 if (reply.err) {
-                    that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+                    that.showNotification('Error ('+reply.err+'): '+reply.msg, 'error');
                 }
             });
         }
@@ -1192,13 +1195,13 @@ export class PanelUI {
                 btns_el.append( [btn_run, btn_stop, btn_restart ])
             
                 btn_run.click(function (event) {
-                    call_docker_srv(host, cont.id, 1, this);
+                    callDockerSrv(host, cont.id, 1, this);
                 });
                 btn_stop.click(function (event) {
-                    call_docker_srv(host, cont.id, 0, this);
+                    callDockerSrv(host, cont.id, 0, this);
                 });
                 btn_restart.click(function (event) {
-                    call_docker_srv(host, cont.id, 2, this);
+                    callDockerSrv(host, cont.id, 2, this);
                 });
                 
                 btns_el.appendTo(cont_el)
@@ -1221,7 +1224,7 @@ export class PanelUI {
                 containers_els: container_els
             }
 
-            this.docker_menu_from_monitor_message(msg_by_host[host]); // update vals
+            this.dockerMenuFromMonitorMessage(msg_by_host[host]); // update vals
         });
 
         if (this.num_docker_containers > 0) {
@@ -1234,7 +1237,7 @@ export class PanelUI {
         $('#docker_heading B').html(this.num_docker_containers);
     }
 
-    docker_menu_from_monitor_message(msg) {
+    dockerMenuFromMonitorMessage(msg) {
 
         let host = msg.header.frame_id ? 'phntm_agent_'+msg.header.frame_id : 'phntm_agent'; // agent host
     
@@ -1261,7 +1264,7 @@ export class PanelUI {
         $('#graph_controls').addClass('active');
     }
 
-    message_type_dialog(msg_type, onclose = null) {
+    messageTypeDialog(msg_type, onclose = null) {
 
         let msg_type_class = msg_type ? this.client.find_message_type(msg_type) : null;;
         let content = (msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>');
@@ -1394,15 +1397,15 @@ export class PanelUI {
     }
 
 
-    add_widget(widget_class, conf) {
+    addCustomWidget(widget_class, conf) {
         this.widgets[widget_class.name] = {
             label: widget_class.label,
             class: widget_class,
         };
-        this.widgets_menu();
+        this.widgetsMenu();
     }
 
-    widgets_menu() {
+    widgetsMenu() {
         $('#widget_list').empty();
         this.num_widgets = Object.keys(this.widgets).length;
 
@@ -1541,7 +1544,7 @@ export class PanelUI {
             let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
             this.service_btn_els[service.service] = service_input_el;
 
-            this.render_service_menu_btns(service, msg_class, node, node_cont_el);
+            this.renderServiceMenuBtns(service, msg_class, node, node_cont_el);
 
             service_content.append(service_input_el);
 
@@ -1617,7 +1620,7 @@ export class PanelUI {
     }
 
 
-    render_service_menu_btns(service, msg_class, node, node_cont) {
+    renderServiceMenuBtns(service, msg_class, node, node_cont) {
         if (!msg_class)
             return;
 
@@ -1639,7 +1642,7 @@ export class PanelUI {
     }
     
 
-    services_menu_from_nodes() {
+    servicesMenuFromNodes() {
         
         let nodes = this.client.discovered_nodes;
         if (!Object.keys(nodes).length)
@@ -1680,9 +1683,9 @@ export class PanelUI {
         //     this.gamepad.MarkMappedServiceButtons();
     }
 
-    confirm_dialog(label, style, confirm_label, confirm_cb, cancel_label, cancel_cb) {
+    confirmDialog(label, style, confirm_label, confirm_cb, cancel_label, cancel_cb) {
 
-        function close_dialog () {
+        function closeDialog () {
             $('BODY').removeClass('no-scroll');
             $("#dialog-modal-confirm").css('display', 'none').removeClass(style).empty();
             $('#dialog-modal-confirm-underlay').css('display', 'none').unbind();
@@ -1693,7 +1696,7 @@ export class PanelUI {
         $('#dialog-modal-confirm-underlay').css('display', 'block').unbind().click((ev)=>{
             if (Date.now() < time_shown+300)
                 return;
-            close_dialog();
+            closeDialog();
             cancel_cb();
         });
 
@@ -1731,13 +1734,13 @@ export class PanelUI {
             ;
     }
 
-    trigger_wifi_scan(roam, callback=null) {
+    triggerWifiScan(roam, callback=null) {
         let btn = roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
         let enabled = roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
         let what = roam ? 'roaming' : 'scanning';
         if (!enabled || btn.hasClass('working')) {
             if (!enabled) {
-                this.show_notification('Wifi '+what+' disabled by robot', 'error');
+                this.showNotification('Wifi '+what+' disabled by robot', 'error');
                 console.warn('Wi-fi '+what+' disabled by the robot');
             }
             if (callback)
@@ -1746,7 +1749,7 @@ export class PanelUI {
         }
 
         if (!this.wifi_scan_node) {
-            this.show_notification('Error: Wifi scan node unknown', 'error');
+            this.showNotification('Error: Wifi scan node unknown', 'error');
             console.warn('Wifi scan node unknown');
             if (callback)
                 callback();
@@ -1787,28 +1790,28 @@ export class PanelUI {
         let that = this;
         btn.addClass('working');
         signal_monitor.addClass('working');
-        this.client.service_call('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
+        this.client.serviceCall('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
             btn.removeClass('working');
             signal_monitor.removeClass('working');
             console.info('Wifi '+what+' reply:', reply);
             if (reply.err) {
-                that.show_notification('Error ('+reply.err+'): '+reply.msg, 'error');
+                that.showNotification('Error ('+reply.err+'): '+reply.msg, 'error');
             }
             else if (!roam) {
                 if (reply.scan_results && reply.scan_results.length) {
                     let val = JSON.stringify(reply.scan_results, null, 4);
                     let num = reply.scan_results.length;
-                    that.show_notification('Wi-Fi scan returned '+num+' result'+(num != 1 ? 's' : ''), null, '<pre>'+val+'</pre>');
+                    that.showNotification('Wi-Fi scan returned '+num+' result'+(num != 1 ? 's' : ''), null, '<pre>'+val+'</pre>');
                 } else {
-                    that.show_notification('Wi-Fi scan returned no results', 'error');
+                    that.showNotification('Wi-Fi scan returned no results', 'error');
                 }
             } else if (roam) {
                 if (reply.scan_results && reply.scan_results.length) {
                     let val = JSON.stringify(reply.scan_results, null, 4);
                     let num = reply.scan_results.length;
-                    that.show_notification(reply.msg, null, '<pre>Scan results:\n'+val+'</pre>');
+                    that.showNotification(reply.msg, null, '<pre>Scan results:\n'+val+'</pre>');
                 } else {
-                    that.show_notification(reply.msg, null);
+                    that.showNotification(reply.msg, null);
                 }
             }
             if (callback)
@@ -1835,9 +1838,10 @@ export class PanelUI {
         } else if (panel) {
             panel.close();
         }
+        this.updateUrlHash();
     }
 
-    make_panel(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, custom_url_vars) {
+    makePanelFromConfig(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, custom_url_vars) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
@@ -1850,13 +1854,11 @@ export class PanelUI {
             this.grid.movable(panel.grid_widget, false);
         }
 
-        // this.client.on(panel.id_source, panel._on_data_context_wrapper);
-
         this.panels[id_source] = panel;
         return panel;
     }
 
-    update_video_stats(results) {
+    updateVideoStats(results) {
         let panel_ids = Object.keys(this.panels);
         let that = this;
 
@@ -1900,7 +1902,7 @@ export class PanelUI {
     }
 
 
-    update_url_hash() {
+    updateUrlHash() {
         let hash = [];
 
         // console.log('Hash for :', $('#grid-stack').children('.grid-stack-item'));
@@ -1952,7 +1954,7 @@ export class PanelUI {
                 let r = that.panels[id_source].rot.toFixed(0);
                 parts.push('r=' + r);
             }
-            // console.log('update_url_hash for ' + id_source + ': ', that.panels[id_source].display_widget);
+            // console.log('updateUrlHash for ' + id_source + ': ', that.panels[id_source].display_widget);
             if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== 'undefined') {
                 that.panels[id_source].display_widget.getUrlHashParts(parts);
             }
@@ -1966,7 +1968,7 @@ export class PanelUI {
             history.pushState("", document.title, window.location.pathname + window.location.search);
     }
 
-    panels_from_url_hash(hash) {
+    panelsFromURLHash(hash) {
         if (!hash.length) {
             return
         }
@@ -2040,9 +2042,9 @@ export class PanelUI {
                     let p = panels_to_make_sorted[j];
                     if (p.x == x && p.y == y) {
 
-                        this.make_panel(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.rot, p.custom_vars)
+                        this.makePanelFromConfig(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.rot, p.custom_vars)
                         if (this.widgets[p.id_source]) {
-                            this.panels[p.id_source].init(p.id_source);
+                            this.panels[p.id_source].init(p.id_source, true);
                         } // else if (this.widgets[id_source]) {
                         //     this.panels[id_source].init(id_source);
                         // }
@@ -2055,11 +2057,11 @@ export class PanelUI {
         
         this.grid.engine.sortNodes();
 
-        this.widgets_menu();
+        this.widgetsMenu();
         return this.panels;
     }
 
-    async update_webrtc_status() {
+    updateWebrtcStatus() {
         let state = null;
         const [via_turn, ip] = this.client.get_turn_connection_info();
         let pc = this.client.pc;
@@ -2086,31 +2088,31 @@ export class PanelUI {
             this.webrtc_status_el.html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]</span>'));
             this.trigger_wifi_scan_el.removeClass('working')
             if (via_turn)
-                this.set_dot_state(2, 'yellow', 'WebRTC connected to robot (TURN)');
+                this.setDotState(2, 'yellow', 'WebRTC connected to robot (TURN)');
             else
-                this.set_dot_state(2, 'green', 'WebRTC connected to robot (P2P)');
+                this.setDotState(2, 'green', 'WebRTC connected to robot (P2P)');
         } else if (state == 'Connecting') {
             this.webrtc_status_el.html('<span class="connecting">' + state + '</span>');
             // $('#robot_wifi_info').addClass('offline')
             this.trigger_wifi_scan_el.removeClass('working')
-            this.set_dot_state(2, 'orange', 'WebRTC connecting...')
+            this.setDotState(2, 'orange', 'WebRTC connecting...')
         } else {
             this.webrtc_status_el.html('<span class="offline">' + state + '</span>');
             // $('#robot_wifi_info').addClass('offline')
             this.trigger_wifi_scan_el.removeClass('working')
-            this.set_dot_state(2, 'red', 'WebRTC ' + state)
+            this.setDotState(2, 'red', 'WebRTC ' + state)
         }
 
     }
 
-    async set_dot_state(dot_no, color, label) {
+    setDotState(dot_no, color, label) {
         this.conn_dot_els[dot_no]
             .removeClass(['green', 'yellow', 'orange', 'red'])
             .addClass(color)
             .attr('title', label);
     }
 
-    async update_wifi_signal(percent) {
+    updateWifiSignal(percent) {
         if (percent < 0) {
             this.wifi_signal_el.attr('title', 'Robot disconnected');
             this.wifi_signal_el.removeClass('working');
@@ -2132,7 +2134,7 @@ export class PanelUI {
             this.wifi_signal_el.addClass('q100');
     }
 
-    async update_num_peers(num) {
+    updateNumPeers(num) {
         if (num > 1) { // only show on more peers
             this.network_peers_el.html(num)
                 .attr('title', 'Multiple peers are connected to the robot')
@@ -2147,7 +2149,7 @@ export class PanelUI {
         }
     }
 
-    async update_rtt(rtt_sec) {
+    updateRTT(rtt_sec) {
 
         if (rtt_sec > 0) {
             let rtt_ms = rtt_sec * 1000; //ms
@@ -2195,7 +2197,7 @@ export class PanelUI {
             .addClass(enabled_classes);
     }
 
-    async save_last_robot_name() {
+    save_last_robot_name() {
         localStorage.setItem('last-robot-name:' + this.client.id_robot, this.client.name);
     }
 
@@ -2205,7 +2207,7 @@ export class PanelUI {
         return name;
     }
 
-    async save_last_robot_battery_shown(val) {
+    save_last_robot_battery_shown(val) {
         localStorage.setItem('last-robot-battery-shown:' + this.client.id_robot, val);
     }
 
@@ -2214,7 +2216,7 @@ export class PanelUI {
         return val;
     }
 
-    async save_last_robot_docker_control_shown(val) {
+    save_last_robot_docker_control_shown(val) {
         localStorage.setItem('last-robot-docker-control-shown:' + this.client.id_robot, val);
     }
 
@@ -2223,7 +2225,7 @@ export class PanelUI {
         return val;
     }
 
-    async save_last_robot_wifi_signal_shown(val) {
+    saveLastRobotWifiSignalShown(val) {
         localStorage.setItem('last-robot-wifi-shown:' + this.client.id_robot, val);
     }
     
@@ -2386,10 +2388,10 @@ export class PanelUI {
     }
 
     //on resize, robot name update
-    update_layout() {
+    updateLayout() {
 
-        this.service_input_dialog.update_layout();
-        this.node_params_dialog.update_layout();
+        this.service_input_dialog.updateLayout();
+        this.node_params_dialog.updateLayout();
 
         let h_extra = 10 + 10 + 5; // 2x padding + margin right
         let menu_item_widths = {
@@ -2618,29 +2620,29 @@ export class PanelUI {
         });
     }
 
-    service_menu_btn_call(service, btn, btn_el) {
+    serviceMenuBtnCall(service, btn, btn_el) {
         let that = this;
         if (btn_el)
             btn_el.addClass('working');
         let show_request = btn.show_request;
         let show_reply = btn.show_reply;
-        this.client.service_call(service, btn.value, !show_request, (service_reply) => {
-            that.service_reply_notification(btn_el, service, show_reply, service_reply);
+        this.client.serviceCall(service, btn.value, !show_request, (service_reply) => {
+            that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
         });
     }
 
-    service_menu_auto_btn_call(service, btn_el, value) {
+    serviceMenuAutoBtnCall(service, btn_el, value) {
         let that = this;
         if (btn_el)
             btn_el.addClass('working');
         let show_request = false;
         let show_reply = null; // auto = if err or reply data
-        this.client.service_call(service, value, !show_request, (service_reply) => {
-            that.service_reply_notification(btn_el, service, show_reply, service_reply);
+        this.client.serviceCall(service, value, !show_request, (service_reply) => {
+            that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
         });
     }
 
-    service_reply_notification(btn_el, id_service, show_reply, service_reply) {
+    serviceReplyNotification(btn_el, id_service, show_reply, service_reply) {
         let id_parts = id_service.split('/');
         let short_id = id_parts[id_parts.length-1];
 
@@ -2690,15 +2692,15 @@ export class PanelUI {
             }
         }
         if (service_reply.err) { // showing errors always
-            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
+            this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
             is_err = true;
         } else if (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)  { // showing errors always
-            this.show_notification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
             is_err = true;
         } else if (service_reply.success === true && show_reply) { //std set bool & trugger
-            this.show_notification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            this.showNotification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
         } else if (show_reply) {
-            this.show_notification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            this.showNotification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
         }
 
         if (is_err && btn_el) { // do the error btn wobble
@@ -2710,7 +2712,7 @@ export class PanelUI {
         }
     }
  
-    show_notification(msg, style, detail) {
+    showNotification(msg, style, detail) {
 
         let msg_el = $('<span class="msg'+(style?' '+style:'')+'"><span class="icon"></span><span class="title">'+msg+'</span></span>');
         
@@ -2765,7 +2767,7 @@ export class PanelUI {
         });
     }  
 
-    update_battery_status(msg) {
+    updateBatteryStatus(msg) {
         
         let topic = this.battery_topic;
         if (!topic || !this.client.topic_configs[topic])
@@ -2821,11 +2823,11 @@ export class PanelUI {
 
     }
 
-    update_wifi_status(msg) { // /iw_status in
+    updateWifiStatus(msg) { // /iw_status in
         // console.warn('UpdateIWStatus', msg)
 
         let qPercent = (msg.quality / msg.quality_max) * 100.0;
-        this.update_wifi_signal(qPercent);
+        this.updateWifiSignal(qPercent);
 
         let apclass = '';
         if (this.lastAP != msg.access_point) {
@@ -2890,7 +2892,7 @@ export class PanelUI {
             });
 
             if (min_rtt > 0) {
-                this.update_rtt(min_rtt);
+                this.updateRTT(min_rtt);
             }
         }
 

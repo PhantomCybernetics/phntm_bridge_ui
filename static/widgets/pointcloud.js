@@ -36,7 +36,7 @@ export class PointCloudWidget {
         document.getElementById('panel_widget_'+panel.n).appendChild( this.renderer.domElement );
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.addEventListener('change', this.controls_changed);
+        this.controls.addEventListener('change', this.controlsChanged);
         this.controls_dirty = false;
         this.controls.target = this.camera_target_pos;
         this.controls.update();
@@ -44,12 +44,12 @@ export class PointCloudWidget {
         // const gridHelper = new THREE.GridHelper( 10, 10 );
         // this.scene.add( gridHelper );
 
-        this.world = new THREE.Object3D();
-        this.world.rotation.set(-Math.PI, 0.0, 0.0); //+z up
-        this.scene.add(this.world);
+        this.ros_space = new THREE.Object3D();
+        this.ros_space.rotation.set(-Math.PI, 0.0, 0.0); //+z up
+        this.scene.add(this.ros_space);
 
         const axesHelper = new THREE.AxesHelper(1);
-        this.world.add(axesHelper);
+        this.ros_space.add(axesHelper);
 
         this.verts = null; //float32array
         this.geometry = new THREE.BufferGeometry();
@@ -74,7 +74,7 @@ export class PointCloudWidget {
     onClose() {
     }
 
-    controls_changed = () => {
+    controlsChanged = () => {
         this.render();
     }
 
@@ -149,12 +149,9 @@ export class PointCloudWidget {
             this.geometry.setAttribute( 'position', att);
             if (!this.points) {
                 this.points = new THREE.Points( this.geometry, this.material );
-                this.world.add( this.points );
+                this.ros_space.add( this.points );
             }
         }
-       
-        
-        
 
         this.renderer.render( this.scene, this.camera );
     }

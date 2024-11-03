@@ -15,23 +15,23 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         let that = this;
 
-        this.addEventListener('pg_updated', (e) => this.on_pg_updated(e));
+        this.addEventListener('pg_updated', (e) => this.onPGUpdated(e));
 
         this.overlays = {};
-        this.sources.on('change', (topics) => this.on_sources_change(topics));
+        this.sources.on('change', (topics) => this.onSourcesChange(topics));
 
         this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1,
-            (t, s) => this.on_laser_data(t, s),
-            (t) => this.clear_laser(t)
+            (t, s) => this.onLaserData(t, s),
+            (t) => this.clearLaser(t)
         );
         this.sources.add('sensor_msgs/msg/Range', 'Range source', null, -1,
-            (t, r) => this.on_range_data(t, r),
-            (t) => this.clear_range(t)
+            (t, r) => this.onRangeData(t, r),
+            (t) => this.clearRange(t)
         );
         // this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
         this.sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
-            (t, d) => { that.on_detections_data(t, d); },
-            (t) => { that.clear_detections(t); }
+            (t, d) => { that.onDetectionsData(t, d); },
+            (t) => { that.clearDetections(t); }
         );
 
         this.sources.add('sensor_msgs/msg/CameraInfo', 'Camera Info', null, -1,
@@ -66,18 +66,18 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.base_link_frame = null;
         
-        panel.widget_menu_cb = () => {
+        panel.widgetMenuCb = () => {
             that.setupMenu();
         }
 
-        this.on_sources_change(this.sources.getSources());
+        this.onSourcesChange(this.sources.getSources());
 
         this.rendering = true;
         this.renderDirty();
-        requestAnimationFrame((t) => this.rendering_loop());  
+        requestAnimationFrame((t) => this.renderingLoop());  
     }
     
-    on_sources_change(source_topics) {
+    onSourcesChange(source_topics) {
 
         let that = this;
         let client = this.panel.ui.client;
@@ -94,7 +94,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         });
     }
 
-    async rendering_loop() {
+    renderingLoop() {
 
         if (!this.rendering)
             return;
@@ -213,11 +213,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
             // console.log('Rendering '+results.length+' detections for '+topic, that.detection_lines[topic], detection_points);
         });
         
-        super.rendering_loop(); //description-tf render
+        super.renderingLoop(); //description-tf render
     }
 
-    on_model_removed() {
-        super.on_model_removed();
+    onModelRemoved() {
+        super.onModelRemoved();
         let that = this;
 
         this.base_link_frame = null;
@@ -227,19 +227,19 @@ export class Everything3DWidget extends DescriptionTFWidget {
             laser_topics = laser_topics.concat(Object.keys(this.laser_frames));
         console.log('Robot removed, clearing laser topics', laser_topics)
         laser_topics.forEach((topic) => {
-            that.clear_laser(topic);
+            that.clearLaser(topic);
         });
 
         let range_topics = this.range_visuals ? [].concat(Object.keys(this.range_visuals)) : [];
         console.log('Robot removed, clearing range topics', range_topics)
         range_topics.forEach((topic) => {
-            that.clear_range(topic);
+            that.clearRange(topic);
         });
 
         let detection_topics = this.detection_lines ? [].concat(Object.keys(this.detection_lines)) : [];
         console.log('Robot removed, clearing detection topics', detection_topics)
         detection_topics.forEach((topic) => {
-            that.clear_detections(topic);
+            that.clearDetections(topic);
         });
 
         let camera_frustum_visuals = this.camera_frustum_visuals ? [].concat(Object.keys(this.camera_frustum_visuals)) : [];
@@ -249,7 +249,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         });
     }
 
-    on_laser_data (topic, scan) {
+    onLaserData (topic, scan) {
 
         if (!this.robot || this.panel.paused) {
             return;
@@ -287,7 +287,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (!this.laser_frames_error_logged[topic]) {
                 this.laser_frames_error_logged[topic] = true;  //only log once
                 let msg = 'Frame "'+frame_id+'" not found in robot model for laser data from '+topic;
-                this.panel.ui.show_notification(msg, 'error');
+                this.panel.ui.showNotification(msg, 'error');
                 console.error(msg);
             }
             return;
@@ -336,7 +336,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }, 300);
     }
 
-    clear_laser(topic) {
+    clearLaser(topic) {
         if (this.laser_visuals[topic]) {
             this.laser_visuals[topic].removeFromParent();
             delete this.laser_visuals[topic];
@@ -346,7 +346,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
     }
 
-    on_pg_updated(ev) {
+    onPGUpdated(ev) {
         // console.log('Pose grapth updated', e);
     }
 
@@ -358,7 +358,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let f = this.robot.getFrame(frame_id);
         if (!f) {
             let msg = 'Frame "'+frame_id+'" not found in robot model for range data from '+topic;
-            this.panel.ui.show_notification(msg, 'error');
+            this.panel.ui.showNotification(msg, 'error');
             console.error(msg);
             return;
         }
@@ -402,14 +402,14 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.renderDirty();
     }
 
-    clear_range(topic) {
+    clearRange(topic) {
         if (this.range_visuals[topic]) {
             this.range_visuals[topic].cone.removeFromParent();
             delete this.range_visuals[topic];
         }
     }
 
-    on_detections_data(topic, data) {
+    onDetectionsData(topic, data) {
         if (!this.robot || this.panel.paused)
             return;
 
@@ -424,7 +424,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (!this.detection_frames_error_logged[topic]) {
                 this.detection_frames_error_logged[topic] = true;  //only log once
                 let msg = 'Frame "'+frame_id+'" not found in robot model for detection data from '+topic;
-                this.panel.ui.show_notification(msg, 'error');
+                this.panel.ui.showNotification(msg, 'error');
                 console.error(msg);
             }
             return;
@@ -519,17 +519,17 @@ export class Everything3DWidget extends DescriptionTFWidget {
             }
         }
 
-        this.clear_detections_on_timeout(topic);
+        this.clearDetectionsOnTimeout(topic);
     }
 
-    clear_detections_on_timeout(topic) {
+    clearDetectionsOnTimeout(topic) {
         if (this.clear_detections_timeout[topic])
             clearTimeout(this.clear_detections_timeout[topic])
 
         let that = this;
         this.clear_detections_timeout[topic] = setTimeout(()=>{
             if (that.panel.paused) { //don't clear while paused
-                that.clear_detections_on_timeout(topic);
+                that.clearDetectionsOnTimeout(topic);
                 return;
             }
 
@@ -548,7 +548,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }, 300);
     }
 
-    clear_detections(topic) {
+    clearDetections(topic) {
         if (this.detection_lines[topic]) {
             this.detection_lines[topic].removeFromParent();
             delete this.detection_lines[topic];
@@ -574,7 +574,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
     // this model ignores distorion (is it a problem or good enough?)
-    calculate_pinhole_frustum_corners(cameraInfo, near, far) {
+    calculatePinholeFrustum(cameraInfo, near, far) {
 
         const fx = cameraInfo.k[0];
         const fy = cameraInfo.k[4];
@@ -622,7 +622,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             if (!this.camera_info_error_logged[topic]) {
                 this.camera_info_error_logged[topic] = true;  //only log once
                 let msg = !frame_id ? 'Missing frame_id in '+topic : 'Frame "'+frame_id+'" not found in camera info of '+topic;
-                this.panel.ui.show_notification(msg, 'error');
+                this.panel.ui.showNotification(msg, 'error');
                 console.error(msg);
             }
             return;
@@ -635,7 +635,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let near = this.overlays[topic].config && this.overlays[topic].config['frustum_near'] ? this.overlays[topic].config['frustum_near'] : 0.01;
         let far = this.overlays[topic].config && this.overlays[topic].config['frustum_far'] ? this.overlays[topic].config['frustum_far'] : 2.0;
 
-        let frustum = this.calculate_pinhole_frustum_corners(data, near, far);
+        let frustum = this.calculatePinholeFrustum(data, near, far);
 
         let frustum_pts = [
             frustum.nearTopLeft, frustum.nearTopRight,

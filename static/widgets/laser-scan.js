@@ -30,7 +30,7 @@ export class LaserScanWidget {
         // panel.zoom = 8.0;
 
         //zoom menu control
-        panel.widget_menu_cb = () => {
+        panel.widgetMenuCb = () => {
 
             let zoom = panel.zoom === null || panel.zoom === undefined ? '?' : panel.zoom.toFixed(1);
             let rot = panel.rot === null || panel.rot === undefined ? '?' : panel.rot.toFixed(0);
@@ -187,14 +187,14 @@ export class LaserScanWidget {
         el.onpointerleave = pointerupHandler;
 
         this.rendering = true;
-        requestAnimationFrame((t)=> this.rendering_loop());
+        requestAnimationFrame((t)=> this.renderingLoop());
     }
 
     setZoom(zoom) {
 
         // panel.zoom +=1.0;
         // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        // panel.ui.update_url_hash();
+        // panel.ui.updateUrlHash();
 
         let panel = this.panel;
         if (zoom < 0.1) {
@@ -205,7 +205,7 @@ export class LaserScanWidget {
         panel.zoom = zoom;
         $('#zoom_ctrl_'+panel.n+' .val')
             .html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        panel.ui.update_url_hash();
+        panel.ui.updateUrlHash();
         
         this.renderDirty();
     }
@@ -214,7 +214,7 @@ export class LaserScanWidget {
 
         // panel.zoom +=1.0;
         // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        // panel.ui.update_url_hash();
+        // panel.ui.updateUrlHash();
 
         let panel = this.panel;
         if (rot < -1.0) {
@@ -225,7 +225,7 @@ export class LaserScanWidget {
         panel.rot = rot;
         $('#rot_ctrl_'+panel.n+' .val')
             .html('Rotate: '+panel.rot.toFixed(0)+'°');
-        panel.ui.update_url_hash();
+        panel.ui.updateUrlHash();
         
         this.renderDirty();
     }
@@ -284,7 +284,7 @@ export class LaserScanWidget {
         this.renderDirty();
     }
 
-    rendering_loop() {
+    renderingLoop() {
 
         if (!this.rendering)
             return;
@@ -294,7 +294,7 @@ export class LaserScanWidget {
             this.render();
         }
 
-        requestAnimationFrame((t)=> this.rendering_loop());
+        requestAnimationFrame((t)=> this.renderingLoop());
     }
 
     render = () => {

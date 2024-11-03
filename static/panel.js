@@ -34,7 +34,7 @@ export class Panel {
 
     initiated = false;
     init_data = null;
-    resize_event_handler = null;
+    resizeEventHandler = null;
     src_visible = false;
     editing = false;
     //const event = new Event("build");
@@ -52,7 +52,7 @@ export class Panel {
         this.custom_url_vars = custom_url_vars;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible+'; custom_url_vars=', this.custom_url_vars);
 
-        this.widget_menu_cb = null;
+        this.widgetMenuCb = null;
         this.floating_menu_top = null;
 
         this.n = Panel.PANEL_NO++;
@@ -107,7 +107,7 @@ export class Panel {
         console.log('Adding widget '+id_source+': ', widget_opts);
         this.grid_widget = grid.addWidget(widget_opts);
 
-        this.ui.client.on(id_source, this._on_data_context_wrapper);
+        this.ui.client.on(id_source, this.onDataContextWrapper);
 
         setTimeout(()=>{
             panels[id_source].onResize()
@@ -204,7 +204,7 @@ export class Panel {
         this.menu_el.on('click', () => {
             if (!isTouchDevice())
                 return;
-            that.ui.panel_menu_touch_toggle(that);
+            that.ui.panelMenuTouchToggle(that);
         });
         
         if (!isTouchDevice()) {
@@ -212,7 +212,6 @@ export class Panel {
                 this.menu_el.removeClass('hover_waiting');
             });
         }
-
 
         menu_content_el.addEventListener('touchstart', (ev) => {
             // console.log('menu touchstart', ev);
@@ -240,7 +239,7 @@ export class Panel {
 
     // init with message type when it's known
     // might get called with null gefore we receive the message type
-    init(msg_type=null) {
+    init(msg_type=null, from_url_hash=false) {
 
         console.log('Panel init '+this.id_source+'; msg_type='+msg_type);
 
@@ -317,17 +316,13 @@ export class Panel {
             this.initiated = true;
 
             if (this.init_data != null) {
-                this._on_data_context_wrapper(this.init_data[0], this.init_data[1]);
+                this.onDataContextWrapper(this.init_data[0], this.init_data[1]);
                 this.init_data = null;
             }
             //use latest msg
 
-            // let latest = this.ui.client.latest[this.id_source];
-            // if (latest) {
-            //     this._on_data_context_wrapper(latest.msg, latest.ev)
-            // }
-
-            this.ui.update_url_hash();
+            if (!from_url_hash)
+                this.ui.updateUrlHash();
             this.setMenu()
 
             if (this.paused) {
@@ -365,7 +360,7 @@ export class Panel {
         }
     }
 
-    _on_data_context_wrapper = (msg, ev) => {
+    onDataContextWrapper = (msg, ev) => {
 
         if (!this.initiated) {
             this.init_data = [ msg, ev ]; //store for after init
@@ -374,9 +369,9 @@ export class Panel {
 
         setTimeout(()=>{
             if (['video', 'sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage', 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'].indexOf(this.msg_type) > -1) {
-                this.on_stream(stream);
+                this.onStream(stream);
             } else {
-                this.on_data(msg, ev);
+                this.onData(msg, ev);
             }
         }, 0);
     }
@@ -393,7 +388,7 @@ export class Panel {
             let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_'+this.n+'" class="msg_types" title="View message type definition">'+this.msg_type+'</a></div>');
             msgTypesEl.click(function(ev) {
 
-                that.ui.message_type_dialog(that.msg_type)             
+                that.ui.messageTypeDialog(that.msg_type)             
     
                 ev.cancelBubble = true;
                 ev.preventDefault();
@@ -420,7 +415,7 @@ export class Panel {
                             that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
                         } else {
                             that.onResize();
-                            that.ui.update_url_hash();
+                            that.ui.updateUrlHash();
                         }
         
                     } else {
@@ -449,7 +444,7 @@ export class Panel {
             if (!isTouchDevice() || closeEl.hasClass('warn')) {
                 that.close();
                 if (that.ui.widgets[that.id_source])
-                    that.ui.widgets_menu();    
+                    that.ui.widgetsMenu();    
             } else {
                 closeEl.addClass('warn');
             }
@@ -472,8 +467,8 @@ export class Panel {
             $('#monitor_menu_content_'+this.n).append(els[i]);
         }
 
-        if (this.widget_menu_cb != null) {
-            this.widget_menu_cb();
+        if (this.widgetMenuCb != null) {
+            this.widgetMenuCb();
         }
 
     }
@@ -567,8 +562,8 @@ export class Panel {
         // console.log('resize ', h, t, pt, pb, mt, mb)
         //$('#panel_content_'+this.n).css('height', h-t-pt-pb-mt-mb);
 
-       if (this.resize_event_handler != null)
-           this.resize_event_handler();
+       if (this.resizeEventHandler != null)
+           this.resizeEventHandler();
     }
 
     maximize(state=true) {
@@ -636,7 +631,7 @@ export class Panel {
         // }, 500); // resize at the end of the animation
     }
 
-    on_data(msg, ev) {
+    onData(msg, ev) {
         // console.log('Got data for '+this.id_source+': ', msg)
 
         if (this.paused)
@@ -731,7 +726,7 @@ export class Panel {
         }
     }
 
-    on_stream(stream) {
+    onStream(stream) {
         console.log('Got stream for '+this.id_source+': ', stream)
     }
 
@@ -742,11 +737,11 @@ export class Panel {
         }
 
         if (this.ui.panel_menu_on === this)
-            this.ui.panel_menu_touch_toggle();  //remove open menu
+            this.ui.panelMenuTouchToggle();  //remove open menu
 
         // uncheck in topic menu if topic
         if (this.ui.graph_menu.topics[this.id_source]) {
-            this.ui.graph_menu.uncheck_topic(this.id_source);
+            this.ui.graph_menu.uncheckTopic(this.id_source);
         }
 
         // uncheck in cam menu if cam
@@ -756,7 +751,7 @@ export class Panel {
             $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').addClass('enabled');
         }
 
-        this.ui.client.off(this.id_source, this._on_data_context_wrapper);
+        this.ui.client.off(this.id_source, this.onDataContextWrapper);
 
         if (this.display_widget && this.display_widget.onClose) {
             this.display_widget.onClose();

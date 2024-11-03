@@ -391,14 +391,14 @@ export class GraphMenu {
 
             if (!isTouchDevice()) {
                 node_el.on('mouseenter', (e) => {
-                    that.hover_node(id_node, true); 
+                    that.hoverNode(id_node, true); 
                 });
                 node_el.on('mouseleave', (e) => {
-                    that.hover_node(id_node, false); 
+                    that.hoverNode(id_node, false); 
                 });
             }
             node_el.on('click', (e) => {
-                that.node_focus_toggle(id_node); 
+                that.nodeFocusToggle(id_node); 
             });
         });
     
@@ -458,7 +458,7 @@ export class GraphMenu {
                 if (that.is_narrow)
                     return;
                 
-                that.topic_focus_toggle(topic); 
+                that.topicFocusToggle(topic); 
             });
 
             chb.on('click', (e) => {
@@ -503,7 +503,7 @@ export class GraphMenu {
 
                 $('#graph_controls').addClass('hover_waiting'); //this will keep menu open (removed on next mouse enter)
 
-                that.ui.message_type_dialog(that.topics[topic].msg_type);
+                that.ui.messageTypeDialog(that.topics[topic].msg_type);
 
                 return false;
             });
@@ -592,7 +592,7 @@ export class GraphMenu {
             if (!node) {
                 this.focused_id_node = null;
             } else if (!node.focused) {
-                this.node_focus_toggle(this.focused_id_node);
+                this.nodeFocusToggle(this.focused_id_node);
             }
         }
         if (this.focused_topic) {
@@ -600,7 +600,7 @@ export class GraphMenu {
             if (!topic) {
                 this.focused_topic = null;
             } else if (!topic.focused) {
-                this.topic_focus_toggle(this.focused_topic); 
+                this.topicFocusToggle(this.focused_topic); 
             }
         }
     }    
@@ -632,14 +632,14 @@ export class GraphMenu {
 
     reset_focus( ) {
         if (this.focused_id_node) {
-            this.node_focus_toggle(this.focused_id_node);
+            this.nodeFocusToggle(this.focused_id_node);
         }
         if (this.focused_topic) {
-            this.topic_focus_toggle(this.focused_topic)
+            this.topicFocusToggle(this.focused_topic)
         }
     }
 
-    node_focus_toggle(id_node) {
+    nodeFocusToggle(id_node) {
 
         if (!this.nodes[id_node])
             return;
@@ -647,10 +647,10 @@ export class GraphMenu {
         let focused = !this.nodes[id_node].focused
 
         if (focused && this.focused_id_node && this.focused_id_node != id_node) {
-            this.node_focus_toggle(this.focused_id_node);
+            this.nodeFocusToggle(this.focused_id_node);
         }
         if (focused && this.focused_topic) {
-            this.topic_focus_toggle(this.focused_topic);
+            this.topicFocusToggle(this.focused_topic);
         }
         if (focused)
             this.focused_id_node = id_node;
@@ -674,7 +674,7 @@ export class GraphMenu {
         this.update_highlights();
     }
 
-    topic_focus_toggle(topic) {
+    topicFocusToggle(topic) {
 
         if (!this.topics[topic])
             return;
@@ -682,7 +682,7 @@ export class GraphMenu {
         let focused = !this.topics[topic].focused;
 
         if (focused && this.focused_id_node) {
-            this.node_focus_toggle(this.focused_id_node);
+            this.nodeFocusToggle(this.focused_id_node);
         }
         if (focused && this.focused_topic && this.focused_topic != topic) {
             this.topic_focus_toggle(this.focused_topic);
@@ -709,7 +709,7 @@ export class GraphMenu {
         this.update_highlights();
     }
 
-    uncheck_topic(topic) {
+    uncheckTopic(topic) {
         if (!this.topics[topic])
             return;
 
@@ -718,7 +718,7 @@ export class GraphMenu {
         this.topics[topic].chb.removeClass('disabled');
     }
 
-    hover_node(id_node, state) {
+    hoverNode(id_node, state) {
 
         // if (state && ((focused_id_node && focused_id_node != id_node) || focused_topic))
         //     return;

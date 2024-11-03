@@ -360,7 +360,7 @@ export class InputManager {
         if (!force && this.current_profile == this.last_profile_notification)
             return;
         this.last_profile_notification = this.current_profile;
-        this.ui.show_notification('Input profile is '+this.profiles[this.current_profile].label);
+        this.ui.showNotification('Input profile is '+this.profiles[this.current_profile].label);
     }
 
     init_controller(c) {
@@ -487,7 +487,7 @@ export class InputManager {
                 label = 'Keyboard';
             else 
                 label = label.split('(')[0]; // remove (Vendor: xxx)
-            this.ui.show_notification(label + (state ? ' enabled' : ' disabled'));
+            this.ui.showNotification(label + (state ? ' enabled' : ' disabled'));
             if (state)
                 this.show_input_profile_notification();
         }
@@ -1528,7 +1528,7 @@ export class InputManager {
         navigator.clipboard.writeText(val);
         console.log('Copied profile json:', val);
         this.close_profile_menu();
-        this.ui.show_notification('Profile JSON copied', null, '<pre>'+val+'</pre>');
+        this.ui.showNotification('Profile JSON copied', null, '<pre>'+val+'</pre>');
     }
 
     full_json_to_clipboard() {
@@ -1543,10 +1543,10 @@ export class InputManager {
         navigator.clipboard.writeText(val);
         console.log('Copied full input json:', val);
         this.close_profile_menu();
-        this.ui.show_notification('Config JSON copied', null, '<pre>'+val+'</pre>');
+        this.ui.showNotification('Config JSON copied', null, '<pre>'+val+'</pre>');
     }
 
-    register_driver(id_driver, driver_class) {
+    registerDriver(id_driver, driver_class) {
         if (this.registered_drivers[id_driver])
             return;
 
@@ -3142,17 +3142,17 @@ export class InputManager {
             case 'ros-srv':
                 //TODO
                 if (!btn.ros_srv_id) {
-                    this.ui.show_notification('Service ID not set', 'error');
+                    this.ui.showNotification('Service ID not set', 'error');
                     console.warn('Service ID not set');
                     return;
                 }
                 if (!btn.ros_srv_msg_type) {
                     console.error('Service msg_type not set');
-                    this.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, true, { err: 1, msg: 'Service not yet discovered, missing message type'});
+                    this.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, true, { err: 1, msg: 'Service not yet discovered, missing message type'});
                     return;
                 }
                 if (btn.service_blocked) {
-                    this.ui.show_notification('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)', 'error');
+                    this.ui.showNotification('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)', 'error');
                     console.warn('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)');
                     return;
                 }
@@ -3162,9 +3162,9 @@ export class InputManager {
                     btn.touch_btn_el.addClass('working');
 
                 btn.service_blocked = true;
-                this.client.service_call(btn.ros_srv_id, call_args ? call_args : undefined, !btn.show_service_request, (reply) => {
+                this.client.serviceCall(btn.ros_srv_id, call_args ? call_args : undefined, !btn.show_service_request, (reply) => {
                     btn.service_blocked = false;
-                    that.ui.service_reply_notification(btn.touch_btn_el, btn.ros_srv_id, btn.show_service_reply, reply);
+                    that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, btn.show_service_reply, reply);
                 });
                 
                 break;
@@ -3203,7 +3203,7 @@ export class InputManager {
                 console.log('WIFI SCAN');
                 if (btn.touch_btn_el)
                     btn.touch_btn_el.addClass('working');
-                that.ui.trigger_wifi_scan(false, ()=>{
+                that.ui.triggerWifiScan(false, ()=>{
                     if (btn.touch_btn_el)
                         btn.touch_btn_el.removeClass('working');
                 });
@@ -3212,7 +3212,7 @@ export class InputManager {
                 console.log('WIFI SCAN & ROAM');
                 if (btn.touch_btn_el)
                     btn.touch_btn_el.addClass('working');
-                that.ui.trigger_wifi_scan(true, ()=>{
+                that.ui.triggerWifiScan(true, ()=>{
                     if (btn.touch_btn_el)
                         btn.touch_btn_el.removeClass('working');
                 });
@@ -3519,7 +3519,7 @@ export class InputManager {
         }
 
         let label = id_gamepad.split('(')[0]; // remove (Vendor: xxx)
-        this.ui.show_notification(label + ' connected');
+        this.ui.showNotification(label + ' connected');
 
         this.init_controller(this.controllers[id_gamepad]);
     }
@@ -3535,7 +3535,7 @@ export class InputManager {
             this.make_controller_icons();
 
             let label = ev.gamepad.id.split('(')[0]; // remove (Vendor: xxx)
-            this.ui.show_notification(label + ' disconnected');
+            this.ui.showNotification(label + ' disconnected');
         }
 
     }

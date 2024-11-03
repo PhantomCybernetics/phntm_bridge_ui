@@ -49,7 +49,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
         // this.topic_scan = '/scan';
 
         //zoom menu control
-        panel.widget_menu_cb = () => {
+        panel.widgetMenuCb = () => {
 
             $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'">'
                 + '<span class="minus">-</span>'
@@ -92,7 +92,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
             });
         }
        
-        this.rendering_loop();
+        this.renderingLoop();
     }
     
     onData = (map_msg, ns_stamp=null, k = -1) => {
@@ -124,7 +124,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
             this.clear_map = clear_map;
     }
      
-    rendering_loop() {
+    renderingLoop() {
 
         let clear_tiles = false;
         if (this.do_clear) {
@@ -164,7 +164,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
 
         if (!this.render_dirty) {
             return window.requestAnimationFrame((step)=>{
-                that.rendering_loop();
+                that.renderingLoop();
             });
         }
 
@@ -310,7 +310,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
     
 
         window.requestAnimationFrame((step)=>{
-            that.rendering_loop();
+            that.renderingLoop();
         });
 
     }

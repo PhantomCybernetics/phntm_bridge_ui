@@ -31,7 +31,6 @@
 
 <div id="fixed-header">
 
-
     <div id="modal-underlay" class="prevent-select"></div> <!-- z-index: 80 -->
     <div id="menu-underlay" class="prevent-select"></div> <!-- z-index: 82 -->
     <div id="input-underlay" class="prevent-select"></div> <!-- z-index: 2 -->
@@ -211,39 +210,39 @@
         });
 
         let input_manager = new InputManager(robot);
-        input_manager.register_driver('Joy', JoyInputDriver);
-        input_manager.register_driver('Twist', TwistInputDriver);
+        input_manager.registerDriver('Joy', JoyInputDriver);
+        input_manager.registerDriver('Twist', TwistInputDriver);
 
         let panel_ui = new PanelUI(robot, 119, input_manager);
 
-        panel_ui.add_type_widget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
-        panel_ui.add_type_widget('sensor_msgs/msg/Range', RangeWidget),
-        panel_ui.add_type_widget('sensor_msgs/msg/LaserScan', LaserScanWidget);
-        panel_ui.add_type_widget('sensor_msgs/msg/Imu', ImuWidget);
-        panel_ui.add_type_widget('rcl_interfaces/msg/Log', LogWidget);
+        panel_ui.addTypeWidget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
+        panel_ui.addTypeWidget('sensor_msgs/msg/Range', RangeWidget),
+        panel_ui.addTypeWidget('sensor_msgs/msg/LaserScan', LaserScanWidget);
+        panel_ui.addTypeWidget('sensor_msgs/msg/Imu', ImuWidget);
+        panel_ui.addTypeWidget('rcl_interfaces/msg/Log', LogWidget);
 
-        panel_ui.add_type_widget('video', VideoWidget);
-        panel_ui.add_type_widget('sensor_msgs/msg/Image', VideoWidget);
-        panel_ui.add_type_widget('sensor_msgs/msg/CompressedImage', VideoWidget);
-        panel_ui.add_type_widget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
+        panel_ui.addTypeWidget('video', VideoWidget);
+        panel_ui.addTypeWidget('sensor_msgs/msg/Image', VideoWidget);
+        panel_ui.addTypeWidget('sensor_msgs/msg/CompressedImage', VideoWidget);
+        panel_ui.addTypeWidget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
         
         // TODO:
-        // panel_ui.add_type_widget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
-        // panel_ui.add_type_widget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
-        panel_ui.add_type_widget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
+        // panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
+        // panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
+        panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
 
-        panel_ui.add_widget(Everything3DWidget);
-        panel_ui.add_widget(NavigationWidget);
-        panel_ui.add_widget(DescriptionTFWidget);
-        panel_ui.add_widget(LaserOdometryWidget);
+        panel_ui.addCustomWidget(Everything3DWidget);
+        panel_ui.addCustomWidget(NavigationWidget);
+        panel_ui.addCustomWidget(DescriptionTFWidget);
+        panel_ui.addCustomWidget(LaserOdometryWidget);
 
-        panel_ui.add_service_type_widget('std_srvs/srv/Empty', ServiceInput_Empty);
-        panel_ui.add_service_type_widget('std_srvs/srv/Trigger', ServiceInput_Empty);
-        panel_ui.add_service_type_widget('std_srvs/srv/SetBool', ServiceInput_Bool);
+        panel_ui.addServiceTypeWidget('std_srvs/srv/Empty', ServiceInput_Empty);
+        panel_ui.addServiceTypeWidget('std_srvs/srv/Trigger', ServiceInput_Empty);
+        panel_ui.addServiceTypeWidget('std_srvs/srv/SetBool', ServiceInput_Bool);
 
         // init panel setup from url
         // also subscribes to topics and cameras required by panel widgets
-        panel_ui.panels_from_url_hash(window.location.hash);
+        panel_ui.panelsFromURLHash(window.location.hash);
 
         robot.on('error', (err, msg)=>{
             console.error('Robot returned error: '+err, msg);
@@ -266,7 +265,7 @@
         robot.connect();
 
         if (navigator.userAgent.toLowerCase().includes('firefox')) {
-            panel_ui.show_page_error(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>');
+            panel_ui.showPageError(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/blob/main/FIREFOX_ISSUES.md">More here</a>');
         }
     });
 
