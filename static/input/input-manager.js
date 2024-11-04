@@ -920,7 +920,7 @@ export class InputManager {
                             new_btn.ros_srv_msg_type = this.client.discovered_services[new_btn.ros_srv_id].msg_type;
                         } else { // otherwise checked on services update
                             console.log('ros-srv btn action missing message type, service '+new_btn.ros_srv_id+' not discovered yet?');
-                            // this.client.run_introspection();
+                            // this.client.runIntrospection();
                         }
 
                         if (default_config.ros_srv_val !== undefined) {

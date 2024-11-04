@@ -369,7 +369,7 @@ export class VideoWidget {
                 this.overlays[topic].container_el.remove();
             }
             if (this.overlays[topic].configUpdateCb) {
-                client.remove_topic_config_handler(topic, this.overlays[topic].configUpdateCb);
+                client.removeTopicConfigHandler(topic, this.overlays[topic].configUpdateCb);
             }
             delete this.overlays[topic];
         }

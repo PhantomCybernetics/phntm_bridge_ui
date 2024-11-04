@@ -422,7 +422,7 @@ export class GraphMenu {
                 msg_type_classes.push('video');
                 title += ' transported as H.264 video';
             }
-            if (!this.ui.client.find_message_type(this.topics[topic].msg_type)) {
+            if (!this.ui.client.findMessageType(this.topics[topic].msg_type)) {
                 msg_type_classes.push('err');
                 title += ' unsupported message type';
             }

@@ -450,7 +450,7 @@ export class PanelUI {
                 $('#introspection_state').addClass('active');
             }
 
-            client.run_introspection(!is_active);
+            client.runIntrospection(!is_active);
         });
 
         $('#fullscreen-toggle').click(()=>{
@@ -1266,7 +1266,7 @@ export class PanelUI {
 
     messageTypeDialog(msg_type, onclose = null) {
 
-        let msg_type_class = msg_type ? this.client.find_message_type(msg_type) : null;;
+        let msg_type_class = msg_type ? this.client.findMessageType(msg_type) : null;;
         let content = (msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>');
 
         if (!isTouchDevice()) {
@@ -1525,7 +1525,7 @@ export class PanelUI {
             let msg_type = node.services[id_service].msg_type;
             num_services++; // activates menu
 
-            let msg_class = this.client.find_message_type(service.msg_type+'_Request');
+            let msg_class = this.client.findMessageType(service.msg_type+'_Request');
             let service_name_parts = service.service.split('/');
             let service_short = service_name_parts[service_name_parts.length-1];
 
@@ -2063,7 +2063,7 @@ export class PanelUI {
 
     updateWebrtcStatus() {
         let state = null;
-        const [via_turn, ip] = this.client.get_turn_connection_info();
+        const [via_turn, ip] = this.client.getTURNConnectionInfo();
         let pc = this.client.pc;
         if (pc) {
             state = pc.connectionState            

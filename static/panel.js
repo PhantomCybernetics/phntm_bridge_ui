@@ -273,7 +273,7 @@ export class Panel {
                     this.rot = this.default_rot;
                 }
                 if (msg_type != 'video') {
-                    this.msg_type_class = msg_type ? this.ui.client.find_message_type(this.msg_type) : null;
+                    this.msg_type_class = msg_type ? this.ui.client.findMessageType(this.msg_type) : null;
                     $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
     
                     if (this.msg_type_class == null && this.msg_type != null) {

@@ -111,7 +111,7 @@ export class ServiceInputDialog {
         this.cont_el.empty();
         this.cont_el.append($('<h3>'+this.service.service+'</h3><span class="msg_type">'+this.service.msg_type+'</span>'))
 
-        this.msg_type = this.client.find_message_type(this.service.msg_type+'_Request');
+        this.msg_type = this.client.findMessageType(this.service.msg_type+'_Request');
 
         this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
         this.cont_el.append(this.menu_underlay);
@@ -691,7 +691,7 @@ export class ServiceInputDialog {
         let label_el = $((label ? '<div class="label">'+label+':</div>' : '') + '<i class="obj-open">{</i>');
         let block = $('<div class="block"></div>')
 
-        let msg_class = this.client.find_message_type(msg_type);
+        let msg_class = this.client.findMessageType(msg_type);
         if (!msg_class)
             block.append($('<div class="err">Unrecognized complex type '+msg_type+'</div>'));
 

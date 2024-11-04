@@ -112,7 +112,7 @@ export class BatteryStateWidget {
     }
 
     onClose() {
-        this.panel.ui.client.remove_topic_config_handler(this.topic, this.onTopicConfigUpdate);
+        this.panel.ui.client.removeTopicConfigHandler(this.topic, this.onTopicConfigUpdate);
     }
 
     onData = (decoded) => {

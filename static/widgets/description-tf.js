@@ -66,7 +66,7 @@ export class DescriptionTFWidget extends EventTarget {
             if (url.indexOf('package:/') !== 0 && url.indexOf('file:/') !== 0) 
                 return url;
                 
-            let url_fw = panel.ui.client.get_bridge_file_url(url);
+            let url_fw = panel.ui.client.getBridgeFileUrl(url);
             console.log('URDF Loader requesting '+url+' > '+url_fw);
             return url_fw;
 
@@ -285,7 +285,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.scene.add(that.ground_plane);
         });
         
-        this.makeMark(this.ros_space, 'ROS BASE', 0, 0, 2.0, true, 2.0);
+        this.markRosOrigin();
     
         this.camera.layers.enableAll();
         if (!this.vars.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -613,8 +613,6 @@ export class DescriptionTFWidget extends EventTarget {
         if (desc.data == this.last_processed_desc) {
             console.warn('Ignoring identical robot description from '+topic);
             return false;
-        } else if (this.last_processed_desc) {
-            console.warn('Overwriting last model desc', this.last_processed_desc);
         }
         this.last_processed_desc = desc.data;
 
@@ -713,9 +711,14 @@ export class DescriptionTFWidget extends EventTarget {
         return true;
     }
 
+    markRosOrigin() {
+        this.makeMark(this.ros_space, 'ROS ORIGIN', 0, 0, 2.0, true, 2.0);
+    }
+
     onModelRemoved() {
         console.warn('Removing robot model, clearing ros_space')
         this.ros_space.clear(); // this.ros_space.remove(this.robot);
+        this.markRosOrigin(); //removed, put back
         this.robot = null;
         while (this.labelRenderer.domElement.children.length > 0) {
             this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
