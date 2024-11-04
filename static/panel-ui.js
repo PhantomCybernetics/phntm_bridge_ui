@@ -275,7 +275,7 @@ export class PanelUI {
                 }
                 that.subscribed_docker_monitor_topic = null;
             }
-            that.save_last_robot_docker_control_shown(that.docker_control_shown);
+            that.saveLastRobotDockerControlShown(that.docker_control_shown);
             if (old_docker_control_shown != that.docker_control_shown) {
                 $('#docker_controls').css('display', that.docker_control_shown ? '' : 'none');
                 that.updateLayout();
@@ -1717,11 +1717,11 @@ export class PanelUI {
         dont_show_label.prependTo(btns);
 
         btn_cancel.click(()=>{
-            close_dialog();
+            closeDialog();
             cancel_cb();
         });
         btn_ok.click(()=>{
-            close_dialog();
+            closeDialog();
             confirm_cb(dont_show_inp.prop('checked'));
         });
         
@@ -1759,7 +1759,7 @@ export class PanelUI {
         let that = this;
         if (!this.wifi_scan_warning_suppressed) {
             let btn_label = roam ? 'Scan &amp; Roam' : 'Scan Wi-Fi';
-            this.confirm_dialog('<span class="warn-icon"></span>Depending on your hardware setup, '
+            this.confirmDialog('<span class="warn-icon"></span>Depending on your hardware setup, '
                 + 'this action can leave your machine offline. See <a href="https://docs.phntm.io/bridge/wifi-scan-roam" target="_blank">more info here</a><br><br>'
                 + 'Before attempting to scan or roam, make sure you have local console access and can reboot the system if necessary.',
                 'warn',

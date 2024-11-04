@@ -274,7 +274,7 @@ export class NodeParamsDialog {
 
                 // console.log('local val set to', that.selected_param_value);
 
-                that.render_param(that.selected_param_name, that.selected_param_value, -1);
+                that.renderParam(that.selected_param_name, that.selected_param_value, -1);
             });
 
         }); 

@@ -2950,13 +2950,13 @@ export class InputManager {
             opts.push('<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-Fi Scan &amp; Roam</option>');
         }
         // let dri = profile.driver_instance;
-        let dri_btns = driver.get_buttons();
+        let dri_btns = driver.getButtons();
         let dri_btns_ids = Object.keys(dri_btns);
         for (let j = 0; j < dri_btns_ids.length; j++) {
             let id_btn = dri_btns_ids[j];
             opts.push('<option value="btn:'+id_btn+'"'+(btn.driver_btn == id_btn ? ' selected' : '')+'>'+dri_btns[id_btn]+'</option>');
         }
-        let dri_axes = driver.get_axes();
+        let dri_axes = driver.getAxes();
         let dri_axes_ids = Object.keys(dri_axes);
         for (let j = 0; j < dri_axes_ids.length; j++) {
             let id_axis = dri_axes_ids[j];
