@@ -1,4 +1,4 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad } from "../inc/lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg } from "../inc/lib.js";
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
@@ -29,22 +29,24 @@ export class DescriptionTFWidget extends EventTarget {
         this.panel = panel;
 
         // defaults overwritten by url params
-        this.render_collisions = true;
-        this.render_visuals = true;
-        this.render_labels = false;
-        this.render_links = true;
-        this.render_joints = true;
-        this.follow_target = true;
-        this.perspective_camera = true;
+        this.vars = {
+            'render_collisions': true,
+            'render_visuals': true,
+            'render_labels': false,
+            'render_links': true,
+            'render_joints': true,
+            'follow_target': true,
+            'perspective_camera': true,
+            'fix_robot_base': false, // robot will be fixed in place
+            'render_pose_graph': false,
+            'render_ground_plane': true,
+            '_focus_target': '', // pass through
+            '_cam_position_offset': '',
+        }
 
         this.pose_graph = [];
-        this.pose_graph_size = 100; // keeps this many nodes in pg
-        this.render_pose_graph = false;
-        this.render_ground_plane = true;
-        this.pos_offset = null;
-        // this.rot_offset = null;
-        this.fix_robot_base = false; // robot will be fixed in place
-
+        this.pose_graph_size = 500; // keeps this many nodes in pg (TODO: to robot's config?)
+    
         // this.latest_tf_stamps = {};
         // this.transforms_queue = [];
         this.smooth_transforms_queue = {};
@@ -75,8 +77,7 @@ export class DescriptionTFWidget extends EventTarget {
             return 'package://' + targetPkg; // put back the url scheme removed by URDFLoader 
         }
         this.robot = null;
-        this.last_robot_world_position = new THREE.Vector3();
-        this.last_robot_world_rotation = new THREE.Quaternion();
+    
         this.joint_markers = [];
         this.link_markers = [];
 
@@ -162,9 +163,10 @@ export class DescriptionTFWidget extends EventTarget {
         this.camera_target_key = null;
 
         this.ros_space = new THREE.Object3D();
-        this.ros_space_default_rotation = new THREE.Euler(-Math.PI/2.0, 0.0, 0.0); // ROS uses +z up
+        this.ros_space_default_rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2.0, 0.0, 0.0)); // ROS uses +z up
         this.scene.add(this.ros_space);
-        this.ros_space.rotation.copy(this.ros_space_default_rotation); 
+        this.ros_space.quaternion.copy(this.ros_space_default_rotation); 
+        this.ros_space_offset_set = false; // will be set on 1st base tf data
 
         const light = new THREE.SpotLight( 0xffffff, 30.0, 0, Math.PI/10);
         light.castShadow = true; // default false
@@ -207,12 +209,12 @@ export class DescriptionTFWidget extends EventTarget {
         // - url vars parsed here - //
 
         // cam follow action
-        if (this.follow_target) {
+        if (this.vars.follow_target) {
             this.focus_btn.addClass('on');
         }
         this.focus_btn.click(function(ev) {
-            that.follow_target = !$(this).hasClass('on');
-            if (that.follow_target) {
+            that.vars.follow_target = !$(this).hasClass('on');
+            if (that.vars.follow_target) {
                 $(this).addClass('on');
                 that.controls.enablePan = false;
             } else {
@@ -225,14 +227,14 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        if (this.perspective_camera) {
+        if (this.vars.perspective_camera) {
             this.perspective_btn.addClass('on');
         } else {
             this.perspective_btn.removeClass('on');
         }
         this.perspective_btn.click(function(ev) {
-            that.perspective_camera = !$(this).hasClass('on');
-            if (that.perspective_camera) {
+            that.vars.perspective_camera = !$(this).hasClass('on');
+            if (that.vars.perspective_camera) {
                 $(this).addClass('on');
             } else {
                 $(this).removeClass('on');
@@ -249,7 +251,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.camera.lookAt(this.camera_target_pos);
 
         this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
-        this.controls.enablePan = !this.follow_target;
+        this.controls.enablePan = !this.vars.follow_target;
         this.renderer.domElement.addEventListener('pointerdown', (ev) => {
             ev.preventDefault(); // stop from moving the panel
         });
@@ -278,29 +280,29 @@ export class DescriptionTFWidget extends EventTarget {
             that.ground_plane.rotation.setFromVector3(new THREE.Vector3(Math.PI/2,0,0));
             that.ground_plane.position.set(0,0,0);
             that.ground_plane.receiveShadow = true;
-            that.ground_plane.visible = that.render_ground_plane;
+            that.ground_plane.visible = that.vars.render_ground_plane;
             that.scene.add(that.ground_plane);
         });
         
         this.makeMark(this.scene, '[0,0,0]', 0, 0, 2.0, true, 2.0);
     
         this.camera.layers.enableAll();
-        if (!this.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
-        if (!this.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
-        if (!this.render_joints)  {
+        if (!this.vars.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
+        if (!this.vars.render_collisions) this.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS); //colliders off by default
+        if (!this.vars.render_joints)  {
             this.camera.layers.disable(DescriptionTFWidget.L_JOINTS); 
             this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); 
         }
-        if (!this.render_links) {
+        if (!this.vars.render_links) {
             this.camera.layers.disable(DescriptionTFWidget.L_LINKS);
             this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
 
         }
-        if (!this.render_labels) {
+        if (!this.vars.render_labels) {
             this.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
             this.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
         }
-        if (!this.render_pose_graph) {
+        if (!this.vars.render_pose_graph) {
             this.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
         }
         this.collider_mat = new THREE.MeshStandardMaterial({
@@ -324,7 +326,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         let aspect = this.panel.widget_width / this.panel.widget_height;
 
-        if (this.perspective_camera) {
+        if (this.vars.perspective_camera) {
             this.camera = new THREE.PerspectiveCamera(75,
                                                       aspect,
                                                       0.01, 1000);
@@ -346,7 +348,7 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera.quaternion.copy(old_camera.quaternion);
             this.camera.zoom = 1.0;
 
-            if (this.perspective_camera) {
+            if (this.vars.perspective_camera) {
                 if (old_camera.isOrthographicCamera) { // compensate for ortho > persp
                     const targetDistance = this.camera.position.distanceTo(this.camera_target_pos.position);
                     const visibleHeight = (old_camera.top - old_camera.bottom) / old_camera.zoom;
@@ -400,11 +402,11 @@ export class DescriptionTFWidget extends EventTarget {
 
         let that = this;
 
-        $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
+        $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.vars.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_joints_'+this.panel.n).change(function(ev) {
-            that.render_joints = $(this).prop('checked');
-            if (that.render_joints) {
+            that.vars.render_joints = $(this).prop('checked');
+            if (that.vars.render_joints) {
                 that.camera.layers.enable(DescriptionTFWidget.L_JOINTS);
                 if ($('#render_labels_'+that.panel.n).prop('checked'))
                     that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS); //labels
@@ -418,11 +420,11 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();          
         });
 
-        $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
+        $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.vars.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_links_'+this.panel.n).change(function(ev) {
-            that.render_links = $(this).prop('checked');
-            if (that.render_links) {
+            that.vars.render_links = $(this).prop('checked');
+            if (that.vars.render_links) {
                 that.camera.layers.enable(DescriptionTFWidget.L_LINKS);
                 if ($('#render_labels_'+that.panel.n).prop('checked'))
                     that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS); //labels
@@ -435,11 +437,11 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
+        $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_labels_'+this.panel.n).change(function(ev) {
-            that.render_labels = $(this).prop('checked');
-            if (that.render_labels) {
+            that.vars.render_labels = $(this).prop('checked');
+            if (that.vars.render_labels) {
                 if ($('#render_joints_'+that.panel.n).prop('checked'))
                     that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS);
                 if ($('#render_links_'+that.panel.n).prop('checked'))
@@ -452,11 +454,11 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
+        $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_visuals_'+this.panel.n).change(function(ev) {
-            that.render_visuals = $(this).prop('checked');
-            if (that.render_visuals)
+            that.vars.render_visuals = $(this).prop('checked');
+            if (that.vars.render_visuals)
                 that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -464,11 +466,11 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
+        $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_collisions_'+that.panel.n).change(function(ev) {
-            that.render_collisions = $(this).prop('checked');
-            if (that.render_collisions)
+            that.vars.render_collisions = $(this).prop('checked');
+            if (that.vars.render_collisions)
                 that.camera.layers.enable(DescriptionTFWidget.L_COLLIDERS);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS);
@@ -476,19 +478,19 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.fix_robot_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix robot base</label></div>')
+        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.vars.fix_robot_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix robot base</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#fix_base_'+this.panel.n).change(function(ev) {
-            that.fix_robot_base = $(this).prop('checked');
+            that.vars.fix_robot_base = $(this).prop('checked');
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
+        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_pg_'+this.panel.n).change(function(ev) {
-            that.render_pose_graph = $(this).prop('checked');
-            if (that.render_pose_graph)
+            that.vars.render_pose_graph = $(this).prop('checked');
+            if (that.vars.render_pose_graph)
                 that.camera.layers.enable(DescriptionTFWidget.L_POSE_GRAPH);
             else
                 that.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
@@ -496,11 +498,11 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_grnd_'+this.panel.n+'""><input type="checkbox" '+(this.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"> Ground plane</label></div>')
+        $('<div class="menu_line"><label for="render_grnd_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"> Ground plane</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));
         $('#render_grnd_'+this.panel.n).change(function(ev) {
-            that.render_ground_plane = $(this).prop('checked');
-            that.ground_plane.visible = that.render_ground_plane;
+            that.vars.render_ground_plane = $(this).prop('checked');
+            that.ground_plane.visible = that.vars.render_ground_plane;
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
@@ -519,43 +521,40 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     getUrlHashParts (out_parts) {
-        out_parts.push('f='+(this.follow_target ? '1' : '0'));
+        out_parts.push('f='+(this.vars.follow_target ? '1' : '0'));
+
         let focus_target = this.camera_target_key;
-        if (!focus_target || !this.follow_target) { // focus point in robot space
-            let focus_pos = null;
+        if (!focus_target || !this.vars.follow_target) { // focus point in robot space
             if (this.robot) {
-                focus_pos = this.robot.worldToLocal(this.camera_target_pos.position.clone()); 
-            } else if (this.set_camera_target_pos_on_description) {
-                focus_pos = this.set_camera_target_pos_on_description
-            } 
-            if (focus_pos)
+                let focus_pos = this.robot.worldToLocal(this.camera_target_pos.position.clone()); 
                 focus_target = focus_pos.x.toFixed(3)+','+focus_pos.y.toFixed(3)+','+focus_pos.z.toFixed(3);
+            } else {
+                focus_target = this.vars._pt_focus_target; 
+            }
         }
+        this.vars._focus_target = focus_target;
         out_parts.push('ft='+focus_target);
 
-        let cam_target_offset;
-        let cam_rot_angle;    
+        
         if (this.robot) {
-            console.log('1');
-            cam_target_offset = this.camera.position.clone().sub(this.camera_target_pos.position);
-            cam_rot_angle = 0.0;
-        } else if (this.set_camera_target_offset_on_description) {
-            console.log('2');
-            cam_target_offset = this.set_camera_target_offset_on_description.offset;
-            cam_rot_angle = this.set_camera_target_offset_on_description.rot;
+            let cam_target_offset = this.camera.position.clone().sub(this.camera_target_pos.position);
+            let cam_rot_angle = 0.0;
+            let val = cam_target_offset.x.toFixed(3)+','+cam_target_offset.y.toFixed(3)+','+cam_target_offset.z.toFixed(3)+','+cam_rot_angle.toFixed(3);
+            this.vars._cam_position_offset = val;
+            out_parts.push('cp='+val);
         } else {
-            console.log('3');
+            out_parts.push('cp='+this.vars._cam_position_offset);
         }
-        out_parts.push('cp='+cam_target_offset.x.toFixed(3)+','+cam_target_offset.y.toFixed(3)+','+cam_target_offset.z.toFixed(3)+','+cam_rot_angle.toFixed(3));
-        out_parts.push('cam='+(this.perspective_camera ? '1' : '0'));
-        out_parts.push('jnt='+(this.render_joints ? '1' : '0'));
-        out_parts.push('lnk='+(this.render_links ? '1' : '0'));        
-        out_parts.push('lbl='+(this.render_labels ? '1' : '0'));
-        out_parts.push('vis='+(this.render_visuals ? '1' : '0'));
-        out_parts.push('col='+(this.render_collisions ? '1' : '0'));
-        out_parts.push('fix='+(this.fix_robot_base ? '1' : '0'));
-        out_parts.push('pg='+(this.render_pose_graph ? '1' : '0'));
-        out_parts.push('grnd='+(this.render_ground_plane ? '1' : '0'));
+        
+        out_parts.push('cam='+(this.vars.perspective_camera ? '1' : '0'));
+        out_parts.push('jnt='+(this.vars.render_joints ? '1' : '0'));
+        out_parts.push('lnk='+(this.vars.render_links ? '1' : '0'));        
+        out_parts.push('lbl='+(this.vars.render_labels ? '1' : '0'));
+        out_parts.push('vis='+(this.vars.render_visuals ? '1' : '0'));
+        out_parts.push('col='+(this.vars.render_collisions ? '1' : '0'));
+        out_parts.push('fix='+(this.vars.fix_robot_base ? '1' : '0'));
+        out_parts.push('pg='+(this.vars.render_pose_graph ? '1' : '0'));
+        out_parts.push('grnd='+(this.vars.render_ground_plane ? '1' : '0'));
         this.sources.getUrlHashParts(out_parts);
     }
 
@@ -567,8 +566,9 @@ export class DescriptionTFWidget extends EventTarget {
             let val = kvp[1];
             // console.warn('DRF got ' + arg +" > "+val);
             switch (arg) {
-                case 'f': this.follow_target = parseInt(val) == 1; break;
+                case 'f': this.vars.follow_target = parseInt(val) == 1; break;
                 case 'ft': 
+                    this.vars._focus_target = val;
                     if (val.indexOf(',') > 0) {
                         let coords = val.split(',');
                         let pos = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
@@ -579,6 +579,7 @@ export class DescriptionTFWidget extends EventTarget {
                     }
                     break;
                 case 'cp':
+                    this.vars._cam_position_offset = val;
                     if (val.indexOf(',') > 0) {
                         let coords = val.split(',');
                         let offset = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
@@ -589,15 +590,15 @@ export class DescriptionTFWidget extends EventTarget {
                         };
                     }
                     break;
-                case 'cam': this.perspective_camera = parseInt(val) == 1; break;
-                case 'jnt': this.render_joints = parseInt(val) == 1; break;
-                case 'lnk': this.render_links = parseInt(val) == 1; break;
-                case 'lbl': this.render_labels = parseInt(val) == 1; break;
-                case 'vis': this.render_visuals = parseInt(val) == 1; break;
-                case 'col': this.render_collisions = parseInt(val) == 1; break;
-                case 'fix': this.fix_robot_base = parseInt(val) == 1; break;
-                case 'pg': this.render_pose_graph = parseInt(val) == 1; break;
-                case 'grnd': this.render_ground_plane = parseInt(val) == 1; break;
+                case 'cam': this.vars.perspective_camera = parseInt(val) == 1; break;
+                case 'jnt': this.vars.render_joints = parseInt(val) == 1; break;
+                case 'lnk': this.vars.render_links = parseInt(val) == 1; break;
+                case 'lbl': this.vars.render_labels = parseInt(val) == 1; break;
+                case 'vis': this.vars.render_visuals = parseInt(val) == 1; break;
+                case 'col': this.vars.render_collisions = parseInt(val) == 1; break;
+                case 'fix': this.vars.fix_robot_base = parseInt(val) == 1; break;
+                case 'pg': this.vars.render_pose_graph = parseInt(val) == 1; break;
+                case 'grnd': this.vars.render_ground_plane = parseInt(val) == 1; break;
             }
         });
         this.sources.parseUrlParts(custom_url_vars);
@@ -782,7 +783,7 @@ export class DescriptionTFWidget extends EventTarget {
         if (focus_joint && focus_joint_key)
             this.setCameraTarget(focus_joint, focus_joint_key, false);
 
-        if (this.follow_target && !this.camera_distance_initialized) {
+        if (this.vars.follow_target && !this.camera_distance_initialized) {
             this.camera_distance_initialized = true;
             let initial_dist = farthest_pt_dist * 3.0; // initial distance proportional to model size
             this.camera_pos.normalize().multiplyScalar(initial_dist);
@@ -796,8 +797,8 @@ export class DescriptionTFWidget extends EventTarget {
         this.camera_target = new_target;
         this.camera_target_key = new_target_key;
 
-        if (!this.follow_target && force_follow) {
-            this.follow_target = true;
+        if (!this.vars.follow_target && force_follow) {
+            this.vars.follow_target = true;
             this.focus_btn.addClass('on');
         }
 
@@ -825,10 +826,10 @@ export class DescriptionTFWidget extends EventTarget {
         });
         this.link_markers = [];
 
-        let h_center = !this.render_joints || !this.render_links; // when rendering only one type, make it centered
-        if (this.render_joints)
+        let h_center = !this.vars.render_joints || !this.vars.render_links; // when rendering only one type, make it centered
+        if (this.vars.render_joints)
             this.joint_markers = this.makeMarkerGroup(robot.joints, DescriptionTFWidget.L_JOINTS, DescriptionTFWidget.L_JOINT_LABELS, h_center);
-        if (this.render_links)
+        if (this.vars.render_links)
             this.link_markers = this.makeMarkerGroup(robot.links, DescriptionTFWidget.L_LINKS, DescriptionTFWidget.L_LINK_LABELS, h_center);
     }
 
@@ -880,7 +881,7 @@ export class DescriptionTFWidget extends EventTarget {
 
     makeMark(target, label_text, layer_axes, layer_labels, axis_size=.02, h_center=true, v_center=0) {
 
-        let is_selected = this.follow_target && target == this.camera_target;
+        let is_selected = this.vars.follow_target && target == this.camera_target;
 
         if (!is_selected && (layer_axes == DescriptionTFWidget.L_JOINTS || layer_axes == DescriptionTFWidget.L_LINKS)) {
              axis_size = .0015;
@@ -939,6 +940,7 @@ export class DescriptionTFWidget extends EventTarget {
                 continue; //throw out older transforms
 
             t.rotation = new Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w).normalize();
+            t.translation = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z);
 
             this.smooth_transforms_queue[ch_id] = {
                 parent: tf.transforms[i].header.frame_id,
@@ -946,10 +948,6 @@ export class DescriptionTFWidget extends EventTarget {
                 stamp: ns_stamp
             }
             
-            function rad2deg(r) {
-                return r * 180.0 / Math.PI;
-            }
-
             if (['fl_wheel_link', 'fr_wheel_link', 'rl_wheel_link', 'rr_wheel_link'].indexOf(ch_id) < 0) {
                 let euler = new THREE.Euler().setFromQuaternion(t.rotation)
                 console.log(tf.transforms[i].header.frame_id+' > '+ch_id+': ['+t.translation.x.toFixed(2)+'; '+t.translation.y.toFixed(2)+'; '+t.translation.z.toFixed(2)+']; rot=['+rad2deg(euler.x).toFixed(2)+'; '+rad2deg(euler.y).toFixed(2)+'; '+rad2deg(euler.z).toFixed(2)+']');
@@ -957,10 +955,13 @@ export class DescriptionTFWidget extends EventTarget {
             
             if (ch_id == this.robot.name) { //this is the base link
 
-                if (this.pos_offset == null) {
-                    this.pos_offset = new THREE.Vector3();
-                    this.pos_offset.copy(t.translation); // will be subtracted from all transforms
+                if (!this.ros_space_offset_set) {
+
                 }
+                // if (this.pos_offset == null) {
+                //     this.pos_offset = new THREE.Vector3();
+                //     this.pos_offset.copy(t.translation); // will be subtracted from all transforms
+                // }
                 // if (this.rot_offset == null) {
                 //     this.rot_offset = new THREE.Quaternion();
                 //     this.rot_offset.copy(t.rotation.clone().invert()); // will be subtracted from all transforms
@@ -975,14 +976,14 @@ export class DescriptionTFWidget extends EventTarget {
                 }
                 
                 let pg_node = {
-                    pos: new THREE.Vector3().copy(t.translation).sub(this.pos_offset),
-                    rot: new THREE.Quaternion().copy(t.rotation),
+                    pos: t.translation,
+                    rot: t.rotation,
                     mat: new THREE.Matrix4(),
                     ns_stamp: ns_stamp,
                 };
                 pg_node.mat.compose(pg_node.pos, pg_node.rot, new THREE.Vector3(1,1,1))
 
-                if (this.render_pose_graph) {
+                if (this.vars.render_pose_graph) {
                     pg_node.visual = new THREE.AxesHelper(.05);
                     pg_node.visual.material.depthTest = false;
                     pg_node.visual.position.copy(pg_node.pos);
@@ -1038,8 +1039,8 @@ export class DescriptionTFWidget extends EventTarget {
 
                     let new_robot_world_position = new THREE.Vector3();
 
-                    if (!this.fix_robot_base) {
-                        let pos = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z).sub(this.pos_offset);
+                    if (!this.vars.fix_robot_base) {
+                        let pos = t.translation;
 
                         let old_robot_world_position = new THREE.Vector3();
                         ch.getWorldPosition(old_robot_world_position);
@@ -1110,7 +1111,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         }
 
-        if (this.robot && this.follow_target) {
+        if (this.robot && this.vars.follow_target) {
 
             let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
             if (this.camera_pose_initialized) {
@@ -1133,8 +1134,6 @@ export class DescriptionTFWidget extends EventTarget {
 
             this.controls.update();
             this.camera_pos = pos_to_maintain;
-            
-            //this.camera_container.quaternion.copy(this.last_robot_world_rotation.slerp(this.camera_container.quaternion, 0.5));
         }
 
         if (this.robot)

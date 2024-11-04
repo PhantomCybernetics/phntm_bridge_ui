@@ -20,6 +20,10 @@ export function deg2rad(degrees)
   return degrees * (pi/180);
 }
 
+export function rad2deg(r) {
+  return r * 180.0 / Math.PI;
+}
+
 export function nl2br (str, is_xhtml) {
     if (typeof str === 'undefined' || str === null) {
         return '';
