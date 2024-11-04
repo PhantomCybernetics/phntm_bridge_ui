@@ -7,8 +7,8 @@ import { Panel } from "./panel.js";
 import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./lib.js";
 import { FallbackServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
 
-import { ServiceInputDialog } from "./widgets/inc/service_input_dialog.js"
-import { NodeParamsDialog } from "./widgets/inc/node_params_dialog.js"
+import { ServiceInputDialog } from "./inc/service-input-dialog.js"
+import { NodeParamsDialog } from "./inc/node-params-dialog.js"
 
 export class PanelUI {
 

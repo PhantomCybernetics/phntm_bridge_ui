@@ -1865,7 +1865,7 @@ BODY.desktop-ui .monitor_menu.hover_waiting {
 }
 
 BODY.desktop-ui .monitor_menu.right:hover {
-    border-radius: 5px 0px 0px 5px;
+    border-radius: 5px 5px 0px 0px;
 }
 
 BODY.touch-ui .monitor_menu.open {
@@ -1934,7 +1934,7 @@ BODY.touch-ui .monitor_menu_content {
 
 BODY.desktop-ui .monitor_menu.right .monitor_menu_content { /* used when panel is thin and on the very left of the screen */
     right: auto;
-    left: 30px;
+    left: 0px;
 }
 
 .monitor_menu_content A {
@@ -2915,6 +2915,10 @@ BODY.touch-ui .editing .grid-stack-item-content {
     display: inline-block;
     line-height: 1em;
     margin-top: -.5em;
+}
+
+.panel_widget.range.source_visible .label {
+    width: 50%;
 }
 
 .panel_widget.range .label SPAN {

@@ -162,9 +162,9 @@ export class DescriptionTFWidget extends EventTarget {
         this.camera_target_key = null;
 
         this.ros_space = new THREE.Object3D();
-        this.ros_space_default_rotation = new THREE.Quaternion(-Math.PI/2.0, 0.0, 0.0); // ROS uses +z up
-        this.ros_space.rotation.copy(this.ros_space_default_rotation); 
+        this.ros_space_default_rotation = new THREE.Euler(-Math.PI/2.0, 0.0, 0.0); // ROS uses +z up
         this.scene.add(this.ros_space);
+        this.ros_space.rotation.copy(this.ros_space_default_rotation); 
 
         const light = new THREE.SpotLight( 0xffffff, 30.0, 0, Math.PI/10);
         light.castShadow = true; // default false

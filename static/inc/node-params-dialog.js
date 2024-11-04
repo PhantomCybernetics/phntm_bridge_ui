@@ -1,4 +1,4 @@
-import { ServiceInputDialog } from './service_input_dialog.js';
+import { ServiceInputDialog } from './service-input-dialog.js';
 
 export class NodeParamsDialog {
 

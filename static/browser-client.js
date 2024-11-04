@@ -749,7 +749,7 @@ export class PhntmBridgeClient extends EventTarget {
             console.error('Will not write '+msg_type+' into '+topic+' (type mixing: '+this.topic_writers[topic].msg_type+' x '+msg_type+')');
             if (err_out) {
                 err_out.error = true;
-                err_out.message = 'Not writing because mixing message types in one topic breaks ROS.' +
+                err_out.message = 'Not writing because mixing message types in one topic breaks ROS. ' +
                                   'Either change the ouput topic, or save your changes & reload this page to override.';
             }
             return false;
