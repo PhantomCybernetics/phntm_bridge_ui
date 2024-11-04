@@ -276,7 +276,7 @@ export class MultiTopicSource extends EventTarget {
             // console.log('Multitopic clicked, open='+menu_line_el.hasClass('open'))
 
             if (isTouchDevice()) {
-                that.panel.ui.panel_menu_autosize(that.panel);
+                that.panel.ui.panelMenuAutosize(that.panel);
             }
         });
 
@@ -447,7 +447,7 @@ export class MultiTopicSource extends EventTarget {
                 that.panel.menu_el.addClass('hover_waiting');
             }
 
-            that.widget.panel.ui.topic_selector_dialog(slot.label,
+            that.widget.panel.ui.topicSelectorDialog(slot.label,
                 slot.msg_type, //filter by msg type
                 Object.keys(that.subscribed_topics), //exclude
                 (topic) => {

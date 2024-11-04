@@ -44,10 +44,10 @@ export class NodeParamsDialog {
         this.selected_param_value = value;
         this.selected_param_description = description;
 
-        this.render_param(name, value, i_list_param);
+        this.renderParam(name, value, i_list_param);
     }
 
-    render_param(name, value, i_list_param) {
+    renderParam(name, value, i_list_param) {
         
         let field = {
             type: null,
@@ -217,7 +217,7 @@ export class NodeParamsDialog {
                         let name = list_reply.result.names[i];
                         let value = vals_reply.values[i];
                         let description = descriptions_reply.descriptors[i];
-                        let type_hr = that.get_type_hr(value['type']);
+                        let type_hr = that.getTypeHR(value['type']);
                         let param_label_el = $('<div class="param-name prevent-select">'+name+'<span class="param-type">'+type_hr+'</span></div>');
                         that.list_el.append(param_label_el);
                         param_label_el.click((ev)=>{
@@ -365,7 +365,7 @@ export class NodeParamsDialog {
 
     }
 
-    get_type_hr(i_type) {
+    getTypeHR(i_type) {
         let type_hr = 'n/a';
         switch (i_type) {
             case 0: type_hr = 'unset'; break;

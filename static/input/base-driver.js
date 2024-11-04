@@ -18,41 +18,41 @@ export class InputDriver {
         this.inp_topic = null;
     }
 
-    get_axes() {
+    getAxes() {
         return {}; // override
     }
 
-    get_buttons() {
+    getButtons() {
         return {}; // override
     }
 
-    reset_all_output() {
+    resetAllOutput() {
         this.axes_output = {};
         this.buttons_output = {};
     }
 
-    set_config(cfg) { // from cookie, robot, etc
+    setConfig(cfg) { // from cookie, robot, etc
         if (cfg && cfg.output_topic) {
             this.output_topic = cfg.output_topic;
         }
-        this.setup_writer();
+        this.setupWriter();
     }
 
-    get_config() { // to save as cookie, on robot, etc
+    getConfig() { // to save as cookie, on robot, etc
         let cfg = {
             output_topic: this.output_topic,
         };
         return cfg;
     }
 
-    set_saved_state() {
+    setSavedState() {
         this.saved_state = {
             msg_type: this.msg_type,
             output_topic: this.output_topic
         }
     }
 
-    check_saved() {
+    checkSaved() {
         if (!this.saved_state)
             return false;
         if (this.saved_state.msg_type != this.msg_type)
@@ -63,7 +63,7 @@ export class InputDriver {
         return true; // saved
     }
 
-    setup_writer() {
+    setupWriter() {
         if (!this.msg_type) {
             console.error('msg_type not defined in InputDriver subclass')
             return;
@@ -71,11 +71,11 @@ export class InputDriver {
         let err = {};
         this.topic_writer = this.client.get_writer(this.output_topic, this.msg_type, err);
         this.error_message = err.message;
-        this.handle_error_message();
-        this.input_manager.disable_controllers_with_conflicting_diver(this);
+        this.handleErrorMessage();
+        this.input_manager.disableControllersWithConflictingDiver(this);
     }
 
-    handle_error_message() {
+    handleErrorMessage() {
         if (this.error_message && this.error_label) {
             this.error_label
                 .html(this.error_message)
@@ -92,7 +92,7 @@ export class InputDriver {
     }
 
 
-    get_header() {
+    getHeader() {
         let now_ms = Date.now(); //window.performance.now()
         let sec = Math.floor(now_ms / 1000);
         let nanosec = (now_ms - sec*1000) * 1000000;
@@ -106,7 +106,7 @@ export class InputDriver {
     }
 
     // override this for more input config options
-    make_cofig_inputs() {
+    makeCofigInputs() {
         let lines = [];
 
         // one output topic by default
@@ -122,25 +122,25 @@ export class InputDriver {
         this.inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val().trim();
             // console.log('Driver output topic is: '+that.output_topic);
-            that.setup_writer();
-            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
+            that.setupWriter();
+            that.input_manager.checkControllerProfileSaved(that.input_manager.edited_controller, that.input_manager.current_profile);
         });
 
         lines.push(line_topic);
         lines.push(this.error_label);
 
-        this.handle_error_message();
+        this.handleErrorMessage();
 
         return lines;
     }
 
-    display_output(el, transmitting) {
+    displayOutput(el, transmitting) {
         el.html('Message: <b>'+this.msg_type+'</b><br>'
                 + 'Topic: <b>'+this.output_topic+'</b> '+ (transmitting ? '(transmitting)' : '(not transmitting)')  +'<br><br>'
                 + JSON.stringify(this.output, null, 4));
     }
 
-    can_transmit() {
+    canTransmit() {
         return this.topic_writer !== null
                && this.topic_writer !== undefined
                && this.topic_writer !== false;

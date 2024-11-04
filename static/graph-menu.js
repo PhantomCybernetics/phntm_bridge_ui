@@ -488,11 +488,11 @@ export class GraphMenu {
                     h = that.ui.type_widgets[msg_type].h;
                 }
 
-                that.ui.toggle_panel(topic, msg_type, state, w, h);
+                that.ui.togglePanel(topic, msg_type, state, w, h);
 
                 if (state && $('BODY').hasClass('hamburger')) {
                     //close burger menu
-                    that.ui.set_burger_menu_state(false, false);
+                    that.ui.setBurgerMenuState(false, false);
                 }
             });
 

@@ -136,7 +136,7 @@ export class PanelUI {
             if (client.name) {
                 $('#robot_name .label').html(client.name);
                 document.title = client.name + ' @ PHNTM bridge';
-                that.save_last_robot_name();
+                that.saveLastRobotName();
             }
 
             $('#robot_info').html('<span class="label">Robot ID:</span> ' + client.id_robot + '<br>'
@@ -193,7 +193,7 @@ export class PanelUI {
         });
 
 
-        let last_saved_name = this.load_last_robot_name();
+        let last_saved_name = this.loadLastRobotName();
         if (last_saved_name) {
             client.name = last_saved_name;
             $('#robot_name .label').html(client.name);
@@ -219,17 +219,17 @@ export class PanelUI {
         this.docker_monitor_topic = null;
         this.subscribed_docker_monitor_topic = null;
         this.iw_topic = null;
-        this.battery_shown = this.load_last_robot_battery_shown();
+        this.battery_shown = this.loadLastRobotBatteryShown();
         // display ui elements as last time to prevent them moving around too much during init
         if (this.battery_shown) {
             $('#battery-info').css('display', 'block');
         }
-        if (this.load_last_robot_wifi_signal_shown()) {
+        if (this.loadLastRobotWifiSignalShown()) {
             $('#signal-monitor').css('display', 'block');
             $('#network-details').css('display', '');
         }
 
-        this.docker_control_shown = this.load_last_robot_docker_control_shown();
+        this.docker_control_shown = this.loadLastRobotDockerControlShown();
         $('#docker_controls').css('display', this.docker_control_shown ? '' : 'none');
 
         this.updateLayout();
@@ -257,7 +257,7 @@ export class PanelUI {
                 $('#battery-info').css('display', 'none');
                 that.battery_shown = false;
             }
-            that.save_last_robot_battery_shown(that.battery_shown);
+            that.saveLastRobotBatteryShown(that.battery_shown);
 
             // docker control optional
             if (robot_ui_config['docker_monitor_topic']) {
@@ -316,7 +316,7 @@ export class PanelUI {
             if (robot_ui_config['collapse_unhandled_services']) 
                 this.collapse_unhandled_services = robot_ui_config['collapse_unhandled_services'];
             
-            that.input_manager.on_ui_config();
+            that.input_manager.onUIConfig();
         });
 
         // we must open at least one webrtc channel to establish connection, 
@@ -332,7 +332,7 @@ export class PanelUI {
                 that.servicesMenuFromNodes();
             }, 0);
             setTimeout(()=>{
-                that.graph_from_nodes(nodes);
+                that.graphFromNodes(nodes);
                 that.latest_nodes = nodes;
             }, 0);
             setTimeout(()=>{
@@ -417,7 +417,7 @@ export class PanelUI {
                 items.forEach(function (item) {
                     let id_src = $(item.el).find('.grid_panel').attr('data-source');
                     if (that.panels[id_src]) {
-                        that.panels[id_src].auto_menu_position();
+                        that.panels[id_src].autoMenuPosition();
                         that.panels[id_src].onResize();
                         window.setTimeout(() => {
                             // console.warn('Delayed resize '+id_src);
@@ -475,22 +475,22 @@ export class PanelUI {
 
         // hanburger menu handlers
         $('#menubar_hamburger, #menubar_hamburger_close').click(() => {
-            that.set_burger_menu_state(!that.burger_menu_open);
+            that.setBurgerMenuState(!that.burger_menu_open);
         });
         $('#graph_controls_heading').click(() => {
-            that.burger_menu_action('#graph_display');
+            that.burgerMenuAction('#graph_display');
         });
         $('#services_heading').click(() => {
-            that.burger_menu_action('#service_list');
+            that.burgerMenuAction('#service_list');
         });
         $('#cameras_heading').click(() => {
-            that.burger_menu_action('#cameras_list');
+            that.burgerMenuAction('#cameras_list');
         });
         $('#docker_heading').click(() => {
-            that.burger_menu_action('#docker_list');
+            that.burgerMenuAction('#docker_list');
         });
         $('#widgets_heading').click(() => {
-            that.burger_menu_action('#widget_list');
+            that.burgerMenuAction('#widget_list');
         });
 
         $('#fixed-header').on('mouseenter', (ev) => {
@@ -600,7 +600,7 @@ export class PanelUI {
         }
     }
 
-    panel_menu_autosize(panel) {
+    panelMenuAutosize(panel) {
         let l = panel.menu_el.offset().left - panel.menu_content_el.width() - 15;
         // let max_w = window.innerWidth-20; // screen offset & padding
         let w_cont = panel.menu_content_el.innerWidth(); //includes padding
@@ -649,7 +649,7 @@ export class PanelUI {
         }
 
         if (!panel.menu_el.hasClass('open')) {
-            this.panel_menu_autosize(panel);
+            this.panelMenuAutosize(panel);
             panel.menu_el.addClass('open');
             panel.menu_content_el.addClass('floating')
                 .appendTo('BODY');
@@ -701,7 +701,7 @@ export class PanelUI {
         this.showing_page_message = true;
     }
 
-    set_burger_menu_state(open, animate = true) {
+    setBurgerMenuState(open, animate = true) {
 
         let that = this;
 
@@ -719,11 +719,11 @@ export class PanelUI {
                     .unbind()
                     .on('click', (e) => {
                         //console.log('overlay clicked')
-                        that.set_burger_menu_state(false, false);
+                        that.setBurgerMenuState(false, false);
                     });
             }
 
-            this.set_burger_menu_width(this.small_menu_width, false); // no animation
+            this.setBurgerMenuWidth(this.small_menu_width, false); // no animation
             this.burger_menu_open = true;
             $('#menubar_content')
                 .addClass('open');
@@ -761,7 +761,7 @@ export class PanelUI {
                 if (animate) {
                     // move the opened items all the way out
 
-                    this.set_burger_menu_width(this.small_menu_width, true); // animates
+                    this.setBurgerMenuWidth(this.small_menu_width, true); // animates
                     open_el.stop();
 
                     // bring menu items back
@@ -838,7 +838,7 @@ export class PanelUI {
     }
 
 
-    burger_menu_action(what, h=null) {
+    burgerMenuAction(what, h=null) {
 
         if (!$('BODY').hasClass('hamburger') || !this.burger_menu_open)
             return;
@@ -889,7 +889,7 @@ export class PanelUI {
             this.graph_menu.set_dimensions(menu_w, h); // h passed from updateLayout is graph height
         }
 
-        this.set_burger_menu_width(menu_w);
+        this.setBurgerMenuWidth(menu_w);
 
         let el_w = menu_w - 20;
         if (what == '#cameras_list' || what == '#widget_list')
@@ -992,7 +992,7 @@ export class PanelUI {
         //   });
     }
 
-    set_burger_menu_width(content_width, animate = true) {
+    setBurgerMenuWidth(content_width, animate = true) {
 
         // let requisted_min_width = min_content_width;
 
@@ -1112,11 +1112,11 @@ export class PanelUI {
                 let w = that.type_widgets[camera.msg_type].w;
                 let h = that.type_widgets[camera.msg_type].h;
     
-                that.toggle_panel(camera.src_id, camera.msg_type, state, w, h);
+                that.togglePanel(camera.src_id, camera.msg_type, state, w, h);
     
                 if (state && $('BODY').hasClass('hamburger')) {
                     //close burger menu
-                    that.set_burger_menu_state(false, false);
+                    that.setBurgerMenuState(false, false);
                 }
             });
 
@@ -1254,7 +1254,7 @@ export class PanelUI {
         });
     }
 
-    graph_from_nodes(nodes) {
+    graphFromNodes(nodes) {
         
         this.graph_menu.update(nodes);
 
@@ -1312,7 +1312,7 @@ export class PanelUI {
 
     }
 
-    topic_selector_dialog(label, msg_type, exclude_topics, onselect, onclose=null, align_el = null) {
+    topicSelectorDialog(label, msg_type, exclude_topics, onselect, onclose=null, align_el = null) {
 
         let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
         $('BODY').addClass('no-scroll');
@@ -1438,12 +1438,12 @@ export class PanelUI {
                 let w = that.widgets[widget_class].class.default_width;
                 let h = that.widgets[widget_class].class.default_height;
     
-                that.toggle_panel(widget_class, widget_class, state, w, h);
+                that.togglePanel(widget_class, widget_class, state, w, h);
                 // client.SetCameraSubscription(id_robot, [ cam ], state);
     
                 if (state && $('BODY').hasClass('hamburger')) {
                     //close burger menu
-                    that.set_burger_menu_state(false, false);
+                    that.setBurgerMenuState(false, false);
                 }
             });
 
@@ -1454,7 +1454,7 @@ export class PanelUI {
         });
     }
 
-    load_service_btns(nodes) {
+    loadServiceBtns(nodes) {
         let that = this;
 
         this.service_btns = {};
@@ -1482,7 +1482,7 @@ export class PanelUI {
 
     }
 
-    save_service_buttons(service, btns) {
+    saveServiceButtons(service, btns) {
         let saved_btn_data = [];
 
         this.service_btns[service].length = 0;
@@ -1505,7 +1505,7 @@ export class PanelUI {
     }
 
 
-    render_node_services_menu(node, node_cont_el) {
+    renderNodeServicesMenu(node, node_cont_el) {
 
         node_cont_el.empty();
 
@@ -1654,7 +1654,7 @@ export class PanelUI {
         if (this.default_service_btns === null) // emty loaded is {}
             return;
         
-        this.load_service_btns(nodes); // reloads all, keeping edit untouched
+        this.loadServiceBtns(nodes); // reloads all, keeping edit untouched
 
         $('#service_list').empty();
         this.num_services = 0;
@@ -1665,7 +1665,7 @@ export class PanelUI {
 
         nodes_sorted.forEach((node) => {
             let node_cont_el = $('<div class="node-cont"></div>');
-            let num_node_services = this.render_node_services_menu(node, node_cont_el);
+            let num_node_services = this.renderNodeServicesMenu(node, node_cont_el);
             node_cont_el.appendTo($('#service_list'));
             this.num_services += num_node_services;
         });
@@ -1768,18 +1768,18 @@ export class PanelUI {
                         that.wifi_scan_warning_suppressed = true;
                         localStorage.setItem('wifi-scan-warning-suppressed:'+that.client.id_robot, true); // warning won't be shown any more
                     }
-                    that.do_wifi_scan_roam(roam, callback);
+                    that.doWifiScanRoam(roam, callback);
                 }, 
                 'Cancel', () => { // cancel
                     if (callback)
                         callback();
                 });
         } else {
-            that.do_wifi_scan_roam(roam, callback);
+            that.doWifiScanRoam(roam, callback);
         }
     }
 
-    do_wifi_scan_roam(roam, callback) {
+    doWifiScanRoam(roam, callback) {
         let signal_monitor = $('#signal-monitor')
         if (signal_monitor.hasClass('working'))
             return;
@@ -1821,7 +1821,7 @@ export class PanelUI {
 
     //widget_opts = {};
 
-    toggle_panel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
+    togglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
         let panel = this.panels[id_source];
         if (state) {
             if (!panel) {
@@ -2179,7 +2179,7 @@ export class PanelUI {
 
     }
 
-    set_body_classes(enabled_classes) {
+    setBodyClasses(enabled_classes) {
 
         let all_body_classes = ['full-width', 'narrow', 'narrower', 'hamburger', 'top-menu', 'touch-ui', 'desktop-ui', 'portrait', 'landscape'];
         let inactive_classes = [];
@@ -2197,30 +2197,30 @@ export class PanelUI {
             .addClass(enabled_classes);
     }
 
-    save_last_robot_name() {
+    saveLastRobotName() {
         localStorage.setItem('last-robot-name:' + this.client.id_robot, this.client.name);
     }
 
-    load_last_robot_name() {
+    loadLastRobotName() {
         let name = localStorage.getItem('last-robot-name:' + this.client.id_robot);
         // console.log('Loaded keyboard driver for robot '+this.client.id_robot+':', dri);
         return name;
     }
 
-    save_last_robot_battery_shown(val) {
+    saveLastRobotBatteryShown(val) {
         localStorage.setItem('last-robot-battery-shown:' + this.client.id_robot, val);
     }
 
-    load_last_robot_battery_shown() {
+    loadLastRobotBatteryShown() {
         let val = localStorage.getItem('last-robot-battery-shown:' + this.client.id_robot) == 'true';
         return val;
     }
 
-    save_last_robot_docker_control_shown(val) {
+    saveLastRobotDockerControlShown(val) {
         localStorage.setItem('last-robot-docker-control-shown:' + this.client.id_robot, val);
     }
 
-    load_last_robot_docker_control_shown() {
+    loadLastRobotDockerControlShown() {
         let val = localStorage.getItem('last-robot-docker-control-shown:' + this.client.id_robot) == 'true';
         return val;
     }
@@ -2230,13 +2230,13 @@ export class PanelUI {
     }
     
 
-    load_last_robot_wifi_signal_shown() {
+    loadLastRobotWifiSignalShown() {
         let val = localStorage.getItem('last-robot-wifi-shown:' + this.client.id_robot) == 'true';
         return val;
     }
 
 
-    set_maximized_panel(max_panel) {
+    setMaximizedPanel(max_panel) {
         this.maximized_panel = max_panel;
         let panel_ids = Object.keys(this.panels);
         let that = this;
@@ -2258,7 +2258,7 @@ export class PanelUI {
        
     }
 
-    update_touch_gamepad_icon() {
+    updateTouchGamepadIcon() {
         if (this.input_manager.touch_gamepad_on) {
             if (this.input_manager.controllers['touch'] && this.input_manager.controllers['touch'].enabled) {
                 $('#touch_ui')
@@ -2282,7 +2282,7 @@ export class PanelUI {
 
             this.openFullscreen();
 
-            // this.update_input_buttons();
+            // this.updateInputButtons();
             
             $('BODY').addClass('touch-gamepad');
             console.log('Touch Gamepad on');
@@ -2305,7 +2305,7 @@ export class PanelUI {
                         top: "60%",
                     },
                     onInput() { // triggered on angle or value change.
-                        that.input_manager.set_touch_gamepad_input('left', this.value, this.angle);
+                        that.input_manager.setTouchGamepadInput('left', this.value, this.angle);
                     }
                 }, { 
                     id: "touch-right-stick", // MANDATORY
@@ -2317,16 +2317,16 @@ export class PanelUI {
                         top: "60%",
                     },
                     onInput() {
-                        that.input_manager.set_touch_gamepad_input('right', this.value, this.angle);
+                        that.input_manager.setTouchGamepadInput('right', this.value, this.angle);
                     }
                 }
             ]);
             
-            this.input_manager.set_touch_gamepad_on(true);
+            this.input_manager.setTouchGamepadOn(true);
             if (this.input_manager.controllers['touch'] && !this.input_manager.controllers['touch'].enabled) {
-                this.input_manager.set_controller_enabled(this.input_manager.controllers['touch'], true, true);
+                this.input_manager.setControllerEnabled(this.input_manager.controllers['touch'], true, true);
             }
-            this.update_touch_gamepad_icon();
+            this.updateTouchGamepadIcon();
             
         } else {
 
@@ -2334,11 +2334,11 @@ export class PanelUI {
             //     closeFullscreen();
             // }
 
-            this.input_manager.set_touch_gamepad_on(false);
+            this.input_manager.setTouchGamepadOn(false);
             if (this.input_manager.controllers['touch'] && this.input_manager.controllers['touch'].enabled) {
-                this.input_manager.set_controller_enabled(this.input_manager.controllers['touch'], false, true);
+                this.input_manager.setControllerEnabled(this.input_manager.controllers['touch'], false, true);
             }
-            this.update_touch_gamepad_icon();
+            this.updateTouchGamepadIcon();
 
             this.touch_gamepad.destroy();
             console.log('Touch Gamepad off');
@@ -2347,7 +2347,7 @@ export class PanelUI {
         }
     }
 
-    update_input_buttons() {
+    updateInputButtons() {
 
         $('#introspection_state').css('display', 'block'); //always
 
@@ -2437,7 +2437,7 @@ export class PanelUI {
 
         let w_body = $('body').innerWidth();
 
-        this.update_input_buttons(); //changes #fixed-right
+        this.updateInputButtons(); //changes #fixed-right
         let w_right = $('#fixed-right').innerWidth(); // right margin
 
         let label_el = $('h1 .label');
@@ -2538,7 +2538,7 @@ export class PanelUI {
             $('#graph_display').css('height', hh);
 
             if (this.burger_menu_open_item) {
-                this.burger_menu_action(this.burger_menu_open_item, hh); // only update
+                this.burgerMenuAction(this.burger_menu_open_item, hh); // only update
             }
 
             if (!$('BODY').hasClass('hamburger') || $('#bottom-links').hasClass('hidden')) { // switched
@@ -2556,7 +2556,7 @@ export class PanelUI {
         } else { // top menu on desktop
 
             if (this.burger_menu_open) {
-                this.set_burger_menu_state(false, false); //no animations
+                this.setBurgerMenuState(false, false); //no animations
             }
             $('#menubar_items').css({
                 height: '' //unset
@@ -2600,7 +2600,7 @@ export class PanelUI {
             cls.push('desktop-ui');
         }
 
-        this.set_body_classes(cls);
+        this.setBodyClasses(cls);
 
         $('body').addClass('initiated');
 

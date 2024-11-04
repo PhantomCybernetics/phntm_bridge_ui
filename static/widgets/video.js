@@ -74,12 +74,12 @@ export class VideoWidget {
         overlay_topics.forEach((topic)=>{
             if (!that.overlays[topic]) {
                 that.overlays[topic] = {};
-                that.overlays[topic].config_update_cb = (config) => {
+                that.overlays[topic].configUpdateCb = (config) => {
                     console.warn('onTopicConfigUpdate', topic, config);
                     that.overlays[topic].config = config;
                     that.setupOverlay(topic, config);
                 }
-                client.on_topic_config(topic, that.overlays[topic].config_update_cb);
+                client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
             }
         });
     }
@@ -368,8 +368,8 @@ export class VideoWidget {
             if (this.overlays[topic].container_el) {
                 this.overlays[topic].container_el.remove();
             }
-            if (this.overlays[topic].config_update_cb) {
-                client.remove_topic_config_handler(topic, this.overlays[topic].config_update_cb);
+            if (this.overlays[topic].configUpdateCb) {
+                client.remove_topic_config_handler(topic, this.overlays[topic].configUpdateCb);
             }
             delete this.overlays[topic];
         }

@@ -332,8 +332,8 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
                     this.pose_graph[i][2] * this.render_scale,
                 ]
 
-                tile0 = this.get_tile(p0[0], p0[1], 1, this.tiles);
-                tile1 = this.get_tile(p1[0], p1[1], 1, this.tiles);
+                tile0 = this.getTile(p0[0], p0[1], 1, this.tiles);
+                tile1 = this.getTile(p1[0], p1[1], 1, this.tiles);
 
                 if (tile0 != tile1 && tile_dirty) {
 
@@ -433,7 +433,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
                     let x = this.scan_graph[i][j][0] + (this.scan_graph[i][j][2] * this.render_scale);
                     let y = this.scan_graph[i][j][1] + (this.scan_graph[i][j][3] * this.render_scale);
 
-                    let tile = this.get_tile(x, y, 0, this.tiles);
+                    let tile = this.getTile(x, y, 0, this.tiles);
 
                     tile.ctx.fillStyle = '#FF0000';
                     

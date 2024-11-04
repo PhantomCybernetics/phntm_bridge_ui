@@ -207,7 +207,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
                 this.tiles_flat = [];
                 for (let x = 0; x < this.map_width*this.render_scale; x+=this.tile_size) {
                     for (let y = 0; y < this.map_height*this.render_scale; y+=this.tile_size) {
-                        this.tiles_flat.push(this.get_tile(x, y, 0));
+                        this.tiles_flat.push(this.getTile(x, y, 0));
                     }
                 }
                 this.last_map_tile_rendered = -1;
@@ -279,7 +279,7 @@ export class OccupancyGrid extends Zoomable2DTiles {
             //     if (val == -1)
             //         continue;
 
-            //     let tile = this.get_tile(x, y, 0);
+            //     let tile = this.getTile(x, y, 0);
 
             //     let amount = val / 100.0;
             //     let c = lerpColor('#00FF00', '#FF0000', amount);

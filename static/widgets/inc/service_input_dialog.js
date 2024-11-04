@@ -779,7 +779,7 @@ export class ServiceInputDialog {
                     }
                     else { // only one of complex types
 
-                        const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.processMsgTemplate(field.type, value ? value[field.name] : null, field.name, i == msg_class.definitions.length-1);
+                        const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.process_msg_template(field.type, value ? value[field.name] : null, field.name, i == msg_class.definitions.length-1);
                         msg[field.name] = nestedMsg;
                         block.append([ nestedBefore, nestedBlock, nestedAfter]);
                     }

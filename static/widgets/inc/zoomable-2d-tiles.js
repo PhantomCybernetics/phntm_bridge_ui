@@ -109,10 +109,7 @@ export class Zoomable2DTiles {
         });
     }
 
-
-
-
-    get_tile(x, y, layer) {
+    getTile(x, y, layer) {
 
         let t_half = this.tile_size/2.0;
         let cx = Math.floor((x+t_half) / this.tile_size);

@@ -473,7 +473,7 @@ export class Panel {
 
     }
 
-    auto_menu_position() {
+    autoMenuPosition() {
         let menu_el = $('#monitor_menu_'+this.n);
         let content_el = $('#monitor_menu_content_'+this.n);
         if (!menu_el.length || !content_el.length)
@@ -580,7 +580,7 @@ export class Panel {
             }
             console.log(`Maximizing panel ${this.id_source} w.height=${h}`);
             $('BODY').addClass('no-scroll');
-            this.ui.set_maximized_panel(this);
+            this.ui.setMaximizedPanel(this);
             $(this.grid_widget)
                 .addClass('maximized')
                 .css({
@@ -594,7 +594,7 @@ export class Panel {
         } else {
             console.log(`Unmaximizing panel ${this.id_source}`);
             if (this.ui.maximized_panel == this) {
-                this.ui.set_maximized_panel(null);
+                this.ui.setMaximizedPanel(null);
             }
             $(this.grid_widget)
                 .removeClass('maximized')

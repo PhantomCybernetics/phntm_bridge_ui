@@ -13,11 +13,11 @@ export class TwistInputDriver extends InputDriver {
         'angular.z': 'Twist: Angular Z',
     }
 
-    get_axes() {
+    getAxes() {
         return TwistInputDriver.axes;
     }
 
-    set_config(cfg) {
+    setConfig(cfg) {
        
         if (cfg.stamped) {
             this.msg_type = 'geometry_msgs/msg/TwistStamped';
@@ -25,18 +25,18 @@ export class TwistInputDriver extends InputDriver {
             this.msg_type = 'geometry_msgs/msg/Twist';
         }
 
-        super.set_config(cfg);
+        super.setConfig(cfg);
     }
 
-    get_config() {
-        let cfg = super.get_config();
+    getConfig() {
+        let cfg = super.getConfig();
 
         cfg.stamped = this.msg_type == 'geometry_msgs/msg/TwistStamped';
 
         return cfg;
     }
 
-    make_cofig_inputs() {
+    makeCofigInputs() {
         let lines = []
 
         // one output topic by default
@@ -53,8 +53,8 @@ export class TwistInputDriver extends InputDriver {
         inp_msg_type.change((ev)=>{
             that.msg_type = $(ev.target).val();
             console.log('Driver msg type is: '+that.msg_type);
-            that.setup_writer();
-            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
+            that.setupWriter();
+            that.input_manager.checkControllerProfileSaved(that.input_manager.edited_controller, that.input_manager.current_profile);
             that.input_manager.make_controller_driver_config_ui(); // redraw
         });
 
@@ -67,8 +67,8 @@ export class TwistInputDriver extends InputDriver {
         this.inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val();
             console.log('Driver output topic is: '+that.output_topic);
-            that.setup_writer();
-            that.input_manager.check_controller_profile_saved(that.input_manager.edited_controller, that.input_manager.current_profile);
+            that.setupWriter();
+            that.input_manager.checkControllerProfileSaved(that.input_manager.edited_controller, that.input_manager.current_profile);
         });
 
         lines.push(line_topic);
@@ -76,7 +76,7 @@ export class TwistInputDriver extends InputDriver {
         this.error_label = $('<span class="driver-error"></span>');
         lines.push(this.error_label);
 
-        this.handle_error_message();
+        this.handleErrorMessage();
 
         return lines;
     }
@@ -107,7 +107,7 @@ export class TwistInputDriver extends InputDriver {
 
         if (this.msg_type == 'geometry_msgs/msg/TwistStamped') {
             msg = {
-                header: this.get_header(),
+                header: this.getHeader(),
                 twist: msg
             }
         }

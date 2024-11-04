@@ -6,7 +6,7 @@ export class JoyInputDriver extends InputDriver {
     num_axes = 10;
     num_buttons = 10;
 
-    get_axes() {
+    getAxes() {
         // makes 10 axes
         let axes = {};
         for (let i = 0; i < this.num_axes; i++) {
@@ -15,7 +15,7 @@ export class JoyInputDriver extends InputDriver {
         return axes;
     }
 
-    get_buttons() {
+    getButtons() {
         // makes 10 axes
         let buttons = {};
         for (let i = 0; i < this.num_buttons; i++) {
@@ -27,7 +27,7 @@ export class JoyInputDriver extends InputDriver {
     generate() {
         // sensor_msgs/msg/Joy
         let msg = {
-            header: this.get_header(),
+            header: this.getHeader(),
             axes: [],
             buttons: []
         }

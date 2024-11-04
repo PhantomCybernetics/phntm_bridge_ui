@@ -28,15 +28,15 @@ export class Everything3DWidget extends DescriptionTFWidget {
             (t, r) => this.onRangeData(t, r),
             (t) => this.clearRange(t)
         );
-        // this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.on_costmap_data(t, c));
+        // this.sources.add('nav_msgs/msg/OccupancyGrid', 'Costmap source', null, 1, (t, c) => this.onCostmapData(t, c));
         this.sources.add('vision_msgs/msg/Detection3DArray', 'Detection 3D Array', null, -1,
             (t, d) => { that.onDetectionsData(t, d); },
             (t) => { that.clearDetections(t); }
         );
 
         this.sources.add('sensor_msgs/msg/CameraInfo', 'Camera Info', null, -1,
-            (t, d) => { that.on_camera_info_data(t, d); },
-            (t) => { that.clear_camera_info(t); }
+            (t, d) => { that.onCameraInfoData(t, d); },
+            (t) => { that.clearCameraInfo(t); }
         );
 
         this.parseUrlParts(this.panel.custom_url_vars);
@@ -85,11 +85,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
         source_topics.forEach((topic)=>{
             if (!that.overlays[topic]) {
                 that.overlays[topic] = {};
-                that.overlays[topic].config_update_cb = (config) => {
+                that.overlays[topic].configUpdateCb = (config) => {
                     console.warn('onTopicConfigUpdate', topic, config);
                     that.overlays[topic].config = config;
                 }
-                client.on_topic_config(topic, that.overlays[topic].config_update_cb);
+                client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
             }
         });
     }
@@ -245,7 +245,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let camera_frustum_visuals = this.camera_frustum_visuals ? [].concat(Object.keys(this.camera_frustum_visuals)) : [];
         console.log('Robot removed, clearing camera frustums', camera_frustum_visuals)
         camera_frustum_visuals.forEach((topic) => {
-            that.clear_camera_info(topic);
+            that.clearCameraInfo(topic);
         });
     }
 
@@ -317,17 +317,17 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         this.renderDirty();
 
-        this.clear_laser_on_timeout(topic);
+        this.clearLaserOnTimeout(topic);
     }
 
-    clear_laser_on_timeout(topic) {
+    clearLaserOnTimeout(topic) {
         if (this.clear_laser_timeout[topic])
             clearTimeout(this.clear_laser_timeout[topic])
 
         let that = this;
         this.clear_laser_timeout[topic] = setTimeout(()=>{
             if (that.panel.paused) { //don't clear while paused
-                that.clear_laser_on_timeout(topic);
+                that.clearLaserOnTimeout(topic);
                 return;
             }
 
@@ -350,7 +350,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         // console.log('Pose grapth updated', e);
     }
 
-    on_range_data (topic, range) {
+    onRangeData (topic, range) {
         if (!this.robot || this.panel.paused)
             return;
 
@@ -605,7 +605,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         };
     }
 
-    on_camera_info_data(topic, data) {
+    onCameraInfoData(topic, data) {
         if (!this.robot || this.panel.paused)
             return;
 
@@ -657,15 +657,15 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.renderDirty();
     }
 
-    clear_camera_info(topic) {
+    clearCameraInfo(topic) {
         if (this.camera_frustum_visuals[topic]) {
             this.camera_frustum_visuals[topic].removeFromParent();
             delete this.camera_frustum_visuals[topic];
         }
     }
 
-    on_costmap_data(topic, costmap) {
-        
+    onCostmapData(topic, costmap) {
+        // TODO
     }
 
     setupMenu () {

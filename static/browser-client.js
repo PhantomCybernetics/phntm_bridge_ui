@@ -583,7 +583,7 @@ export class PhntmBridgeClient extends EventTarget {
         });
     }
 
-    on_topic_config(topic, cb) {
+    onTopicConfig(topic, cb) {
         if (!this.topic_config_calbacks[topic])
             this.topic_config_calbacks[topic] = [];
 
