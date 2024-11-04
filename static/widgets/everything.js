@@ -1,7 +1,7 @@
 import { DescriptionTFWidget } from './description-tf.js'
 import { MultiTopicSource } from "./inc/multitopic.js";
 import * as THREE from 'three';
-import { lerpColor, deg2rad } from '../lib.js'
+import { lerpColor, deg2rad } from '../inc/lib.js'
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 
 export class Everything3DWidget extends DescriptionTFWidget {

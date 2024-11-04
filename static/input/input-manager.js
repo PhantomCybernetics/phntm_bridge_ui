@@ -1,4 +1,4 @@
-import { isIOS, lerp, isTouchDevice } from '../lib.js';
+import { isIOS, lerp, isTouchDevice } from '../inc/lib.js';
 import * as THREE from 'three';
 
 export class InputManager {

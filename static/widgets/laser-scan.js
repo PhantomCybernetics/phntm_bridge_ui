@@ -1,4 +1,4 @@
-import { deg2rad } from "../lib.js";
+import { deg2rad } from "../inc/lib.js";
 
 //laser scan visualization
 //TODO turn into class

@@ -1,4 +1,4 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad } from "../inc/lib.js";
 import * as THREE from 'three';
 import { Zoomable2DTiles } from './inc/zoomable-2d-tiles.js'
 

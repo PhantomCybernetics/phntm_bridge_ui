@@ -4,7 +4,7 @@ import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from '/static/browser-cl
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./lib.js";
+import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./inc/lib.js";
 import { FallbackServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
 
 import { ServiceInputDialog } from "./inc/service-input-dialog.js"

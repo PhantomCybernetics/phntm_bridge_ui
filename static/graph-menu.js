@@ -1,6 +1,6 @@
 
 import { IsImageTopic} from '/static/browser-client.js';
-import { isTouchDevice } from './lib.js'
+import { isTouchDevice } from './inc/lib.js'
 
 export class GraphMenu {
 

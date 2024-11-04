@@ -1,7 +1,7 @@
 
 import { IsImageTopic } from '/static/browser-client.js';
 
-import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./lib.js";
+import { lerpColor, linkifyURLs, escapeHtml, roughSizeOfObject, isTouchDevice, isSafari } from "./inc/lib.js";
 
 BigInt.prototype.toJSON = function() { return this.toString() } // fixes Bigint serialization issue in JSON.stringify
 

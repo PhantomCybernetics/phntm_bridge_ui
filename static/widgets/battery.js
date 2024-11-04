@@ -1,4 +1,4 @@
-import { lerpColor } from "./../lib.js";
+import { lerpColor } from "./../inc/lib.js";
 import '/static/canvasjs-charts/canvasjs.min.js';
 
 // BATTERY VISUALIZATION

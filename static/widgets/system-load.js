@@ -1,4 +1,4 @@
-import { formatBytes } from "../lib.js";
+import { formatBytes } from "../inc/lib.js";
 
 export class SystemLoadWidget {
 

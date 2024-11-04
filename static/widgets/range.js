@@ -1,4 +1,4 @@
-import { lerpColor } from "../lib.js";
+import { lerpColor } from "../inc/lib.js";
 
 // RANGE VISUALIZATION
 export class RangeWidget {

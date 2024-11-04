@@ -1,4 +1,4 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad } from "../lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad } from "../inc/lib.js";
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';

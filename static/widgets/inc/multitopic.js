@@ -1,4 +1,4 @@
-import { isTouchDevice } from "./../../lib.js";
+import { isTouchDevice } from "./../../inc/lib.js";
 
 export class MultiTopicSource extends EventTarget {
 
