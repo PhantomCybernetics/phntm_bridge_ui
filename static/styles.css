@@ -5052,8 +5052,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     /* border: 1px solid rgba(0,0,0,0.5); */
     color: #ffffff;
     font-size: 12px;
-    
-    /* text-align: center; */
+    text-align: center;
 }
 
 .marker_label:hover {

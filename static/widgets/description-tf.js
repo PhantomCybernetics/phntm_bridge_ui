@@ -40,7 +40,8 @@ export class DescriptionTFWidget extends EventTarget {
             'fix_robot_base': false, // robot will be fixed in place
             'render_pose_graph': false,
             'render_ground_plane': true,
-            '_focus_target': '', // pass through
+            // pass through vars:
+            '_focus_target': '',
             '_cam_position_offset': '',
         }
 
@@ -284,7 +285,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.scene.add(that.ground_plane);
         });
         
-        this.makeMark(this.scene, '[0,0,0]', 0, 0, 2.0, true, 2.0);
+        this.makeMark(this.ros_space, 'ROS BASE', 0, 0, 2.0, true, 2.0);
     
         this.camera.layers.enableAll();
         if (!this.vars.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -609,11 +610,13 @@ export class DescriptionTFWidget extends EventTarget {
         if (this.panel.paused) // TODO: process last received data on unpause
             return;
 
-        if (desc == this.last_processed_desc) {
+        if (desc.data == this.last_processed_desc) {
             console.warn('Ignoring identical robot description from '+topic);
             return false;
+        } else if (this.last_processed_desc) {
+            console.warn('Overwriting last model desc', this.last_processed_desc);
         }
-        this.last_processed_desc = desc;
+        this.last_processed_desc = desc.data;
 
         if (this.robot) {
             this.onModelRemoved();
@@ -644,7 +647,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.ros_space.position.set(0,0,0);
 
-        this.makeMark(this.robot, '[ROBOT]', 0, 0, 1.0);
+        this.makeMark(this.robot, 'ROBOT BASE', 0, 0, 1.0);
 
         console.log('Robot model initiated...');
         this.renderDirty();
@@ -911,7 +914,7 @@ export class DescriptionTFWidget extends EventTarget {
             label_el = new CSS2DObject(el);
             let that = this;
             el.addEventListener('pointerdown', function(ev) {
-                that.set_camera_target(target, label_text, true); // label=key, turns on following
+                that.setCameraTarget(target, label_text, true); // label=key, turns on following
                 ev.preventDefault();
             });
             target.add(label_el);
@@ -956,7 +959,9 @@ export class DescriptionTFWidget extends EventTarget {
             if (ch_id == this.robot.name) { //this is the base link
 
                 if (!this.ros_space_offset_set) {
-
+                    // this.ros_space.quaternion.
+                    this.ros_space.position.sub(new Vector3())
+                    this.ros_space_offset_set = true;
                 }
                 // if (this.pos_offset == null) {
                 //     this.pos_offset = new THREE.Vector3();
