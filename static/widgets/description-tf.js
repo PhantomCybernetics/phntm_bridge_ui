@@ -96,8 +96,8 @@ export class DescriptionTFWidget extends EventTarget {
                         side: THREE.DoubleSide,
                         depthWrite: true,
                         transparent: false
-                     } );
-                   
+                    });
+                    
                     const mesh = new THREE.Mesh(geom, stl_base_mat);
                     done_cb(mesh);
                 });
@@ -185,6 +185,8 @@ export class DescriptionTFWidget extends EventTarget {
         const ambience = new THREE.AmbientLight( 0x606060 ); // soft white light
         this.scene.add( ambience );
         
+        this.makeMark(this.scene, 'SCENE ORIGIN', 0, 0, 2.0, true, 1.0);
+
         panel.resizeEventHandler = () => {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
             that.updateOrthoCameraAspect();
@@ -614,11 +616,12 @@ export class DescriptionTFWidget extends EventTarget {
             console.warn('Ignoring identical robot description from '+topic);
             return false;
         }
-        this.last_processed_desc = desc.data;
 
         if (this.robot) {
             this.onModelRemoved();
         }
+
+        this.last_processed_desc = desc.data;
 
         console.warn('Parsing robot description...');
         this.robot = this.urdf_loader.parse(desc.data);
@@ -645,7 +648,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.ros_space.position.set(0,0,0);
 
-        this.makeMark(this.robot, 'ROBOT BASE', 0, 0, 1.0);
+        this.makeMark(this.robot, 'ROBOT BASE', 0, 0, 2.0);
 
         console.log('Robot model initiated...');
         this.renderDirty();
@@ -712,7 +715,7 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     markRosOrigin() {
-        this.makeMark(this.ros_space, 'ROS ORIGIN', 0, 0, 2.0, true, 2.0);
+        this.makeMark(this.ros_space, 'ROS ORIGIN', 0, 0, 1.0, true, 1.0);
     }
 
     onModelRemoved() {
@@ -720,6 +723,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.ros_space.clear(); // this.ros_space.remove(this.robot);
         this.markRosOrigin(); //removed, put back
         this.robot = null;
+        this.last_processed_desc = null;
         while (this.labelRenderer.domElement.children.length > 0) {
             this.labelRenderer.domElement.removeChild(this.labelRenderer.domElement.children[0]); 
         }
@@ -954,26 +958,21 @@ export class DescriptionTFWidget extends EventTarget {
                 stamp: ns_stamp
             }
             
-            if (['fl_wheel_link', 'fr_wheel_link', 'rl_wheel_link', 'rr_wheel_link'].indexOf(ch_id) < 0) {
-                let euler = new THREE.Euler().setFromQuaternion(t.rotation)
-                console.log(tf.transforms[i].header.frame_id+' > '+ch_id+': ['+t.translation.x.toFixed(2)+'; '+t.translation.y.toFixed(2)+'; '+t.translation.z.toFixed(2)+']; rot=['+rad2deg(euler.x).toFixed(2)+'; '+rad2deg(euler.y).toFixed(2)+'; '+rad2deg(euler.z).toFixed(2)+']');
-            }
+            // if (['fl_wheel_link', 'fr_wheel_link', 'rl_wheel_link', 'rr_wheel_link'].indexOf(ch_id) < 0) {
+            //     let euler = new THREE.Euler().setFromQuaternion(t.rotation)
+            //     console.log(tf.transforms[i].header.frame_id+' > '+ch_id+': ['+t.translation.x.toFixed(2)+'; '+t.translation.y.toFixed(2)+'; '+t.translation.z.toFixed(2)+']; rot=['+rad2deg(euler.x).toFixed(2)+'; '+rad2deg(euler.y).toFixed(2)+'; '+rad2deg(euler.z).toFixed(2)+']');
+            // }
             
             if (ch_id == this.robot.name) { //this is the base link
 
                 if (!this.ros_space_offset_set) {
-                    // this.ros_space.quaternion.
-                    this.ros_space.position.sub(new Vector3())
+                    // moves ros space so that the initial ronot's position and rotation is aligned with the scene's origin
+                    // all furher transforms then take place in the ros space
+                    this.ros_space.quaternion.copy(this.ros_space_default_rotation.clone().multiply(t.rotation.clone().invert())); // robot aligned with scene
+                    let t_pos = t.translation.clone().applyQuaternion(this.ros_space.quaternion);
+                    this.ros_space.position.copy(t_pos.clone().negate());
                     this.ros_space_offset_set = true;
                 }
-                // if (this.pos_offset == null) {
-                //     this.pos_offset = new THREE.Vector3();
-                //     this.pos_offset.copy(t.translation); // will be subtracted from all transforms
-                // }
-                // if (this.rot_offset == null) {
-                //     this.rot_offset = new THREE.Quaternion();
-                //     this.rot_offset.copy(t.rotation.clone().invert()); // will be subtracted from all transforms
-                // }
 
                 // trim pg
                 while (this.pose_graph.length > this.pose_graph_size) { 
