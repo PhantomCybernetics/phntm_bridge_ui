@@ -538,7 +538,6 @@ export class DescriptionTFWidget extends EventTarget {
         this.vars._focus_target = focus_target;
         out_parts.push('ft='+focus_target);
 
-        
         if (this.robot) {
             let cam_target_offset = this.camera.position.clone().sub(this.camera_target_pos.position);
             let cam_rot_angle = 0.0;

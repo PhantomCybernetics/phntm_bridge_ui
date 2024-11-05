@@ -764,6 +764,8 @@ export class Panel {
 
         $('.grid_panel[data-source="'+this.id_source+'"]').remove(); //updates url hash
         console.log('Panel closed for '+this.id_source)
+
+        this.ui.updateUrlHash();
     }
 
 }

@@ -1834,11 +1834,11 @@ export class PanelUI {
                     panel.editing = true;
                     $(panel.grid_widget).addClass('editing');
                 }
+                this.updateUrlHash();
             }
         } else if (panel) {
             panel.close();
         }
-        this.updateUrlHash();
     }
 
     makePanelFromConfig(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, custom_url_vars) {
