@@ -251,7 +251,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
     onLaserData (topic, scan) {
 
-        if (!this.robot || this.panel.paused) {
+        if (!this.robot_model || this.panel.paused) {
             return;
         }
 
@@ -279,7 +279,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let frame_id = scan.header.frame_id;
 
         if (!this.laser_frames[topic]) 
-            this.laser_frames[topic] = this.robot.getFrame(frame_id);
+            this.laser_frames[topic] = this.robot_model.getFrame(frame_id);
 
         if (!this.laser_frames[topic]) {
             if (!this.laser_frames_error_logged)
@@ -351,11 +351,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
     onRangeData (topic, range) {
-        if (!this.robot || this.panel.paused)
+        if (!this.robot_model || this.panel.paused)
             return;
 
         let frame_id = range.header.frame_id;
-        let f = this.robot.getFrame(frame_id);
+        let f = this.robot_model.getFrame(frame_id);
         if (!f) {
             let msg = 'Frame "'+frame_id+'" not found in robot model for range data from '+topic;
             this.panel.ui.showNotification(msg, 'error');
@@ -410,14 +410,14 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
     onDetectionsData(topic, data) {
-        if (!this.robot || this.panel.paused)
+        if (!this.robot_model || this.panel.paused)
             return;
 
         if (!this.overlays[topic] || !this.overlays[topic].config)
             return; // wait for config
 
         let frame_id = data.header.frame_id;
-        let f = this.robot.getFrame(frame_id);
+        let f = this.robot_model.getFrame(frame_id);
         if (!f) {
             if (!this.detection_frames_error_logged)
                 this.detection_frames_error_logged = {};
@@ -606,7 +606,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
     }
 
     onCameraInfoData(topic, data) {
-        if (!this.robot || this.panel.paused)
+        if (!this.robot_model || this.panel.paused)
             return;
 
         if (!this.overlays[topic] || !this.overlays[topic].config)  
@@ -615,7 +615,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let frame_id = data.header.frame_id;
         if (this.overlays[topic].config['force_frame_id'])
             frame_id = this.overlays[topic].config['force_frame_id'];
-        let f = frame_id ? this.robot.getFrame(frame_id) : null;
+        let f = frame_id ? this.robot_model.getFrame(frame_id) : null;
         if (!frame_id || !f) {
             if (!this.camera_info_error_logged)
                 this.camera_info_error_logged = {};
