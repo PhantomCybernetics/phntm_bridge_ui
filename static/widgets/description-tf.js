@@ -143,6 +143,8 @@ export class DescriptionTFWidget extends EventTarget {
         this.panel.panel_btns.append(this.perspective_btn);
         this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
         this.panel.panel_btns.append(this.focus_btn);
+        this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>')
+        this.panel.panel_btns.append(this.labels_btn);
 
         [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
 
@@ -238,6 +240,29 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
+        // labels toggle 
+        if (this.vars.render_labels) {
+            this.labels_btn.addClass('on');
+        }
+        this.labels_btn.click(function(ev) {
+            that.vars.render_labels = !$(this).hasClass('on');
+            if (that.vars.render_labels) {
+                $(this).addClass('on');
+                if (that.vars.render_joints)
+                    that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS);
+                if (that.vars.render_links)
+                    that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS);
+            } else {
+                $(this).removeClass('on');
+                that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
+                that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
+            }
+            // that.makeRobotMarkers();
+            that.panel.ui.updateUrlHash(); 
+            that.renderDirty();
+        });
+
+        // camera type
         if (this.vars.perspective_camera) {
             this.perspective_btn.addClass('on');
         } else {
@@ -424,7 +449,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.vars.render_joints = $(this).prop('checked');
             if (that.vars.render_joints) {
                 that.camera.layers.enable(DescriptionTFWidget.L_JOINTS);
-                if ($('#render_labels_'+that.panel.n).prop('checked'))
+                if (that.vars.render_labels)
                     that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS); //labels
             } else {
                 that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
@@ -442,7 +467,7 @@ export class DescriptionTFWidget extends EventTarget {
             that.vars.render_links = $(this).prop('checked');
             if (that.vars.render_links) {
                 that.camera.layers.enable(DescriptionTFWidget.L_LINKS);
-                if ($('#render_labels_'+that.panel.n).prop('checked'))
+                if (that.vars.render_labels)
                     that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS); //labels
             } else {
                 that.camera.layers.disable(DescriptionTFWidget.L_LINKS);
@@ -453,22 +478,22 @@ export class DescriptionTFWidget extends EventTarget {
             that.renderDirty();
         });
 
-        $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_labels_'+this.panel.n).change(function(ev) {
-            that.vars.render_labels = $(this).prop('checked');
-            if (that.vars.render_labels) {
-                if ($('#render_joints_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS);
-                if ($('#render_links_'+that.panel.n).prop('checked'))
-                    that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS);
-            } else {
-                that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
-                that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
-            }
-            // that.panel.ui.updateUrlHash();
-            that.renderDirty();
-        });
+        // $('<div class="menu_line"><label for="render_labels_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_labels?'checked':'')+' id="render_labels_'+this.panel.n+'" title="Render labels"> Show labels</label></div>')
+        //     .insertBefore($('#close_panel_menu_'+this.panel.n));
+        // $('#render_labels_'+this.panel.n).change(function(ev) {
+        //     that.vars.render_labels = $(this).prop('checked');
+        //     if (that.vars.render_labels) {
+        //         if ($('#render_joints_'+that.panel.n).prop('checked'))
+        //             that.camera.layers.enable(DescriptionTFWidget.L_JOINT_LABELS);
+        //         if ($('#render_links_'+that.panel.n).prop('checked'))
+        //             that.camera.layers.enable(DescriptionTFWidget.L_LINK_LABELS);
+        //     } else {
+        //         that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS);
+        //         that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
+        //     }
+        //     // that.panel.ui.updateUrlHash();
+        //     that.renderDirty();
+        // });
 
         $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
             .insertBefore($('#close_panel_menu_'+this.panel.n));

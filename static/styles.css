@@ -51,6 +51,8 @@ body::after{
         url('/static/graph/icon-focus-on.svg')
         url('/static/graph/icon-isometric.svg')
         url('/static/graph/icon-perspective.svg')
+        url('/static/graph/icon-label.svg')
+        url('/static/graph/icon-label-on.svg')
  }
 
 BODY.desktop-ui {
@@ -2673,17 +2675,24 @@ BODY.touch-ui .pause-panel-button.paused {
     float: left;
 }
 
-.panel-btn.focus-btn {
-    background-image: url('/static/graph/icon-focus.svg');
-    background-size: 20px 20px;
-}
-
 .panel-btn:hover {
     background-color: black;
 }
 
+.panel-btn.focus-btn {
+    background-image: url('/static/graph/icon-focus.svg');
+    background-size: 20px 20px;
+}
 .panel-btn.focus-btn.on {
     background-image: url('/static/graph/icon-focus-on.svg');
+}
+
+.panel-btn.labels-btn {
+    background-image: url('/static/graph/icon-label.svg');
+    background-size: 20px 20px;
+}
+.panel-btn.labels-btn.on {
+    background-image: url('/static/graph/icon-label-on.svg');
 }
 
 .panel-btn.perspective-btn,
