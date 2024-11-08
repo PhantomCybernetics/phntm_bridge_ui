@@ -53,6 +53,9 @@ export class DescriptionTFWidget extends EventTarget {
         this.smooth_transforms_queue = {};
         this.camera_pose_initialized = false; // first hard set pose, then smooth lerp
         this.camera_distance_initialized = false; // only once (if target autodetected)
+        this.robot_pose_initialized = false; // true after 1st base transform
+        this.camera_target_pose_initialized = false; // 1st cam to target will not lerp
+        this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
         // this.last_tf_stamps = {};
 
         let that = this;
@@ -118,7 +121,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.manager.onLoad = () => {
             console.info('Robot URDF loaded', that.robot_model);
             if (that.robot_model) {
-                if (!that.clearModel(that.robot_model)) { //clear after urdf fully loades; sets mats
+                if (!that.cleanURDFModel(that.robot_model)) { //clear after urdf fully loades; sets mats
                     console.error('Invalid URDF model imported; ignoring')
                     that.robot_model.removeFromParent();
                     that.robot_model = null;
@@ -202,8 +205,8 @@ export class DescriptionTFWidget extends EventTarget {
         this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, (topic, tf) => { that.onTFData(topic, tf); });
         this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, (topic, tf) => { that.onDescriptionData(topic, tf); });
 
-        this.set_camera_target_pos_on_description = null;
-        this.set_camera_target_offset_on_description = null;
+        // this.set_camera_target_pos_on_description = null;
+        // this.set_camera_target_offset_on_description = null;
         const camera_target_pos_geometry = new THREE.SphereGeometry( 0.01, 32, 16 ); 
         const camera_target_pos_material = new THREE.MeshBasicMaterial( { color: 0xff00ff } ); 
         this.camera_target_pos = new THREE.Mesh(camera_target_pos_geometry, camera_target_pos_material);
@@ -216,6 +219,7 @@ export class DescriptionTFWidget extends EventTarget {
         // - url vars parsed here - //
 
         // cam follow action
+        this.last_camera_url_update = Number.NEGATIVE_INFINITY;;
         if (this.vars.follow_target) {
             this.focus_btn.addClass('on');
         }
@@ -291,8 +295,8 @@ export class DescriptionTFWidget extends EventTarget {
             that.scene.add(that.ground_plane);
         });
         
-        this.makeMark(this.ros_space, 'ROS ORIGIN', 0, 0, 1.0, true, 1.0);
-        this.makeMark(this.robot, 'ROBOT ORIGIN', 0, 0, 1.0, true, 1.0);
+        this.makeMark(this.ros_space, 'ROS_ORIGIN', 0, 0, 1.0, true, 1.0);
+        // this.makeMark(this.robot, 'ROBOT ORIGIN', 0, 0, 1.0, true, 1.0);
     
         this.camera.layers.enableAll();
         if (!this.vars.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -345,6 +349,10 @@ export class DescriptionTFWidget extends EventTarget {
                                                        frustumSize / 2.0,
                                                        frustumSize / -2.0,
                                                        -1000, 1000); // negative near to prvent clipping while keeping the zoom functionality
+            if (this.set_ortho_camera_zoom > 0) { //set zoom from url
+                this.camera.zoom = this.set_ortho_camera_zoom;
+                this.set_ortho_camera_zoom = -1;
+            }
         }
         
         this.scene.add(this.camera);
@@ -539,15 +547,16 @@ export class DescriptionTFWidget extends EventTarget {
         this.vars._focus_target = focus_target;
         out_parts.push('ft='+focus_target);
 
-        let cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
-        let cam_target_pos_robot_space = this.robot.worldToLocal(this.camera_target_pos.position.clone());
-        let cam_target_offset = cam_pos_robot_space.sub(cam_target_pos_robot_space);
-        let cam_rot_angle = 0.0; // TODO ??!
-        let val = cam_target_offset.x.toFixed(3)+','+cam_target_offset.y.toFixed(3)+','+cam_target_offset.z.toFixed(3)+','+cam_rot_angle.toFixed(3);
-        this.vars._cam_position_offset = val;
-        out_parts.push('cp='+val);        
-        
         out_parts.push('cam='+(this.vars.perspective_camera ? '1' : '0'));
+
+        let cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
+        let cam_rot_angle = 0.0; // TODO ??!
+        let val = cam_pos_robot_space.x.toFixed(3)+','+cam_pos_robot_space.y.toFixed(3)+','+cam_pos_robot_space.z.toFixed(3)+','+cam_rot_angle.toFixed(3);
+        if (!this.vars.perspective_camera) //pass zoom for ortho cam as 4th val
+            val += ','+this.camera.zoom.toFixed(3);
+        this.vars._cam_position_offset = val;
+        out_parts.push('cp='+val);
+        
         out_parts.push('jnt='+(this.vars.render_joints ? '1' : '0'));
         out_parts.push('lnk='+(this.vars.render_links ? '1' : '0'));        
         out_parts.push('lbl='+(this.vars.render_labels ? '1' : '0'));
@@ -573,25 +582,26 @@ export class DescriptionTFWidget extends EventTarget {
                     if (val.indexOf(',') > 0) {
                         let coords = val.split(',');
                         let pos = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
-                        console.log('pased ft', pos);
-                        this.set_camera_target_pos_on_description = pos;
+                        this.camera_target_pos.position.copy(this.robot.localToWorld(pos));
+                        this.camera_target_key = null;
                     } else {
-                        this.camera_target_key = val;
+                        this.camera_target_key = val; // will be set on description
                     }
                     break;
+                case 'cam': this.vars.perspective_camera = parseInt(val) == 1; break;
                 case 'cp':
                     this.vars._cam_position_offset = val;
                     if (val.indexOf(',') > 0) {
                         let coords = val.split(',');
-                        let offset = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
+                        let pos = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
                         let rot = parseFloat(coords[3]);
-                        this.set_camera_target_offset_on_description = {
-                            offset: offset,
-                            rot: rot
-                        };
+                        if (coords.length > 3)
+                            this.set_ortho_camera_zoom = parseFloat(coords[4]);
+                        this.camera_pos.copy(this.robot.localToWorld(pos));
+                        this.camera_distance_initialized = true;
+                        this.camera_pose_initialized = true;
                     }
                     break;
-                case 'cam': this.vars.perspective_camera = parseInt(val) == 1; break;
                 case 'jnt': this.vars.render_joints = parseInt(val) == 1; break;
                 case 'lnk': this.vars.render_links = parseInt(val) == 1; break;
                 case 'lbl': this.vars.render_labels = parseInt(val) == 1; break;
@@ -630,33 +640,10 @@ export class DescriptionTFWidget extends EventTarget {
         console.log('Robot desc received, model: ', this.robot_model);
         
         this.getAutofocusTarget();
-        // this.ros_space.add(this.robot);
-        
-        // let update_controls = false;
-        // if (this.set_camera_target_pos_on_description) {
-        //     let pos = this.robot.localToWorld(this.set_camera_target_pos_on_description);
-        //     this.set_camera_target_pos_on_description = null;
-        //     this.camera_target_pos.position.copy(pos);
-        //     update_controls = true;
-        // } else if (this.camera_target_key) {
-            
-        // }
-
-        // if (this.set_camera_target_offset_on_description) {
-        //     let cam_pos = this.camera_target_pos.position.clone().add(this.set_camera_target_offset_on_description.offset);
-        //     this.camera.position.copy(cam_pos);
-        //     this.set_camera_target_offset_on_description = null;
-        // }
-        // if (update_controls)
-        //     this.controls.update();
-
-        // this.ros_space.position.set(0,0,0);
-
-        console.log('Robot model initiated...');
         this.renderDirty();
     }
 
-    clearModel(obj, lvl=0, inVisual=false, inCollider=false) {
+    cleanURDFModel(obj, lvl=0, inVisual=false, inCollider=false) {
 
         if (obj.isLight || obj.isScene || obj.isCamera) {
             return false;
@@ -705,7 +692,7 @@ export class DescriptionTFWidget extends EventTarget {
         if (obj.children && obj.children.length) {
             for (let i = 0; i < obj.children.length; i++) {
                 let ch = obj.children[i];
-                let res = this.clearModel(ch, lvl+1, inVisual, inCollider); // recursion
+                let res = this.cleanURDFModel(ch, lvl+1, inVisual, inCollider); // recursion
                 if (!res) {
                     obj.remove(ch);
                     i--;
@@ -898,11 +885,15 @@ export class DescriptionTFWidget extends EventTarget {
         if (!is_selected && (layer_axes == DescriptionTFWidget.L_JOINTS || layer_axes == DescriptionTFWidget.L_LINKS)) {
              axis_size = .0015;
         }
+
+        if (is_selected && this.robot_model && label_text == this.robot_model.name) {
+            axis_size = 1.0; // big visual for robots coords frame, when base link is selected
+        }
   
         const axesHelper = new THREE.AxesHelper(axis_size);       
         axesHelper.material.transparent = true;
-        axesHelper.material.opacity = 0.9;
-        axesHelper.material.width = 1;
+        axesHelper.material.opacity = 0.99;
+        axesHelper.material.width = 1.0;
         axesHelper.material.depthTest = false;
         axesHelper.material.depthWrite = false;
 
@@ -939,40 +930,37 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     onTFData (topic, tf) {
-        if (this.panel.paused || !this.robot_model) //wait for model
+        if (this.panel.paused || !this.robot_model) //wait for the model
             return;
 
         for (let i = 0; i < tf.transforms.length; i++) {
 
             let ns_stamp = tf.transforms[i].header.stamp.sec * 1000000000 + tf.transforms[i].header.stamp.nanosec;
-            let ch_id = tf.transforms[i].child_frame_id;
+            let id_child = tf.transforms[i].child_frame_id;
             let t = tf.transforms[i].transform;
 
-            if (this.smooth_transforms_queue[ch_id] !== undefined && this.smooth_transforms_queue[ch_id].stamp > ns_stamp)
+            if (this.smooth_transforms_queue[id_child] !== undefined && this.smooth_transforms_queue[id_child].stamp > ns_stamp)
                 continue; //throw out older transforms
 
             t.rotation = new Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w).normalize();
             t.translation = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z);
 
-            this.smooth_transforms_queue[ch_id] = {
+            this.smooth_transforms_queue[id_child] = {
                 parent: tf.transforms[i].header.frame_id,
                 transform: t,
                 stamp: ns_stamp
             }
             
-            // if (['fl_wheel_link', 'fr_wheel_link', 'rl_wheel_link', 'rr_wheel_link'].indexOf(ch_id) < 0) {
-            //     let euler = new THREE.Euler().setFromQuaternion(t.rotation)
-            //     console.log(tf.transforms[i].header.frame_id+' > '+ch_id+': ['+t.translation.x.toFixed(2)+'; '+t.translation.y.toFixed(2)+'; '+t.translation.z.toFixed(2)+']; rot=['+rad2deg(euler.x).toFixed(2)+'; '+rad2deg(euler.y).toFixed(2)+'; '+rad2deg(euler.z).toFixed(2)+']');
-            // }
-            
-            if (ch_id == this.robot_model.name) { //this is the base link
+            if (id_child == this.robot_model.name) { //this is the base link
 
                 if (!this.ros_space_offset_set) {
                     // moves ros space so that the initial ronot's position and rotation is aligned with the scene's origin
                     // all furher transforms then take place in the ros space
+
                     this.ros_space.quaternion.copy(this.ros_space_default_rotation.clone().multiply(t.rotation.clone().invert())); // robot aligned with scene
                     let t_pos = t.translation.clone().applyQuaternion(this.ros_space.quaternion);
                     this.ros_space.position.copy(t_pos.clone().negate());
+
                     this.ros_space_offset_set = true;
                 }
 
@@ -1029,6 +1017,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         const lerp_amount = 0.6;
         const cam_lerp_amount = 0.5;
+        let that = this;
 
         if (this.robot_model && this.robot_model.frames) {
 
@@ -1054,7 +1043,7 @@ export class DescriptionTFWidget extends EventTarget {
                         let old_robot_world_position = new THREE.Vector3();
                         this.robot.getWorldPosition(old_robot_world_position);
 
-                        if (this.camera_pose_initialized)
+                        if (this.robot_pose_initialized)
                             this.robot.position.lerp(pos, lerp_amount);
                         else
                             this.robot.position.copy(pos);
@@ -1063,7 +1052,8 @@ export class DescriptionTFWidget extends EventTarget {
 
                         let d_pos = new THREE.Vector3().subVectors(new_robot_world_position, old_robot_world_position);
 
-                        this.camera_pos.add(d_pos); // move camera by d
+                        if (this.robot_pose_initialized)
+                            this.camera_pos.add(d_pos); // move camera by d
                         this.light.position.add(d_pos);
 
                     } else {
@@ -1076,7 +1066,7 @@ export class DescriptionTFWidget extends EventTarget {
                     // let rot = new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
                     // rot = rot.multiply(this.rot_offset);
 
-                    if (this.camera_pose_initialized)
+                    if (this.robot_pose_initialized)
                         this.robot.quaternion.slerp(t.rotation, lerp_amount); //set rot always
                     else
                         this.robot.quaternion.copy(t.rotation);
@@ -1088,11 +1078,22 @@ export class DescriptionTFWidget extends EventTarget {
                     let d_rot = new_robot_world_rotation.multiply(old_robot_world_rotation.invert());
                     // console.log(d_rot_rad);
 
-                    this.camera_pos.sub(new_robot_world_position)
+                    if (this.robot_pose_initialized) {
+                        this.camera_pos.sub(new_robot_world_position)
                                     //    .applyAxisAngle(new THREE.Vector3(0,1,0), d_rot_rad)
                                    .applyQuaternion(d_rot)
                                    .add(new_robot_world_position);
+                    }
 
+                    if (!this.vars.follow_target && this.last_camera_url_update+1000 < Date.now()) {
+                        setTimeout(()=>{
+                            // saves new camera pos in relation to robot as it moves around
+                            this.last_camera_url_update = Date.now();
+                            that.panel.ui.updateUrlHash(); 
+                        }, 0);
+                    }
+                    
+                    this.robot_pose_initialized = true;
                     this.light.target = this.robot;                    
 
                 } else if (t_child && t_parent) {
@@ -1101,7 +1102,7 @@ export class DescriptionTFWidget extends EventTarget {
 
                     t_parent.attach(t_child);
 
-                    if (this.camera_pose_initialized) {
+                    if (this.robot_pose_initialized) {
                         t_child.position.lerp(new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z), lerp_amount);
                         t_child.quaternion.slerp(new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w), lerp_amount);
                     } else {
@@ -1120,22 +1121,20 @@ export class DescriptionTFWidget extends EventTarget {
 
         }
 
-        if (this.robot_model && this.vars.follow_target) {
+        if (this.robot_model && this.vars.follow_target && this.camera_pose_initialized) {
 
             let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
-            if (this.camera_pose_initialized) {
-                this.camera.position.copy(this.camera.position.lerp(this.camera_pos, cam_lerp_amount));
-            } else {
-                this.camera.position.copy(this.camera_pos);
-            }
+            
+            this.camera.position.lerp(this.camera_pos, cam_lerp_amount);
             
             if (this.camera_target) {
                 let new_target_pos = new THREE.Vector3();
                 this.camera_target.getWorldPosition(new_target_pos);
-                if (this.camera_pose_initialized) {
+                if (this.camera_target_pose_initialized) {
                     this.camera_target_pos.position.copy(this.camera_target_pos.position.lerp(new_target_pos, cam_lerp_amount));
                 } else {
-                    this.camera_target_pos.position.copy(new_target_pos);
+                     this.camera_target_pos.position.copy(new_target_pos);
+                     this.camera_target_pose_initialized = true;
                 }
                 // this.camera.lookAt(this.camera_target_pos);
                 // console.log('Focusing on ['+new_target_pos.x+';'+new_target_pos.y+';'+new_target_pos.z+']');
@@ -1145,10 +1144,10 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera_pos = pos_to_maintain;
         }
 
-        if (this.robot_model)
+        if (this.robot_model) {
             this.camera_pose_initialized = true;
+        }
 
-        let that = this;
         if ((this.controls_dirty || this.render_dirty) && this.robot_model) {
             this.controls_dirty = false;
             this.render_dirty = false;
