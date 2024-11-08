@@ -1942,6 +1942,10 @@ export class PanelUI {
                 [x, y].join('x'),
                 [w, h].join('x'),
             ];
+            if (!that.panels[id_source]) {
+                console.error('Panel not found ', id_source, $(widget).find('.grid_panel'));
+                return;
+            }
             if (that.panels[id_source].src_visible)
                 parts.push('src');
             if (that.panels[id_source].zoom !== undefined && that.panels[id_source].zoom !== null

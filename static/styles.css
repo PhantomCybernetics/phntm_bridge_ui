@@ -2675,9 +2675,61 @@ BODY.touch-ui .pause-panel-button.paused {
     float: left;
 }
 
-.panel-btn:hover {
+.panel-btn:hover, .panel-select:hover {
     background-color: black;
 }
+
+.panel-select {
+    position: relative;
+    width: 30px;
+    height: 27px;
+    /* background-color: black; */
+    display: block;
+    cursor: pointer;
+    float: left;
+    margin-top: 8px;
+}
+
+.panel-select .panel-btn {
+    margin-top: 0px;
+}
+
+.panel-select:hover {
+    border-radius: 5px 5px 0px 0px;
+}
+
+.panel-select-content {
+    display: none;
+    position: absolute;
+    right: 0px;
+    top: 27px;
+    border-radius: 5px 0px 5px 5px;
+    background-color: #000000e6;
+    font-size: 13px;
+    padding: 3px 5px 5px 5px;
+}
+
+.panel-select:hover .panel-select-content {
+    display: block;
+}
+
+.panel-select-content SPAN {
+    display: block;
+    cursor: pointer;
+    color: #fff;
+    padding: 5px 5px 5px 5px;
+    text-align: left;
+    margin-top: 2px;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
+}
+
+.panel-select-content SPAN:hover {
+    background-color: #001649;
+    border-radius: 5px;
+}
+
 
 .panel-btn.focus-btn {
     background-image: url('/static/graph/icon-focus.svg');

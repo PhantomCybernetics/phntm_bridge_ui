@@ -141,8 +141,28 @@ export class DescriptionTFWidget extends EventTarget {
         // camera controls
         this.perspective_btn = $('<span class="panel-btn perspective-btn" title="Perspective"></span>')
         this.panel.panel_btns.append(this.perspective_btn);
+        let focus_select = $('<span class="panel-select"></span>')
         this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
-        this.panel.panel_btns.append(this.focus_btn);
+        
+        let focus_select_content = $('<span class="panel-select-content"></span>')
+        this.focus_camera_top = $('<span>Top</span>');
+        this.focus_camera_left = $('<span>Left</span>');
+        this.focus_camera_right = $('<span>Right</span>');
+        this.focus_camera_front = $('<span>Front</span>');
+        this.focus_camera_back = $('<span>Back</span>');
+        this.focus_camera_bottom = $('<span>Bottom</span>');
+        focus_select_content.append([
+            this.focus_camera_top,
+            this.focus_camera_left,
+            this.focus_camera_right,            
+            this.focus_camera_front,
+            this.focus_camera_back,
+            this.focus_camera_bottom, 
+        ]);
+        focus_select.append(this.focus_btn);
+        focus_select.append(focus_select_content);
+        this.panel.panel_btns.append(focus_select);
+
         this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>')
         this.panel.panel_btns.append(this.labels_btn);
 
