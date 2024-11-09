@@ -145,23 +145,30 @@ export class DescriptionTFWidget extends EventTarget {
         this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
         
         let focus_select_content = $('<span class="panel-select-content"></span>')
-        this.focus_camera_top = $('<span>Top</span>');
-        this.focus_camera_left = $('<span>Left</span>');
-        this.focus_camera_right = $('<span>Right</span>');
-        this.focus_camera_front = $('<span>Front</span>');
-        this.focus_camera_back = $('<span>Back</span>');
-        this.focus_camera_bottom = $('<span>Bottom</span>');
-        focus_select_content.append([
+        this.focus_camera_top = $('<span data-focus="top">Top</span>');
+        this.focus_camera_left = $('<span data-focus="left">Left</span>');
+        this.focus_camera_right = $('<span data-focus="right">Right</span>');
+        this.focus_camera_front = $('<span data-focus="front">Front</span>');
+        this.focus_camera_back = $('<span data-focus="back">Back</span>');
+        this.focus_camera_bottom = $('<span data-focus="bottom">Bottom</span>');
+        let focus_btns = [
             this.focus_camera_top,
             this.focus_camera_left,
             this.focus_camera_right,            
             this.focus_camera_front,
             this.focus_camera_back,
             this.focus_camera_bottom, 
-        ]);
+        ];
+        focus_select_content.append(focus_btns);
+        focus_btns.forEach((btn_el)=>{
+            $(btn_el).click(()=>{
+                that.moveCameraToPosition($(btn_el).attr('data-focus'));
+            });
+        });
         focus_select.append(this.focus_btn);
         focus_select.append(focus_select_content);
         this.panel.panel_btns.append(focus_select);
+
 
         this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>')
         this.panel.panel_btns.append(this.labels_btn);
@@ -453,6 +460,23 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera.updateProjectionMatrix();
             this.renderDirty();
         }
+    }
+
+    moveCameraToPosition(position) {
+        let v = new THREE.Vector3();
+        let d = this.camera.position.distanceTo(this.camera_target_pos.position);
+        switch (position) {
+            case 'top': v.set(0,0,d); break; //in ros space
+            case 'left': v.set(0,d,0); break;
+            case 'right': v.set(0,-d,0); break;
+            case 'front': v.set(d,0,0); break;
+            case 'back': v.set(-d,0,0); break;
+            case 'bottom': v.set(0,0,-d); break;
+        }
+        let robot_world_rotation = new THREE.Quaternion();
+        this.robot.getWorldQuaternion(robot_world_rotation);
+        v.applyQuaternion(robot_world_rotation);
+        this.camera_pos.copy(this.camera_target_pos.position.clone().add(v));
     }
 
     setupMenu() {
