@@ -1966,8 +1966,15 @@ export class PanelUI {
             hash.push(parts.join(':'));
         });
 
-        if (hash.length > 0)
-            window.location.hash = '' + hash.join(';');
+        const max_safe_url_length = 2048; // chrome 
+        const hash_joined = hash.length > 0 ? hash.join(';') : '';
+        const url_without_hash = window.location.href.split('#')[0];
+        if ((url_without_hash.length + 1 + hash_joined.length) >= max_safe_url_length) {
+            this.showNotification('URL longer than max safe '+max_safe_url_length+' characters. Some clipping may occur', 'error');
+        }
+
+        if (hash_joined.length > 0)
+            window.location.hash = hash_joined;
         else //remove hash
             history.pushState("", document.title, window.location.pathname + window.location.search);
     }

@@ -53,6 +53,7 @@ body::after{
         url('/static/graph/icon-perspective.svg')
         url('/static/graph/icon-label.svg')
         url('/static/graph/icon-label-on.svg')
+        url('/static/graph/icon-view.svg')
  }
 
 BODY.desktop-ui {
@@ -2688,6 +2689,10 @@ BODY.touch-ui .pause-panel-button.paused {
     cursor: pointer;
     float: left;
     margin-top: 8px;
+    background-repeat: no-repeat;
+    background-size: 20px 20px;
+    border-radius: 5px;
+    background-position: center;
 }
 
 .panel-select .panel-btn {
@@ -2730,6 +2735,10 @@ BODY.touch-ui .pause-panel-button.paused {
     border-radius: 5px;
 }
 
+.panel-select {
+    background-image: url('/static/graph/icon-view.svg');
+    background-size: 20px 20px;
+}
 
 .panel-btn.focus-btn {
     background-image: url('/static/graph/icon-focus.svg');

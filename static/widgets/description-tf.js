@@ -40,7 +40,7 @@ export class DescriptionTFWidget extends EventTarget {
             'fix_robot_base': false, // robot will be fixed in place
             'render_pose_graph': false,
             'render_ground_plane': true,
-            // pass through vars:
+            // passthrough vars:
             '_focus_target': '',
             '_cam_position_offset': '',
         }
@@ -52,7 +52,7 @@ export class DescriptionTFWidget extends EventTarget {
         // this.transforms_queue = [];
         this.smooth_transforms_queue = {};
         this.camera_pose_initialized = false; // first hard set pose, then smooth lerp
-        this.camera_distance_initialized = false; // only once (if target autodetected)
+        this.camera_distance_initialized = false; // determine distance to target if false; only once (if target autodetected)
         this.robot_pose_initialized = false; // true after 1st base transform
         this.camera_target_pose_initialized = false; // 1st cam to target will not lerp
         this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
@@ -141,34 +141,34 @@ export class DescriptionTFWidget extends EventTarget {
         // camera controls
         this.perspective_btn = $('<span class="panel-btn perspective-btn" title="Perspective"></span>')
         this.panel.panel_btns.append(this.perspective_btn);
-        let focus_select = $('<span class="panel-select"></span>')
-        this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
         
-        let focus_select_content = $('<span class="panel-select-content"></span>')
-        this.focus_camera_top = $('<span data-focus="top">Top</span>');
-        this.focus_camera_left = $('<span data-focus="left">Left</span>');
-        this.focus_camera_right = $('<span data-focus="right">Right</span>');
-        this.focus_camera_front = $('<span data-focus="front">Front</span>');
-        this.focus_camera_back = $('<span data-focus="back">Back</span>');
-        this.focus_camera_bottom = $('<span data-focus="bottom">Bottom</span>');
-        let focus_btns = [
-            this.focus_camera_top,
-            this.focus_camera_left,
-            this.focus_camera_right,            
-            this.focus_camera_front,
-            this.focus_camera_back,
-            this.focus_camera_bottom, 
+        this.focus_btn = $('<span class="panel-btn focus-btn" title="Focus camera on selection"></span>')
+        this.panel.panel_btns.append(this.focus_btn);
+
+        let view_select = $('<span class="panel-select view-select"></span>')
+        let view_select_content = $('<span class="panel-select-content"></span>')
+        this.view_camera_top = $('<span data-focus="top">Top</span>');
+        this.view_camera_left = $('<span data-focus="left">Left</span>');
+        this.view_camera_right = $('<span data-focus="right">Right</span>');
+        this.voew_camera_front = $('<span data-focus="front">Front</span>');
+        this.view_camera_back = $('<span data-focus="back">Back</span>');
+        this.view_camera_bottom = $('<span data-focus="bottom">Bottom</span>');
+        let view_btns = [
+            this.view_camera_top,
+            this.view_camera_left,
+            this.view_camera_right,            
+            this.view_camera_front,
+            this.view_camera_back,
+            this.view_camera_bottom, 
         ];
-        focus_select_content.append(focus_btns);
-        focus_btns.forEach((btn_el)=>{
+        view_select_content.append(view_btns);
+        view_btns.forEach((btn_el)=>{
             $(btn_el).click(()=>{
-                that.moveCameraToPosition($(btn_el).attr('data-focus'));
+                that.moveCameraToView($(btn_el).attr('data-focus'));
             });
         });
-        focus_select.append(this.focus_btn);
-        focus_select.append(focus_select_content);
-        this.panel.panel_btns.append(focus_select);
-
+        view_select.append(view_select_content);
+        this.panel.panel_btns.append(view_select);
 
         this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>')
         this.panel.panel_btns.append(this.labels_btn);
@@ -309,9 +309,11 @@ export class DescriptionTFWidget extends EventTarget {
 
         // make camera (persp/orto) when type, pos and focus is determined
         this.makeCamera();
-        this.camera.position.copy(this.camera_pos);
 
-        this.camera.lookAt(this.camera_target_pos);
+        if (!this.camera_pose_initialized) {
+            this.camera.position.copy(this.camera_pos);
+            this.camera.lookAt(this.camera_target_pos);
+        }
 
         this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
         this.controls.enablePan = !this.vars.follow_target;
@@ -462,7 +464,7 @@ export class DescriptionTFWidget extends EventTarget {
         }
     }
 
-    moveCameraToPosition(position) {
+    moveCameraToView(position) {
         let v = new THREE.Vector3();
         let d = this.camera.position.distanceTo(this.camera_target_pos.position);
         switch (position) {
@@ -608,21 +610,27 @@ export class DescriptionTFWidget extends EventTarget {
     getUrlHashParts (out_parts) {
         out_parts.push('f='+(this.vars.follow_target ? '1' : '0'));
 
+        // focus position or model node (in robot space)
+        let focus_pos_robot_space = this.robot.worldToLocal(this.camera_target_pos.position.clone()); 
         let focus_target = this.camera_target_key;
         if (!focus_target || !this.vars.follow_target) { // focus point in robot space
-            let focus_pos = this.robot.worldToLocal(this.camera_target_pos.position.clone()); 
-            focus_target = focus_pos.x.toFixed(3)+','+focus_pos.y.toFixed(3)+','+focus_pos.z.toFixed(3);
+            focus_target = focus_pos_robot_space.x.toFixed(3)+','+focus_pos_robot_space.y.toFixed(3)+','+focus_pos_robot_space.z.toFixed(3);
         }
         this.vars._focus_target = focus_target;
         out_parts.push('ft='+focus_target);
 
-        out_parts.push('cam='+(this.vars.perspective_camera ? '1' : '0'));
+        // camera type
+        out_parts.push('ct='+(this.vars.perspective_camera ? '1' : '0'));
 
+        // camera rotation and distance from focal target (in robot space)
         let cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
-        let cam_rot_angle = 0.0; // TODO ??!
-        let val = cam_pos_robot_space.x.toFixed(3)+','+cam_pos_robot_space.y.toFixed(3)+','+cam_pos_robot_space.z.toFixed(3)+','+cam_rot_angle.toFixed(3);
-        if (!this.vars.perspective_camera) //pass zoom for ortho cam as 4th val
-            val += ','+this.camera.zoom.toFixed(3);
+        let cam_distance = cam_pos_robot_space.distanceTo(focus_pos_robot_space);
+        let cam_rot_robot_space = this.robot.quaternion.clone().invert().multiply(this.camera.quaternion);
+        
+        let val = cam_rot_robot_space.x.toFixed(3)+','+cam_rot_robot_space.y.toFixed(3)+','+cam_rot_robot_space.z.toFixed(3)+','+cam_rot_robot_space.w.toFixed(3)
+                + ','+cam_distance.toFixed(3); // distance to target as 5th val
+        if (!this.vars.perspective_camera)  // cheaper to pass ortho zoom than to calculate respective offset on every change
+            val += ','+this.camera.zoom.toFixed(3); // 6th val
         this.vars._cam_position_offset = val;
         out_parts.push('cp='+val);
         
@@ -657,17 +665,20 @@ export class DescriptionTFWidget extends EventTarget {
                         this.camera_target_key = val; // will be set on description
                     }
                     break;
-                case 'cam': this.vars.perspective_camera = parseInt(val) == 1; break;
+                case 'ct': this.vars.perspective_camera = parseInt(val) == 1; break;
                 case 'cp':
                     this.vars._cam_position_offset = val;
                     if (val.indexOf(',') > 0) {
                         let coords = val.split(',');
-                        let pos = new THREE.Vector3(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2]));
-                        let rot = parseFloat(coords[3]);
-                        if (coords.length > 3)
-                            this.set_ortho_camera_zoom = parseFloat(coords[4]);
-                        this.camera_pos.copy(this.robot.localToWorld(pos));
-                        this.camera_distance_initialized = true;
+                        let cam_rot_robot_space = new THREE.Quaternion(parseFloat(coords[0]), parseFloat(coords[1]), parseFloat(coords[2], parseFloat(coords[3])));
+                        let dist_to_target = parseFloat(coords[4]);
+                        if (coords.length > 5)
+                            this.set_ortho_camera_zoom = parseFloat(coords[5]);
+
+                        let cam_rot = this.robot.quaternion.clone().multiply(cam_rot_robot_space);
+
+                        // this.camera_pos.copy(this.robot.localToWorld(pos));
+                        this.camera_distance_initialized = true; // don't autodetect 
                         this.camera_pose_initialized = true;
                     }
                     break;
@@ -840,13 +851,6 @@ export class DescriptionTFWidget extends EventTarget {
             if (wp_magnitude > farthest_pt_dist)
                 farthest_pt_dist = wp_magnitude;
         });
-
-        // was this even needed? should pick the outermost frame of the model tho
-        // if (robot.links['base_footprint']) {
-        //     let v = new THREE.Vector3();
-        //     robot.links['base_footprint'].getWorldPosition(v);
-        //     this.ros_space.position.copy(v.negate());
-        // }
 
         if (focus_joint && focus_joint_key)
             this.setCameraTarget(focus_joint, focus_joint_key, false);
@@ -1088,6 +1092,7 @@ export class DescriptionTFWidget extends EventTarget {
         const cam_lerp_amount = 0.5;
         let that = this;
 
+        // set model transforms
         if (this.robot_model && this.robot_model.frames) {
 
             let transform_ch_frames = Object.keys(this.smooth_transforms_queue);
@@ -1190,6 +1195,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         }
 
+        // move the camera
         if (this.robot_model && this.vars.follow_target && this.camera_pose_initialized) {
 
             let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
@@ -1217,6 +1223,7 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera_pose_initialized = true;
         }
 
+        // render here
         if ((this.controls_dirty || this.render_dirty) && this.robot_model) {
             this.controls_dirty = false;
             this.render_dirty = false;
