@@ -24,7 +24,8 @@ export class MultiTopicSource extends EventTarget {
             num: num,
             cb: cb,
             clear_cb: clear_cb,
-            topic_slots: []
+            topic_slots: [],
+            args_parsed: false
         }
         this.sources.push(new_src);
         this.updateSlots(new_src);    
@@ -131,11 +132,13 @@ export class MultiTopicSource extends EventTarget {
         custom_url_vars.forEach((kvp)=>{
             let arg = kvp[0];
             if (arg.indexOf('in') !== 0)
-                return;
+                return; // not multitopic, skip
             let i = parseInt(arg.substring(2));
             let src = this.sources[i];
             if (!src)
                 return;
+            if (src.args_parsed)
+                return; //only once
             let vals = kvp[1].split(',');
             // console.warn('Multitopic got in_'+i+" > "+vals.join(', '));
             for (let j = 0; j < vals.length; j++) {
@@ -156,6 +159,7 @@ export class MultiTopicSource extends EventTarget {
                     this.assignSlotTopic(slot); //try assign
                 }
             }
+            src.args_parsed = true;
             this.updateSlots(src);
         });
         this.updateMenuContent();

@@ -39,7 +39,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             (t) => { that.clearCameraInfo(t); }
         );
 
-        this.parseUrlParts(this.panel.custom_url_vars);
+        this.sources.parseUrlParts(this.panel.custom_url_vars); // init unparsed by parent
 
         this.range_visuals = {};
         this.laser_visuals = {};

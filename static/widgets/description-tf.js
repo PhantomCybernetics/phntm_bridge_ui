@@ -352,7 +352,7 @@ export class DescriptionTFWidget extends EventTarget {
         });
         
         this.makeMark(this.ros_space, 'ROS_ORIGIN', 0, 0, 1.0, true, 1.0);
-        // this.makeMark(this.robot, 'ROBOT ORIGIN', 0, 0, 1.0, true, 1.0);
+        this.makeMark(this.robot, 'ROBOT_ORIGIN', 0, 0, 1.0, true, 1.0);
     
         this.camera.layers.enableAll();
         if (!this.vars.render_visuals) this.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
@@ -622,6 +622,8 @@ export class DescriptionTFWidget extends EventTarget {
                 + cam_distance.toFixed(3); // distance to target as 5th val
         if (!this.vars.perspective_camera)  // cheaper to pass ortho zoom than to calculate respective offset on every change
             val += ','+this.camera.zoom.toFixed(3); // 6th val
+        if (this.set_camera_target_offset)
+            val = this.vars._cam_position_offset;
         this.vars._cam_position_offset = val;
         out_parts.push('cp='+val);
         
@@ -664,7 +666,7 @@ export class DescriptionTFWidget extends EventTarget {
                         let cam_rot_robot_space = new THREE.Quaternion(parseFloat(coords[0]),
                                                                        parseFloat(coords[1]), 
                                                                        parseFloat(coords[2]),
-                                                                       parseFloat(coords[3]));
+                                                                       parseFloat(coords[3])).normalize();
                         let dist_to_target = parseFloat(coords[4]);
                         if (coords.length > 5)
                             this.set_ortho_camera_zoom = parseFloat(coords[5]);
@@ -673,7 +675,7 @@ export class DescriptionTFWidget extends EventTarget {
                             rotation: cam_rot_robot_space,
                             distance: dist_to_target
                         }
-
+                        console.warn('Parsing CP');
                         this.camera_distance_initialized = true; // don't autodetect 
                         this.camera_pose_initialized = true;
                     }
