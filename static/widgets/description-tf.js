@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { OrbitControls } from 'orbit-controls';
+import { TrackballControls } from 'trackball-controls';
 import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
@@ -56,6 +57,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.robot_pose_initialized = false; // true after 1st base transform
         this.camera_target_pose_initialized = false; // 1st cam to target will not lerp
         this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
+        this.set_camera_view = null; // animate to position if set
         // this.last_tf_stamps = {};
 
         let that = this;
@@ -150,7 +152,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.view_camera_top = $('<span data-focus="top">Top</span>');
         this.view_camera_left = $('<span data-focus="left">Left</span>');
         this.view_camera_right = $('<span data-focus="right">Right</span>');
-        this.voew_camera_front = $('<span data-focus="front">Front</span>');
+        this.view_camera_front = $('<span data-focus="front">Front</span>');
         this.view_camera_back = $('<span data-focus="back">Back</span>');
         this.view_camera_bottom = $('<span data-focus="bottom">Bottom</span>');
         let view_btns = [
@@ -240,7 +242,7 @@ export class DescriptionTFWidget extends EventTarget {
         const camera_target_pos_material = new THREE.MeshBasicMaterial( { color: 0xff00ff } ); 
         this.camera_target_pos = new THREE.Mesh(camera_target_pos_geometry, camera_target_pos_material);
         this.camera_target_pos.position.set(0,0,0); // adjusted by url 
-        // this.camera_target_pos.visible = false;
+        this.camera_target_pos.visible = false; //enable when debugging
         this.scene.add(this.camera_target_pos);
 
         this.parseUrlParts(this.panel.custom_url_vars);
@@ -316,6 +318,7 @@ export class DescriptionTFWidget extends EventTarget {
         }
 
         this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
+        // this.controls = new TrackballControls(this.camera, this.labelRenderer.domElement);
         this.controls.enablePan = !this.vars.follow_target;
         this.renderer.domElement.addEventListener('pointerdown', (ev) => {
             ev.preventDefault(); // stop from moving the panel
@@ -466,20 +469,51 @@ export class DescriptionTFWidget extends EventTarget {
     }
 
     moveCameraToView(position) {
-        let v = new THREE.Vector3();
+        let rwq = new THREE.Quaternion();
+        this.robot.getWorldQuaternion(rwq);
+
+        let target_pos = new THREE.Vector3();
         let d = this.camera.position.distanceTo(this.camera_target_pos.position);
+        let delta_rot = new THREE.Quaternion();
+        const gl_offset = 0.0001; // avoiding gimbal lock of orbital controls with a tiny offset
         switch (position) {
-            case 'top': v.set(0,0,d); break; //in ros space
-            case 'left': v.set(0,d,0); break;
-            case 'right': v.set(0,-d,0); break;
-            case 'front': v.set(d,0,0); break;
-            case 'back': v.set(-d,0,0); break;
-            case 'bottom': v.set(0,0,-d); break;
+            case 'top':
+                target_pos.set(-gl_offset,0,d);
+                delta_rot.setFromEuler(new THREE.Euler(0, 0, deg2rad(-90)));
+                break; // in ros space
+            case 'left':
+                target_pos.set(0,d,0);
+                delta_rot.setFromEuler(new THREE.Euler(deg2rad(-90), 0, deg2rad(180)));
+                break;
+            case 'right':
+                target_pos.set(0,-d,0);
+                delta_rot.setFromEuler(new THREE.Euler(deg2rad(90), 0, 0));
+                break;
+            case 'front':
+                target_pos.set(d,0,0);
+                delta_rot.setFromEuler(new THREE.Euler(deg2rad(90), deg2rad(90), 0));
+                break;
+            case 'back':
+                target_pos.set(-d,0,0);
+                delta_rot.setFromEuler(new THREE.Euler(deg2rad(90), deg2rad(-90), 0));
+                break;
+            case 'bottom':
+                target_pos.set(gl_offset,0,-d);
+                delta_rot.setFromEuler(new THREE.Euler(0, deg2rad(180), deg2rad(90)));
+                break;
         }
-        let robot_world_rotation = new THREE.Quaternion();
-        this.robot.getWorldQuaternion(robot_world_rotation);
-        v.applyQuaternion(robot_world_rotation);
-        this.camera_pos.copy(this.camera_target_pos.position.clone().add(v));
+        
+        target_pos.applyQuaternion(rwq);
+        this.controls.enableRotate = false;
+        this.controls.enablePan = false;
+
+        this.set_camera_view = {
+            start: Date.now(),
+            start_cam_position: new THREE.Vector3().copy(this.camera.position),
+            start_cam_rotation: new THREE.Quaternion().copy(this.camera.quaternion),
+            target_offset_pos: target_pos,
+            target_rot: delta_rot
+        };
     }
 
     setupMenu() {
@@ -1213,6 +1247,43 @@ export class DescriptionTFWidget extends EventTarget {
 
             this.set_camera_target_offset = null;
             this.controls.update();
+
+        }
+        
+        // move camera to position relative to target
+        else if (this.set_camera_view) {
+
+            const animation_duration = 1000;
+
+            if (this.camera_target && this.vars.follow_target) {
+                this.camera_target.getWorldPosition(this.camera_target_pos.position);
+            }
+
+            let lerp_amount = (Date.now()-this.set_camera_view.start) / animation_duration;
+            let done = false;
+            if (lerp_amount >= 1.0) {
+                lerp_amount = 1.0;
+                done = true;
+            }
+
+            let target_pos = this.camera_target_pos.position.clone().add(this.set_camera_view.target_offset_pos); //update as the robor/target move
+            this.camera.position.copy(this.set_camera_view.start_cam_position.lerp(target_pos, lerp_amount));
+
+            let rwq = new THREE.Quaternion();
+            this.robot.getWorldQuaternion(rwq);
+            let target_rot = rwq.multiply(this.set_camera_view.target_rot.clone()); //update as the robor/target move
+            this.camera.quaternion.copy(this.set_camera_view.start_cam_rotation.slerp(target_rot, lerp_amount));
+
+            this.camera_pos.copy(this.camera.position)
+            this.controls_dirty = true;
+            
+            if (done) {
+                this.set_camera_view = null;
+                this.controls.enableRotate = true;
+                this.controls.enablePan = !this.vars.follow_target;
+                this.controls.update();
+                this.panel.ui.updateUrlHash();
+            }
         }
 
         // move the camera if fixed to target
@@ -1226,10 +1297,10 @@ export class DescriptionTFWidget extends EventTarget {
                 let new_target_pos = new THREE.Vector3();
                 this.camera_target.getWorldPosition(new_target_pos);
                 if (this.camera_target_pose_initialized) {
-                    this.camera_target_pos.position.copy(this.camera_target_pos.position.lerp(new_target_pos, cam_lerp_amount));
+                    this.camera_target_pos.position.lerp(new_target_pos, cam_lerp_amount);
                 } else {
-                     this.camera_target_pos.position.copy(new_target_pos);
-                     this.camera_target_pose_initialized = true;
+                    this.camera_target_pos.position.copy(new_target_pos);
+                    this.camera_target_pose_initialized = true;
                 }
                 // this.camera.lookAt(this.camera_target_pos);
                 // console.log('Focusing on ['+new_target_pos.x+';'+new_target_pos.y+';'+new_target_pos.z+']');
