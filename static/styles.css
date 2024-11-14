@@ -2658,7 +2658,7 @@ BODY.touch-ui .pause-panel-button.paused {
     right: 35px;
     top: -9px;
     height: 39px;
-    z-index: 3; /* above title */
+    z-index: 114; /* same as menu, above 2d labels */
 }
 
 .panel-btn {

@@ -128,7 +128,7 @@ export class PanelUI {
         });
 
         client.on('error', (error, msg) => {
-            that.showPageError(error, msg);
+            that.showNotification('Client error ('+error+'): '+msg, 'error');
         });
 
         client.on('update', () => { // from socket

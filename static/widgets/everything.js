@@ -495,7 +495,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             let marker_el = null;
             if (!this.detection_markers[topic][i]) {
                 const geometry = new THREE.BoxGeometry( 1, 1, 1 ); 
-                const material = new THREE.MeshBasicMaterial( {color: 0x00ffff, transparent: true, opacity: 0.5} ); 
+                const material = new THREE.MeshBasicMaterial( {color: 0xff00ff, transparent: true, opacity: 0.5} ); 
                 const cube = new THREE.Mesh( geometry, material ); 
                 f.add(cube);
                 this.detection_markers[topic][i] = cube;
