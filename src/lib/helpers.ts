@@ -1,5 +1,7 @@
 import { Debugger } from "./debugger";
 const $d:Debugger = Debugger.Get();
+import * as fs from 'fs';
+import * as path from 'path';
 
 export function GetCerts (priv: string, pub: string) : string[] {
     let certFiles : string[] = [priv, pub];
@@ -35,5 +37,35 @@ export function Die (message?: string) : void{
     process.exit(1);
 }
 
-
+export function GetGitInfo(repoPath: string = '.') : string[] {
+    const gitPath: string = path.join(repoPath, '.git');
+    let currentSHA: string | null = null;
+    let latestTag: string | null = null;
+  
+    // Read HEAD to get current SHA
+    try {
+      const headContent: string = fs.readFileSync(path.join(gitPath, 'HEAD'), 'utf8').trim();
+      if (headContent.startsWith('ref: ')) {
+        const ref: string = headContent.slice(5);
+        currentSHA = fs.readFileSync(path.join(gitPath, ref), 'utf8').trim();
+      } else {
+        currentSHA = headContent;
+      }
+    } catch (error) {
+      $d.err('Error reading current git SHA:', (error as Error).message);
+    }
+  
+    // Read refs/tags to get the latest tag
+    try {
+      const tagsPath: string = path.join(gitPath, 'refs', 'tags');
+      const tags: string[] = fs.readdirSync(tagsPath);
+      if (tags.length > 0) {
+        latestTag = tags[tags.length - 1];
+      }
+    } catch (error) {
+      $d.err('Error reading tags:', (error as Error).message);
+    }
+  
+    return [ currentSHA, latestTag ];
+  }
 

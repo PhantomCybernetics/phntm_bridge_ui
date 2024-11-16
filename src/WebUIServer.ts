@@ -7,7 +7,7 @@ const fs = require('fs');
 
 import * as C from 'colors'; C; //force import typings with string prototype extension
 
-import { GetCerts } from './lib/helpers';
+import { GetCerts, GetGitInfo } from './lib/helpers';
 
 const _ = require('lodash');
 import * as path from 'path'
@@ -48,6 +48,9 @@ const APP_ID:string = CONFIG['WEB_UI'].appId;
 const APP_KEY:string = CONFIG['WEB_UI'].appKey;
 const ANALYTICS_CODE:string[] = CONFIG['WEB_UI'].analyticsCode;
 
+const GIT_INFO = GetGitInfo(); // latest sha hash & tag 
+const UI_GIT_VERSION = GIT_INFO[1] ? GIT_INFO[1] : '#' + GIT_INFO[0].slice(0, 7);
+
 console.log('-----------------------------------------------------------------------'.yellow);
 console.log(' PHNTM BRIDGE WEB UI'.yellow);
 console.log('');
@@ -55,6 +58,7 @@ console.log((' '+UI_HOST+':'+UI_PORT+UI_URL+'__ID__').green);
 console.log((' Bridge Socket.io: '+BRIDGE_SOCKET_URL+'').green);
 console.log((' App ID: '+APP_ID+'').green);
 console.log((' App Key: '+APP_KEY+'').green);
+console.log((' UI version: '+UI_GIT_VERSION).green);
 console.log((' ').green);
 //console.log((' Register new users via https://THIS_HOSTNAME:'+IO_PORT+'/u/r/').yellow);
 console.log('----------------------------------------------------------------------'.yellow);
@@ -104,7 +108,8 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
         bridge_files_url: BRIDGE_FILES_URL,
         app_id: APP_ID,
         app_key: APP_KEY,
-        analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : ''
+        analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : '',
+        ui_git_version: UI_GIT_VERSION,
     });
 });
 
