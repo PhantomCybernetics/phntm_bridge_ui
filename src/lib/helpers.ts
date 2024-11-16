@@ -55,15 +55,34 @@ export function GetGitInfo(repoPath: string = '.') : string[] {
       $d.err('Error reading current git SHA:', (error as Error).message);
     }
   
-    // Read refs/tags to get the latest tag
-    try {
-      const tagsPath: string = path.join(gitPath, 'refs', 'tags');
-      const tags: string[] = fs.readdirSync(tagsPath);
-      if (tags.length > 0) {
-        latestTag = tags[tags.length - 1];
+    // Read packed-refs file
+    const packedRefsPath: string = path.join(gitPath, 'packed-refs');
+    if (fs.existsSync(packedRefsPath)) {
+      const packedRefs: string = fs.readFileSync(packedRefsPath, 'utf8');
+      const lines: string[] = packedRefs.split('\n');
+
+      // Find the latest tag that points to the current SHA
+      for (const line of lines) {
+        if (line.includes(currentSHA) && line.includes('refs/tags/')) {
+          latestTag = line.split('refs/tags/')[1];
+          break;
+        }
       }
-    } catch (error) {
-      $d.err('Error reading tags:', (error as Error).message);
+    }
+
+    // If not found in packed-refs, check loose refs
+    if (!latestTag) {
+      const tagsPath: string = path.join(gitPath, 'refs', 'tags');
+      if (fs.existsSync(tagsPath)) {
+        const tags: string[] = fs.readdirSync(tagsPath);
+        for (const tag of tags) {
+          const tagSHA: string = fs.readFileSync(path.join(tagsPath, tag), 'utf8').trim();
+          if (tagSHA === currentSHA) {
+            latestTag = tag;
+            break;
+          }
+        }
+      }
     }
   
     return [ currentSHA, latestTag ];
