@@ -151,6 +151,14 @@ export class PanelUI {
             }
             that.updateWebrtcStatus()
             that.updateLayout(); // robot name length affects layout
+
+            let client_version_info = client.client_version ? client.client_version : 'N/A';
+            if (client.ros_distro)
+                client_version_info += ' @ '+client.ros_distro.charAt(0).toUpperCase() + client.ros_distro.slice(1);
+            if (client_version_info)
+                client_version_info += ' ';
+            $('#bridge-version-info').html(client_version_info);
+            that.saveLastRobotClientVersionInfo(client_version_info);
         });
 
         function reconnectSockerTimer() {
@@ -198,6 +206,10 @@ export class PanelUI {
             client.name = last_saved_name;
             $('#robot_name .label').html(client.name);
         }
+
+        let last_client_version_info = this.loadLastRobotClientVersionInfo();
+        if (last_client_version_info)
+            $('#bridge-version-info').html(last_client_version_info);
 
         window.addEventListener("resize", (event) => {
             that.updateLayout()
@@ -2224,6 +2236,15 @@ export class PanelUI {
 
     loadLastRobotBatteryShown() {
         let val = localStorage.getItem('last-robot-battery-shown:' + this.client.id_robot) == 'true';
+        return val;
+    }
+
+    saveLastRobotClientVersionInfo(val) {
+        localStorage.setItem('last-robot-client-version-info:' + this.client.id_robot, val);
+    }
+
+    loadLastRobotClientVersionInfo() {
+        let val = localStorage.getItem('last-robot-client-version-info:' + this.client.id_robot);
         return val;
     }
 
