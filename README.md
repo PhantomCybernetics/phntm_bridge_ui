@@ -9,12 +9,12 @@ You can fork this repository and host it yourself to customize the default UI pr
 # Install Bridge UI Server
 
 ### Install Docker & Docker Compose
-```
+```bash
 sudo apt install docker docker-buildx docker-compose-v2
 ```
 
 ### Build Docker Image
-```
+```bash
 cd ~
 git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
 cd bridge_ui
@@ -76,7 +76,7 @@ services:
       /bin/sh /phntm_bridge_ui/run.web-ui.sh
 ```
 ### Launch:
-```
+```bash
 docker compose up phntm_bridge_ui
 ```
 
