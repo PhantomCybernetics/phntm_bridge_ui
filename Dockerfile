@@ -39,7 +39,7 @@ ENV PHNTM_WS /phntm_bridge_ui
 # WORKDIR /
 
 # RUN mkdir $PHNTM_WS/node_modules
-RUN git clone https://github.com/PhantomCybernetics/bridge_ui.git $PHNTM_WS
+COPY ./ $PHNTM_WS
 WORKDIR $PHNTM_WS
 RUN npm install
 

@@ -16,8 +16,9 @@ sudo apt install docker docker-buildx docker-compose-v2
 ### Build Docker Image
 ```
 cd ~
-wget https://raw.githubusercontent.com/PhantomCybernetics/bridge_ui/main/Dockerfile -O phntm-bridge-ui.Dockerfile
-docker build -f phntm-bridge-ui.Dockerfile -t phntm/bridge-ui:latest .
+git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
+cd bridge_ui
+docker build -f Dockerfile -t phntm/bridge-ui:latest .
 ```
 
 ### Register new App on Cloud Bridge
@@ -25,7 +26,7 @@ To Phantom Bridge, this UI represents an app, individual browser clients running
 [https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
 
 ### Create Config File
-Create new config file `nano ~/bridge_ui_config.jsonc` and paste:
+Create new config file `vim ~/bridge_ui_config.jsonc` and paste:
 ```jsonc
 {
     "dieOnException": true,
@@ -78,49 +79,4 @@ services:
 ```
 docker compose up phntm_bridge_ui
 ```
-
-# Dev Mode
-Dev mode mapps live git repo on the host machine to the container so that you can make changes more conventinetly.
-```
-cd ~
-git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
-```
-
-Make the following changes to your docker compose service in compose.yaml:
-```yaml
-services:
-  phntm_bridge_ui:
-    volumes:
-      - ~/bridge_ui:/phntm_bridge_ui
-    command:
-      /bin/sh -c "while sleep 1000; do :; done"
-```
-
-Launch server manually for better control:
-```
-docker compose up phntm_bridge_ui -d
-docker exec -it phntm-bridge-ui bash
-npm install # necessary on the first run from new source!
-./run.web-ui.sh
-```
-
-# Custom ROS Message Types
-When starting, the UI server looks for .idl files in msgTypesDir (msg_types/grp_name/*.idl) and generates a JSON definition into a single .json file (static/msg_types.json) that the clients' web browsers then fetch. If you want to add support for ROS message types, just add add new .idl to the source folder, restart the UI server and reload web browser.
-
-Neither the Cloud Bridge nor the Bridge UI Server use these definitions themselves in any way. They are used in the web browser to serialize and deserialzie binary ROS messages. Unsupported message types will be ignored by the client by default; topics and services are discovered regardless.
-
-# Input and Controls
-This web UI enables you to connect a gamepad or use keyboard to generate standard ROS messages such as sensor_msgs/msg/Joy or geometry_msgs/msg/Twist. This enables to control a robot remotely with easy configuration in the web browser.
-
-See Input and Controls for details.
-
-# URDF & TF
-TODO
-
-# Customizing this UI
-The UI is meant to be customized and extended. src/robot_ui.html is the best place to start. It uses PhntmBridgeClient (static/browser-client.js) to facilitate the connection to both Robot and Cloud Bridge.
-
-See Customizing the UI
-
-
 
