@@ -1993,6 +1993,7 @@ export class PanelUI {
 
     panelsFromURLHash(hash) {
         if (!hash.length) {
+            this.setDefaultPanels(); // don't start empty
             return
         }
 
@@ -2082,6 +2083,10 @@ export class PanelUI {
 
         this.widgetsMenu();
         return this.panels;
+    }
+
+    setDefaultPanels() {
+        $("#widget_list > label:first-child").click();
     }
 
     updateWebrtcStatus() {

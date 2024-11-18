@@ -38,7 +38,7 @@ export class DescriptionTFWidget extends EventTarget {
             'render_visuals': true,
             'render_labels': false,
             'render_links': true,
-            'render_joints': true,
+            'render_joints': false,
             'render_ros_origin': false,
             'follow_target': true,
             'perspective_camera': true,
