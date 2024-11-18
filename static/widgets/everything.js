@@ -49,6 +49,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
         this.scan_older_stamp_drops = {}; // topic => num
         this.laser_frames = {};
         this.dirty_laser_points = {}; // topic => vector3[]
+        this.dirty_laser_colors = {}; // topic => vector3[]
         this.clear_laser_timeout = {}; // timer refs
         
         this.dirty_detection_results = {}; // topic => []
@@ -105,9 +106,11 @@ export class Everything3DWidget extends DescriptionTFWidget {
         let dirty_laser_topics = Object.keys(this.dirty_laser_points);
         dirty_laser_topics.forEach((topic)=>{
             let laser_points = that.dirty_laser_points[topic];
-            if (!laser_points)
+            let laser_point_colors = that.dirty_laser_colors[topic];
+            if (!laser_points || !laser_point_colors)
                 return;
             delete that.dirty_laser_points[topic];
+            delete that.dirty_laser_colors[topic];
 
             if (!that.sources.topicSubscribed(topic))
                 return;
@@ -116,13 +119,15 @@ export class Everything3DWidget extends DescriptionTFWidget {
     
                 let color = new THREE.Color(0x00ffff);
                 const material = new THREE.LineBasicMaterial( {
-                    color: color,
+                    // color: color,
                     transparent: true,
-                    opacity: .85
+                    // opacity: .85,
+                    vertexColors: true
                 } );
               
                 that.laser_geometry[topic] = new THREE.BufferGeometry().setFromPoints( laser_points );
-    
+                let colors_buf = new Float32Array(laser_point_colors);
+                that.laser_geometry[topic].setAttribute('color', new THREE.BufferAttribute(colors_buf, 4));
                 that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
                 that.laser_visuals[topic].castShadow = false;
                 that.laser_visuals[topic].receiveShadow = false;
@@ -131,6 +136,15 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 }
             } else {
                 that.laser_geometry[topic].setFromPoints(laser_points);
+
+                const colorAttribute = that.laser_geometry[topic].getAttribute('color');
+                if (colorAttribute.count != laser_point_colors.length / 3) {
+                    let colors_buf = new Float32Array(laser_point_colors);
+                    that.laser_geometry[topic].setAttribute('color', new THREE.BufferAttribute(colors_buf, 4));
+                } else {
+                    colorAttribute.copyArray(laser_point_colors);
+                }    
+                colorAttribute.needsUpdate = true;
             }
         });
 
@@ -296,9 +310,10 @@ export class Everything3DWidget extends DescriptionTFWidget {
         }
 
         let laser_points = [];
+        let laser_point_colors = [];
         const rot_axis = new THREE.Vector3(0, 0, 1); // +z is up
         const center = new THREE.Vector3(0, 0, 0);
-
+        const ray_dir = new THREE.Vector3();
         let a = scan.angle_min;
         for (let i = 0; i < scan.ranges.length; i++)  {
             let dist = scan.ranges[i];
@@ -309,11 +324,17 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 let p = new THREE.Vector3(dist, 0, 0);
                 p.applyAxisAngle(rot_axis, a);
                 laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
-                laser_points.push(center);
-            }  
+                ray_dir.copy(p.clone().sub(center)).normalize();
+                // let d = dist / 2.0;
+                // laser_points.push(center.clone().add(ray_dir.multiplyScalar(scan.range_min)));
+                laser_points.push(p.clone().sub(ray_dir.multiplyScalar(0.15)));
+                laser_point_colors.push(1, 0, 0, 1);
+                laser_point_colors.push(0, 0, 1, 0);
+            }
         };
 
         this.dirty_laser_points[topic] = laser_points;
+        this.dirty_laser_colors[topic] = laser_point_colors;
 
         this.renderDirty();
 
