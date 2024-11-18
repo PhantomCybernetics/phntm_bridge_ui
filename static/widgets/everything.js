@@ -131,6 +131,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 that.laser_visuals[topic] = new THREE.LineSegments(that.laser_geometry[topic], material);
                 that.laser_visuals[topic].castShadow = false;
                 that.laser_visuals[topic].receiveShadow = false;
+                that.laser_visuals[topic].renderOrder = 1;
                 if (that.laser_frames[topic]) {
                     that.laser_frames[topic].add(that.laser_visuals[topic]);
                 }
@@ -328,7 +329,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
                 // let d = dist / 2.0;
                 // laser_points.push(center.clone().add(ray_dir.multiplyScalar(scan.range_min)));
                 laser_points.push(p.clone().sub(ray_dir.multiplyScalar(0.15)));
-                laser_point_colors.push(1, 0, 0, 1);
+                laser_point_colors.push(0, 1, 1, 1);
                 laser_point_colors.push(0, 0, 1, 0);
             }
         };
@@ -393,10 +394,13 @@ export class Everything3DWidget extends DescriptionTFWidget {
             geometry.translate(range.max_range/2.0, 0, 0);
             let color = new THREE.Color(0xffff00);
             const material = new THREE.MeshBasicMaterial({
-                color: color, transparent: true, opacity: .85
+                color: color,
+                transparent: true,
+                opacity: .85
             } );
-            const cone = new THREE.Mesh(geometry, material );
+            const cone = new THREE.Mesh(geometry, material);
             cone.castShadow = false;
+            cone.renderOrder = 2;
             this.range_visuals[topic] = {
                 cone: cone,
                 color: color,
@@ -415,7 +419,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
 
         if (range.range < range.max_range-0.001) {
             this.range_visuals[topic].material.color.set(color);
-            this.range_visuals[topic].material.opacity = Math.max(1.0-gageVal, 0.2);
+            this.range_visuals[topic].material.opacity = Math.max(.99-gageVal, 0.2);
             this.range_visuals[topic].cone.scale.set(gageVal,gageVal,gageVal);
         } else {
             this.range_visuals[topic].cone.scale.set(0,0,0);
