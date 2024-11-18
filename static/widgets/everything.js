@@ -353,6 +353,7 @@ export class Everything3DWidget extends DescriptionTFWidget {
             }
 
             that.dirty_laser_points[topic] = [];
+            that.dirty_laser_colors[topic] = [];
             that.renderDirty();
         }, 300);
     }
