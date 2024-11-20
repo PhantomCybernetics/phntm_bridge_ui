@@ -925,7 +925,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
             
         this.ros_distro = robot_data['ros_distro'];
-        this.client_version = robot_data['git_tag'] ? robot_data['git_tag'] : '#'+robot_data['git_sha'].slice(0, 7);
+        this.client_version = robot_data['git_tag'] ? robot_data['git_tag'] : (robot_data['git_sha'] ? '#'+robot_data['git_sha'].slice(0, 7) : null);
 
         if (this.robot_socket_online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);

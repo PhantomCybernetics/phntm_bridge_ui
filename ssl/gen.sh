@@ -2,14 +2,8 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+echo "Making a self signed certificate in $DIR/ ..."
 
-echo "Making a self signed certificate in $DIR/ ...\n"
+openssl req -config $DIR/openssl.conf -new -x509 -sha256 -newkey rsa:2048 -nodes -days 1000 -keyout $DIR/private.key.pem -out $DIR/public.cert.pem
 
-
- openssl genrsa 1024 > $DIR/private.pem
- openssl req -new -key $DIR/private.pem -out $DIR/csr.pem
- openssl x509 -req -days 365 -in $DIR/csr.pem -signkey $DIR/private.pem -out $DIR/public.crt
-
- echo "\n\nAll done, restart the service!"
-
-
+echo "All done"

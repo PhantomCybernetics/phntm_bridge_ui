@@ -157,8 +157,12 @@ export class PanelUI {
                 client_version_info += ' @ '+client.ros_distro.charAt(0).toUpperCase() + client.ros_distro.slice(1);
             if (client_version_info)
                 client_version_info += ' ';
-            $('#bridge-version-info').html(client_version_info);
-            that.saveLastRobotClientVersionInfo(client_version_info);
+            
+            if (client.client_version && client.ros_distro) {
+                $('#bridge-version-info').html(client_version_info);
+                that.saveLastRobotClientVersionInfo(client_version_info);
+            }
+                
         });
 
         function reconnectSockerTimer() {
