@@ -1002,7 +1002,8 @@ export class PhntmBridgeClient extends EventTarget {
                         that.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);
                 })
                 .catch((error) => {
-                    console.error('External script loading error for '+custom_driver.url, error);
+                    console.error('External input driver loading error for '+custom_driver.url, error);
+                    that.ui.showNotification('Error loading external input driver '+custom_driver.class, 'error', '<pre>Source: <a href="'+custom_driver.url+'">'+custom_driver.url+'</a>\n'+error+'</pre>');
                     loading_num_custom_drivers--;
                     if (loading_num_custom_drivers == 0) // all done?
                         that.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);

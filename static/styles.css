@@ -4909,6 +4909,10 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     cursor: pointer;
 }
 
+#notifications .msg A {
+    color: black;
+}
+
 #notifications .msg .title {
     display: block;
     margin-right: 60px;
@@ -4981,6 +4985,11 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 
 #notifications .msg.error {
     background-color: red;
+    color: white;
+}
+
+
+#notifications .msg.error A {
     color: white;
 }
 
