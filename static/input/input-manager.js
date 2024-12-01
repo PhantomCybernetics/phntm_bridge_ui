@@ -3190,6 +3190,7 @@ export class InputManager {
                     
                     that.resetAll();
                     that.current_profile = btn.set_ctrl_profile;
+                    that.saveLastUserProfile(that.current_profile);
                     that.showInputProfileNotification();
                     that.resetAll();
                     that.makeUI();
