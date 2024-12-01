@@ -232,9 +232,9 @@
         panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
 
         panel_ui.addCustomWidget(Everything3DWidget);
-        panel_ui.addCustomWidget(NavigationWidget);
-        panel_ui.addCustomWidget(DescriptionTFWidget);
-        panel_ui.addCustomWidget(LaserOdometryWidget);
+        // panel_ui.addCustomWidget(NavigationWidget);
+        // panel_ui.addCustomWidget(DescriptionTFWidget);
+        // panel_ui.addCustomWidget(LaserOdometryWidget);
 
         panel_ui.addServiceTypeWidget('std_srvs/srv/Empty', ServiceInput_Empty);
         panel_ui.addServiceTypeWidget('std_srvs/srv/Trigger', ServiceInput_Empty);
@@ -247,19 +247,6 @@
         robot.on('error', (err, msg)=>{
             console.error('Robot returned error: '+err, msg);
         })
-
-        // introspection running in the robot
-        robot.on('introspection',  (state) => {
-        });
-
-        // robot's state changed
-        robot.on('update', ()=>{
-            // console.info('(Socket.io) robot updated');
-        });
-
-        robot.on('nodes', (nodes)=>{
-            // console.warn('(Socket.io) got nodes:', nodes);
-        });
 
         //connects socket.io, then runs handshake with the robot
         robot.connect();

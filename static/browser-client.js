@@ -116,6 +116,9 @@ export class PhntmBridgeClient extends EventTarget {
     event_calbacks = {}
     topic_config_calbacks = {};
 
+    input_manager = null;
+    extrernal_scripts = {};
+
     constructor(opts) {
         super();
 
@@ -876,6 +879,35 @@ export class PhntmBridgeClient extends EventTarget {
         return res;
     }
 
+    _loadExternalScript(url, class_to_load) {
+        let that = this;
+        return new Promise((resolve, reject) => {
+            if (that.extrernal_scripts[url] !== undefined) {
+                console.log('External script already included: ' + url);
+                return;
+            }
+            
+            that.extrernal_scripts[url] = null; // now loading
+
+            import(url)
+                .then(imported_module => {
+                    if (!imported_module || !imported_module[class_to_load]) {
+                        that.extrernal_scripts[url] = false;
+                        console.error('Class '+class_to_load+' not found in '+url);
+                        reject();
+                        return;
+                    }
+                    that.extrernal_scripts[url] = true;
+                    console.log('Class '+class_to_load+' loaded from external ' + url);
+                    resolve(imported_module[class_to_load]);
+                })
+                .catch(error => {
+                    that.extrernal_scripts[url] = false;
+                    reject(error);
+                });
+        });
+      }
+
     _processRobotData(robot_data, answer_callback) {
 
         console.info('Recieved robot state data: ', this.id_robot, robot_data);
@@ -950,11 +982,40 @@ export class PhntmBridgeClient extends EventTarget {
             return;
         }
 
-        if (robot_data['input_drivers'] || robot_data['input_defaults']) {
-            let drivers = robot_data['input_drivers'];
-            let default_profiles = robot_data['input_defaults'] && robot_data['input_defaults']['input_profiles'] ? robot_data['input_defaults']['input_profiles'] : {};
-            let service_buttons = robot_data['input_defaults'] && robot_data['input_defaults']['service_buttons'] ? robot_data['input_defaults']['service_buttons'] : {}; 
-            this.emit('input_config', drivers, default_profiles, service_buttons);  // service_buttons must trigger before ui
+        let loading_num_custom_drivers = 0;
+        let input_drivers = null;
+        let input_profile_defaults = null;
+        let input_service_defaults = null;
+        if (robot_data['custom_input_drivers'] && robot_data['custom_input_drivers'].length) {
+            robot_data['custom_input_drivers'].forEach((custom_driver)=>{
+                if (!custom_driver.class || !custom_driver.url) {
+                    console.error('Invalid custom_input_driver definition received:', custom_driver);
+                    return;
+                }
+                loading_num_custom_drivers++;
+                this._loadExternalScript(custom_driver.url, custom_driver.class)
+                .then((loaded_class)=>{
+                    console.log('Loaded '+custom_driver.url+'; registering '+custom_driver.class, loaded_class);
+                    that.input_manager.registerDriver(custom_driver.class, loaded_class);
+                    loading_num_custom_drivers--;
+                    if (loading_num_custom_drivers == 0) // all done?
+                        that.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);
+                })
+                .catch((error) => {
+                    console.error('External script loading error for '+custom_driver.url, error);
+                    loading_num_custom_drivers--;
+                    if (loading_num_custom_drivers == 0) // all done?
+                        that.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);
+                });
+            });
+        }
+
+        if (robot_data['input_drivers'] || robot_data['input_defaults'] || robot_data['service_defaults']) {
+            input_drivers = robot_data['input_drivers'];
+            input_profile_defaults = robot_data['input_defaults'] ? robot_data['input_defaults'] : {};
+            input_service_defaults = robot_data['service_defaults'] ? robot_data['service_defaults'] : {};
+            if (loading_num_custom_drivers == 0) // wait for all custom input drivers to load
+                this.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);  // service_buttons must trigger before ui
         }
 
         if (robot_data['read_data_channels']) {

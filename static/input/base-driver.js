@@ -18,12 +18,21 @@ export class InputDriver {
         this.inp_topic = null;
     }
 
+    // override this to define named axes
     getAxes() {
-        return {}; // override
+        return {}; 
     }
 
+    // override this to define named buttons
     getButtons() {
-        return {}; // override
+        return {}; 
+    }
+
+    // override this to output message
+    generate() { 
+        console.warn('You need to override the generate() method!')
+        this.output = null;
+        return this.output;
     }
 
     resetAllOutput() {

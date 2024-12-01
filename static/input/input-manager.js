@@ -6,6 +6,7 @@ export class InputManager {
     constructor(client) {
 
         this.client = client;
+        this.client.input_manager = this;
         this.ui = null; // ui constructor assigms ref
 
         this.registered_drivers = {}; // id => class; all available
