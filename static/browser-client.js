@@ -278,6 +278,16 @@ export class PhntmBridgeClient extends EventTarget {
             }, 0)
         });
 
+        this.socket.on('peer_service_call', (data) => {
+            if (!data[that.id_robot])
+                 return;
+
+            setTimeout(()=>{
+                console.log('Got peer service call broadcast', data[that.id_robot]);
+                that.emit('peer_service_call_broadcast', data[that.id_robot]);
+             }, 0)
+        });
+
         this.socket.on("robot:update", (update_data, return_callback) => {
             setTimeout(()=>{
                 that._processRobotData(update_data, return_callback);
@@ -982,6 +992,7 @@ export class PhntmBridgeClient extends EventTarget {
             return;
         }
 
+        // load custom input drivers
         let loading_num_custom_drivers = 0;
         let input_drivers = null;
         let input_profile_defaults = null;
@@ -995,7 +1006,6 @@ export class PhntmBridgeClient extends EventTarget {
                 loading_num_custom_drivers++;
                 this._loadExternalScript(custom_driver.url, custom_driver.class)
                 .then((loaded_class)=>{
-                    console.log('Loaded '+custom_driver.url+'; registering '+custom_driver.class, loaded_class);
                     that.input_manager.registerDriver(custom_driver.class, loaded_class);
                     loading_num_custom_drivers--;
                     if (loading_num_custom_drivers == 0) // all done?
@@ -1017,6 +1027,35 @@ export class PhntmBridgeClient extends EventTarget {
             input_service_defaults = robot_data['service_defaults'] ? robot_data['service_defaults'] : {};
             if (loading_num_custom_drivers == 0) // wait for all custom input drivers to load
                 this.emit('input_config', input_drivers, input_profile_defaults, input_service_defaults);  // service_buttons must trigger before ui
+        }
+
+        // load custom service widgets
+        if (robot_data['custom_service_widgets'] && robot_data['custom_service_widgets'].length) {
+            robot_data['custom_service_widgets'].forEach((custom_widget)=>{
+                if (!custom_widget.class || !custom_widget.url) {
+                    console.error('Invalid custom_service_widgets definition received:', custom_widget);
+                    return;
+                }
+                // loading_num_custom_drivers++;
+                this._loadExternalScript(custom_widget.url, custom_widget.class)
+                .then((loaded_class)=>{
+                    that.ui.addCustomServiceWidget(custom_widget.class, loaded_class);
+                })
+                .catch((error) => {
+                    console.error('External service widget loading error for '+custom_widget.url, error);
+                    that.ui.showNotification('Error loading external service widget '+custom_widget.class, 'error', '<pre>Source: <a href="'+custom_widget.url+'">'+custom_widget.url+'</a>\n'+error+'</pre>');
+                });
+            });
+        }
+
+        if (robot_data['service_widgets'] && robot_data['service_widgets'].length) {
+            robot_data['service_widgets'].forEach((srv_mapping)=>{
+                if (!srv_mapping.srv || !srv_mapping.class) {
+                    console.error('Invalid service_widgets mapping received:', srv_mapping);
+                    return;
+                }
+                that.ui.addServiceWidgetMapping(srv_mapping.srv, srv_mapping.class, srv_mapping.data)
+            });
         }
 
         if (robot_data['read_data_channels']) {
@@ -1571,10 +1610,6 @@ export class PhntmBridgeClient extends EventTarget {
                 cb(reply);
         });
     }
-
-    // get_last_srv_call_data(service) {
-    //     return null;
-    // }
 
     runIntrospection(state=true) {
         if (this.introspection == state)

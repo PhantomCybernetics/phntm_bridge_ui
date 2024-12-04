@@ -1441,6 +1441,19 @@ BODY.hamburger #docker_controls H3 {
     position: relative;
 }
 
+.service-control {
+    border: 0px;
+    padding: 0px;
+    margin: 9px 5px 0px 1px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    height: 35px;
+    line-height: 36px;
+    position: relative;
+    display: inline-block;
+}
+
 .service_inp {
     background: white;
     color: black;

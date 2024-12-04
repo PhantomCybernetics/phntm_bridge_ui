@@ -5,7 +5,7 @@ import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
 import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./inc/lib.js";
-import { FallbackServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
+import { UserButtonsServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
 
 import { ServiceInputDialog } from "./inc/service-input-dialog.js"
 import { NodeParamsDialog } from "./inc/node-params-dialog.js"
@@ -32,9 +32,49 @@ export class PanelUI {
     
     widgets = {}; // custom and/or compound
 
-    input_widgets = {};
+    service_widgets = {};
     addServiceTypeWidget(srv_msg_type, widget_class) {
-        this.input_widgets[srv_msg_type] = widget_class;
+        this.service_widgets[srv_msg_type] = widget_class;
+    }
+
+    custom_service_widgets = {};
+    addCustomServiceWidget(widget_class_name, widget_class) {
+        if (this.custom_service_widgets[widget_class_name])
+            return; //only once per session
+
+        this.custom_service_widgets[widget_class_name] ={
+            'class': widget_class,
+        };
+
+        let cusom_css = widget_class.GetStyles();
+        if (cusom_css) {
+            let style = document.createElement('style');
+            style.textContent = cusom_css;
+            this.custom_service_widgets[widget_class_name]['css'] = style;
+            document.head.appendChild(style);
+        }
+
+        let mapped_service_ids = Object.keys(this.service_widget_map);
+        mapped_service_ids.forEach((id_service)=>{
+            if (!this.service_widget_map[id_service].widget && this.service_widget_map[id_service].class_name == widget_class_name) {
+                this.service_widget_map[id_service].widget = new widget_class(id_service, this.service_widget_map[id_service].data, this.client);
+            }
+        });
+    }
+
+    service_widget_map = {};
+    addServiceWidgetMapping(id_service, widget_class_name, extra_data) {
+        console.log('Adding service widget mapping for '+id_service+': '+widget_class_name+', data=', extra_data);
+
+        this.service_widget_map[id_service] = {
+            class_name: widget_class_name,
+            widget: null,
+            data: extra_data
+        }
+        if (this.custom_service_widgets[widget_class_name]) {
+            let widget_class = this.custom_service_widgets[widget_class_name]['class'];
+            this.service_widget_map[id_service].widget = new widget_class(id_service, extra_data, this.client);
+        }
     }
 
     constructor(client, grid_cell_height, input_manager) {
@@ -399,6 +439,16 @@ export class PanelUI {
             that.updateWebrtcStatus();
         });
 
+        client.on('peer_service_call_broadcast', (data) => {
+            let id_service = data.service;
+            let msg = data.msg;
+            console.log('Got peer service call data', id_service, msg);
+
+            if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget) {
+                that.service_widget_map[id_service].widget.onValueChanged(msg);
+            }
+        });
+
         client.on('robot_peers', (peers_data) => {
             setTimeout(()=>{
                 that.updateNumPeers(peers_data.num_connected);
@@ -480,6 +530,7 @@ export class PanelUI {
         $('#trigger_wifi_scan').click(() => {
             that.triggerWifiScan(false);
         });
+
         $('#trigger_wifi_roam').click(() => {
             that.triggerWifiScan(true);
         });
@@ -1560,7 +1611,7 @@ export class PanelUI {
             let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
             this.service_btn_els[service.service] = service_input_el;
 
-            this.renderServiceMenuBtns(service, msg_class, node, node_cont_el);
+            this.renderServiceMenuControls(service, msg_class, node, node_cont_el);
 
             service_content.append(service_input_el);
 
@@ -1636,24 +1687,32 @@ export class PanelUI {
     }
 
 
-    renderServiceMenuBtns(service, msg_class, node, node_cont) {
+    renderServiceMenuControls(service, msg_class, node, node_cont) {
         if (!msg_class)
             return;
 
-        let service_input_btns_el = this.service_btn_els[service.service]
-        if (!service_input_btns_el)
+        let service_input_controls_el = this.service_btn_els[service.service]
+        if (!service_input_controls_el)
             return;
 
-        service_input_btns_el.empty();
+        service_input_controls_el.empty();
+
+        if (this.service_widget_map[service.service]) {
+            if (this.service_widget_map[service.service].widget) {
+                this.service_widget_map[service.service].widget.target_el = service_input_controls_el;
+                this.service_widget_map[service.service].widget.makeMenuControls();
+            }
+            return; //handled by custom widget
+        }
 
         let msg_type = msg_class.name.endsWith('_Request') ? msg_class.name.replace('_Request', '') : msg_class.name;
 
         if (msg_class.definitions && msg_class.definitions.length==1 && msg_class.definitions[0].name == 'structure_needs_at_least_one_member') { // ignore https://github.com/ros2/rosidl_python/pull/73
-            ServiceInput_Empty.MakeMenuControls(service_input_btns_el, service, this.client);
-        } else if (this.input_widgets[msg_type] != undefined) { // btn by known service type
-            this.input_widgets[msg_type].MakeMenuControls(service_input_btns_el, service, this.client);
-        } else { // custom user btns
-            FallbackServiceInput.MakeMenuControls(service_input_btns_el, service, this.client, node, node_cont);
+            ServiceInput_Empty.MakeMenuControls(service_input_controls_el, service, this.client);
+        } else if (this.service_widgets[msg_type] != undefined) { // btn by known service type
+            this.service_widgets[msg_type].MakeMenuControls(service_input_controls_el, service, this.client);
+        } else { // custom user-defined btns
+            UserButtonsServiceInput.MakeMenuControls(service_input_controls_el, service, this.client, node, node_cont);
         }
     }
     

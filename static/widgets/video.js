@@ -10,7 +10,6 @@ export class VideoWidget {
 
         this.panel = panel;
 
-        console.log('making video el')
         $('#panel_widget_'+panel.n)
             .addClass('enabled video')
             .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted></video>' //muted allows video autoplay in chrome before user interactions

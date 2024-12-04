@@ -2194,8 +2194,8 @@ export class InputManager {
                 
                 let srv_val_el = $('<div class="config-row"><span class="label">Send value:</span></div>');
 
-                if (that.ui.input_widgets[btn.ros_srv_msg_type]) {
-                    let srv_val_inp = that.ui.input_widgets[btn.ros_srv_msg_type].MakeInputConfigControls(btn, (val)=>{
+                if (that.ui.service_widgets[btn.ros_srv_msg_type]) {
+                    let srv_val_inp = that.ui.service_widgets[btn.ros_srv_msg_type].MakeInputConfigControls(btn, (val)=>{
                         console.log('btn service val set to ', val);
                         btn.ros_srv_val = val;
                         that.checkControllerProfileSaved(that.edited_controller, that.current_profile);

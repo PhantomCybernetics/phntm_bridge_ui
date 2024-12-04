@@ -1,13 +1,11 @@
-
-
 class ServiceInput {
-    static MakeMenuControls(el, service, client) {};
+    static MakeMenuControls(target_el, service, client) {};
     static MakeInputConfigControls(btn, on_change_cb) {};
 }
 
-export class FallbackServiceInput extends ServiceInput {
+export class UserButtonsServiceInput extends ServiceInput {
 
-    static MakeMenuControls(el, service, client, node, node_cont) {
+    static MakeMenuControls(target_el, service, client, node, node_cont) {
 
         if (!client.ui.service_btns[service.service])
             client.ui.service_btns[service.service] = [];
@@ -16,7 +14,7 @@ export class FallbackServiceInput extends ServiceInput {
         data_editor_btn.click((ev)=>{
             client.ui.service_input_dialog.show(service, node, node_cont);
         });
-        el.append(data_editor_btn);
+        target_el.append(data_editor_btn);
 
         let btns = client.ui.service_btns[service.service];
         btns.sort((a, b)=>{
@@ -28,7 +26,7 @@ export class FallbackServiceInput extends ServiceInput {
             btn_el.click((ev)=>{
                 client.ui.serviceMenuBtnCall(service.service, btn, btn_el);
             });
-            el.append(btn_el);
+            target_el.append(btn_el);
         });
     }
 
@@ -38,17 +36,17 @@ export class FallbackServiceInput extends ServiceInput {
 
 }
 
-// std_srvs/srv/Empty & std_srvs/srv/Trigger
+// std_srvs/srv/Empty and std_srvs/srv/Trigger
 export class ServiceInput_Empty extends ServiceInput {
 
-    static MakeMenuControls(el, service, client) {
+    static MakeMenuControls(target_el, service, client) {
         let btn = $('<button class="service_button blue">Call</button>');
     
         btn.click((ev)=>{
             client.ui.serviceMenuAutoBtnCall(service.service, btn, null);
         });
     
-        el.append(btn);
+        target_el.append(btn);
     }
 
     static MakeInputConfigControls() {
@@ -60,7 +58,7 @@ export class ServiceInput_Empty extends ServiceInput {
 // std_srvs/srv/SetBool
 export class ServiceInput_Bool extends ServiceInput  {
     
-    static MakeMenuControls(el, service, client) {
+    static MakeMenuControls(target_el, service, client) {
     
         let btn_true = $('<button class="service_button green">True</button>');
         let btn_false = $('<button class="service_button red">False</button>');
@@ -73,8 +71,8 @@ export class ServiceInput_Bool extends ServiceInput  {
             client.ui.serviceMenuAutoBtnCall(service.service, btn_false, { data: false });
         });
 
-        el.append(btn_true);
-        el.append(btn_false);
+        target_el.append(btn_true);
+        target_el.append(btn_false);
     }
 
     static MakeInputConfigControls(btn, on_change_cb) {
