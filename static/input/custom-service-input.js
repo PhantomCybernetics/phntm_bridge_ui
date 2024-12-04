@@ -15,12 +15,12 @@ export class CustomServiceInput {
         // override this to make your UI
     }
 
-    onValueChanged(new_value) {
-        // trigerred when other peer updates the input
+    onValueChanged(msg) {
+        // trigerred when another peer updates the input
         // override to update the UI
     }
 
     static GetStyles() {
-        // override this to insert custom CSS for this input class
+        return ''; // override this to insert custom CSS for this input class
     }
 }
