@@ -53,13 +53,6 @@ export class PanelUI {
             this.custom_service_widgets[widget_class_name]['css'] = style;
             document.head.appendChild(style);
         }
-
-        let mapped_service_ids = Object.keys(this.service_widget_map);
-        mapped_service_ids.forEach((id_service)=>{
-            if (!this.service_widget_map[id_service].widget && this.service_widget_map[id_service].class_name == widget_class_name) {
-                this.service_widget_map[id_service].widget = new widget_class(id_service, this.service_widget_map[id_service].data, this.client);
-            }
-        });
     }
 
     service_widget_map = {};
@@ -70,10 +63,6 @@ export class PanelUI {
             class_name: widget_class_name,
             widget: null,
             data: extra_data
-        }
-        if (this.custom_service_widgets[widget_class_name]) {
-            let widget_class = this.custom_service_widgets[widget_class_name]['class'];
-            this.service_widget_map[id_service].widget = new widget_class(id_service, extra_data, this.client);
         }
     }
 
@@ -1577,20 +1566,20 @@ export class PanelUI {
         node_cont_el.empty();
 
         if (!node.services || !Object.keys(node.services).length)
-            return 0;
+            return [];
 
         let node_label_el = $('<div class="node">' + node.node + '</div>');
         let prefered_services = [];
         let collapsed_services = [];
         let service_ids = Object.keys(node.services);
-        let num_services = 0;
+        // let num_services = 0;
 
         for (let i = 0; i < service_ids.length; i++) {
 
             let id_service = service_ids[i];
             let service = node.services[id_service];
             let msg_type = node.services[id_service].msg_type;
-            num_services++; // activates menu
+            // num_services++; // activates menu
 
             let msg_class = this.client.findMessageType(service.msg_type+'_Request');
             let service_name_parts = service.service.split('/');
@@ -1683,7 +1672,7 @@ export class PanelUI {
             }
         }
 
-        return num_services;
+        return service_ids;
     }
 
 
@@ -1691,16 +1680,26 @@ export class PanelUI {
         if (!msg_class)
             return;
 
-        let service_input_controls_el = this.service_btn_els[service.service]
+        let id_service = service.service;
+
+        let service_input_controls_el = this.service_btn_els[id_service]
         if (!service_input_controls_el)
             return;
 
         service_input_controls_el.empty();
 
-        if (this.service_widget_map[service.service]) {
-            if (this.service_widget_map[service.service].widget) {
-                this.service_widget_map[service.service].widget.target_el = service_input_controls_el;
-                this.service_widget_map[service.service].widget.makeMenuControls();
+        if (this.service_widget_map[id_service]) {
+            if (!this.service_widget_map[id_service].widget) {
+                let widget_class_name = this.service_widget_map[id_service]['class_name'];
+                if (this.custom_service_widgets[widget_class_name]) {
+                    let widget_class = this.custom_service_widgets[widget_class_name]['class'];
+                    this.service_widget_map[id_service].widget = new widget_class(id_service, this.service_widget_map[id_service].data, this.client);
+                }
+            }
+
+            if (this.service_widget_map[id_service].widget) {
+                this.service_widget_map[id_service].widget.target_el = service_input_controls_el;
+                this.service_widget_map[id_service].widget.makeMenuControls();
             }
             return; //handled by custom widget
         }
@@ -1716,6 +1715,16 @@ export class PanelUI {
         }
     }
     
+    clearCustomServiceWidgets(all_current_service_ids) {
+        let custom_widget_service_ids = Object.keys(this.service_widget_map);
+        let that = this;
+        custom_widget_service_ids.forEach((id_service)=>{
+            if (all_current_service_ids.indexOf(id_service) === -1) {
+                console.warn('Removing widget for ' + id_service);
+                that.service_widget_map[id_service].widget = null; // delete ref so that next time it's re-created it needs to tead fresh value
+            }
+        });
+    }
 
     servicesMenuFromNodes() {
         
@@ -1738,12 +1747,15 @@ export class PanelUI {
             return a.node.toLowerCase().localeCompare(b.node.toLowerCase());
         });
 
+        let all_current_service_ids = [];
         nodes_sorted.forEach((node) => {
             let node_cont_el = $('<div class="node-cont"></div>');
-            let num_node_services = this.renderNodeServicesMenu(node, node_cont_el);
+            let node_service_ids = this.renderNodeServicesMenu(node, node_cont_el);
             node_cont_el.appendTo($('#service_list'));
-            this.num_services += num_node_services;
+            this.num_services += node_service_ids.length;
+            all_current_service_ids = all_current_service_ids.concat(node_service_ids);
         });
+        this.clearCustomServiceWidgets(all_current_service_ids);
 
         $('#services_heading .full-w').html(this.num_services == 1 ? 'Service' : 'Services');
         $('#services_heading B').html(this.num_services);
