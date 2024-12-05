@@ -63,8 +63,16 @@ export class NodeParamsDialog {
             case 1: field.type = 'bool'; default_value = value.bool_value; break;
             case 2: field.type = 'int64'; default_value = value.integer_value; break;
             case 3: field.type = 'float64'; default_value = value.double_value; break;
-            case 4: field.type = 'string'; default_value = value.string_value; break;
-
+            case 4:
+                field.type = 'string';
+                default_value = value.string_value;
+                if (default_value.indexOf("\n") > -1 ||
+                    default_value.indexOf("\r") > -1 ||
+                    default_value.length > 50)
+                {
+                    field.is_long_text = true; // shows textarea
+                }
+                break;
             case 5:
                 field.type = 'uint8'; is_array = true;
                 default_value = [];
@@ -141,13 +149,19 @@ export class NodeParamsDialog {
             });
     
         } else {
-            editor_size = 1+hint_lines.length;
+            if (!field.is_long_text) { // one line
+                editor_size = 1+hint_lines.length;
+            } else {
+                editor_size = 4+hint_lines.length;
+            }
+
             this.list_el
                 .addClass('one-line-editor')
                 .css('height', 'calc(60vh - 60px + 5px - '+(34*editor_size)+'px - 20px)');
             this.editor_el
                 .addClass('one-line')
                 .css('height', (34*editor_size)+'px');
+                
             const r = ServiceInputDialog.MakePrimitiveType(field, default_value, true, true, (val) => {
                 // console.log('Output val changed to ', val);
                 that.output_value = val;
@@ -169,6 +183,14 @@ export class NodeParamsDialog {
             this.btn_set.removeClass('read-only');
             this.btn_set.attr('title', '');
         }
+
+        this.editor_el.find('INPUT, SELECT').on('keypress', (ev)=>{
+            if (ev.keyCode == 13 && !that.btn_set.hasClass('read-only') && !that.btn_set.hasClass('working')) {
+                // btn_edit_confirm.trigger('click');
+                console.warn('ENTER');
+                that.btn_set.click();
+            }
+        });
     }
 
     show(node) {
@@ -193,24 +215,29 @@ export class NodeParamsDialog {
 
         this.client.serviceCall(node['_srvListParameters'], list_msg, true, (list_reply) =>{
             if (list_reply.err) {
-                that.list_el.empty();
-                that.list_el.append($('<div class="load-err">'+(list_reply.msg?list_reply.msg:'Error while fetching params')+'</div>'));
+                if (that.node == node) {
+                    that.list_el.empty();
+                    that.list_el.append($('<div class="load-err">'+(list_reply.msg?list_reply.msg:'Error while fetching params')+'</div>'));
+                }
                 return;
             }
             list_reply.result.names.sort()
             this.client.serviceCall(node['_srvDescribeParameters'], { "names": list_reply.result.names }, true, (descriptions_reply) =>{
                 if (descriptions_reply.err) {
-                    that.list_el.empty();
-                    that.list_el.append($('<div class="load-err">'+(descriptions_reply.msg?descriptions_reply.msg:'Error while fetching param descriptions')+'</div>'));
+                    if (that.node == node) {
+                        that.list_el.empty();
+                        that.list_el.append($('<div class="load-err">'+(descriptions_reply.msg?descriptions_reply.msg:'Error while fetching param descriptions')+'</div>'));
+                    }
                     return;
                 }
                 this.client.serviceCall(node['_srvGetParameters'], { "names": list_reply.result.names }, true, (vals_reply) =>{
                     if (vals_reply.err) {
-                        that.list_el.empty();
-                        that.list_el.append($('<div class="load-err">'+(vals_reply.msg?vals_reply.msg:'Error while fetching params')+'</div>'));
+                        if (that.node == node) {
+                            that.list_el.empty();
+                            that.list_el.append($('<div class="load-err">'+(vals_reply.msg?vals_reply.msg:'Error while fetching params')+'</div>'));
+                        }
                         return;
                     }
-            
                     that.list_el.empty();
 
                     for (let i = 0; i < list_reply.result.names.length; i++) {
@@ -247,8 +274,10 @@ export class NodeParamsDialog {
                 btn_reload.removeClass('working');
 
                 if (value_reply.err) {
-                    that.editor_el.empty();
-                    that.editor_el.append($('<div class="load-err">'+(value_reply.msg?value_reply.msg:'Error while fetching param value')+'</div>'));
+                    if (that.node == node) {
+                        that.editor_el.empty();
+                        that.editor_el.append($('<div class="load-err">'+(value_reply.msg?value_reply.msg:'Error while fetching param value')+'</div>'));
+                    }
                     return;
                 }
                 
@@ -362,7 +391,6 @@ export class NodeParamsDialog {
 
         this.bg.unbind().show().click((ev)=>this.hide());
         $('BODY').addClass('no-scroll');
-
     }
 
     getTypeHR(i_type) {

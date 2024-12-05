@@ -6067,7 +6067,10 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     overflow: hidden;
 }
 
-.json-editor INPUT, .json-editor SELECT {
+
+.json-editor INPUT,
+.json-editor TEXTAREA,
+.json-editor SELECT {
     color: white;
     background-color: #bb61d0;
     font-weight: normal;
@@ -6088,7 +6091,25 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     right: 0px;
 }
 
+.json-editor SELECT {
+    margin-right: 0px;
+}
+
+.json-editor.one-line .val_wrap.long_text {
+    height: 136px;
+}
+
+.json-editor.one-line TEXTAREA {
+    /* height: 120px; */
+    resize: none;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    height: 122px;
+    margin-right: 0px;
+}
+
 #service-input-dialog .json-editor INPUT.err,
+#service-input-dialog .json-editor TEXTAREA.err,
 #node-params-dialog .json-editor INPUT.err {
     color: white;
     background: red;
@@ -6320,7 +6341,9 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background-size: 50px;
 }
 
-#node-params-dialog .json-editor INPUT, #node-params-dialog .json-editor SELECT {
+#node-params-dialog .json-editor INPUT,
+#node-params-dialog .json-editor TEXTAREA,
+#node-params-dialog .json-editor SELECT {
     background-color: white;
     color: black;
 }

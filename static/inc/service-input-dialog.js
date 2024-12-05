@@ -546,7 +546,13 @@ export class ServiceInputDialog {
         let val_inp = null;
         let type_hint = $('<span class="hint">'+field.type+'</span>');
         if (inp_type_grp == 'string') {
-            val_inp = $('<input type="text"/>');
+            if (!field.is_long_text) {
+                val_inp = $('<input type="text"/>');
+            }
+            else {
+                val_inp = $('<textarea/>');
+                type_hint = null;
+            }
             val_inp.val(val);
             val_inp.change((ev)=>{
                 val = ServiceInputDialog.Validate($(ev.target).val(), field.type, val_inp, type_hint);
@@ -594,8 +600,12 @@ export class ServiceInputDialog {
             });
         } 
         
-        line.append($('<div class="val_wrap">').append(type_hint ? [ val_inp, type_hint ] : val_inp ));
-        
+        let val_wrap = $('<div class="val_wrap">');
+        if (field.is_long_text) {
+            val_wrap.addClass('long_text');
+        }
+        line.append(val_wrap.append(type_hint ? [ val_inp, type_hint ] : val_inp ));
+
         line.append('<i class="end-line"><b>,</b></i>');
         if (last_in_block)
             line.addClass('last-in-block');
