@@ -2553,7 +2553,7 @@ BODY.touch-ui #msg-type-dialog .title {
 #msg-type-dialog .content {
     padding: 10px;
     border-radius: 5px;
-    height: 710px;
+    height: calc(90vh - 140px);
     margin: 10px 10px 10px 10px;
     overflow: scroll;
     margin-top: 10px;
@@ -2563,6 +2563,7 @@ BODY.touch-ui #msg-type-dialog .title {
 
 BODY.touch-ui #msg-type-dialog .content {
     margin-bottom: 80px;
+    height: unset;
 }
 
 BODY.touch-ui.landscape #msg-type-dialog .content {
