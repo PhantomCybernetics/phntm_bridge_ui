@@ -2159,7 +2159,15 @@ export class InputManager {
             '<option value="">Select service...</option>'
         ];
         
-        Object.values(this.client.discovered_nodes).forEach((node)=>{
+        let nodes = this.client.discovered_nodes;
+        if (!Object.keys(nodes).length)
+            return;
+
+        let nodes_sorted = Object.values(nodes).sort((a, b)=>{
+            return a.node.toLowerCase().localeCompare(b.node.toLowerCase());
+        });
+
+        nodes_sorted.forEach((node)=>{
             let service_ids = Object.keys(node.services);
             if (!service_ids.length)
                 return;
@@ -2187,10 +2195,13 @@ export class InputManager {
         let rener_srv_details = () => {
             srv_details_el.empty();
             if (btn.ros_srv_msg_type) {
-                srv_details_el.append($('<div class="config-row">' +
-                                        '<span class="label">Message type:</span>' +
-                                        '<span class="static_val msg_type">' + btn.ros_srv_msg_type + '</span>' +
-                                        '</div>'));
+                let msg_type_row = $('<div class="config-row"><span class="label">Message type:</span></div>');
+                let msg_type_link = $('<span class="static_val msg_type">' + btn.ros_srv_msg_type + '</span>');
+                msg_type_link.click(()=>{
+                    that.ui.messageTypeDialog(btn.ros_srv_msg_type);
+                });
+                msg_type_link.appendTo(msg_type_row);
+                srv_details_el.append(msg_type_row);
                 
                 let srv_val_el = $('<div class="config-row"><span class="label">Send value:</span></div>');
 

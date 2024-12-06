@@ -109,8 +109,12 @@ export class ServiceInputDialog {
         let that = this;
 
         this.cont_el.empty();
-        this.cont_el.append($('<h3>'+this.service.service+'</h3><span class="msg_type">'+this.service.msg_type+'</span>'))
+        let msg_type_link = $('<span class="msg_type">'+this.service.msg_type+'</span>');
+        msg_type_link.click(()=>{
+            that.client.ui.messageTypeDialog(this.service.msg_type);
+        });
 
+        this.cont_el.append( [ $('<h3>'+this.service.service+'</h3>'), msg_type_link ]);
         this.msg_type = this.client.findMessageType(this.service.msg_type+'_Request');
 
         this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
@@ -737,7 +741,7 @@ export class ServiceInputDialog {
                             msg[field.name].length = 0;
 
                         const arrayLength = field.arrayLength ?? (value && value[field.name] ? value[field.name].length : 0);
-                        console.log()
+                        
                         for (let j = 0; j < arrayLength; j++) {                            
                             const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.processMsgTemplate(field.type, value && value[field.name] && value[field.name][j] !== undefined ? value[field.name][j] : null, null, j == arrayLength-1);
                             let nested_block = $('<div></div>').append([ nestedBefore, nestedBlock, nestedAfter ]);

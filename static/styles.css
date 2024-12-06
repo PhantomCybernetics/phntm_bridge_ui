@@ -367,6 +367,7 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 #input-underlay,
 #input-manager-overlay,
 #touch-ui-dialog-underlay,
+#msg-type-dialog-underlay,
 #dialog-modal-confirm-underlay {
     display: none;
     position: fixed;
@@ -396,6 +397,10 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 #menu-underlay {
     z-index: 82; 
     /* background-color: transparent; */
+}
+
+#msg-type-dialog-underlay {
+    z-index: 220; /* above service input dialog */
 }
 
 #hamburger_menu_label {
@@ -2437,18 +2442,29 @@ SPAN.error {
 
 }
 
-#msg_type-dialog {
-    background: #060606;
-    margin-top: 10px;
-    font-size: 12px;
-    font-family: monospace;
-    white-space: pre;
-    padding: 10px;
-    color: #00fff9;
-    border-radius: 5px;
+#msg-type-dialog {
+    position: fixed;
+    top: calc(10% - 20px);
+    width: 90vw;
+    max-width: 650px;
+    left: calc(50% - Min(45vw, 325px) - 15px);
+    border-radius: 10px;
+
+    height: auto; /* content resizes */
+    z-index: 221; /* above srv input dialog */
+    padding: 30px 0px 50px 0px;
+    overflow: visible;
     display: none;
-    overflow: scroll;
-    height: -webkit-fill-available;
+    background: #000000e0;
+}
+
+BODY.touch-ui #msg-type-dialog {
+    left: 0px;
+    top: -10px;
+    width: 100%;
+    max-width: unset;
+    height: auto; /* content resizes */
+    padding: 60px 0px 0px 0px;
 }
 
 #touch-ui-dialog {
@@ -2512,60 +2528,88 @@ BODY.desktop-ui #touch-ui-selector {
     min-width: 200px;
 }
 
-
-#touch-ui-dialog .title {
+#msg-type-dialog .title {
     position: absolute;
+    left: 10px;
+    top: 10px;
+    font-size: 18px;
+    line-height: 20px;
+    white-space: nowrap;
+    right: 10px;
+    overflow: hidden;
+    color: #fff;
+    cursor: move;
+}
+
+BODY.touch-ui #msg-type-dialog .title {
     left: 20px;
     top: 20px;
     font-size: 22px;
     line-height: 40px;
-    white-space: nowrap;
-    /* background: #003aff; */
     right: 20px;
-    overflow: hidden;
-    color: #fff;;
+    cursor: default;
 }
 
-#touch-ui-dialog .content {
+#msg-type-dialog .content {
     padding: 10px;
     border-radius: 5px;
     height: 710px;
-    margin: 10px 10px 80px 10px;
+    margin: 10px 10px 10px 10px;
     overflow: scroll;
     margin-top: 10px;
     font-size: 15px;
     overscroll-behavior: none;
 }
 
-BODY.landscape #touch-ui-dialog .content {
+BODY.touch-ui #msg-type-dialog .content {
+    margin-bottom: 80px;
+}
+
+BODY.touch-ui.landscape #msg-type-dialog .content {
     margin-bottom: 10px;
 }
 
-#touch-ui-dialog.msg_type .content {
+#msg-type-dialog .content {
     background-color: #210077;
     font-family: monospace;
     white-space: pre;
     color: #00fff9;
-    font-size: 12px;
+    font-size: 16px;
 }
 
+#msg-type-dialog .content .type {
+    color: #9bc200;
+    font-style: italic;
+}
 
-#touch-ui-dialog button.close {
+#msg-type-dialog button.close {
     position: absolute;
     display: block;
-    height: 60px;
-    left: 10px;
+    height: 40px;
     right: 10px;
     bottom: 10px;
     border-radius: 5px;
     background: #434343;
     border: 0px;
     color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    padding-left: 20px;
+    padding-right: 20px;
+    line-height: 42px;
+}
+
+BODY.touch-ui #msg-type-dialog button.close {
+    height: 60px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
     font-size: 26px;
+    font-weight: normal;
 }
 
 /* right top */
-BODY.landscape #touch-ui-dialog button.close {
+BODY.touch-ui.landscape #msg-type-dialog button.close {
     left: auto;
     padding-left: 20px;
     padding-right: 20px;
@@ -2574,7 +2618,7 @@ BODY.landscape #touch-ui-dialog button.close {
     font-size: 20px;
 }
 
-#msg_type-dialog.err {
+#msg-type-dialog .err {
     background: rgb(215 3 35);
     font-weight: bold;
     display: block !important;
@@ -5434,6 +5478,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     overflow: hidden;
     text-overflow: ellipsis;
     border-bottom: 1px dashed #fff;
+    cursor: help;
 }
 
 #service-input-dialog .buttons {

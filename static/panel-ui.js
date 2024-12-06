@@ -1320,52 +1320,127 @@ export class PanelUI {
         $('#graph_controls').addClass('active');
     }
 
-    messageTypeDialog(msg_type, onclose = null) {
+    getMessageDefs(msg_class) {
+        if (!msg_class)
+            return null;
 
-        let msg_type_class = msg_type ? this.client.findMessageType(msg_type) : null;;
-        let content = (msg_type_class ? JSON.stringify(msg_type_class, null, 2) : '<span class="error">Message type not loaded!</span>');
+        let out = {};
 
-        if (!isTouchDevice()) {
-            $('#msg_type-dialog')
-                .html(content);
-            $("#msg_type-dialog").dialog({
-                resizable: true,
-                draggable: true,
-                height: 700,
-                width: 700,
-                top: 180,
-                modal: true,
-                title: msg_type,
-                buttons: {
-                    Okay: function () {
-                        $(this).dialog("close");
-                        if (onclose)
-                            onclose();
-                    },
-                },
-                close: function (event, ui) {
-                    if (onclose)
-                        onclose();
+        for (let i = 0; i < msg_class.definitions.length; i++) {
+
+            const field = msg_class.definitions[i];
+
+            if (field.isConstant === true) {
+                // out[field.name] = 'CONSTANT';
+                continue;
+            }
+
+            if (field.name === 'structure_needs_at_least_one_member') {
+                continue; // ignore 
+            }
+
+            if (field.isComplex === true) { // Complex type -> new block in recursion
+                   
+                if (field.isArray === true) { // array of complex types
+                    out[field.name] = [];
+                    let arrayLength = Math.max(field.arrayLength ?? 0, 1);
+                    for (let j = 0; j < arrayLength; j++) {                            
+                        let nested_class = this.client.findMessageType(field.type);
+                        let nested_def = this.getMessageDefs(nested_class);
+                        out[field.name].push(nested_def);
+                    }
                 }
-            });
-        } else {
+                else { // only one of complex types
 
-            $('#touch-ui-dialog .title').html(msg_type);
-            $('#touch-ui-dialog .content').html(content);
-            let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
-            $('BODY').addClass('no-scroll');
-            $('#touch-ui-dialog').addClass('msg_type').css({
-                display: 'block'
-            });
-            $('#touch-ui-dialog .content').scrollTop(0).scrollLeft(0);
-            $('#close-touch-ui-dialog').unbind().click((e) => {
-                $('#touch-ui-dialog').css('display', 'none').removeClass('msg_type');
-                if (!body_scroll_was_disabled)
-                    $('BODY').removeClass('no-scroll');
-            });
+                    let nested_class = this.client.findMessageType(field.type);
+                    let nested_def = this.getMessageDefs(nested_class);
+                    out[field.name] = nested_def;
+                }
+            } 
+            else { // Primitive types
+                
+                if (field.isArray === true) { // array of primitives
+                    
+                    out[field.name] = []
+
+                    let arrayLength = Math.max(field.arrayLength ?? 0, 1);
+                    for (let j = 0; j < arrayLength; j++) {                            
+                        out[field.name].push(field.type);
+                    }
+                   
+                }
+                else { // single primitive type
+                    
+                    out[field.name] = field.type;
+                
+                }
+                
+            }
 
         }
 
+        return out;
+    }
+
+    messageTypeDialog(msg_type) {
+
+        let msg_type_class = msg_type ? this.client.findMessageType(msg_type) : null;
+
+        let content = '<span class="error">Message type not loaded</span>';
+        if (msg_type_class) {
+            content = JSON.stringify(this.getMessageDefs(msg_type_class), null, 4);
+        } else {
+            let req_class = this.client.findMessageType(msg_type+'_Request');
+            let res_class = this.client.findMessageType(msg_type+'_Response');
+            if (req_class || res_class) {
+                content = 'Request:\n'
+                content += JSON.stringify(this.getMessageDefs(req_class), null, 4);
+
+                content += '\n\nResponse:\n'
+                content += JSON.stringify(this.getMessageDefs(res_class), null, 4);
+            }
+        }
+
+        [ 'bool', 'byte', 'char',
+         'float32', 'float64',
+         'int8', 'uint8',
+         'int16', 'uint16',
+         'int32', 'uint32',
+         'int64', 'uint64',
+         'string' ].forEach((t)=>{
+            content = content.replaceAll('"'+t+'"', '<span class="type">'+t+'</span>');
+        });
+
+        $('#msg-type-dialog .title').html(msg_type);
+        $('#msg-type-dialog .content').html(content);
+        let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
+        $('BODY').addClass('no-scroll');
+        $('#msg-type-dialog').css({
+            display: 'block'
+        });
+        $('#msg-type-dialog .content').scrollTop(0).scrollLeft(0);
+
+        if (!$('BODY').hasClass('touch-ui')) {
+            $('#msg-type-dialog').draggable({
+                handle: '.title',
+                cursor: 'move'
+            });
+        }
+
+        function closeDialog() {
+            $('#msg-type-dialog').css('display', 'none');
+            $('#msg-type-dialog-underlay').css('display', 'none');
+            if (!body_scroll_was_disabled)
+                $('BODY').removeClass('no-scroll');
+        }
+
+        $('#close-msg-type-dialog').unbind().click((e) => {
+            closeDialog();
+        });
+        $('#msg-type-dialog-underlay').unbind().css('display', 'block')
+        .on('click', (e) => { //close
+            closeDialog();
+        });
     }
 
     topicSelectorDialog(label, msg_type, exclude_topics, onselect, onclose=null, align_el = null) {
@@ -1444,7 +1519,7 @@ export class PanelUI {
                     $('BODY').removeClass('no-scroll');
                 that.client.off('topics', render_list);
                 $('#touch-ui-dialog-underlay').unbind().css('display', 'none');
-                $('#close-touch-ui-dialog').unbind();
+                // $('#close-touch-ui-dialog').unbind();
                 align_el.removeClass('selecting');
                 if (onclose) {
                     onclose();
@@ -1564,6 +1639,7 @@ export class PanelUI {
     renderNodeServicesMenu(node, node_cont_el) {
 
         node_cont_el.empty();
+        let that = this;
 
         if (!node.services || !Object.keys(node.services).length)
             return [];
@@ -1592,9 +1668,13 @@ export class PanelUI {
                 + '>'
                 + service_short
                 + '</div>'
-                + '<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>'
                 + '</div>');
             
+            let msg_type_link = $('<div class="service_input_type" id="service_input_type_' + i + '" title="'+(msg_class?msg_type:msg_type+' unsupported message type')+'">' + msg_type + '</div>');
+            msg_type_link.click(()=>{
+                that.messageTypeDialog(msg_type);
+            });
+            msg_type_link.appendTo(service_content);
             // node_content.append(service_content);
 
             let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
@@ -2698,7 +2778,7 @@ export class PanelUI {
             }
         };
 
-        $('BODY.touch-ui #touch-ui-dialog .content').css({
+        $('BODY.touch-ui #msg-type-dialog .content').css({
             'height': (portrait ? window.innerHeight - 160 : window.innerHeight - 90) + 'px'
         });
 
