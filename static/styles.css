@@ -4522,7 +4522,7 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     text-decoration-style: dashed;
     cursor: help;
 }
-
+ 
 #gamepad-settings-panel .line .type-hint {
     cursor: help;
 }
@@ -6144,6 +6144,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     font-size: 12px;
 }
 
+#service-input-dialog.input-manager .json-editor .add,
+#service-input-dialog.input-manager .json-editor .remove {
+    background-color: #26214b
+}
+
 .json-editor .remove.hidden {
     display: none;
 }
@@ -6210,6 +6215,13 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     right: 0px;
 }
 
+
+#service-input-dialog.input-manager .json-editor INPUT,
+#service-input-dialog.input-manager .json-editor TEXTAREA,
+#service-input-dialog.input-manager .json-editor SELECT {
+    background-color: #26214b
+}
+
 .json-editor SELECT {
     margin-right: 0px;
 }
@@ -6234,7 +6246,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     background: red;
 }
 
-.json-editor .val_wrap .hint{
+.json-editor .val_wrap .hint {
     color: rgba(255, 255, 255, 0.3);
     font-size: 14px;
     font-weight: normal;
@@ -6245,6 +6257,10 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     line-height: 30px;
     border-radius: 0px 5px 5px 0px;
     background-color: #bb61d0;
+}
+
+#service-input-dialog.input-manager .json-editor .val_wrap .hint {
+    background-color: #26214b
 }
 
 .json-editor .val_wrap .hint.err {

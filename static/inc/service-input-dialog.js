@@ -66,7 +66,6 @@ export class ServiceInputDialog {
             if (b.editing) {
                 b.label = btn_inp.val();
                 b.editing = false;
-
             }
 
             if (b == btn) {
@@ -239,7 +238,7 @@ export class ServiceInputDialog {
         json_menu.append( [ btn_json_copy_btn, btn_json_copy_service_btns, btn_json_copy_all_services ]);
         json_menu.appendTo(btn_json);
 
-        let btn_call = $('<button class="btn-call">Call<span class="wide"> Service</span></button>');
+        let btn_call = $('<button class="btn-call">Test<span class="wide"> Service</span></button>');
         btn_call.click((ev) => {
             that.client.ui.serviceMenuBtnCall(service.service, that.selected_btn, btn_call);
         });
@@ -299,6 +298,15 @@ export class ServiceInputDialog {
 
         this.editor = $('<div class="json-editor"></div>');
 
+        this.editor.empty();
+
+        let [ msg_ref, block_before, block_el, block_after] = this.processMsgTemplate(this.service.msg_type+'_Request', initial_value, '', true);
+        // this.msg = msg_ref;
+        // btn.value = msg;
+
+        this.editor.append([ block_before, block_el, block_after] );
+        this.editor.scrollTop(0);
+
         this.bottom_btns_el = $('<div class="buttons"></div>');
 
         let btn_close = $('<button class="btn-close">Close</button>');
@@ -306,17 +314,18 @@ export class ServiceInputDialog {
             that.hide();
         });
 
-        let btn_call = $('<button class="btn-call">Call<span class="wide"> Service</span></button>');
+        let btn_call = $('<button class="btn-call">Test<span class="wide"> Service</span></button>');
         btn_call.click((ev) => {
-            // TODO
-            // that.client.ui.serviceMenuBtnCall(service.service, that.selected_btn, btn_call);
+            that.client.serviceCall(that.service.service, msg_ref ? msg_ref : undefined, false, (test_reply) => {
+                that.client.ui.serviceReplyNotification(btn_call, that.service.service, true, test_reply);
+            });
         });
 
         let btn_set = $('<button class="btn-save">Set</button>');
         btn_set.click((ev) => {
             that.hide();
-            cb(); // TODO
-        }); 
+            cb(msg_ref); // TODO
+        });
 
         this.bottom_btns_el.append([ btn_set, btn_call, btn_close ]);
         this.cont_el.append([ this.editor, this.bottom_btns_el ]);
