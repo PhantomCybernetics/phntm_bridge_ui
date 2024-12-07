@@ -124,10 +124,14 @@ export class InputDriver {
         let msg_type_hint = $('<span class="comment">'+this.msg_type+'</span>');
         this.error_label = $('<span class="driver-error"></span>');
         
+        let that = this;
+
         this.inp_topic.appendTo(line_topic);
         msg_type_hint.appendTo(line_topic);
-    
-        let that = this;
+        msg_type_hint.click(()=>{
+            that.client.ui.messageTypeDialog(that.msg_type);
+        });
+        
         this.inp_topic.change((ev)=>{
             that.output_topic = $(ev.target).val().trim();
             // console.log('Driver output topic is: '+that.output_topic);

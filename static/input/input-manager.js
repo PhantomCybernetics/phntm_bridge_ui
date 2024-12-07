@@ -2201,7 +2201,7 @@ export class InputManager {
                 let srv_val_btn = $('<button class="srv-val" title="Set service call data">{}</button>');
                 srv_val_btn.click(()=>{
                     that.ui.service_input_dialog.showInputManagerDialog(btn.ros_srv_id, btn.ros_srv_msg_type, btn.ros_srv_val, (srv_payload) => {
-                        console.warn('Set srv payload:', srv_payload);
+                        console.warn('Setting srv payload for '+btn.ros_srv_id+':', srv_payload);
                         btn.ros_srv_val = srv_payload;
                         that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
                     });

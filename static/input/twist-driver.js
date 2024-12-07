@@ -40,22 +40,32 @@ export class TwistInputDriver extends InputDriver {
         let lines = []
 
         // one output topic by default
-        let line_msg_type = $('<div class="line"><span class="label">Type:</span></div>');
+        let line_msg_type = $('<div class="line"></div>');
+        let type_label = $('<span class="label">Type:&nbsp;</span>');
+        let type_hint_link = $('<span class="type-hint">[?]</span>');
+        type_hint_link.appendTo(type_label);
+        type_label.appendTo(line_msg_type);
+
+        let that = this;
+
         let opts = [];
         [ 'geometry_msgs/msg/Twist', 'geometry_msgs/msg/TwistStamped' ].forEach((one_type)=>{
             opts.push('<option value="'+one_type+'"'+(this.msg_type==one_type?' selected':'')+'>'+one_type+'</option>',)
         });
         let inp_msg_type = $('<select>'+opts.join()+'</select>');
         
+        type_hint_link.click(()=>{
+            that.client.ui.messageTypeDialog(inp_msg_type.val());
+        });
+
         inp_msg_type.appendTo(line_msg_type);
         
-        let that = this;
         inp_msg_type.change((ev)=>{
             that.msg_type = $(ev.target).val();
             console.log('Driver msg type is: '+that.msg_type);
             that.setupWriter();
             that.input_manager.checkControllerProfileSaved(that.input_manager.edited_controller, that.input_manager.current_profile);
-            that.input_manager.make_controller_driver_config_ui(); // redraw
+            that.input_manager.makeControllerDriverConfigUI(); // redraw
         });
 
         lines.push(line_msg_type);

@@ -4523,6 +4523,9 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     cursor: help;
 }
 
+#gamepad-settings-panel .line .type-hint {
+    cursor: help;
+}
 
 #gamepad-settings-panel .driver-error {
     background: #be1e1e;
@@ -4906,7 +4909,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     padding: 0px;
     margin: 6px 6px 0px 0px;
     float: left;
-    margin-left: calc(35% + 17px);
+    margin-left: calc(35% + 5px);
     height: 20px;
     width: 20px;
 }
@@ -4919,7 +4922,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 }
 
 #gamepad #gamepad_settings .srv-settings .config-row {
-    margin-left: 65px;
+    margin-left: 67px;
 }
 
 #gamepad #gamepad_settings BUTTON.srv-val {
@@ -4932,7 +4935,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     border: 0px;
     border-radius: 5px;
     padding: 0px 10px;
-    margin: 4px 5px 0px 10px;
+    margin: 4px 5px 0px 1px;
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
@@ -6006,6 +6009,42 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     border-top: 5px solid #d78ee0;
     border-bottom: 5px solid #d78ee0;
 }
+
+
+#service-input-dialog.input-manager {
+    background-color: #5d53b0;
+}
+
+#service-input-dialog.input-manager H3 {
+    color: #fff;
+}
+
+#service-input-dialog.input-manager .json-editor {
+    top: 0px;
+    margin-bottom: 5px;
+    background-color: #3A3376;
+    border-color:#3A3376;
+}
+
+#service-input-dialog.input-manager .buttons BUTTON {
+    background-color: #26214b;
+    color: white;
+}
+
+#service-input-dialog.input-manager .buttons BUTTON:hover {
+    background-color: white;
+    color: black;
+}
+
+#service-input-dialog.input-manager .buttons BUTTON.btn-save {
+    background-color: rgb(233 15 233);
+}
+
+#service-input-dialog.input-manager .buttons BUTTON.btn-save:hover {
+    background-color: rgb(246, 15, 246);
+    color: white;
+}
+
 
 #service-input-dialog.narrow .json-editor,
 #service-input-dialog.thin .json-editor {

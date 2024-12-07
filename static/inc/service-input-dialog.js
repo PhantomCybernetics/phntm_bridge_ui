@@ -108,7 +108,7 @@ export class ServiceInputDialog {
 
         let that = this;
 
-        this.cont_el.empty();
+        this.cont_el.empty().removeClass('input-manager');
         let msg_type_link = $('<span class="msg_type">'+this.service.msg_type+'</span>');
         msg_type_link.click(()=>{
             that.client.ui.messageTypeDialog(this.service.msg_type);
@@ -278,7 +278,57 @@ export class ServiceInputDialog {
     }
 
     showInputManagerDialog(id_service, msg_type, initial_value, cb) {
-        
+        this.service = {
+            service: id_service,
+            msg_type: msg_type,
+        }
+
+        let that = this;
+
+        this.cont_el.empty().addClass('input-manager');
+        let msg_type_link = $('<span class="msg_type">'+this.service.msg_type+'</span>');
+        msg_type_link.click(()=>{
+            that.client.ui.messageTypeDialog(this.service.msg_type);
+        });
+
+        this.cont_el.append( [ $('<h3>'+this.service.service+'</h3>'), msg_type_link ]);
+        this.msg_type = this.client.findMessageType(this.service.msg_type+'_Request');
+
+        this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
+        this.cont_el.append(this.menu_underlay);
+
+        this.editor = $('<div class="json-editor"></div>');
+
+        this.bottom_btns_el = $('<div class="buttons"></div>');
+
+        let btn_close = $('<button class="btn-close">Close</button>');
+        btn_close.click((ev)=>{
+            that.hide();
+        });
+
+        let btn_call = $('<button class="btn-call">Call<span class="wide"> Service</span></button>');
+        btn_call.click((ev) => {
+            // TODO
+            // that.client.ui.serviceMenuBtnCall(service.service, that.selected_btn, btn_call);
+        });
+
+        let btn_set = $('<button class="btn-save">Set</button>');
+        btn_set.click((ev) => {
+            that.hide();
+            cb(); // TODO
+        }); 
+
+        this.bottom_btns_el.append([ btn_set, btn_call, btn_close ]);
+        this.cont_el.append([ this.editor, this.bottom_btns_el ]);
+
+        this.cont_el.draggable({
+            handle: 'h3',
+            cursor: 'move'
+        });
+
+        this.cont_el.show();
+        this.bg.unbind().show().click((ev)=>this.hide());
+        $('BODY').addClass('no-scroll');
     }
 
     renderButtonTabs() {
