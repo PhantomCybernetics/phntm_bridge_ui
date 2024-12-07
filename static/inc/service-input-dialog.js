@@ -277,6 +277,10 @@ export class ServiceInputDialog {
         $('BODY').addClass('no-scroll');
     }
 
+    showInputManagerDialog(id_service, msg_type, initial_value, cb) {
+        
+    }
+
     renderButtonTabs() {
         let that = this;
 

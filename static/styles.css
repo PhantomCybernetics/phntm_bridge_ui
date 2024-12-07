@@ -2452,7 +2452,7 @@ SPAN.error {
 
     height: auto; /* content resizes */
     z-index: 221; /* above srv input dialog */
-    padding: 30px 0px 50px 0px;
+    padding: 33px 0px 50px 0px;
     overflow: visible;
     display: none;
     background: #000000e0;
@@ -2533,12 +2533,17 @@ BODY.desktop-ui #touch-ui-selector {
     left: 10px;
     top: 10px;
     font-size: 18px;
-    line-height: 20px;
+    line-height: 24px;
     white-space: nowrap;
     right: 10px;
     overflow: hidden;
     color: #fff;
     cursor: move;
+}
+
+#msg-type-dialog .title SPAN {
+    border-bottom: 1px dashed white;
+    display: inline-block;
 }
 
 BODY.touch-ui #msg-type-dialog .title {
@@ -3775,12 +3780,12 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
 }
 
 #gamepad #gamepad_settings .config-row INPUT.half {
-    width: 50%;
+    width: 65%;
 }
 
 #gamepad #gamepad_settings .config-row SELECT {
     float: right;
-    width: 50%;
+    width: 65%;
     background-color: #26214b;
     color: white;
     margin-right: 5px;
@@ -4901,7 +4906,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     padding: 0px;
     margin: 6px 6px 0px 0px;
     float: left;
-    margin-left: calc(50% - -5px);
+    margin-left: calc(35% + 17px);
     height: 20px;
     width: 20px;
 }
@@ -4911,6 +4916,35 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
     padding: 0px 0px 0px 0px;
     position: relative;
     top: 1px;
+}
+
+#gamepad #gamepad_settings .srv-settings .config-row {
+    margin-left: 65px;
+}
+
+#gamepad #gamepad_settings BUTTON.srv-val {
+    position: absolute;
+    background: #26214b;
+    color: white;
+    font-weight: normal;
+    width: 45px;
+    font-weight: bold;
+    border: 0px;
+    border-radius: 5px;
+    padding: 0px 10px;
+    margin: 4px 5px 0px 10px;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    /* width: 60px; */
+    height: 55px;
+    line-height: 55px;
+    left: 35%
+}
+
+#gamepad #gamepad_settings BUTTON.srv-val:hover {
+    background-color: white;
+    color: black;
 }
 
 #notifications {

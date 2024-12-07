@@ -1,6 +1,5 @@
 class ServiceInput {
     static MakeMenuControls(target_el, service, client) {};
-    static MakeInputConfigControls(btn, on_change_cb) {};
 }
 
 export class UserButtonsServiceInput extends ServiceInput {
@@ -29,11 +28,6 @@ export class UserButtonsServiceInput extends ServiceInput {
             target_el.append(btn_el);
         });
     }
-
-    static MakeInputConfigControls() {
-        return $('<span class="static_val">{data}</span>');
-    }
-
 }
 
 // std_srvs/srv/Empty and std_srvs/srv/Trigger
@@ -48,11 +42,6 @@ export class ServiceInput_Empty extends ServiceInput {
     
         target_el.append(btn);
     }
-
-    static MakeInputConfigControls() {
-        return $('<span class="static_val">None</span>');
-    }
-
 }
     
 // std_srvs/srv/SetBool
@@ -74,18 +63,4 @@ export class ServiceInput_Bool extends ServiceInput  {
         target_el.append(btn_true);
         target_el.append(btn_false);
     }
-
-    static MakeInputConfigControls(btn, on_change_cb) {
-        let opts = [
-            '<option value="1"'+(btn.ros_srv_val?' selected':'')+'>True</option>',
-            '<option value="0"'+(!btn.ros_srv_val?' selected':'')+'>False</option>'
-        ];
-        let inp = $('<select>'+opts.join('')+'</select>');
-        inp.change((ev)=>{
-            let val = parseInt($(ev.target).val());
-            on_change_cb(val ? true : false);
-        });
-        return inp;
-    }
-
 }

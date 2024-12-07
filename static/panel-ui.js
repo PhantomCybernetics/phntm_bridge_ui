@@ -1411,7 +1411,7 @@ export class PanelUI {
             content = content.replaceAll('"'+t+'"', '<span class="type">'+t+'</span>');
         });
 
-        $('#msg-type-dialog .title').html(msg_type);
+        $('#msg-type-dialog .title').html('<span>'+msg_type+'</span>');
         $('#msg-type-dialog .content').html(content);
         let body_scroll_was_disabled = $('BODY').hasClass('no-scroll');
         $('BODY').addClass('no-scroll');

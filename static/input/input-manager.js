@@ -914,6 +914,8 @@ export class InputManager {
                     case 'ros-srv':
                         new_btn.action = default_config.action;
                         new_btn.ros_srv_id = default_config.ros_srv_id;
+                        new_btn.ros_srv_silent_req = default_config.ros_srv_silent_req ? true : false;
+                        new_btn.ros_srv_silent_res = default_config.ros_srv_silent_res ? true : false;
                         new_btn.assigned = true;
 
                         new_btn.ros_srv_msg_type = null;
@@ -952,11 +954,6 @@ export class InputManager {
                         new_btn.action = default_config.action;
                         new_btn.assigned = true;
                         new_btn.set_ctrl_profile = default_config.profile;
-                        break;
-                    case 'wifi-scan':
-                    case 'wifi-roam':
-                        new_btn.action = default_config.action;
-                        new_btn.assigned = true;
                         break;
                 } 
             }
@@ -1141,6 +1138,8 @@ export class InputManager {
                 case 'ros-srv':
                     btn_data['ros_srv_id'] = btn.ros_srv_id;
                     btn_data['ros_srv_val'] = btn.ros_srv_val;
+                    btn_data['ros_srv_silent_req'] = btn.ros_srv_silent_req;
+                    btn_data['ros_srv_silent_res'] = btn.ros_srv_silent_res;
                     break;
                 case 'ctrl-enabled':
                     switch (btn.set_ctrl_state) {
@@ -1309,9 +1308,12 @@ export class InputManager {
                         case 'ros-srv':
                             if (btn_live.ros_srv_id != btn_saved.ros_srv_id)
                                 return false;
-                            if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val)) {
+                            if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val)) 
                                 return false;
-                            }
+                            if (btn_live.ros_srv_silent_req != btn_saved.ros_srv_silent_req)
+                                return false;
+                            if (btn_live.ros_srv_silent_res != btn_saved.ros_srv_silent_res)
+                                return false;
                             break;
                         case 'ctrl-enabled':
                             if (btn_live.ctrl_state != btn_saved.ctrl_state)
@@ -2188,56 +2190,46 @@ export class InputManager {
             }
         });
         
-        let srv_inp = $('<select>'+srv_opts.join('')+'</select>');
-        srv_inp.appendTo(srv_el);
+        let srv_id_inp = $('<select>'+srv_opts.join('')+'</select>');
+        srv_id_inp.appendTo(srv_el);
         
-        let srv_details_el = $('<div></div>');
-        let rener_srv_details = () => {
+        let srv_details_el = $('<div class="srv-settings"></div>');
+        let render_srv_details = () => {
             srv_details_el.empty();
             if (btn.ros_srv_msg_type) {
-                let msg_type_row = $('<div class="config-row"><span class="label">Message type:</span></div>');
-                let msg_type_link = $('<span class="static_val msg_type">' + btn.ros_srv_msg_type + '</span>');
-                msg_type_link.click(()=>{
-                    that.ui.messageTypeDialog(btn.ros_srv_msg_type);
+
+                let srv_val_btn = $('<button class="srv-val" title="Set service call data">{}</button>');
+                srv_val_btn.click(()=>{
+                    that.ui.service_input_dialog.showInputManagerDialog(btn.ros_srv_id, btn.ros_srv_msg_type, btn.ros_srv_val, (srv_payload) => {
+                        console.warn('Set srv payload:', srv_payload);
+                        btn.ros_srv_val = srv_payload;
+                        that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
+                    });
                 });
-                msg_type_link.appendTo(msg_type_row);
-                srv_details_el.append(msg_type_row);
                 
-                let srv_val_el = $('<div class="config-row"><span class="label">Send value:</span></div>');
+                let silent_req_el = $('<div class="config-row"><label for="'+btn.i+'_silent_req_cb" class="small-settings-cb-label">Silent request</label></div>');
+                let silent_req_inp = $('<input type="checkbox" '+(btn.ros_srv_silent_req?' checked' : '')+' id="'+btn.i+'_silent_req_cb" class="small-settings-cb"/>');
+                silent_req_inp.prependTo(silent_req_el);
+                silent_req_inp.change((ev)=>{
+                    let val = $(ev.target).prop('checked') ? true : false;
+                    btn.ros_srv_silent_req = val;
+                    that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
+                });
 
-                if (that.ui.service_widgets[btn.ros_srv_msg_type]) {
-                    let srv_val_inp = that.ui.service_widgets[btn.ros_srv_msg_type].MakeInputConfigControls(btn, (val)=>{
-                        console.log('btn service val set to ', val);
-                        btn.ros_srv_val = val;
-                        that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
-                    });
-                    srv_val_el.append(srv_val_inp);
-                } else {
-                    let val_json = JSON.stringify(btn.ros_srv_val === undefined ? {} : btn.ros_srv_val);
-                    let srv_val_inp = $('<textarea>'+val_json+'</textarea>');
-                    srv_val_el.append(srv_val_inp);
-                    srv_val_el.append($('<div class="cleaner"></div>'));
-                    srv_val_inp.change((ev) => {
-                        let val = null;
-                        try {
-                            val = JSON.parse($(ev.target).val());
-                        } catch (e) {
-                            console.error('Failed parsing json val: ', $(ev.target).val());
-                            srv_val_inp.addClass('error')
-                            return;
-                        }
-                        srv_val_inp.removeClass('error');
-                        btn.ros_srv_val = val;
-                        that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
-                    });
-                }
-
-                srv_details_el.append(srv_val_el);
+                let silent_res_el = $('<div class="config-row"><label for="'+btn.i+'_silent_res_cb" class="small-settings-cb-label">Silent response</label></div>');
+                let silent_res_inp = $('<input type="checkbox" '+(btn.ros_srv_silent_res?' checked' : '')+' id="'+btn.i+'_silent_res_cb" class="small-settings-cb"/>');
+                silent_res_inp.prependTo(silent_res_el);
+                silent_res_inp.change((ev)=>{
+                    let val = $(ev.target).prop('checked') ? true : false;
+                    btn.ros_srv_silent_res = val;
+                    that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
+                });
+                srv_details_el.append( [ srv_val_btn, silent_req_el, silent_res_el, $('<div class="cleaner"></div>') ]);
             }
         };
-        rener_srv_details();
+        render_srv_details();
 
-        srv_inp.change((ev)=>{
+        srv_id_inp.change((ev)=>{
             let val = $(ev.target).val();
             if (val) {
                 let vals = val.split(':');
@@ -2247,8 +2239,9 @@ export class InputManager {
                 btn.ros_srv_id = null;
                 btn.ros_srv_msg_type = null;
             }
+            btn.ros_srv_val = null; // remove val
             console.log('btn set to ros srv '+btn.ros_srv_id+' msg type='+btn.ros_srv_msg_type);
-            rener_srv_details();
+            render_srv_details();
             that.checkControllerProfileSaved(that.edited_controller, that.current_profile);
         });
 
@@ -2817,12 +2810,6 @@ export class InputManager {
                     case 'ui-profile': 
                         this.renderUIProfileButtonConfig(driver, btn);
                         break;
-                    case 'wifi-scan':     
-                        this.renderWifiScanButtonConfig(driver, btn);
-                        break;
-                    case 'wifi-roam': 
-                        this.renderWifiRoamButtonConfig(driver, btn);
-                        break;
                     default: 
                         console.error('Button action type not supported: ', btn.action)
                         btn.conf_toggle_el.removeClass('open');
@@ -2955,12 +2942,6 @@ export class InputManager {
             '<option value="ui-profile"'+(btn.action == 'ui-profile' ? ' selected': '')+'>Set UI Layout</option>',
         ];
         
-        if (this.ui.wifi_scan_enabled) {
-            opts.push('<option value="wifi-scan"'+(btn.action == 'wifi-scan' ? ' selected': '')+'>Wi-Fi Scan</option>');
-        }
-        if (this.ui.wifi_roam_enabled) {
-            opts.push('<option value="wifi-roam"'+(btn.action == 'wifi-roam' ? ' selected': '')+'>Wi-Fi Scan &amp; Roam</option>');
-        }
         // let dri = profile.driver_instance;
         let dri_btns = driver.getButtons();
         let dri_btns_ids = Object.keys(dri_btns);
@@ -3152,10 +3133,9 @@ export class InputManager {
 
         switch (btn.action) {
             case 'ros-srv':
-                //TODO
                 if (!btn.ros_srv_id) {
-                    this.ui.showNotification('Service ID not set', 'error');
-                    console.warn('Service ID not set');
+                    this.ui.showNotification('ROS service not set', 'error');
+                    console.warn('ROS service ID not set');
                     return;
                 }
                 if (!btn.ros_srv_msg_type) {
@@ -3168,15 +3148,14 @@ export class InputManager {
                     console.warn('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)');
                     return;
                 }
-                let call_args = btn.ros_srv_val; // from widget or parsed json
 
                 if (btn.touch_btn_el)
                     btn.touch_btn_el.addClass('working');
 
                 btn.service_blocked = true;
-                this.client.serviceCall(btn.ros_srv_id, call_args ? call_args : undefined, !btn.show_service_request, (reply) => {
+                this.client.serviceCall(btn.ros_srv_id, btn.ros_srv_val ? btn.ros_srv_val : undefined, btn.ros_srv_silent_req, (reply) => {
                     btn.service_blocked = false;
-                    that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, btn.show_service_reply, reply);
+                    that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, !btn.ros_srv_silent_res, reply);
                 });
                 
                 break;
@@ -3211,24 +3190,6 @@ export class InputManager {
             case 'ui-profile': 
                 //TODO
                 console.error('UI profiles TBD')
-                break;
-            case 'wifi-scan': 
-                console.log('WIFI SCAN');
-                if (btn.touch_btn_el)
-                    btn.touch_btn_el.addClass('working');
-                that.ui.triggerWifiScan(false, ()=>{
-                    if (btn.touch_btn_el)
-                        btn.touch_btn_el.removeClass('working');
-                });
-                break;
-            case 'wifi-roam': 
-                console.log('WIFI SCAN & ROAM');
-                if (btn.touch_btn_el)
-                    btn.touch_btn_el.addClass('working');
-                that.ui.triggerWifiScan(true, ()=>{
-                    if (btn.touch_btn_el)
-                        btn.touch_btn_el.removeClass('working');
-                });
                 break;
             default: 
                 break; 
