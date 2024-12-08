@@ -3155,7 +3155,8 @@ export class InputManager {
                 btn.service_blocked = true;
                 this.client.serviceCall(btn.ros_srv_id, btn.ros_srv_val ? btn.ros_srv_val : undefined, btn.ros_srv_silent_req, (reply) => {
                     btn.service_blocked = false;
-                    that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, !btn.ros_srv_silent_res, reply);
+                    if (reply !== undefined) // undefined means service call was cancelled here (by a callback)
+                        that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, !btn.ros_srv_silent_res, reply);
                 });
                 
                 break;

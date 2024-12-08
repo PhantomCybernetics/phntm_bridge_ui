@@ -116,6 +116,9 @@ export class PhntmBridgeClient extends EventTarget {
     event_calbacks = {}
     topic_config_calbacks = {};
 
+    service_request_callbacks = {};
+    service_reply_callbacks = {};
+
     input_manager = null;
     extrernal_scripts = {};
 
@@ -1593,19 +1596,73 @@ export class PhntmBridgeClient extends EventTarget {
         }
     }
 
-    serviceCall(service, data, silent, cb) { 
+    registerServiceRequestCallback(id_service, async_cb) {
+        if (!this.service_request_callbacks[id_service])
+            this.service_request_callbacks[id_service] = [];
+        if (this.service_request_callbacks[id_service].indexOf(async_cb) < 0)
+            this.service_request_callbacks[id_service].push(async_cb);
+    }
+
+    registerServiceReplyCallback(id_service, cb) {
+        if (!this.service_reply_callbacks[id_service])
+            this.service_reply_callbacks[id_service] = [];
+        if (this.service_reply_callbacks[id_service].indexOf(cb) < 0)
+            this.service_reply_callbacks[id_service].push(cb);
+    }
+
+    serviceCall(service, data, silent_req, cb) { 
+
+        let that = this;
+        if (this.service_request_callbacks[service] && this.service_request_callbacks[service].length) {
+
+            let num_completed = 0;
+            let abort = false;
+            for (let i = 0; i < this.service_request_callbacks[service].length; i++) {
+                this.service_request_callbacks[service][i](data, (cb_res)=>{
+                    if (!cb_res) {
+                        abort = true;
+                        console.log('Service call '+service+' aborted by cb');
+                    }
+
+                    num_completed++
+                    if (num_completed == this.service_request_callbacks[service].length) {
+                        if (!abort) {
+                            that._doServiceCall(service, data, silent_req, cb);
+                        } else {
+                            if (cb)
+                                cb();
+                        }
+                    }
+                });
+            }
+
+        } else {
+            this._doServiceCall(service, data, silent_req, cb);
+        }
+    }
+
+    _doServiceCall(service, data, silent_req, cb) {
         let req = {
             id_robot: this.id_robot,
             service: service,
             msg: data // data undefined => no msg
         }
-        if (this.ui && !silent) {
+        if (this.ui && !silent_req) {
             //let data_hr = (data !== null && data !== undefined); 
             this.ui.showNotification('Calling '+service, null, 'Request data:<br><pre>'+JSON.stringify(data, null, 2)+'</pre>');
         }
+        let that = this;
         console.log('Service call request', req);
         this.socket.emit('service', req, (reply)=> {
+
             console.log('Service call reply', reply);
+            
+            if (that.service_reply_callbacks[service]) {
+                for (let i = 0; i < that.service_reply_callbacks[service].length; i++) {
+                    that.service_reply_callbacks[service][i](data, reply);
+                }
+            }
+
             if (cb)
                 cb(reply);
         });

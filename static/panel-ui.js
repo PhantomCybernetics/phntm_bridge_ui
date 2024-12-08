@@ -1185,6 +1185,19 @@ export class PanelUI {
         }
     }
 
+    onDockerCommandReply(req_data, reply_data) {
+        if (reply_data.err) {
+            reply_data._notification = {
+                label: 'Error ('+reply_data.err+'): '+reply_data.msg,
+                style: 'error'
+            }
+        } else {
+            reply_data._notification = {
+                label: reply_data.msg
+            }
+        }
+    }
+
     dockerMenuFromAllHosts(msg_by_host) {
         console.warn('Got full Docker containers: ', msg_by_host);
         this.docker_hosts = {}; // always redraw completely
@@ -1196,22 +1209,23 @@ export class PanelUI {
         }
 
         let that = this;
-        function callDockerSrv(agent_node, id_container, state, btn) {
+        function callDockerSrv(node_docker_srv, id_container, state, btn) {
             if ($(btn).hasClass('working'))
                 return;
             $(btn).addClass('working');
 
-            that.client.serviceCall('/'+agent_node+'/docker_command', { id_container: id_container, set_state: state }, true, (reply) =>{
+            that.client.serviceCall(node_docker_srv, { id_container: id_container, set_state: state }, true, (reply) =>{
                 $(btn).removeClass('working');
-                if (reply.err) {
-                    that.showNotification('Error ('+reply.err+'): '+reply.msg, 'error');
-                }
+                that.serviceReplyNotification(null, node_docker_srv, true, reply);
             });
         }
 
         let hosts =  Object.keys(msg_by_host);
         hosts.sort(); //keep sorted aphabetically
         hosts.forEach((host)=>{
+
+            let node_docker_srv = '/'+host+'/docker_command';
+            that.client.registerServiceReplyCallback(node_docker_srv, (req_data, reply_data) => { that.onDockerCommandReply(req_data, reply_data) } );
 
             let grp_el = $('<div class="host-group"></div>');
             let grp_containers_el = $('<div class="host-group-containers"></div>');
@@ -1251,13 +1265,13 @@ export class PanelUI {
                 btns_el.append( [btn_run, btn_stop, btn_restart ])
             
                 btn_run.click(function (event) {
-                    callDockerSrv(host, cont.id, 1, this);
+                    callDockerSrv(node_docker_srv, cont.name, 1, this);
                 });
                 btn_stop.click(function (event) {
-                    callDockerSrv(host, cont.id, 0, this);
+                    callDockerSrv(node_docker_srv, cont.name, 0, this);
                 });
                 btn_restart.click(function (event) {
-                    callDockerSrv(host, cont.id, 2, this);
+                    callDockerSrv(node_docker_srv, cont.name, 2, this);
                 });
                 
                 btns_el.appendTo(cont_el)
@@ -1901,31 +1915,43 @@ export class PanelUI {
             ;
     }
 
-    triggerWifiScan(roam, callback=null) {
-        let btn = roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
-        let enabled = roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
-        let what = roam ? 'roaming' : 'scanning';
-        if (!enabled || btn.hasClass('working')) {
-            if (!enabled) {
-                this.showNotification('Wifi '+what+' disabled by robot', 'error');
-                console.warn('Wi-fi '+what+' disabled by the robot');
-            }
-            if (callback)
-                callback();
-            return;
-        }
+    triggerWifiScan(attempt_roam) {
 
-        if (!this.wifi_scan_node) {
-            this.showNotification('Error: Wifi scan node unknown', 'error');
-            console.warn('Wifi scan node unknown');
-            if (callback)
-                callback();
+        if (!this.wifi_scan_service) {
+            this.showNotification('Error: Wifi scan service unknown', 'error');
+            console.warn('Wifi scan node/service unknown');
             return;
         }
 
         let that = this;
+        this.client.serviceCall(this.wifi_scan_service, { attempt_roam: attempt_roam }, true, (reply)=>{
+            if (reply !== undefined) // undefined means service call was cancelled here (by a callback)
+                that.serviceReplyNotification(null, this.wifi_scan_service, true, reply);
+        });
+    }
+
+    onWifiScanRequest(req_data, cb) {
+
+        let dropdown_btn = req_data.attempt_roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
+        let signal_monitor = $('#signal-monitor')
+        let enabled = req_data.attempt_roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
+        let what = req_data.attempt_roam ? 'roaming' : 'scanning';
+        if (!enabled || dropdown_btn.hasClass('working') || signal_monitor.hasClass('working')) {
+            if (!enabled) {
+                this.showNotification('Wifi '+what+' disabled by robot', 'error');
+                console.warn('Wi-fi '+what+' disabled by the robot');
+            }
+            return cb(false); // abort
+        }
+
+        function setWorkingState() {
+            dropdown_btn.addClass('working');
+            signal_monitor.addClass('working');
+        }
+
+        let that = this;
         if (!this.wifi_scan_warning_suppressed) {
-            let btn_label = roam ? 'Scan &amp; Roam' : 'Scan Wi-Fi';
+            let btn_label = req_data.attempt_roam ? 'Scan &amp; Roam' : 'Scan Wi-Fi';
             this.confirmDialog('<span class="warn-icon"></span>Depending on your hardware setup, '
                 + 'this action can leave your machine offline. See <a href="https://docs.phntm.io/bridge/wifi-scan-roam" target="_blank">more info here</a><br><br>'
                 + 'Before attempting to scan or roam, make sure you have local console access and can reboot the system if necessary.',
@@ -1935,58 +1961,67 @@ export class PanelUI {
                         that.wifi_scan_warning_suppressed = true;
                         localStorage.setItem('wifi-scan-warning-suppressed:'+that.client.id_robot, true); // warning won't be shown any more
                     }
-                    that.doWifiScanRoam(roam, callback);
+                    setWorkingState();
+                    cb(true); //proceed
                 }, 
                 'Cancel', () => { // cancel
-                    if (callback)
-                        callback();
+                    cb(false); // abort
                 });
-        } else {
-            that.doWifiScanRoam(roam, callback);
+            return;
+        }
+
+        setWorkingState();
+        return cb(true); //proceed
+    }
+
+    onWifiScanReply(req_data, reply_data) {
+        let dropdown_btn = req_data.attempt_roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
+        let signal_monitor = $('#signal-monitor')
+
+        dropdown_btn.removeClass('working');
+        signal_monitor.removeClass('working');
+
+        // override the default notification by passing 
+        // label, detail & style in reply_data._notification
+
+        if (reply_data.err) {
+            reply_data._notification = {
+                label: 'Error ('+reply.err+'): '+reply.msg,
+                style: 'error'
+            }
+        }
+        
+        else if (!req_data.attempt_roam) {
+            if (reply_data.scan_results && reply_data.scan_results.length) {
+                let val = JSON.stringify(reply_data.scan_results, null, 4);
+                let num = reply_data.scan_results.length;
+                reply_data._notification = {
+                    label: 'Wi-Fi scan returned '+num+' result'+(num != 1 ? 's' : ''),
+                    detail: '<pre>'+val+'</pre>'
+                }
+            } else {
+                reply_data._notification = {
+                    label: 'Wi-Fi scan returned no results',
+                    detail: 'error'
+                }
+            }
+        }
+        
+        else if (req_data.attempt_roam) {
+            if (reply_data.scan_results && reply_data.scan_results.length) {
+                let val = JSON.stringify(reply_data.scan_results, null, 4);
+                let num = reply_data.scan_results.length;
+                reply_data._notification = {
+                    label: reply.msg,
+                    detail: '<pre>Scan results:\n'+val+'</pre>'
+                }
+            } else {
+                reply_data._notification = {
+                    label: reply.msg,
+                }
+            }
         }
     }
-
-    doWifiScanRoam(roam, callback) {
-        let signal_monitor = $('#signal-monitor')
-        if (signal_monitor.hasClass('working'))
-            return;
-        let btn = roam ? $('#trigger_wifi_roam') : $('#trigger_wifi_scan');
-        let enabled = roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
-        let what = roam ? 'roam' : 'scan';
-        console.warn('Triggering wifi '+what);
-        let that = this;
-        btn.addClass('working');
-        signal_monitor.addClass('working');
-        this.client.serviceCall('/'+this.wifi_scan_node+'/iw_scan', { attempt_roam: roam }, true, (reply) =>{
-            btn.removeClass('working');
-            signal_monitor.removeClass('working');
-            console.info('Wifi '+what+' reply:', reply);
-            if (reply.err) {
-                that.showNotification('Error ('+reply.err+'): '+reply.msg, 'error');
-            }
-            else if (!roam) {
-                if (reply.scan_results && reply.scan_results.length) {
-                    let val = JSON.stringify(reply.scan_results, null, 4);
-                    let num = reply.scan_results.length;
-                    that.showNotification('Wi-Fi scan returned '+num+' result'+(num != 1 ? 's' : ''), null, '<pre>'+val+'</pre>');
-                } else {
-                    that.showNotification('Wi-Fi scan returned no results', 'error');
-                }
-            } else if (roam) {
-                if (reply.scan_results && reply.scan_results.length) {
-                    let val = JSON.stringify(reply.scan_results, null, 4);
-                    let num = reply.scan_results.length;
-                    that.showNotification(reply.msg, null, '<pre>Scan results:\n'+val+'</pre>');
-                } else {
-                    that.showNotification(reply.msg, null);
-                }
-            }
-            if (callback)
-                callback(reply);
-        });
-    }
-
-    //widget_opts = {};
 
     togglePanel(id_source, msg_type, state, w, h, x = null, y = null, src_visible = false) {
         let panel = this.panels[id_source];
@@ -2842,64 +2877,76 @@ export class PanelUI {
             btn_el.removeClass('working');
 
         let is_err = false;
-        let err_in_resuls = false;
-        if (service_reply.results && Array.isArray(service_reply.results)) {
-            service_reply.results.forEach((res)=>{
-                if (res.successful === false) {
-                    err_in_resuls = true;
-                    return
-                }
-            }); 
-        }
-        if (service_reply.result && service_reply.result.successful === false)
-            err_in_resuls = true;
-        
-        const replacer = (key, value) => {
-            // if (key == 'byte_array_value') return 'byte_array_value';
-            
-            if (key == 'byte_array_value' && Array.isArray(value)) {
-                let new_value = [];
-                for (let i = 0; i < value.length; i++)
-                    if (value[i] instanceof ArrayBuffer) {
-                        let uint8arr = new Uint8Array(value[i]);
-                        new_value.push(uint8arr[0]);
-                    }
-                    else
-                        new_value.push(value[i]);
-                return new_value;
-            }
-            // if (value instanceof ArrayBuffer) return '<ArrayBuffer>';
-            return value;
-        };
 
-        if (show_reply === null) { //auto (only show when there is something interesting in the reply)
-            let reply_keys = Object.keys(service_reply);
-            reply_keys = reply_keys.filter(item => ['success', 'successful', 'err', 'error'].indexOf(item) === -1);
-            if (service_reply.message && service_reply.message.length) {
-                show_reply = true;
-            } else if (reply_keys.length) {
-                show_reply = true;
-            } else {
-                show_reply = false;
+        if (service_reply._notification) { // prepared by reply callback
+
+            if (show_reply)
+                this.showNotification(service_reply._notification.label, service_reply._notification.style, service_reply._notification.detail);
+
+            if (service_reply._notification.style == 'error')
+                is_err = true;
+
+        } else { // auto
+ 
+            let err_in_resuls = false;
+            if (service_reply && service_reply.results && Array.isArray(service_reply.results)) {
+                service_reply.results.forEach((res)=>{
+                    if (res.successful === false) {
+                        err_in_resuls = true;
+                        return
+                    }
+                }); 
             }
-        }
-        if (service_reply.err) { // showing errors always
-            this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
-            is_err = true;
-        } else if (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)  { // showing errors always
-            this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
-            is_err = true;
-        } else if (service_reply.success === true && show_reply) { //std set bool & trugger
-            this.showNotification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
-        } else if (show_reply) {
-            this.showNotification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            if (service_reply && service_reply.result && service_reply.result.successful === false)
+                err_in_resuls = true;
+            
+            const replacer = (key, value) => {
+                // if (key == 'byte_array_value') return 'byte_array_value';
+                
+                if (key == 'byte_array_value' && Array.isArray(value)) {
+                    let new_value = [];
+                    for (let i = 0; i < value.length; i++)
+                        if (value[i] instanceof ArrayBuffer) {
+                            let uint8arr = new Uint8Array(value[i]);
+                            new_value.push(uint8arr[0]);
+                        }
+                        else
+                            new_value.push(value[i]);
+                    return new_value;
+                }
+                // if (value instanceof ArrayBuffer) return '<ArrayBuffer>';
+                return value;
+            };
+
+            if (service_reply && show_reply === null) { //auto (only show when there is something interesting in the reply)
+                let reply_keys = Object.keys(service_reply);
+                reply_keys = reply_keys.filter(item => ['success', 'successful', 'err', 'error'].indexOf(item) === -1);
+                if (service_reply.message && service_reply.message.length) {
+                    show_reply = true;
+                } else if (reply_keys.length) {
+                    show_reply = true;
+                } else {
+                    show_reply = false;
+                }
+            }
+            if (service_reply && service_reply.err) { // showing errors always
+                this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
+                is_err = true;
+            } else if (service_reply && (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error))  { // showing errors always
+                this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+                is_err = true;
+            } else if (service_reply && service_reply.success === true && show_reply) { //std set bool & trugger
+                this.showNotification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            } else if (show_reply) {
+                this.showNotification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+            }
+
         }
 
         if (is_err && btn_el) { // do the error btn wobble
             btn_el.addClass('btn_err');
             setTimeout(()=>{
-                btn_el
-                    .removeClass('btn_err');
+                btn_el.removeClass('btn_err');
             }, 600); 
         }
     }
@@ -3049,9 +3096,15 @@ export class PanelUI {
             .css('display', msg.supports_scanning && this.wifi_roam_enabled ? 'inline-block' : 'none');
         // $('#robot_wifi_info').removeClass('offline');
 
-        if (msg.supports_scanning)
-            this.wifi_scan_node = msg.header.frame_id ? 'phntm_agent_'+msg.header.frame_id : 'phntm_agent';
+        if (msg.supports_scanning) {
+            if (!this.wifi_scan_service) {
+                let iw_node = msg.header.frame_id ? 'phntm_agent_'+msg.header.frame_id : 'phntm_agent'
+                this.wifi_scan_service = '/'+iw_node+'/iw_scan';
 
+                this.client.registerServiceRequestCallback(this.wifi_scan_service, (req_data, cb) => { this.onWifiScanRequest(req_data, cb) } );
+                this.client.registerServiceReplyCallback(this.wifi_scan_service, (req_data, reply_data) => { this.onWifiScanReply(req_data, reply_data) } );
+            }
+        }
         // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
         // console.log('Selected pair', selected_pair);
 
