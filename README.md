@@ -10,22 +10,17 @@ You can fork this repository and host it yourself to customize the default UI pr
 
 # Install Bridge UI Server
 
-### Install Docker & Docker Compose
+### Install Node & npm
 ```bash
-sudo apt install docker docker-buildx docker-compose-v2
-```
-Then add the current user to the docker group:
-```bash
-sudo usermod -aG docker ${USER}
-# log out & back in
+sudo apt install nodejs
 ```
 
-### Clone this repo and build the Docker Image
+### Clone this repo
 ```bash
 cd ~
 git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
 cd bridge_ui
-docker build -f Dockerfile -t phntm/bridge-ui:latest .
+npm install
 ```
 
 ### Register a new App on the Cloud Bridge
@@ -33,7 +28,7 @@ To Phantom Bridge, this UI represents an app, individual browser clients running
 [https://bridge.phntm.io:1337/app/register](https://bridge.phntm.io:1337/app/register)
 
 ### Create config file
-Create new config file e.g. `~/bridge_ui_config.jsonc` and paste:
+Create new config file e.g. `~/bridge_ui/config.jsonc` and paste:
 ```jsonc
 {
     "dieOnException": true,
@@ -64,28 +59,36 @@ Create new config file e.g. `~/bridge_ui_config.jsonc` and paste:
 }
 ```
 
-### Add service to your compose.yaml
-Add phntm_bridge_ui service to your compose.yaml file with config.jsonc mapped to /phntm_bridge_ui/config.jsonc and ssl certificates folder exposed:
-```yaml
-services:
-  phntm_bridge_ui:
-    image: phntm/bridge-ui:latest
-    container_name: phntm-bridge-ui
-    hostname: phntm-bridge-ui.local
-    restart: unless-stopped
-    privileged: true
-    environment:
-      - TERM=xterm
-    ports:
-      - 443:443
-    volumes:
-      - /etc/letsencrypt:/ssl
-      - ~/bridge_ui_config.jsonc:/phntm_bridge_ui/config.jsonc
-    command:
-      /bin/sh /phntm_bridge_ui/run.web-ui.sh
-```
-### Launch:
+### Add system service to your systemd
 ```bash
-docker compose up phntm_bridge_ui
+sudo vim /etc/systemd/system/phntm_bridge_ui.service
 ```
 
+and paste
+```
+[Unit]
+Description=phntm bridge_ui service
+After=network.target
+
+[Service]
+ExecStart=/home/ubuntu/bridge_ui/run.web-ui.sh
+Restart=always
+User=root
+Environment=NODE_ENV=production
+WorkingDirectory=/home/ubuntu/bridge_ui/
+StandardOutput=append:/var/log/bridge_ui.log
+StandardError=append:/var/log/bridge_ui.err.log
+
+[Install]
+WantedBy=multi-user.target
+```
+Reload systemctl daemon
+```bash
+sudo systemctl daemon-reload
+```
+
+### Launch:
+```bash
+sudo systemctl start phntm_bridge_ui.service
+sudo systemctl enable phntm_bridge_ui.service # will launch on boot
+```
