@@ -10,12 +10,13 @@ You can fork this repository and host it yourself to customize the default UI pr
 
 # Install Bridge UI Server
 
-### Install Node & npm
+### Install Node.js
+Last tested v18.20.5
 ```bash
 sudo apt install nodejs
 ```
 
-### Clone this repo
+### Clone this repo and install Node dependencies
 ```bash
 cd ~
 git clone git@github.com:PhantomCybernetics/bridge_ui.git bridge_ui
@@ -62,8 +63,7 @@ Create new config file e.g. `~/bridge_ui/config.jsonc` and paste:
 ```bash
 sudo vim /etc/systemd/system/phntm_bridge_ui.service
 ```
-
-and paste
+...and paste:
 ```
 [Unit]
 Description=phntm bridge_ui service
