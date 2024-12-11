@@ -35,10 +35,9 @@ Create new config file e.g. `~/bridge_ui/config.jsonc` and paste:
 
     "WEB_UI": {
         "ssl": {
-            // certificates need to be exposed to the docker container
             // use certbot or the ssl/gen.sh script for self signed dev certificates
-            "private": "/ssl/privkey.pem",
-            "public": "/ssl/fullchain.pem"
+            "private": "/your_ssl_dir/privkey.pem",
+            "public": "/your_ssl_dir/fullchain.pem"
         },
         
         "port": 443, 
