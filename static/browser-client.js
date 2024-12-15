@@ -150,9 +150,7 @@ export class PhntmBridgeClient extends EventTarget {
         this.bridge_files_url = opts.bridge_files_url;
         this.bridge_files_secret = null;
 
-        this.ice_servers_config = opts.ice_servers ? opts.ice_servers : [{urls:[
-            "stun:stun.l.google.com:19302",
-        ]}];
+        this.ice_servers_config = [];
         this.force_turn = opts.force_turn; 
 
         this.init_complete = false;
@@ -971,6 +969,28 @@ export class PhntmBridgeClient extends EventTarget {
             
         this.ros_distro = robot_data['ros_distro'];
         this.client_version = robot_data['git_tag'] ? robot_data['git_tag'] : (robot_data['git_sha'] ? '#'+robot_data['git_sha'].slice(0, 7) : null);
+
+        if (robot_data['ice_servers']) {
+            console.log('Got ice servers: ', robot_data['ice_servers']);
+            if (!robot_data['ice_servers'].length){
+                this.ui.showNotification('No ICE servers received', 'error');
+                console.error('No ICE servers received!');
+            } else {
+                let ice_servers_config = {
+                    urls: [],
+                };
+                if (robot_data['ice_username']) 
+                    ice_servers_config['username'] = robot_data['ice_username'];
+                if (robot_data['ice_secret']) 
+                    ice_servers_config['credential'] = robot_data['ice_secret'];
+                robot_data['ice_servers'].forEach((one) => {
+                    ice_servers_config['urls'].push(one)
+                })
+                // "turn:turn.phntm.io:3478",
+                // "turn:turn.phntm.io:3479",
+                this.ice_servers_config = [ ice_servers_config ]
+            }
+        }
 
         if (this.robot_socket_online && !this.pc /*|| this.pc.signalingState == 'closed' */) {
             console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
