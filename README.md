@@ -10,10 +10,10 @@ You can fork this repository and host it yourself to customize the default UI pr
 
 # Install Bridge UI Server
 
-### Install Node.js
+### Install Node.js & Npm
 Last tested v18.20.5
 ```bash
-sudo apt install nodejs
+sudo apt install nodejs npm
 ```
 
 ### Clone this repo and install Node dependencies
