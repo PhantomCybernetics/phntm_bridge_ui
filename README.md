@@ -45,13 +45,16 @@ Create new config file e.g. `~/bridge_ui/config.jsonc` and paste:
         "host": "https://bridge.phntm.io",
         "url": "/", // base address of the UI (ID_ROBOT will be appended) 
 
-        // Cloud Bridge Socket.io where the client browsers should connect to
-        "bridgeSocketUrl": "https://bridge.phntm.io:1337",
+        // address where robot's Cloud Bridge instance will be requested
+        "bridgeLocateUrl": "https://register.phntm.io/locate",
+        
+        "bridgeSocketPort": 1337, // Cloud Bridge port for Socket.io
+        "bridgeFilesPort": 1338, // Cloud Bridge port for file requests
 
         // app credentials generated upon registration on Cloud Bridge
         "appId": "APP_ID",
         "appKey": "APP_KEY",
-        "name": "Phntm Bridge Web UI"
+        "name": "Phntm Bridge Web UI",
 
         // lines of an analytics tracker code to be appended to HTML
         "analyticsCode": []

@@ -2,6 +2,7 @@ const startupTime:number = Date.now();
 
 import { Debugger } from './lib/debugger';
 const $d:Debugger = Debugger.Get('[Bridge Web]');
+import axios, { AxiosResponse, AxiosError } from 'axios';
 
 const fs = require('fs');
 
@@ -42,8 +43,10 @@ const UI_PORT:number = CONFIG['WEB_UI'].port;
 const UI_HOST:string = CONFIG['WEB_UI'].host;
 const UI_URL:string = CONFIG['WEB_UI'].url;
 
-const BRIDGE_SOCKET_URL:string = CONFIG['WEB_UI'].bridgeSocketUrl;
-const BRIDGE_FILES_URL:string = CONFIG['WEB_UI'].bridgeFilesUrl;
+const BRIDGE_LOCATE_URL:string = CONFIG['WEB_UI'].bridgeLocateUrl;
+const BRIDGE_SOCKET_PORT:number = CONFIG['WEB_UI'].bridgeSocketPort;
+const BRIDGE_FILES_PORT:number = CONFIG['WEB_UI'].bridgeFilesPort;
+
 const APP_ID:string = CONFIG['WEB_UI'].appId;
 const APP_KEY:string = CONFIG['WEB_UI'].appKey;
 const ANALYTICS_CODE:string[] = CONFIG['WEB_UI'].analyticsCode;
@@ -55,7 +58,7 @@ console.log('-------------------------------------------------------------------
 console.log(' PHNTM BRIDGE WEB UI'.yellow);
 console.log('');
 console.log((' '+UI_HOST+':'+UI_PORT+UI_URL+'__ID__').green);
-console.log((' Bridge Socket.io: '+BRIDGE_SOCKET_URL+'').green);
+console.log((' Bridge Locate URL: '+BRIDGE_LOCATE_URL+'').green);
 console.log((' App ID: '+APP_ID+'').green);
 console.log((' App Key: '+APP_KEY+'').green);
 console.log((' UI version: '+UI_GIT_VERSION).green);
@@ -99,17 +102,48 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
 
     res.setHeader('Content-Type', 'text/html');
 
-    res.render('robot_ui', {
-        //user: req.user, flashMessage: req.flash('info'), flashMessageError: req.flash('error'),
-        //activeTab: 'models', title: 'Models',
-        //models: modelItems
-        id_robot: req.params.ID,
-        bridge_socket_url: BRIDGE_SOCKET_URL,
-        bridge_files_url: BRIDGE_FILES_URL,
+    // query the cloud bridge server (closest) for the registered 
+    // instance of this robot
+    let idRobot:string = req.params.ID;
+    axios.post(BRIDGE_LOCATE_URL, {
+        id_robot: idRobot,
         app_id: APP_ID,
-        app_key: APP_KEY,
-        analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : '',
-        ui_git_version: UI_GIT_VERSION,
+        app_key: APP_KEY
+    }, { timeout: 5000 })
+    .then((response: AxiosResponse) => {
+        if (response.status != 200) {
+            $d.err('Locate returned code '+response.status+' for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
+            res.send('Error locating robot on Cloud Bridge, Web UI credentials misconfigured');
+            return;
+        }
+        if (response.data['id_robot'] != idRobot) {
+            $d.err('Locate returned code wrong robot id for '+idRobot+':', response.data);
+            res.send('Error locating robot on Cloud Bridge');
+            return;
+        }
+        let robot_bridge_sever:string = response.data['bridge_server']+':'+BRIDGE_SOCKET_PORT;
+        let robot_bridge_files_url:string = response.data['bridge_server']+':'+BRIDGE_FILES_PORT+'/%SECRET%/%ROBOT_ID%/%URL%';
+        res.render('robot_ui', {
+            id_robot: req.params.ID,
+            bridge_socket_url: robot_bridge_sever, //
+            bridge_files_url: robot_bridge_files_url,
+            app_id: APP_ID,
+            analytics_code: ANALYTICS_CODE ? ANALYTICS_CODE.join('\n') : '',
+            ui_git_version: UI_GIT_VERSION,
+        });
+    })
+    .catch((error:AxiosError) => {
+        if (error.code === 'ECONNABORTED') {
+            $d.err('Locating request timed out for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
+            res.send('Timed out locating robot on Cloud Bridge');
+        }
+        else if (error.status == 404) {
+            $d.err('Locate returned code 404 for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
+            res.send('Robot not found on Cloud Bridge');
+        } else {
+            $d.err('Error locating robot '+idRobot+' at '+BRIDGE_LOCATE_URL+':', error.message);
+            res.send('Error locating robot on Cloud Bridge, Web UI seems misconfigured');
+        }
     });
 });
 

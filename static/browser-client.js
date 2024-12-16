@@ -135,15 +135,10 @@ export class PhntmBridgeClient extends EventTarget {
             console.error("Missing opts.app_id")
             return false;
         }
-        this.app_key = opts.app_key;
-        if (!this.app_key) {
-            console.error("Missing opts.app_key")
-            return false;
-        }
         this.session = null;
 
         //defaults to phntm bridge service
-        this.socket_url = opts.socket_url !== undefined ? opts.socket_url : 'https://bridge.phntm.io:1337';
+        this.socket_url = opts.socket_url;
         this.socket_path = opts.socket_path !== undefined ? opts.socket_path : '/app/socket.io/';
         this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
 
@@ -173,7 +168,6 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket_auth = {
             id_app: this.app_id,
-            key: this.app_key,
             id_instance: null, // stored for reconnects when known
         }
 
