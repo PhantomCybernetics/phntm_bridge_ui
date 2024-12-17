@@ -53,6 +53,8 @@ export class PanelUI {
             this.custom_service_widgets[widget_class_name]['css'] = style;
             document.head.appendChild(style);
         }
+
+        this.servicesMenuFromNodes();
     }
 
     service_widget_map = {};
