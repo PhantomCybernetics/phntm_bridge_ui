@@ -395,7 +395,7 @@ export class InputManager {
                 let driver = profile_default_cfg.driver;
                 if (!driver || this.enabled_drivers.indexOf(driver) < 0) {
                     driver = this.enabled_drivers[0];
-                    console.warn('Controller profile '+id_profile+' for '+c.type+' missing driver, fallback='+driver+'; config=', profile_default_cfg)
+                    console.warn('Controller profile '+id_profile+' for '+c.type+' missing driver '+'; falling back to'+driver)
                 }
 
                 let c_profile = {
@@ -466,6 +466,8 @@ export class InputManager {
         // disable controllers producing into the same topic to avoid conflicsts
         if (state) {
             let c_ids = Object.keys(this.controllers);
+            if (!c.profiles[this.current_profile])
+                return; // driver not loaded
             let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
             c_ids.forEach((cc_id) => {
                 let cc = this.controllers[cc_id];
@@ -694,6 +696,10 @@ export class InputManager {
         }
 
         if (!c_profile.driver_instances[c_profile.driver]) {
+
+            if (!this.registered_drivers[c_profile.driver]) {
+                return;
+            }
 
             //init driver
             c_profile.driver_instances[c_profile.driver] = new this.registered_drivers[c_profile.driver](this);
@@ -1023,6 +1029,8 @@ export class InputManager {
                 return;
             // Object.keys(c.profiles).forEach((id_profile)=>{
             let p = c.profiles[that.current_profile];
+            if (!p || !p.driver_instances)
+                return; // error, driver not loaded
             Object.values(p.driver_instances).forEach((d)=>{
                 d.axes.forEach((axis)=>{
                     axis.needs_reset = true; // (TODO: this does nothing, should we )
@@ -1047,11 +1055,14 @@ export class InputManager {
 
         let data = {
             driver: profile.driver,
-            driver_config: driver.getConfig(),
+            driver_config: driver ? driver.getConfig() : {},
             axes: [],
             buttons: [],
         };
-        
+
+        if (!driver)
+            return data;
+
         // axes stats => config
         for (let i = 0; i < driver.axes.length; i++) {
             if (only_assigned && !driver.axes[i].driver_axis) {
@@ -1164,6 +1175,8 @@ export class InputManager {
     setSavedControllerProfileState(c, id_profile) {
         let c_profile = c.profiles[id_profile];
         let driver = c_profile.driver_instances[c_profile.driver];
+        if (!driver)
+            return;
         driver.setSavedState();
         
         let saved_data = this.getControllerProfileConfig(c, id_profile, true);
@@ -1670,7 +1683,8 @@ export class InputManager {
                         c_profile.driver = val;
                         that.initControllerProfile(that.edited_controller, c_profile);
                         
-                        c_profile.driver_instances[c_profile.driver].setupWriter();
+                        if (c_profile.driver_instances[c_profile.driver])
+                            c_profile.driver_instances[c_profile.driver].setupWriter();
                         that.checkControllerProfileSaved(that.edited_controller, that.current_profile, false);
                         that.makeUI();
                         that.renderTouchButtons();
@@ -1858,7 +1872,7 @@ export class InputManager {
             $('#save-gamepad-profile').removeClass('saved');
         }
 
-        let driver = c_profile.driver_instances[c_profile.driver];
+        let driver = c_profile ? c_profile.driver_instances[c_profile.driver] : null;
 
         if (this.edited_controller.type == 'keyboard') {
             $('#gamepad-buttons-tab').html('Key Mapping');
@@ -2338,6 +2352,13 @@ export class InputManager {
 
     makeAxesUI(driver) {
         
+        if (!driver) {
+            $('#gamepad-axes-panel')
+                .empty()
+                .append('<span class="error">Driver not loaded</span>');
+            return;
+        }
+
         let that = this;
 
         // all gamepad axes
@@ -3068,6 +3089,14 @@ export class InputManager {
         let that = this;
 
         setTimeout(()=>{
+
+            if (!driver) {
+                $('#gamepad-buttons-panel')
+                    .empty()
+                    .append('<span class="error">Driver not loaded</span>');
+                return;
+            }
+
             // all gamepad axes
             let button_els = [];
             for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
@@ -3203,7 +3232,14 @@ export class InputManager {
         
         setTimeout(()=>{
             let profile = this.edited_controller.profiles[this.current_profile];
+
+            if (!profile)
+                return; // not loaded
+
             let driver = profile.driver_instances[profile.driver];
+
+            if (!driver)
+                return; // not loaded
 
             for (let i_axis = 0; i_axis < driver.axes.length; i_axis++) {
 
@@ -3237,7 +3273,13 @@ export class InputManager {
         
         setTimeout(()=>{
             let profile = this.edited_controller.profiles[this.current_profile];
+            if (!profile)
+                return; // not loaded
+
             let driver = profile.driver_instances[profile.driver];
+
+            if (!driver)
+                return; // not loaded
 
             for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
 
@@ -3291,7 +3333,7 @@ export class InputManager {
                     }
                 }
 
-                if (btn.assigned) {
+                if (btn.assigned && btn.out_val_el) {
 
                     if (btn.driver_btn && (btn.val === true || btn.val === false))
                         btn.out_val_el.html(btn.val.toString());
@@ -3316,6 +3358,9 @@ export class InputManager {
 
         let profile = c.profiles[this.current_profile];
         let driver = profile.driver_instances[profile.driver];
+
+        if (!driver)
+            return; // not loaded
 
         let combined_axes_vals = {}; // 1st pass, same axess added to single val
         let combined_axes_unscaled_vals = {}; // expected to be within [-1; +1] (offset added and scaling sign kept)
@@ -3428,6 +3473,9 @@ export class InputManager {
         let profile = c.profiles[this.current_profile];
         let driver = profile.driver_instances[profile.driver];
 
+        if (!driver)
+            return; // not loaded
+
         let some_buttons_live = false;
         driver.buttons_output = {}; // this goes to the drive
 
@@ -3539,6 +3587,7 @@ export class InputManager {
                 connected: true,
             };
             this.controllers['keyboard'] = kb;
+            this.edited_controller = kb;
             this.initController(kb);
         }
     }
@@ -3586,7 +3635,11 @@ export class InputManager {
                 return; //not yet configured
 
             let c_profile = c.profiles[that.current_profile];
+            if (!c_profile)
+                return; // driver not loaded
             let driver = c_profile.driver_instances[c_profile.driver];
+            if (!driver)
+                return; // not loaded
     
             if (c.type == 'touch') {
     
@@ -3865,6 +3918,9 @@ export class InputManager {
         let c_profile = c.profiles[this.current_profile];
         let driver = c_profile.driver_instances[c_profile.driver];
 
+        if (!driver)
+            return; // not loaded
+
         let that = this;
 
         if (driver.on_button_press) { // user mapping
@@ -3925,6 +3981,10 @@ export class InputManager {
 
         let c_profile = c.profiles[this.current_profile];
         let driver = c_profile.driver_instances[c_profile.driver];
+
+        if (!driver)
+            return; // not loaded
+
         let that = this;
 
         if (driver.on_button_press) { // if still listening on up, thus must be a single modifier

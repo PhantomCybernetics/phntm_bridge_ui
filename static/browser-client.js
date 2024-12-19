@@ -1274,7 +1274,8 @@ export class PhntmBridgeClient extends EventTarget {
             console.log('Read channel '+topic+' open '+open_evt.target.label, open_evt)
         });
         dc.addEventListener("error", (err_evt) => {
-            console.error('Read channel '+topic+' error '+err_evt.target.label, err_evt)
+            if (that.socket.connected)
+                console.error('Read channel '+topic+' error '+err_evt.target.label, err_evt)
         });
         dc.addEventListener("bufferedamountlow", (event) => {
             console.warn('Read channel '+topic+' bufferedamountlow '+event.target.label, event)
@@ -1334,7 +1335,8 @@ export class PhntmBridgeClient extends EventTarget {
             }
         });
         dc.addEventListener('error', (ev)=> {
-            console.error('write DC '+topic+' error', ev)
+            if (that.socket.connected)
+                console.error('write DC '+topic+' error', ev)
             if (that.topic_writers[topic].dc == dc) {
                 delete that.topic_writers[topic].dc;
                 that.topic_writers[topic].dc_id = -1;
@@ -1513,7 +1515,7 @@ export class PhntmBridgeClient extends EventTarget {
                 }
             } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
 
-                console.error(`Peer disconnected, robot_socket_online=${that.robot_socket_online}`);
+                console.warn(`Peer disconnected, robot_socket_online=${that.robot_socket_online}`);
 
                 let was_connected = pc.connected;
                 that.peer_stats_loop_running = false;
