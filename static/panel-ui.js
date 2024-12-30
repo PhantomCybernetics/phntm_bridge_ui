@@ -87,7 +87,9 @@ export class PanelUI {
             cellHeight: grid_cell_height,
             handle: '.panel-title',
             columnOpts: {
-                breakpoints: [{ w: 500, c: 1 }]
+                breakpoints: [
+                    { w: 500, c: 1 }
+                ]
             }
         });
 

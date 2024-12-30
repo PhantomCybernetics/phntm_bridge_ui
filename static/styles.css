@@ -1824,23 +1824,34 @@ BUTTON#trigger_wifi_roam.working {
     background-repeat: no-repeat;
     background-position: -26px 1px;
     cursor: pointer;
+    border-radius: 5px;
+    background-color: #525559;
 }
 
 BODY.touch-gamepad .monitor_menu,
 BODY.touch-gamepad .pause-panel-button,
-BODY.touch-gamepad H3.panel-title {
+BODY.touch-gamepad H3.panel-title,
+BODY.touch-gamepad .panel-btn,
+BODY.touch-gamepad .panel-select {
     opacity: 0.2 !important;
 }
 
-BODY.touch-ui .monitor_menu{
+BODY.touch-ui .monitor_menu {
     width: 40px;
     height: 38px;
-    right: 0px;
     top: -8px;
-    /* background-color: blue; */
+    right: -5px;
     background-image: url(/static/graph/icon-menu-thicker.png);
     background-size: 128px;
     background-position: -44px 12px;
+}
+
+BODY.touch-ui.touch-gamepad .monitor_menu {
+    background-color: #252b33;
+}
+
+BODY.touch-ui .editing .monitor_menu {
+    background-color: #005a00;
 }
 
 /* makes the hover area bigger for your conveninence */
@@ -2276,7 +2287,7 @@ BODY.desktop-ui .monitor_menu_content A.msg_types.err:hover,
     width: -webkit-fill-available;
     margin-right: 30px;
     overflow: hidden;
-    text-overflow: ellipsis;
+    /* text-overflow: ellipsis; */
     /* background-color: red; */
     color: #fff;
     position: relative;
@@ -2294,7 +2305,7 @@ BODY.touch-ui .panel-title {
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
-    padding-left: 40px;
+    padding-left: 26px;
 }
 
 BODY.touch-ui .grid-stack-item.editing .panel-title {
@@ -2705,7 +2716,7 @@ BODY.desktop-ui .pause-panel-button.paused {
 BODY.touch-ui .pause-panel-button {
     width: 40px;
     height: 40px;
-    left: -4px;
+    left: -11px;
     top: -8px;
     background-repeat: no-repeat;
     background-position: -47px 7px;
@@ -2718,10 +2729,90 @@ BODY.touch-ui .pause-panel-button.paused {
 
 .panel_btns {
     position: absolute;
-    right: 35px;
+    right: 30px;
     top: -9px;
     height: 39px;
     z-index: 114; /* same as menu, above 2d labels */
+    max-width: calc(100% - 40px);
+    /* background-color: red; */
+}
+
+/* .narrow-panel .pause-panel-button, */
+/* .narrow-panel .panel-btns-gradient, */
+.narrow-panel .panel-btn,
+.narrow-panel .panel-select,
+.buttons-hidden .panel-btn,
+.buttons-hidden .panel-select {
+    display: none;
+}
+
+BODY.touch-ui .narrow-panel .edit-panel-button {
+    display: none !important; 
+}
+
+.tiny-panel .panel-title {
+   visibility: hidden !important;
+}
+
+.tiny-panel .panel_btns,
+.tiny-panel .pause-panel-button {
+    display: none !important;
+}
+.tiny-panel .monitor_menu {
+    background-color: transparent;
+    right: min(calc(50% - 20px), -5px) !important;
+}
+
+
+/* .narrow-panel .panel-title {
+    padding-left: 2px !important;
+} */
+
+.panel-btns-content {
+    background: #525559;
+    display: block;
+    position: relative;
+    margin-left: 10px;
+    height: 100%;
+}
+
+BODY.touch-ui .panel-btns-content {
+    padding-right: 5px;
+}
+
+BODY.touch-ui .editing .panel-btns-content {
+    padding-right: 0px;
+}
+
+BODY.touch-ui .panel_btns {
+    /* right: min(40px, calc(100% - 20px)); */
+    /* padding-left: 10px; */
+}
+
+BODY.touch-ui.touch-gamepad .panel-btns-content {
+    background-color: #252b33;
+}
+
+BODY.touch-ui .editing .panel-btns-content {
+    background-color: #005a00;
+}
+
+.panel-btns-gradient {
+    background-image: linear-gradient(to right, transparent, #525559);
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 10px;
+    height: 100%;
+    pointer-events: none;
+}
+
+BODY.touch-ui.touch-gamepad .panel-btns-gradient {
+    background-image: linear-gradient(to right, transparent, #252b33);
+}
+
+BODY.touch-ui .editing .panel-btns-gradient {
+    background-image: linear-gradient(to right, transparent, #005a00);
 }
 
 .panel-btn {
@@ -2737,11 +2828,17 @@ BODY.touch-ui .pause-panel-button.paused {
     margin-top: 8px;
     background-repeat: no-repeat;
     float: left;
+    flex-shrink: 0
 }
 
-.panel-btn:hover, .panel-select:hover {
+BODY.desktop-ui .panel-btn:hover,
+.panel-select:hover {
     background-color: black;
 }
+
+/* BODY.touch-ui .panel-btn:last-of-type {
+    margin-right: 10px;
+} */
 
 .panel-select {
     position: relative;
@@ -2756,6 +2853,7 @@ BODY.touch-ui .pause-panel-button.paused {
     background-size: 20px 20px;
     border-radius: 5px;
     background-position: center;
+    flex-shrink: 0
 }
 
 .panel-select .panel-btn {
@@ -2820,20 +2918,20 @@ BODY.touch-ui .pause-panel-button.paused {
 }
 
 .panel-btn.perspective-btn,
-.panel-btn.perspective-btn.on:hover {
+BODY.desktop-ui .panel-btn.perspective-btn.on:hover {
     background-image: url('/static/graph/icon-isometric.svg');
     background-size: 20px 20px;
 }
 
 .panel-btn.perspective-btn.on,
-.panel-btn.perspective-btn:hover {
+BODY.desktop-ui .panel-btn.perspective-btn:hover {
     background-image: url('/static/graph/icon-perspective.svg');
 }
 
 .edit-panel-button {
     display: none;
     cursor: pointer;
-    position: absolute;
+    position: relative;
     width: 40px;
     height: 40px;
     right: 0px;
@@ -2844,7 +2942,7 @@ BODY.touch-ui .pause-panel-button.paused {
     background-position: -44px 8px;
     background-size: 100px;
     display: none;
-    /* background-color: red; */
+    margin-right: 5px;
 }
 
 BODY.touch-ui .edit-panel-button {
@@ -2855,6 +2953,12 @@ BODY.touch-ui .editing .edit-panel-button {
     background-color: #008700;
     display: block;
 }
+
+BODY.touch-ui .editing .panel-btn,
+BODY.touch-ui .editing .panel-select {
+    display: none;
+}
+
 
 BODY.touch-ui .editing .grid-stack-item-content {
     background-color: #005a00;
@@ -3322,10 +3426,17 @@ BODY.touch-gamepad #gamepad #gamepad_settings #gamepad-touch-right-zone {
     background-color: #4a4290;
 }
 
+#gamepad #gamepad_settings #input-profile-select.loading {
+    color: #ffffff5e;
+}
+
 BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
     font-size: 15px;
 }
 
+#gamepad #gamepad_settings #input-profile-select OPTION:disabled {
+
+}
 
 
 #profile-buttons {
@@ -4266,7 +4377,7 @@ BODY.desktop-ui  #bottom-links I  {
 }
 
 BODY.hamburger  #bottom-links I  {
-    margin-right: 6px;
+    margin-right: 2px;
 }
 
 BODY.hamburger  #bottom-links I.bm-hide  {
@@ -4274,21 +4385,25 @@ BODY.hamburger  #bottom-links I.bm-hide  {
 }
 
 BODY.hamburger  #bottom-links SPAN {
-    display: block;
+    display: inline-block;
     margin-top: 5px;
+}
+
+BODY.hamburger SPAN#bridge-docs-link {
+    display: block;
 }
 
 BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle {
     display: block;
     position: absolute;
-    width: 40px;
+    width: 35px;
     height: 40px;
     right: 10px;
     bottom: 8px;
     margin: 0px;
     padding: 0px;
     background-image: url(/static/graph/icon-fullscreen.png);
-    background-size: 80px;
+    background-size: 70px;
     background-repeat: no-repeat;
     background-position: 0px 0px;
 }
@@ -4304,7 +4419,7 @@ BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle:active {
 }
 
 BODY.hamburger.touch-ui  #bottom-links SPAN#fullscreen-toggle.enabled {
-    background-position: -40px 0px;
+    background-position: -35px 0px;
 }
 
 BODY.hamburger  #bottom-links {
@@ -4576,6 +4691,18 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     background-image: url(/static/graph/icon-plus.png);
     background-size: 16px;
     background-repeat: no-repeat;
+}
+
+#gamepad-buttons-panel .error,
+#gamepad-axes-panel .error {
+    background: red;
+    display: block;
+    padding: 10px;
+    border-radius: 2px;
+    text-align: center;
+    color: white;
+    font-size: 15px;
+    margin-top: -5px;
 }
 
 #input-controller-selection {

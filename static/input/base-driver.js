@@ -168,7 +168,7 @@ export class InputDriver {
         }
         if (!this.topic_writer.send(this.output)) { // true when ready and written
             if (!this.error_logged) {
-                console.error('Input driver\'s topic writer failed writing (warming up?)');
+                console.warn('Input driver\'s topic writer failed writing (warming up?)');
                 this.error_logged = true; 
             }
             return false;

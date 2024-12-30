@@ -62,7 +62,7 @@ export class Panel {
             '<div class="grid_panel" data-source="'+id_source+'">' +
                 '<h3 class="panel-title" id="panel_title_'+this.n+'" title="'+id_source+'">'+id_source+'</h3>' +
                 '<span class="notes"></span>' +
-                '<span class="panel_btns" id="panel_btns_'+this.n+'""></span>' +
+                '<span class="panel_btns"><span class="panel-btns-gradient"></span><spam class="panel-btns-content" id="panel_btns_'+this.n+'"></span></span>' +
                 '<div class="monitor_menu prevent-select" id="monitor_menu_'+this.n+'">' +
                     '<div class="monitor_menu_content" id="monitor_menu_content_'+this.n+'"></div>' +
                 '</div>' +
@@ -77,6 +77,8 @@ export class Panel {
         let widget_opts = {
             w: w,
             h: h,
+            minW: undefined,
+            minH: undefined,
             content: html
         };
         if (x != null && x != undefined) widget_opts.x = x;
@@ -197,7 +199,6 @@ export class Panel {
             that.last_content_space_click = Date.now();
         }, {'passive': true});
 
-        
         let menu_content_el = document.getElementById('monitor_menu_'+this.n);
         this.menu_el = $(menu_content_el);
         this.menu_content_el = $('#monitor_menu_content_'+this.n);
@@ -258,7 +259,6 @@ export class Panel {
             if (this.ui.widgets[msg_type]) {
 
                 if (!this.display_widget) { //only once
-                    // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
                     fallback_show_src = false;
                 }
@@ -507,37 +507,31 @@ export class Panel {
 
         [ this.widget_width, this.widget_height ] = this.getAvailableWidgetSize();
 
+        let widget_el = $('#panel_widget_'+this.n);
+
         // console.info('Resizing panel widget for '+ this.id_source+' to '+this.widget_width +' x '+this.widget_height);
 
-        $('#panel_widget_'+this.n).parent()
-            .css('height', this.widget_height)
+        if (this.widget_width < 100)
+            widget_el.parent().parent().addClass('narrow-panel');
+        else
+            widget_el.parent().parent().removeClass('narrow-panel');
 
-        $('#panel_source_'+this.n)
-            .css('height', this.widget_height-24)
+        if (this.widget_width < 50)
+            widget_el.parent().parent().addClass('tiny-panel');
+        else
+            widget_el.parent().parent().removeClass('tiny-panel');
+
+        widget_el.parent().css('height', this.widget_height)
+        $('#panel_source_'+this.n).css('height', this.widget_height-24)
 
         this.widget_width = this.src_visible ? (this.widget_width/2.0) : this.widget_width;
 
+        // auto scale canvas
         let canvas = document.getElementById('panel_canvas_'+this.n);
         if (canvas && !$(canvas).hasClass('big_canvas') && !$(canvas).hasClass('canvas_tile')) {
             canvas.width = this.widget_width;
             canvas.height = this.widget_height;
-            // let ctx = canvas.getContext('2d');
-
-            // Event handler to resize the canvas when the document view is changed
-           
-            // canvas.width = window.innerWidth + 'px';
-            // canvas.height = window.innerHeight;
         }
-
-        //  auto scale canvas
-        // if ($('#panel_widget_'+this.n+' CANVAS').length > 0) {
-
-        //     $('#panel_widget_'+this.n+' CANVAS')
-        //         .attr({
-        //             'width': this.widget_width,
-        //             'height' : this.widget_height
-        //         });
-        // }
 
         // auto scale THREE renderer & set camera aspect
         if (this.display_widget) {
@@ -553,17 +547,8 @@ export class Panel {
             }
         }
 
-        // let h = $('#panel_content_'+this.n).parent().parent('.grid-stack-item-content').innerHeight();
-        // let t = $('#panel_content_'+this.n).position().top;
-        // let pt = parseInt($('#panel_content_'+this.n).css('padding-top'));
-        // let pb = parseInt($('#panel_content_'+this.n).css('padding-bottom'));
-        // let mt = parseInt($('#panel_content_'+this.n).css('margin-top'));
-        // let mb = parseInt($('#panel_content_'+this.n).css('margin-bottom'));
-        // console.log('resize ', h, t, pt, pb, mt, mb)
-        //$('#panel_content_'+this.n).css('height', h-t-pt-pb-mt-mb);
-
-       if (this.resizeEventHandler != null)
-           this.resizeEventHandler();
+        if (this.resizeEventHandler != null)
+            this.resizeEventHandler();
     }
 
     maximize(state=true) {

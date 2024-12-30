@@ -235,6 +235,11 @@ export class DescriptionTFWidget extends EventTarget {
 
         panel.resizeEventHandler = () => {
             that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
+            if (panel.widget_width < 250) {
+                $(panel.grid_widget).addClass('buttons-hidden');
+            } else {
+                $(panel.grid_widget).removeClass('buttons-hidden');
+            }
             that.updateOrthoCameraAspect();
             that.renderDirty();
         };

@@ -466,7 +466,7 @@ export class InputManager {
         // disable controllers producing into the same topic to avoid conflicsts
         if (state) {
             let c_ids = Object.keys(this.controllers);
-            if (!c.profiles[this.current_profile])
+            if (!c.profiles || !this.current_profile || !c.profiles[this.current_profile])
                 return; // driver not loaded
             let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
             c_ids.forEach((cc_id) => {
@@ -509,6 +509,8 @@ export class InputManager {
             let cc = this.controllers[cc_id];
             if (!cc.enabled)
                 return;
+            if (!cc.profiles[this.current_profile])
+                return; // not loaded
             let d = cc.profiles[this.current_profile].driver_instances[cc.profiles[this.current_profile].driver];
             if (d == active_driver) {
                 c = cc;
@@ -1594,6 +1596,7 @@ export class InputManager {
                     'disabled': false,
                     'autocomplete': 'off'
                 })
+                .removeClass('loading')
                 .append(profile_opts);
             
             $('#input-profile-select').unbind().change((ev)=>{
@@ -1845,15 +1848,16 @@ export class InputManager {
 
         this.makeControllerDriverConfigUI();
 
+        this.debug_output_panel.html('{}');
+
         if (!this.edited_controller || !this.enabled_drivers || !this.current_profile) {
             $('#gamepad-axes-panel').html('Waiting for controllers...');    
-            this.debug_output_panel.html('{}');
             // $('#gamepad-profile-config').css('display', 'none');
             this.controller_enabled_cb.attr('disabled', true);
             $('#gamepad_settings').removeClass('unsaved');
             $('#save-gamepad-profile').addClass('saved');
             return;
-        }
+        }   
 
         // console.log('Editing controller is ', this.edited_controller);
 
@@ -2597,12 +2601,14 @@ export class InputManager {
             if (!c || !c.profiles) return;
             let profile = c.profiles[this.current_profile];
             let driver = profile.driver_instances[profile.driver]
-            
+        
             let top_btns_cont = $('#touch-ui-top-buttons');
             top_btns_cont.empty();//.removeClass('ui-sortable');
-
             let bottom_btns_cont = $('#touch-ui-bottom-buttons');
             bottom_btns_cont.empty();//.removeClass('ui-sortable');
+
+            if (!driver)
+                return; //not loaded
 
             let top_btns = [];
             let bottom_btns = [];
@@ -3923,7 +3929,7 @@ export class InputManager {
 
         let that = this;
 
-        if (driver.on_button_press) { // user mapping
+        if (driver.on_button_press) { // user is mapping a key
             if (['Shift', 'Control', 'Alt', 'Meta'].indexOf(ev.key) > -1) {
                 return; // ignore single modifiers here
             }
@@ -3953,7 +3959,8 @@ export class InputManager {
                     continue;
                 if (ev.altKey && btn.key_mod != 'alt' && this.driverHasKeyModBinding(driver, ev.key.toLowerCase(), 'alt'))
                     continue;
-               
+
+                ev.preventDefault();
                 btn.pressed = true;
                 btn.raw = 1.0;
 
