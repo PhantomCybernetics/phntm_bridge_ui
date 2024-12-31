@@ -1828,6 +1828,23 @@ BUTTON#trigger_wifi_roam.working {
     background-color: #525559;
 }
 
+.grid-stack-item.maximized .monitor_menu {
+    background-color: transparent;
+}
+
+.grid-stack-item.maximized .panel_btns {
+    right: 66px;
+    top: 56px;
+}
+
+.grid-stack-item.maximized .panel_btns .panel-btns-gradient {
+    display: none;
+}
+
+.grid-stack-item.maximized .panel_btns .panel-btns-content {
+    background-color: transparent;
+}
+
 BODY.touch-gamepad .monitor_menu,
 BODY.touch-gamepad .pause-panel-button,
 BODY.touch-gamepad H3.panel-title,
@@ -2354,8 +2371,8 @@ BODY.desktop-ui .grid-stack>.grid-stack-item:hover {
 }
 
 BODY.touch-ui .grid-stack-item.maximized .panel-title {
-    top: 55px;
-    left: 8px;
+    top: 57px;
+    left: 16px;
 }
 
 .grid-stack-item.maximized .panel_content_space {
@@ -2714,17 +2731,17 @@ BODY.desktop-ui .pause-panel-button.paused {
 }
 
 BODY.touch-ui .pause-panel-button {
-    width: 40px;
+    width: 30px;
     height: 40px;
-    left: -11px;
+    left: -5px;
     top: -8px;
     background-repeat: no-repeat;
-    background-position: -47px 7px;
+    background-position: -54px 7px;
     background-size: 82px;
 }
 
 BODY.touch-ui .pause-panel-button.paused {
-    background-position: 13px 7px;
+    background-position: 8px 7px;
 }
 
 .panel_btns {
@@ -2734,6 +2751,7 @@ BODY.touch-ui .pause-panel-button.paused {
     height: 39px;
     z-index: 114; /* same as menu, above 2d labels */
     max-width: calc(100% - 40px);
+    pointer-events: none;
     /* background-color: red; */
 }
 
@@ -2828,7 +2846,7 @@ BODY.touch-ui .editing .panel-btns-gradient {
     margin-top: 8px;
     background-repeat: no-repeat;
     float: left;
-    flex-shrink: 0
+    pointer-events: all;
 }
 
 BODY.desktop-ui .panel-btn:hover,
@@ -2853,7 +2871,7 @@ BODY.desktop-ui .panel-btn:hover,
     background-size: 20px 20px;
     border-radius: 5px;
     background-position: center;
-    flex-shrink: 0
+    pointer-events: all;
 }
 
 .panel-select .panel-btn {
@@ -2943,6 +2961,7 @@ BODY.desktop-ui .panel-btn.perspective-btn:hover {
     background-size: 100px;
     display: none;
     margin-right: 5px;
+    pointer-events: all;
 }
 
 BODY.touch-ui .edit-panel-button {

@@ -661,7 +661,7 @@ export class PanelUI {
     }
 
     panelMenuAutosize(panel) {
-        let l = panel.menu_el.offset().left - panel.menu_content_el.width() - 15;
+        let l = panel.menu_el.offset().left - panel.menu_content_el.width() + 35;
         // let max_w = window.innerWidth-20; // screen offset & padding
         let w_cont = panel.menu_content_el.innerWidth(); //includes padding
         if (l < 5) {
@@ -675,7 +675,7 @@ export class PanelUI {
         let t = panel.menu_el.offset().top - (h_cont / 2.0);
         if (panel.floating_menu_top !== null)
             t = panel.floating_menu_top;
-        let min_top = $(window).scrollTop() + 25.0;
+        let min_top = $(window).scrollTop() + 0.0;
         let t0 = t;
         if (t < min_top) {
             t = min_top;
@@ -705,7 +705,7 @@ export class PanelUI {
         }
 
         if (this.panel_menu_on && this.panel_menu_on != panel) {
-            this.panelMenuTouchToggle(this.panel_menu_on) //turn off previous
+            this.panelMenuTouchToggle(this.panel_menu_on); //turn off previous
         }
 
         if (!panel.menu_el.hasClass('open')) {
