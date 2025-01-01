@@ -258,7 +258,7 @@ export class Panel {
 
             if (this.ui.widgets[msg_type]) {
 
-                if (!this.display_widget) { //only once
+                if (!this.display_widget) { // only once
                     this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
                     fallback_show_src = false;
                 }

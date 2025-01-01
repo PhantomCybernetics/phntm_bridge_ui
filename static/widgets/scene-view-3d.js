@@ -4,9 +4,9 @@ import * as THREE from 'three';
 import { lerpColor, deg2rad } from '../inc/lib.js'
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 
-export class Everything3DWidget extends DescriptionTFWidget {
+export class SceneView3DWidget extends DescriptionTFWidget {
 
-    static label = 'Everything (3D)';
+    static label = '3D Scene View';
     static default_width = 8;
     static default_height = 6;
     
@@ -14,6 +14,8 @@ export class Everything3DWidget extends DescriptionTFWidget {
         super(panel, false); // don't start rendering loop yet
 
         let that = this;
+
+        $('#panel_title_'+panel.n).text('Scene View');
 
         this.addEventListener('pg_updated', (e) => this.onPGUpdated(e));
 

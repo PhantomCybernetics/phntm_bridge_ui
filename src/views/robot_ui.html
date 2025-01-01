@@ -190,7 +190,7 @@
     import { LaserOdometryWidget } from '/static/widgets/laser-odo.js';
     import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
     import { NavigationWidget } from '/static/widgets/navigation.js';
-    import { Everything3DWidget } from '/static/widgets/everything.js';
+    import { SceneView3DWidget } from '/static/widgets/scene-view-3d.js';
 
     import { JoyInputDriver } from '/static/input/joy-driver.js';
     import { TwistInputDriver } from '/static/input/twist-driver.js';
@@ -231,7 +231,7 @@
         // panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
         panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
 
-        panel_ui.addCustomWidget(Everything3DWidget);
+        panel_ui.addCustomWidget(SceneView3DWidget);
         // panel_ui.addCustomWidget(NavigationWidget);
         // panel_ui.addCustomWidget(DescriptionTFWidget);
         // panel_ui.addCustomWidget(LaserOdometryWidget);
