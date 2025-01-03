@@ -227,13 +227,18 @@ export class PanelUI {
 
             let panel = that.panels[id_src];
             // console.log('id_panel: '+id_src+'; panel=', panel, that.panels)
-            if (!panel)
+            if (!panel) {
+                console.error('Panel '+id_src+ 'not found for stream '+stream.id);
                 return;
-
+            }
+                
             panel.id_stream = stream.id;
             console.log('Found video panel for new media stream ' + stream.id + ' src=' + id_src);
             if (document.getElementById('panel_video_' + panel.n)) {
+                console.log('Assigning stream '+panel.id_stream+' to panel');
                 document.getElementById('panel_video_' + panel.n).srcObject = stream;
+            } else {
+                console.error('Panel video #panel_video_'+panel.n+' not found for stream '+stream.id);
             }
         });
 

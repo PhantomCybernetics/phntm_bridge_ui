@@ -12,7 +12,7 @@ export class VideoWidget {
 
         $('#panel_widget_'+panel.n)
             .addClass('enabled video')
-            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted></video>' //muted allows video autoplay in chrome before user interactions
+            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted preload="metadata"></video>' //muted allows video autoplay in chrome before user interactions
                 + '<span id="video_stats_'+panel.n+'" class="video_stats"></span>'
                 + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
                 + '<div id="video_overlay_'+panel.n+'" class="video_overlay"></div>'
@@ -31,16 +31,71 @@ export class VideoWidget {
         this.display_overlay_input_crop = false;
 
         let that = this;
-        this.el.on('loadedmetadata', function() {
-            console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
-            that.videoWidth = this.videoWidth;
-            that.videoHeight = this.videoHeight;
+        // this.el.on('loadedmetadata', function(ev) {
+        //     if (!this.videoWidth || !this.videoHeight) {
+        //         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
+        //         return;
+        //     }
+        //     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
+        //     that.videoWidth = this.videoWidth;
+        //     that.videoHeight = this.videoHeight;
+        //     that.updateAllOverlays();
+        // });
+
+        let video_el = document.getElementById('panel_video_'+panel.n);
+        video_el.addEventListener('resize', () => {
+            // Safari sometimes doesn't load meta properly => wait for actual dimensions
+            if (that.videoWidth != -1 || that.videoHeight != -1)
+                return;
+
+            if (!video_el.videoWidth || !video_el.videoHeight) {
+                console.log('Invalid video metadata loaded, ignoring; w, h = ', video_el.videoWidth, video_el.videoHeight);
+                return;
+            }
+
+            console.log('Video meta loaded:', video_el.videoWidth, video_el.videoHeight);
+            // console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
+            that.videoWidth = video_el.videoWidth;
+            that.videoHeight = video_el.videoHeight;
             that.updateAllOverlays();
         });
 
-        if (panel.id_stream && panel.ui.client.media_streams[panel.id_stream]) { // assign stream, if already available
-            console.log('Assigning stream '+panel.id_stream+' to panel');
-            document.getElementById('panel_video_'+panel.n).srcObject = panel.ui.client.media_streams[panel.id_stream];
+        video_el.addEventListener('click', () => {
+            console.log('Click > play');
+            video_el.play();
+        });
+        
+        // this.el.on('resize', () => {
+        //     let w = that.el
+
+        //     if (!this.videoWidth || !this.videoHeight) {
+        //         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
+        //         return;
+        //     }
+        //     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
+        //     that.videoWidth = this.videoWidth;
+        //     that.videoHeight = this.videoHeight;
+        //     that.updateAllOverlays();
+        // });
+
+        // this.el.on('loadedmetadata', function(ev) {
+        //     if (!this.videoWidth || !this.videoHeight) {
+        //         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
+        //         return;
+        //     }
+        //     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
+        //     that.videoWidth = this.videoWidth;
+        //     that.videoHeight = this.videoHeight;
+        //     that.updateAllOverlays();
+        // });
+
+        if (panel.id_stream && panel.ui.client.media_streams[panel.id_stream]) { // assign stream, if already available            
+            if (document.getElementById('panel_video_' + panel.n)) {
+                console.log('Assigning stream '+panel.id_stream+' to panel');
+                document.getElementById('panel_video_'+panel.n).srcObject = panel.ui.client.media_streams[panel.id_stream];
+            } else {
+                console.error('Panel video #panel_video_' + panel.n + ' not found for stream '+panel.id_stream)
+            }
         }
 
         this.overlays = {};

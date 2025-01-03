@@ -1205,13 +1205,19 @@ export class PhntmBridgeClient extends EventTarget {
         if (start_time === undefined)
             start_time = Date.now();
         else if (Date.now() - start_time > 30000) {
-            console.error('Timed out while waiting for ICE gathering, state='+this.pc.iceGatheringState);
+            if (this.pc)
+                console.error('Timed out while waiting for ICE gathering, state='+this.pc.iceGatheringState);
+            else
+                console.error('Timed out while waiting for ICE gathering, pc='+this.pc);
             if (reject)
                 return reject();
             return;
         }
 
-        console.log('Waiting for ICE gathering, state='+this.pc.iceGatheringState);
+        if (this.pc)
+            console.log('Waiting for ICE gathering, state='+this.pc.iceGatheringState);
+        else
+            console.log('Waiting for ICE gathering, pc='+this.pc);
 
         let that = this;
         setTimeout(() => {
@@ -1476,8 +1482,8 @@ export class PhntmBridgeClient extends EventTarget {
             }
 
             evt.track.addEventListener('ended', (evt) => {
-                console.warn('Track ended!', evt);
-            })
+                console.warn('Track ended!', evt, evt.target.id);
+            });
         });
 
         // data channels opened by the app, not webrtc

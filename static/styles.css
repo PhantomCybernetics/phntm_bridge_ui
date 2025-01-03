@@ -3074,6 +3074,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     /* background: rgba(255, 0, 0, 0.315); */
     width: 100%;
     height: 100%;
+    pointer-events: none;
 }
 
 .video_overlay_cont {
