@@ -288,16 +288,16 @@ export class Panel {
                 }
             }
 
-            if (this.ui.topic_widgets[this.id_source] != undefined) {
-                console.log('Initiating display topic widget '+this.id_source, this.display_widget)
+            if (this.ui.topic_widgets[this.id_source] != undefined) {               
                 if (!this.display_widget) { //only once
+                    console.log('Initiating display topic widget '+this.id_source, this.display_widget)
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
                     fallback_show_src = false;
                 }
-            } else if (this.ui.type_widgets[this.msg_type] != undefined) {
-                console.log('Initiating display type widget '+this.id_source+' w '+this.msg_type, this.display_widget)
+            } else if (this.ui.type_widgets[this.msg_type] != undefined) {               
                 if (!this.display_widget) { //only once
+                    console.log('Initiating display type widget '+this.id_source+' w '+this.msg_type, this.display_widget)
                     // $('#display_panel_source_link_'+this.n).css('display', 'block');
                     this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source); //no data yet
                     fallback_show_src = false;
@@ -713,6 +713,56 @@ export class Panel {
 
     onStream(stream) {
         console.log('Got stream for '+this.id_source+': ', stream)
+    }
+
+    setMediaStream(id_stream=null) {
+
+        if (!id_stream && !this.id_stream) {
+            console.debug('setMediaStream: no media stream given nor stored');
+            return;
+        }
+
+        if (id_stream)
+            this.id_stream = id_stream;
+
+        console.log('setMediaStream: setting stream '+this.id_stream);
+
+        // if (this.ui.client.media_streams[this.id_stream]) { // assign stream, if already available            
+        //     this.setMediaStream(panel.ui.client.media_streams[panel.id_stream]);
+        // }
+
+        let that = this;
+        let video_el = document.getElementById('panel_video_' + this.n);
+
+        if (!video_el) {
+            console.log('setMediaStream Panel video element #panel_video_' + this.n + ' not yet ready');
+            return;
+        }
+
+        window.setTimeout(()=>{
+            let stream = that.ui.client.media_streams[that.id_stream];
+            if (!stream) {
+                console.error('setMediaStream: stream '+that.id_stream+' not an object', stream);
+                return;
+            }
+            if (!stream.active) {
+                console.error('setMediaStream: stream '+that.id_stream+' inactive', stream);
+                return;
+            }
+            stream.getTracks().forEach(track => {
+                console.log('setMediaStream: Stream track'+track.id+'; readyState='+track.readyState, track);
+            });
+            console.log('setMediaStream: PC iceConnectionState = ', that.ui.client.pc.iceConnectionState);
+            console.log('setMediaStream: Assigning stream '+that.id_stream+' to panel', stream);
+            try {
+                video_el.srcObject = stream;
+                video_el.play();
+            }
+            catch(e) {
+                console.error('setMediaStream threw exception', e);
+            }
+        }, 0);
+
     }
 
     close() { // remove panel

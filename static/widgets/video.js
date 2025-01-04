@@ -12,7 +12,7 @@ export class VideoWidget {
 
         $('#panel_widget_'+panel.n)
             .addClass('enabled video')
-            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted preload="metadata"></video>' //muted allows video autoplay in chrome before user interactions
+            .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted="true" preload="metadata"></video>' //muted allows video autoplay in chrome before user interactions
                 + '<span id="video_stats_'+panel.n+'" class="video_stats"></span>'
                 + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
                 + '<div id="video_overlay_'+panel.n+'" class="video_overlay"></div>'
@@ -43,6 +43,11 @@ export class VideoWidget {
         // });
 
         let video_el = document.getElementById('panel_video_'+panel.n);
+
+        video_el.onloadedmetadata = () => {
+            video_el.play().catch(e => console.error('Play failed:', e));
+        };
+
         video_el.addEventListener('resize', () => {
             // Safari sometimes doesn't load meta properly => wait for actual dimensions
             if (that.videoWidth != -1 || that.videoHeight != -1)
@@ -60,10 +65,10 @@ export class VideoWidget {
             that.updateAllOverlays();
         });
 
-        video_el.addEventListener('click', () => {
-            console.log('Click > play');
-            video_el.play();
-        });
+        // video_el.addEventListener('click', () => {
+        //     console.log('Click > play');
+        //     video_el.play();
+        // });
         
         // this.el.on('resize', () => {
         //     let w = that.el
@@ -89,14 +94,15 @@ export class VideoWidget {
         //     that.updateAllOverlays();
         // });
 
-        if (panel.id_stream && panel.ui.client.media_streams[panel.id_stream]) { // assign stream, if already available            
-            if (document.getElementById('panel_video_' + panel.n)) {
-                console.log('Assigning stream '+panel.id_stream+' to panel');
-                document.getElementById('panel_video_'+panel.n).srcObject = panel.ui.client.media_streams[panel.id_stream];
-            } else {
-                console.error('Panel video #panel_video_' + panel.n + ' not found for stream '+panel.id_stream)
-            }
-        }
+        document.getElementById('panel_video_'+panel.n).addEventListener('error', (ev)=>{
+            console.log('(Assigned) Stream error', ev);
+        });
+
+        // document.getElementById('panel_video_'+panel.n).addEventListener('error', (ev)=>{
+        //     console.log('(Assigned) Stream error', ev);
+        // });
+
+        this.panel.setMediaStream();
 
         this.overlays = {};
         this.clear_overlays_timeout = {}
@@ -117,7 +123,6 @@ export class VideoWidget {
         this.parseUrlParts(this.panel.custom_url_vars); //calls multisource.parseUrlParts
         this.onOverlaySourcesChange(this.overlay_sources.getSources());
     }
-
     
     onOverlaySourcesChange(overlay_topics) {
 

@@ -173,7 +173,7 @@
 <!-- <div id="monitors" style="display:none"></div> -->
 
 <script type="module">
-
+    
     import { BatteryStateWidget } from '/static/widgets/battery.js';
     import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
     import { VideoWidget } from '/static/widgets/video.js';
@@ -199,60 +199,65 @@
 
     $(document).ready(function() {
 
-        let robot = new PhntmBridgeClient({
-            socket_url: '<%= bridge_socket_url %>',
-            socket_path: '/app/socket.io/',
-            socket_auto_connect: false,
-            bridge_files_url: '<%= bridge_files_url %>',
-            app_id: '<%= app_id %>',
-            id_robot: '<%= id_robot %>',
-            force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1 (debug)
-        });
+        try {
 
-        let input_manager = new InputManager(robot);
-        input_manager.registerDriver('Joy', JoyInputDriver);
-        input_manager.registerDriver('Twist', TwistInputDriver);
+            let robot = new PhntmBridgeClient({
+                socket_url: '<%= bridge_socket_url %>',
+                socket_path: '/app/socket.io/',
+                socket_auto_connect: false,
+                bridge_files_url: '<%= bridge_files_url %>',
+                app_id: '<%= app_id %>',
+                id_robot: '<%= id_robot %>',
+                force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1 (debug)
+            });
 
-        let panel_ui = new PanelUI(robot, 119, input_manager);
+            let input_manager = new InputManager(robot);
+            input_manager.registerDriver('Joy', JoyInputDriver);
+            input_manager.registerDriver('Twist', TwistInputDriver);
 
-        panel_ui.addTypeWidget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
-        panel_ui.addTypeWidget('sensor_msgs/msg/Range', RangeWidget),
-        panel_ui.addTypeWidget('sensor_msgs/msg/LaserScan', LaserScanWidget);
-        panel_ui.addTypeWidget('sensor_msgs/msg/Imu', ImuWidget);
-        panel_ui.addTypeWidget('rcl_interfaces/msg/Log', LogWidget);
+            let panel_ui = new PanelUI(robot, 119, input_manager);
 
-        panel_ui.addTypeWidget('video', VideoWidget);
-        panel_ui.addTypeWidget('sensor_msgs/msg/Image', VideoWidget);
-        panel_ui.addTypeWidget('sensor_msgs/msg/CompressedImage', VideoWidget);
-        panel_ui.addTypeWidget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
-        
-        // TODO:
-        // panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
-        // panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
-        panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
+            panel_ui.addTypeWidget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
+            panel_ui.addTypeWidget('sensor_msgs/msg/Range', RangeWidget),
+            panel_ui.addTypeWidget('sensor_msgs/msg/LaserScan', LaserScanWidget);
+            panel_ui.addTypeWidget('sensor_msgs/msg/Imu', ImuWidget);
+            panel_ui.addTypeWidget('rcl_interfaces/msg/Log', LogWidget);
 
-        panel_ui.addCustomWidget(SceneView3DWidget);
-        // panel_ui.addCustomWidget(NavigationWidget);
-        // panel_ui.addCustomWidget(DescriptionTFWidget);
-        // panel_ui.addCustomWidget(LaserOdometryWidget);
+            panel_ui.addTypeWidget('video', VideoWidget);
+            panel_ui.addTypeWidget('sensor_msgs/msg/Image', VideoWidget);
+            panel_ui.addTypeWidget('sensor_msgs/msg/CompressedImage', VideoWidget);
+            panel_ui.addTypeWidget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
+            
+            // TODO:
+            // panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
+            // panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
+            panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
 
-        panel_ui.addServiceTypeWidget('std_srvs/srv/Empty', ServiceInput_Empty);
-        panel_ui.addServiceTypeWidget('std_srvs/srv/Trigger', ServiceInput_Empty);
-        panel_ui.addServiceTypeWidget('std_srvs/srv/SetBool', ServiceInput_Bool);
+            panel_ui.addCustomWidget(SceneView3DWidget);
+            // panel_ui.addCustomWidget(NavigationWidget);
+            // panel_ui.addCustomWidget(DescriptionTFWidget);
+            // panel_ui.addCustomWidget(LaserOdometryWidget);
 
-        // init panel setup from url
-        // also subscribes to topics and cameras required by panel widgets
-        panel_ui.panelsFromURLHash(window.location.hash);
+            panel_ui.addServiceTypeWidget('std_srvs/srv/Empty', ServiceInput_Empty);
+            panel_ui.addServiceTypeWidget('std_srvs/srv/Trigger', ServiceInput_Empty);
+            panel_ui.addServiceTypeWidget('std_srvs/srv/SetBool', ServiceInput_Bool);
 
-        robot.on('error', (err, msg)=>{
-            console.error('Robot returned error: '+err, msg);
-        })
+            // init panel setup from url
+            // also subscribes to topics and cameras required by panel widgets
+            panel_ui.panelsFromURLHash(window.location.hash);
 
-        //connects socket.io, then runs handshake with the robot
-        robot.connect();
+            robot.on('error', (err, msg)=>{
+                console.error('Robot returned error: '+err, msg);
+            })
 
-        if (navigator.userAgent.toLowerCase().includes('firefox')) {
-            panel_ui.showPageError(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+            //connects socket.io, then runs handshake with the robot
+            robot.connect();
+
+            if (navigator.userAgent.toLowerCase().includes('firefox')) {
+                panel_ui.showPageError(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+            }
+        } catch (e) {
+            document.error(e);
         }
     });
 

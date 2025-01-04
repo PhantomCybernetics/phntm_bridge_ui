@@ -231,15 +231,8 @@ export class PanelUI {
                 console.error('Panel '+id_src+ 'not found for stream '+stream.id);
                 return;
             }
-                
-            panel.id_stream = stream.id;
-            console.log('Found video panel for new media stream ' + stream.id + ' src=' + id_src);
-            if (document.getElementById('panel_video_' + panel.n)) {
-                console.log('Assigning stream '+panel.id_stream+' to panel');
-                document.getElementById('panel_video_' + panel.n).srcObject = stream;
-            } else {
-                console.error('Panel video #panel_video_'+panel.n+' not found for stream '+stream.id);
-            }
+            
+            panel.setMediaStream(stream.id);
         });
 
 
@@ -616,10 +609,10 @@ export class PanelUI {
         //     }
         // });
 
-        window.addEventListener('touchstart', (ev) => {
-            // ev.preventDefault();
-            // ev.stopPropagation();
-        }, { passive: false });
+        // window.addEventListener('touchstart', (ev) => {
+        //     // ev.preventDefault();
+        //     // ev.stopPropagation();
+        // }, { passive: false });
 
         $(window).on('resize', () => {
             if (that.panel_menu_on) {
@@ -649,7 +642,7 @@ export class PanelUI {
                     });
                     console.log('Screen Wake Lock released:', wakeLock.released);
                 } catch (err) {
-                    console.error(`${err.name}, ${err.message}`);
+                    console.error(`Screen Wake Lock ${err.name}, ${err.message}`);
                 }
             };
             

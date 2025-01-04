@@ -484,11 +484,25 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         window.addEventListener("beforeunload", function(e){
-            if (that.pc) {
-                console.warn('Unloading window, disconnecting pc...');
-                that.pc.close();
-                that.pc = null;
-            }
+            // let stream_ids = Object.keys(that.media_streams);
+            // $('video').each((index, video_el)=>{
+            //     // console.log();
+            //     video_el.srcObject = null;
+            // });
+
+            // if (that.pc) {
+            //     console.warn('Unloading window, disconnecting pc...', that.pc);
+            //     that.pc.close();
+            //     that.pc = null;
+            // }
+
+            // stream_ids.forEach((id_stream)=>{
+            //     console.warn('Killing stream '+id_stream, that.media_streams[id_stream]);
+            //     that.media_streams[id_stream].getTracks().forEach(track => {
+            //         track.stop();
+            //     });
+            // });
+            // debugger;
         });
 
         this.on('peer_connected', () => this.startHeartbeat());
@@ -1128,11 +1142,6 @@ export class PhntmBridgeClient extends EventTarget {
             });
         }
 
-        if (robot_data['ui']) { 
-            console.log('UI got config: ', robot_data['ui']);
-            this.emit('ui_config', robot_data['ui']); // must trigger after service_buttons
-        }
-
         if (robot_data['read_video_streams']) {
             robot_data['read_video_streams'].forEach((stream_data)=>{
                 let id_src = stream_data[0];
@@ -1144,24 +1153,29 @@ export class PhntmBridgeClient extends EventTarget {
                 }
 
                 if (id_stream) {
-                    if (!this.topic_streams[id_src] || this.topic_streams[id_src] != id_stream) {
+                    if (!that.topic_streams[id_src] || that.topic_streams[id_src] != id_stream) {
                         console.log('Setting stream to '+id_stream+' for '+id_src);
-                        this.topic_streams[id_src] = id_stream;
-                        if (this.media_streams[id_stream]) {
-                            this.emit('media_stream', id_src, this.media_streams[id_stream]);
-                        }
+                        that.topic_streams[id_src] = id_stream;
+                        // if (that.media_streams[id_stream]) {
+                        //     that.emit('media_stream', id_src, that.media_streams[id_stream]);
+                        // }
                     } else {
-                        console.log('Stream already exists for '+id_src +'; old='+this.topic_streams[id_src]+' new='+id_stream+'');
+                        console.log('Stream already exists for '+id_src +'; old='+that.topic_streams[id_src]+' new='+id_stream+'');
                     }
 
-                } else if (this.topic_streams[id_src]) {
+                } else if (that.topic_streams[id_src]) {
                     //stream closed
-                    console.log('Stream closed for '+id_src +'; '+this.topic_streams[id_src]);
+                    console.log('Stream closed for '+id_src +'; '+that.topic_streams[id_src]);
                     // if (this.media_streams[this.topic_streams[id_src]])
                     //     delete this.media_streams[this.topic_streams[id_src]];
-                    delete this.topic_streams[id_src];
+                    delete that.topic_streams[id_src];
                 }
             });
+        }
+
+        if (robot_data['ui']) { 
+            console.log('UI got config: ', robot_data['ui']);
+            this.emit('ui_config', robot_data['ui']); // must trigger after service_buttons
         }
 
         if (robot_data['offer'] && answer_callback) {
@@ -1428,7 +1442,7 @@ export class PhntmBridgeClient extends EventTarget {
         let config = {
             sdpSemantics: 'unified-plan',
             iceServers: this.ice_servers_config,
-            // bundlePolicy: 'max-compat'
+            bundlePolicy: 'max-compat'
         };
 
         if (this.force_turn) {
@@ -1437,6 +1451,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         let pc = new RTCPeerConnection(config);
+        // pc.addTransceiver('video', { direction: 'recvonly' });
         let that = this;
 
         pc.addEventListener('icegatheringstatechange', (evt) => {
@@ -1465,7 +1480,7 @@ export class PhntmBridgeClient extends EventTarget {
                     if (that.topic_streams[id_src] == stream.id) {
                         that.emit('media_stream', id_src, stream)
                     }
-                })
+                });
 
                 stream.addEventListener('addtrack', (evt) => {
                     console.warn('Stream added track '+stream.id, evt);

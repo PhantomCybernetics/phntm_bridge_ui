@@ -1,14 +1,12 @@
 import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg } from "../inc/lib.js";
 import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
+import { STLLoader } from 'stl-loader';
+import { ColladaLoader } from 'collada-loader';
 import { OrbitControls } from 'orbit-controls';
-import { LoadingManager } from 'three';
 import URDFLoader from 'urdf-loader';
 import { CSS2DRenderer, CSS2DObject } from 'css-2d-renderer';
 import { MultiTopicSource } from "./inc/multitopic.js";
-import { Vector3 } from "three";
-import { Quaternion } from "three";
+import { Vector3, Quaternion, LoadingManager } from "three";
 
 export class DescriptionTFWidget extends EventTarget {
     static label = 'Robot description (URFD) + Transforms';
