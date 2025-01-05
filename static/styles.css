@@ -306,7 +306,7 @@ BODY.hamburger #menubar_scrollable.open {
 
 
 #menubar_items #graph_display.narrow #graph_topics {
-    width: 300px;
+    width: 100%;
     padding-left: 0px !important;
     float: right;
 }
@@ -557,6 +557,10 @@ BODY.narrower .narrower-w { display: inline; }
     overflow-y: scroll;
     overscroll-behavior: none;
     scrollbar-width: none;
+}
+
+#menubar_items #graph_display.narrow #graph_topics_scrolling {
+    width: 100%;
 }
 
 #graph_topics {
