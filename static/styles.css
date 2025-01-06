@@ -2215,6 +2215,7 @@ BODY.touch-ui .src_ctrl_menu {
     position: relative;
     min-width: 50px;
     text-align: left;
+    max-width: calc(100% - 5px);
 }
 
 BODY.touch-ui .src_ctrl_menu BUTTON {
