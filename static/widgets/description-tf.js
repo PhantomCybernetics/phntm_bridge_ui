@@ -213,6 +213,10 @@ export class DescriptionTFWidget extends EventTarget {
         this.ros_space.quaternion.copy(this.ros_space_default_rotation); 
         this.ros_space_offset_set = false; // will be set on 1st base tf data
 
+        this.skybox_name = 'acid';
+        this.skybox_textures = {};
+        this.cube_loader = new THREE.CubeTextureLoader();
+
         const light = new THREE.SpotLight( 0xffffff, 30.0, 0, Math.PI/10);
         light.castShadow = true; // default false
         this.scene.add(light);
@@ -471,7 +475,8 @@ export class DescriptionTFWidget extends EventTarget {
             this.controls.object = this.camera;
             this.controls.update();
         }
-            
+
+        this.setSkybox();
     }
 
     updateOrthoCameraAspect() {
@@ -485,6 +490,29 @@ export class DescriptionTFWidget extends EventTarget {
             this.camera.updateProjectionMatrix();
             this.renderDirty();
         }
+    }
+
+    setSkybox(skybox_name) {
+
+        if (this.vars.perspective_camera && this.skybox_name) {
+            if (!this.skybox_textures[this.skybox_name]) {
+                this.skybox_textures[this.skybox_name] = this.cube_loader.load([
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_0.png',
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_1.png',
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_2.png',
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_3.png',
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_4.png',
+                    '/static/skyboxes/'+this.skybox_name+'/cubemap_5.png'
+                ]);
+            }
+            this.scene.background = this.skybox_textures[this.skybox_name];
+
+        } else { //skybox doesn't work with otrho cameras
+            
+            this.scene.background = new THREE.Color(0x000000); // Red color
+            
+        }
+        
     }
 
     moveCameraToView(position) {

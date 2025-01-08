@@ -484,24 +484,21 @@ export class PhntmBridgeClient extends EventTarget {
         });
 
         window.addEventListener("beforeunload", function(e){
-            // let stream_ids = Object.keys(that.media_streams);
-            // $('video').each((index, video_el)=>{
-            //     // console.log();
-            //     video_el.srcObject = null;
-            // });
+            let stream_ids = Object.keys(that.media_streams);
 
-            // if (that.pc) {
-            //     console.warn('Unloading window, disconnecting pc...', that.pc);
-            //     that.pc.close();
-            //     that.pc = null;
-            // }
+            stream_ids.forEach((id_stream)=>{
+                console.warn('Killing stream '+id_stream, that.media_streams[id_stream]);
+                that.media_streams[id_stream].getTracks().forEach(track => {
+                    track.stop();
+                });
+            });
 
-            // stream_ids.forEach((id_stream)=>{
-            //     console.warn('Killing stream '+id_stream, that.media_streams[id_stream]);
-            //     that.media_streams[id_stream].getTracks().forEach(track => {
-            //         track.stop();
-            //     });
-            // });
+            if (that.pc) {
+                console.warn('Unloading window, disconnecting pc...', that.pc);
+                that.pc.close();
+                that.pc = null;
+            }
+            
             // debugger;
         });
 
@@ -1156,11 +1153,13 @@ export class PhntmBridgeClient extends EventTarget {
                     if (!that.topic_streams[id_src] || that.topic_streams[id_src] != id_stream) {
                         console.log('Setting stream to '+id_stream+' for '+id_src);
                         that.topic_streams[id_src] = id_stream;
-                        // if (that.media_streams[id_stream]) {
-                        //     that.emit('media_stream', id_src, that.media_streams[id_stream]);
-                        // }
+                        
                     } else {
                         console.log('Stream already exists for '+id_src +'; old='+that.topic_streams[id_src]+' new='+id_stream+'');
+                    }
+
+                    if (that.media_streams[id_stream]) {
+                         that.emit('media_stream', id_src, that.media_streams[id_stream]);
                     }
 
                 } else if (that.topic_streams[id_src]) {

@@ -739,30 +739,45 @@ export class Panel {
             return;
         }
 
-        window.setTimeout(()=>{
-            let stream = that.ui.client.media_streams[that.id_stream];
-            if (!stream) {
-                console.error('setMediaStream: stream '+that.id_stream+' not an object', stream);
-                return;
-            }
-            if (!stream.active) {
-                console.error('setMediaStream: stream '+that.id_stream+' inactive', stream);
-                return;
-            }
-            stream.getTracks().forEach(track => {
-                console.log('setMediaStream: Stream track'+track.id+'; readyState='+track.readyState, track);
-            });
-            console.log('setMediaStream: PC iceConnectionState = ', that.ui.client.pc.iceConnectionState);
-            console.log('setMediaStream: Assigning stream '+that.id_stream+' to panel', stream);
+        
+        let stream = that.ui.client.media_streams[that.id_stream];
+        if (!stream) {
+            console.error('setMediaStream: stream '+that.id_stream+' not an object', stream);
+            return;
+        }
+        if (!stream.active) {
+            console.error('setMediaStream: stream '+that.id_stream+' inactive', stream);
+            return;
+        }
+        stream.getTracks().forEach(track => {
+            console.log('setMediaStream: Stream track'+track.id+'; readyState='+track.readyState, track);
+        });
+        
+
+        function trySet() {
+            
+            // window.setTimeout(()=>{
+            //     
+            //     trySet();
+            // }, 0);
+
             try {
-                video_el.srcObject = stream;
-                video_el.play();
-            }
-            catch(e) {
+                if (video_el.srcObject === stream) {
+                    console.warn('Stream identical, ignoring')
+                } else {
+                    console.log('setMediaStream: !!! Assigning stream '+that.id_stream+' to panel', stream);
+                    console.log('setMediaStream: PC iceConnectionState = '+that.ui.client.pc.iceConnectionState+'; video readyState='+ video_el.readyState);
+                    video_el.srcObject = stream;
+                    // video_el.play().catch(error => console.error('setMediaStream: Autoplay error:', error));
+                }
+            } catch(e) {
                 console.error('setMediaStream threw exception', e);
             }
-        }, 0);
+        }
 
+        window.setTimeout(()=>{
+            trySet();
+        }, 0);
     }
 
     close() { // remove panel
