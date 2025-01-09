@@ -284,7 +284,8 @@ export class PanelUI {
         // triggered before ui_config
         client.on('input_config', (drivers, default_profiles, robot_service_buttons) => {
             console.log('got robot service buttons', robot_service_buttons)
-            this.default_service_btns = robot_service_buttons; // {} if undef
+            that.default_service_btns = robot_service_buttons; // {} if undefined on robot
+            that.servicesMenuFromNodes();
         });
 
         // triggered after input_config
@@ -1674,8 +1675,8 @@ export class PanelUI {
             // num_services++; // activates menu
 
             let msg_class = this.client.findMessageType(service.msg_type+'_Request');
-            let service_name_parts = service.service.split('/');
-            let service_short = service_name_parts[service_name_parts.length-1];
+            // let service_name_parts = service.service.split('/');
+            let service_short = service.service.replace('/'+node.node, '') //service_name_parts[service_name_parts.length-1];
 
             let service_content = $('<div class="service ' + (msg_class ? 'handled' : 'nonhandled') + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type + '">'
                 + '<div '
@@ -1831,7 +1832,7 @@ export class PanelUI {
         if (this.collapse_services === null) // empty loaded is []
             return;
 
-        if (this.default_service_btns === null) // emty loaded is {}
+        if (this.default_service_btns === null) // empty loaded is {}
             return;
         
         this.loadServiceBtns(nodes); // reloads all, keeping edit untouched
@@ -1861,9 +1862,6 @@ export class PanelUI {
         } else {
             $('#service_controls').removeClass('active');
         }
-
-        // if (this.gamepad)
-        //     this.gamepad.MarkMappedServiceButtons();
     }
 
     confirmDialog(label, style, confirm_label, confirm_cb, cancel_label, cancel_cb) {
