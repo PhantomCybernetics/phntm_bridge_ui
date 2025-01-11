@@ -254,15 +254,15 @@ export class InputManager {
             if (!enabled_drivers || !enabled_drivers.length) { // no drivers allowed => no input
                 console.log('Input is disabled by the robot');
                 // hide monkey and touch icon from UI
-                $('#gamepad').css('display', 'none');
-                $('#touch_ui').css('display', 'none');
                 this.enabled = false;
                 localStorage.removeItem('last-robot-input-defaults:'+this.client.id_robot);
+                this.ui.updateInputButtons();
                 return;
             }
 
             this.enabled = true;
             localStorage.setItem('last-robot-input-defaults:'+this.client.id_robot, JSON.stringify(robot_defaults)); // show icons & buttons right away next time to make the UI feel (more) solid
+            
 
             this.profiles = {};
 
@@ -351,6 +351,8 @@ export class InputManager {
         Object.values(this.controllers).forEach((c)=>{
             this.initController(c);
         });
+
+        this.ui.updateInputButtons();
     }
 
     showInputProfileNotification(force=false) {
