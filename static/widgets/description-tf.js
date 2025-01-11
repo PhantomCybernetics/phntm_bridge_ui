@@ -43,6 +43,7 @@ export class DescriptionTFWidget extends EventTarget {
             'fix_robot_base': false, // robot will be fixed in place
             'render_pose_graph': false,
             'render_ground_plane': true,
+            'render_stats': false,
             // passthrough vars:
             '_focus_target': '',
             '_cam_position_offset': '',
@@ -126,6 +127,8 @@ export class DescriptionTFWidget extends EventTarget {
         }
         this.manager.onLoad = () => {
             console.info('Robot URDF loaded', that.robot_model);
+            that.stats_model_tris = 0;
+            that.stats_model_verts = 0;
             if (that.robot_model) {
                 if (!that.cleanURDFModel(that.robot_model)) { //clear after urdf fully loades; sets mats
                     console.error('Invalid URDF model imported; ignoring')
@@ -187,6 +190,8 @@ export class DescriptionTFWidget extends EventTarget {
             antialias : false,
             precision : 'highp' // TODO: med & low are really bad on some devices, there could be a switch for this in the menu
         });
+        this.renderer.localClippingEnabled = true;
+        this.renderer.info.autoReset = false;
         this.renderer.shadowMap.enabled = true;
         this.renderer.setSize(panel.widget_width, panel.widget_height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -197,6 +202,14 @@ export class DescriptionTFWidget extends EventTarget {
         this.labelRenderer.domElement.style.position = 'absolute';
         this.labelRenderer.domElement.style.top = '0px';
         document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
+
+        this.rendering_stats_el = $('<span id="rendering_stats_'+panel.n+'" class="rendering_stats"></span>');
+        $('#panel_widget_'+panel.n).append(this.rendering_stats_el);
+        this.stats_fps = 0;
+        this.stats_model_verts = 0;
+        this.stats_model_tris = 0;
+        this.stats_model_tris_rendered = 0;
+        this.stats_model_lines_rendered = 0;
 
         this.camera_pos = new THREE.Vector3(1,.5,1);
         this.camera_target = null;
@@ -515,6 +528,42 @@ export class DescriptionTFWidget extends EventTarget {
         
     }
 
+    updateRenderingStats(countFrame=false) {
+
+        if (!this.vars.render_stats) {
+            this.rendering_stats_el.removeClass('enabled');
+            this.last_stats_updated = 0;
+            this.frame_count_since_last_update = 0;
+            return;
+        }
+        
+        this.rendering_stats_el.addClass('enabled');
+        
+        if (countFrame) {
+            this.frame_count_since_last_update++;
+        }
+
+        if (!this.last_stats_updated || Date.now() - this.last_stats_updated > 1000) {
+            let dt = this.last_stats_updated ? Date.now() - this.last_stats_updated : 0;
+            let r = dt ? 1000 / dt : 0;
+            this.stats_fps = this.last_frame_count ? this.renderer.info.render.frame-this.last_frame_count : 0;
+            this.stats_fps *= r;
+            this.stats_model_tris_rendered = this.stats_fps ? (this.renderer.info.render.triangles / this.stats_fps) : 0;
+            this.stats_model_lines_rendered = this.stats_fps ? (this.renderer.info.render.lines / this.stats_fps) : 0;
+
+            this.last_stats_updated = Date.now();
+            this.last_frame_count = this.renderer.info.render.frame;
+            this.renderer.info.reset(); // resets tris & lines but not frames
+        }
+
+        this.rendering_stats_el.html(this.stats_fps.toFixed(0)+' FPS<br>\n'
+                                    + 'Model: '+this.stats_model_verts.toLocaleString('en-US') + ' verts, '
+                                    + this.stats_model_tris.toLocaleString('en-US') + ' tris<br>\n'
+                                    + 'Rendered: ' + this.stats_model_lines_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' lines, '
+                                    + this.stats_model_tris_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' tris'
+                                    );
+    }
+
     moveCameraToView(position) {
         let rwq = new THREE.Quaternion();
         if (this.vars.follow_target && this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY)
@@ -677,6 +726,14 @@ export class DescriptionTFWidget extends EventTarget {
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
+
+        $('<div class="menu_line"><label for="render_stats_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_stats?'checked':'')+' id="render_stats_'+this.panel.n+'" title="Show rendering stats"> Rendering stats</label></div>')
+            .insertBefore($('#close_panel_menu_'+this.panel.n));
+        $('#render_stats_'+this.panel.n).change(function(ev) {
+            that.vars.render_stats = $(this).prop('checked');
+            that.panel.ui.updateUrlHash();
+            that.updateRenderingStats();
+        });
     }
 
     onClose() {
@@ -747,6 +804,7 @@ export class DescriptionTFWidget extends EventTarget {
         out_parts.push('fix='+(this.vars.fix_robot_base ? '1' : '0'));
         out_parts.push('pg='+(this.vars.render_pose_graph ? '1' : '0'));
         out_parts.push('grnd='+(this.vars.render_ground_plane ? '1' : '0'));
+        out_parts.push('s='+(this.vars.render_stats ? '1' : '0'));
         this.sources.getUrlHashParts(out_parts);
     }
 
@@ -800,6 +858,7 @@ export class DescriptionTFWidget extends EventTarget {
                 case 'fix': this.vars.fix_robot_base = parseInt(val) == 1; break;
                 case 'pg': this.vars.render_pose_graph = parseInt(val) == 1; break;
                 case 'grnd': this.vars.render_ground_plane = parseInt(val) == 1; break;
+                case 's': this.vars.render_stats = parseInt(val) == 1; break;
             }
         });
         this.sources.parseUrlParts(custom_url_vars);
@@ -845,15 +904,14 @@ export class DescriptionTFWidget extends EventTarget {
             inCollider = true;
         }
 
+        obj.frustumCulled = true;
+
         // mesh visuals
         if (obj.isMesh && inVisual) {
-
-            console.log('Visual:', obj);
-
             if (!obj.material) {
                 obj.material = new THREE.MeshBasicMaterial({
                     color: 0xffffff,
-                    side: THREE.DoubleSide,
+                    side: THREE.FrontSide,
                     depthWrite: true,
                     transparent: false
                 });
@@ -871,12 +929,18 @@ export class DescriptionTFWidget extends EventTarget {
         
         // colliders
         } else if (obj.isMesh && inCollider) {
-
-            console.log('Collider:', obj);
-
             obj.material = this.collider_mat;
             obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
             obj.layers.set(DescriptionTFWidget.L_COLLIDERS);
+        }
+
+        // count vers & tris
+        if (obj.isMesh && obj.geometry) {
+            this.stats_model_verts += obj.geometry.attributes.position.count;
+            if (obj.geometry.index) //indexed geometry
+                this.stats_model_tris += obj.geometry.index.count / 3;
+            else
+                this.stats_model_tris += obj.geometry.attributes.position.count / 3;
         }
 
         if (obj.children && obj.children.length) {
@@ -1462,6 +1526,7 @@ export class DescriptionTFWidget extends EventTarget {
             }
         }
 
+        this.updateRenderingStats(true);
         requestAnimationFrame((t) => this.renderingLoop());
     }
 
