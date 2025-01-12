@@ -4270,6 +4270,7 @@ BODY.touch-gamepad .grid-stack-item-content {
   }
 
   .menu_line.zoom_ctrl,
+  .menu_line.plus_minus_ctrl,
   .menu_line.rot_ctrl {
     line-height: 30px;
     height: 35px;
@@ -4279,14 +4280,16 @@ BODY.touch-gamepad .grid-stack-item-content {
   }
 
   .menu_line.zoom_ctrl .minus,
+  .menu_line.plus_minus_ctrl .minus,
   .menu_line.rot_ctrl .rot-left {
     left: 5px;
   }
 
   .menu_line.zoom_ctrl .val,
+  .menu_line.plus_minus_ctrl .val,
   .menu_line.rot_ctrl .val {
     display: block;
-    margin: 0px 0px 0px -50px;
+    margin: 0px 0px 0px 0px;
     float: none;
     padding: 0px;
     background: transparent;
@@ -4294,16 +4297,20 @@ BODY.touch-gamepad .grid-stack-item-content {
     width: auto;
     position: absolute;
     left: 50%;
-    width: 100px;
+    transform: translate(-50%, 0px);
+    width: calc(100% - 100px);
   }
 
   .menu_line.zoom_ctrl .plus,
+  .menu_line.plus_minus_ctrl .plus,
   .menu_line.rot_ctrl .rot-right {
     right: 5px;
   }
 
   .menu_line.zoom_ctrl .minus,
   .menu_line.zoom_ctrl .plus,
+  .menu_line.plus_minus_ctrl .minus,
+  .menu_line.plus_minus_ctrl .plus,
   .menu_line.rot_ctrl .rot-left,
   .menu_line.rot_ctrl .rot-right {
     position: absolute;
@@ -4340,6 +4347,8 @@ BODY.touch-gamepad .grid-stack-item-content {
 
   .menu_line.zoom_ctrl .minus:hover,
   .menu_line.zoom_ctrl .plus:hover,
+  .menu_line.plus_minus_ctrl .minus:hover,
+  .menu_line.plus_minus_ctrl .plus:hover,
   .menu_line.rot_ctrl .rot-left:hover,
   .menu_line.rot_ctrl .rot-right:hover {
     background-color: #006dff;

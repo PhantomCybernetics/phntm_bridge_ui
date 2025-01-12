@@ -14,6 +14,8 @@ export class MultiTopicSource extends EventTarget {
         this.widget.panel.ui.client.on('topics', (discovered_topics) => { that.onTopicsDiscovered(discovered_topics); });
 
         this.event_calbacks = {};
+
+        this.menu_open = false;
     }
 
     add(msg_type, label, selected_topic, num, cb, clear_cb) {
@@ -30,7 +32,6 @@ export class MultiTopicSource extends EventTarget {
         this.sources.push(new_src);
         this.updateSlots(new_src);    
     }
-
 
     on(event, cb) {
 
@@ -70,6 +71,21 @@ export class MultiTopicSource extends EventTarget {
 
     hasSources() {
         for (let i = 0; i < this.sources.length; i++) {
+            if (!this.sources[i].topic_slots)
+                continue;
+            for (let j = 0; j < this.sources[i].topic_slots.length; j++) {    
+                if (this.sources[i].topic_slots[j].selected_topic) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    hasType(msg_type) {
+        for (let i = 0; i < this.sources.length; i++) {
+            if (this.sources[i].msg_type != msg_type)
+                continue;
             if (!this.sources[i].topic_slots)
                 continue;
             for (let j = 0; j < this.sources[i].topic_slots.length; j++) {    
@@ -268,17 +284,20 @@ export class MultiTopicSource extends EventTarget {
     setupMenu (label="Edit input") {
 
         let menu_line_el = $('<div class="menu_line src_ctrl"></div>');
+        if (this.menu_open)
+            menu_line_el.addClass('open');
 
         let label_el = $('<span class="label">'+label+'</span>');
         let that = this;
         label_el.on('click', () => { 
-            if (menu_line_el.hasClass('open'))
+            if (that.menu_open) {
+                that.menu_open = false;
                 menu_line_el.removeClass('open');
-            else
+            } else {
+                that.menu_open = true;
                 menu_line_el.addClass('open');
-
-            // console.log('Multitopic clicked, open='+menu_line_el.hasClass('open'))
-
+            }
+                
             if (isTouchDevice()) {
                 that.panel.ui.panelMenuAutosize(that.panel);
             }

@@ -22,6 +22,7 @@ export class SceneView3DWidget extends DescriptionTFWidget {
         this.overlays = {};
         this.sources.on('change', (topics) => this.onSourcesChange(topics));
 
+        this.laser_delay = 150; // ms
         this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1,
             (t, s) => this.onLaserData(t, s),
             (t) => this.clearLaser(t)
@@ -95,6 +96,8 @@ export class SceneView3DWidget extends DescriptionTFWidget {
                 client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
             }
         });
+
+        this.panel.setMenu();
     }
 
     renderingLoop() {
@@ -336,12 +339,13 @@ export class SceneView3DWidget extends DescriptionTFWidget {
             }
         };
 
-        this.dirty_laser_points[topic] = laser_points;
-        this.dirty_laser_colors[topic] = laser_point_colors;
-
-        this.renderDirty();
-
-        this.clearLaserOnTimeout(topic);
+        let that = this;
+        setTimeout(() => {
+            that.dirty_laser_points[topic] = laser_points;
+            that.dirty_laser_colors[topic] = laser_point_colors;
+            that.renderDirty();
+            that.clearLaserOnTimeout(topic);    
+        }, this.laser_delay);
     }
 
     clearLaserOnTimeout(topic) {
@@ -696,7 +700,38 @@ export class SceneView3DWidget extends DescriptionTFWidget {
         // TODO
     }
 
+    setLaserDelay(val) {
+        this.laser_delay = val;
+        $('#laser_delay_ctrl_'+this.panel.n+' .val')
+            .html('Laser delay: '+this.laser_delay.toFixed(0)+'ms');
+    }
+
     setupMenu () {
         super.setupMenu();
+
+        if (this.sources.hasType('sensor_msgs/msg/LaserScan')) {
+            $('<div class="menu_line plus_minus_ctrl" id="laser_delay_ctrl_'+this.panel.n+'">'
+                + '<span class="minus">-</span>'
+                + '<button class="val" title="Reset delay">Laser delay: '+this.laser_delay.toFixed(0)+'ms</button>'
+                + '<span class="plus">+</span>'
+                + '</div>')
+                .insertBefore($('#close_panel_menu_'+this.panel.n));
+            
+            let that = this;
+            $('#laser_delay_ctrl_'+this.panel.n+' .plus').click(function(ev) {
+                that.setLaserDelay(that.laser_delay + 10);
+            });
+    
+            $('#laser_delay_ctrl_'+this.panel.n+' .minus').click(function(ev) {
+                let val = that.laser_delay - 10;
+                if (val < 0)
+                    val = 0;
+                that.setLaserDelay(val);
+            });
+    
+            $('#laser_delay_ctrl_'+this.panel.n+' .val').click(function(ev) {
+                that.setLaserDelay(0);
+            });
+        }
     }
 }

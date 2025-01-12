@@ -1295,8 +1295,8 @@ export class DescriptionTFWidget extends EventTarget {
             return;
         }
 
-        const lerp_amount = 0.6;
-        const cam_lerp_amount = 0.5;
+        const lerp_amount = 0.2;
+        const cam_lerp_amount = 1.0;
         let that = this;
 
         // set model transforms
