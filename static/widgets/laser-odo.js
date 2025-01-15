@@ -51,10 +51,6 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         this.sources.add('nav_msgs/msg/Odometry', 'Odometry source', null, 1, this.onOdometryData);
         this.sources.add('sensor_msgs/msg/LaserScan', 'Scan source', null, 1, this.onScanData);
 
-        //zoom menu control
-        panel.widgetMenuCb = () => {
-            that.setupMenu();
-        }
 
         // window.addEventListener('resize', () => {
         //     ResizeWidget(panel);
@@ -72,28 +68,23 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
         this.renderingLoop();
     }
 
-    setupMenu () {
+    setupMenu (menu_els) {
 
-        this.sources.setupMenu();
+        this.sources.setupMenu(menu_els);
 
-        super.setupMenu();  //zoom + follow
-
-        // $('<div class="menu_line src_ctrl" id="src_ctrl_'+panel.n+'">'
-        //     + '<button class="val" title="">'+this.+'</button>'
-        //     + '<button class="val" title="">'+this.+'</button>'
-        //     + '</div>')
-        //     .insertBefore($('#close_panel_menu_'+panel.n));
+        super.setupMenu(menu_els);  //zoom + follow
 
         let that = this;
 
-        $('<div class="menu_line"><a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        
-        $('#clear_panel_link_'+this.panel.n).click((ev)=>{
+        let clear_line_el = $('<div class="menu_line"></div>');
+        let clear_btn = $('<a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a>');
+        clear_btn.appendTo(clear_line_el);
+        clear_btn.click((ev)=>{
             ev.preventDefault(); //stop from moving the panel
             that.clear();
         });
-    } //widget menu end
+        menu_els.push(clear_line_el);
+    }
 
     onOdometryData = (topic, odo) => {
 

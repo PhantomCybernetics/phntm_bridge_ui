@@ -98,42 +98,45 @@ export class ImuWidget {
         //     ResizeWidget(panel);
         //     RenderImu(panel);
         // });
-       
-
-        panel.widgetMenuCb = () => {
-
-            $('<div class="menu_line"><label for="display_rot_'+panel.n+'"><input type="checkbox" id="display_rot_'+panel.n+'" '
-                + (that.display_rot?'checked ':'')
-                + 'title="Display rotation"/> Rotation</label></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('#display_rot_'+panel.n).change(function(ev) {
-                that.display_rot = $(this).prop('checked');
-                that.updateDisplay();
-            });
-
-            $('<div class="menu_line"><label for="display_acc_'+panel.n+'"><input type="checkbox" id="display_acc_'+panel.n+'" '
-                + (that.display_acc?'checked ':'')
-                + 'title="Display acceleration"/> Linear acceleration</label></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('#display_acc_'+panel.n).change(function(ev) {
-                that.display_acc = $(this).prop('checked');
-                that.updateDisplay();
-            });
-
-            $('<div class="menu_line"><label for="display_gyro_'+panel.n+'"><input type="checkbox" id="display_gyro_'+panel.n+'" '
-                + (that.display_gyro?'checked ':'')
-                + 'title="Display angular velocity"/> Angular velocity</label></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('#display_gyro_'+panel.n).change(function(ev) {
-                that.display_gyro = $(this).prop('checked');
-                that.updateDisplay();
-            });
-        }
 
         this.updateDisplay();
+    }
+
+    setupMenu(menu_els) {
+        let that = this;
+
+        // display rotation as a cube
+        let display_rot_line_el = $('<div class="menu_line"></div>');
+        let display_rot_label = $('<label for="display_rot_'+this.panel.n+'">Rotation</label>');
+        let display_ror_cb = $('<input type="checkbox" id="display_rot_'+this.panel.n+'" ' + (this.display_rot?'checked ':'')+ 'title="Display rotation"/>');
+        display_rot_label.append(display_ror_cb).appendTo(display_rot_line_el);
+        display_ror_cb.change(function(ev) {
+            that.display_rot = $(this).prop('checked');
+            that.updateDisplay();
+        });
+        menu_els.push(display_rot_line_el);
+
+        // display acceleration vector
+        let display_acc_line_el = $('<div class="menu_line"></div>');
+        let display_acc_label = $('<label for="display_acc_'+this.panel.n+'">Linear acceleration</label>');
+        let display_acc_cb = $('<input type="checkbox" id="display_acc_'+this.panel.n+'" ' + (this.display_acc?'checked ':'') + 'title="Display acceleration"/> ');
+        display_acc_label.append(display_acc_cb).appendTo(display_acc_line_el);
+        display_acc_cb.change(function(ev) {
+            that.display_acc = $(this).prop('checked');
+            that.updateDisplay();
+        });
+        menu_els.push(display_acc_line_el);
+
+        // display gyro vector
+        let display_gyro_line_el = $('<div class="menu_line"></div>');
+        let display_gyro_label = $('<label for="display_gyro_'+this.panel.n+'">Angular velocity</label>');
+        let display_gyro_cb = $('<input type="checkbox" id="display_gyro_'+this.panel.n+'" ' + (this.display_gyro?'checked ':'') + 'title="Display angular velocity"/>');
+        display_gyro_label.append(display_gyro_cb).appendTo(display_gyro_line_el);
+        display_gyro_cb.change(function(ev) {
+            that.display_gyro = $(this).prop('checked');
+            that.updateDisplay();
+        });
+        menu_els.push(display_gyro_line_el);
     }
 
     updateDisplay() {

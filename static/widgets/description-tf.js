@@ -49,6 +49,9 @@ export class DescriptionTFWidget extends EventTarget {
             '_cam_position_offset': '',
         }
 
+        this.panel.fps_el.addClass('rendering_stats');
+        this.panel.show_fps_menu_label = 'Show rendering stats';
+
         this.pose_graph = [];
         this.pose_graph_size = 500; // keeps this many nodes in pg (TODO: to robot's config?)
     
@@ -62,6 +65,9 @@ export class DescriptionTFWidget extends EventTarget {
         this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
         this.set_camera_view = null; // animate to position if set
         // this.last_tf_stamps = {};
+
+        this.stats_model_tris = 0;
+        this.stats_model_verts = 0;
 
         let that = this;
 
@@ -203,13 +209,13 @@ export class DescriptionTFWidget extends EventTarget {
         this.labelRenderer.domElement.style.top = '0px';
         document.getElementById('panel_widget_'+panel.n).appendChild(this.labelRenderer.domElement);
 
-        this.rendering_stats_el = $('<span id="rendering_stats_'+panel.n+'" class="rendering_stats"></span>');
-        $('#panel_widget_'+panel.n).append(this.rendering_stats_el);
-        this.stats_fps = 0;
-        this.stats_model_verts = 0;
-        this.stats_model_tris = 0;
-        this.stats_model_tris_rendered = 0;
-        this.stats_model_lines_rendered = 0;
+        // this.rendering_stats_el = $('<span id="rendering_stats_'+panel.n+'" class="rendering_stats"></span>');
+        // $('#panel_widget_'+panel.n).append(this.rendering_stats_el);
+        // this.stats_fps = 0;
+        // this.stats_model_verts = 0;
+        // this.stats_model_tris = 0;
+        // this.stats_model_tris_rendered = 0;
+        // this.stats_model_lines_rendered = 0;
 
         this.camera_pos = new THREE.Vector3(1,.5,1);
         this.camera_target = null;
@@ -417,8 +423,6 @@ export class DescriptionTFWidget extends EventTarget {
             emissive: 0xffff00,
             wireframe: true,
         });
-        
-        panel.widgetMenuCb = () => { that.setupMenu(); }
     
         if (start_loop) {
             this.rendering = true;
@@ -528,40 +532,24 @@ export class DescriptionTFWidget extends EventTarget {
         
     }
 
-    updateRenderingStats(countFrame=false) {
-
-        if (!this.vars.render_stats) {
-            this.rendering_stats_el.removeClass('enabled');
-            this.last_stats_updated = 0;
-            this.frame_count_since_last_update = 0;
-            return;
-        }
+    updateFps() {
         
-        this.rendering_stats_el.addClass('enabled');
-        
-        if (countFrame) {
-            this.frame_count_since_last_update++;
-        }
+        let dt = this.panel.last_fps_updated ? Date.now() - this.panel.last_fps_updated : 0;
+        let r = dt ? 1000 / dt : 0;
+        this.stats_fps = this.last_frame_count ? this.renderer.info.render.frame-this.last_frame_count : 0;
+        this.stats_fps *= r;
+        this.stats_model_tris_rendered = this.stats_fps ? (this.renderer.info.render.triangles / this.stats_fps) : 0;
+        this.stats_model_lines_rendered = this.stats_fps ? (this.renderer.info.render.lines / this.stats_fps) : 0;
 
-        if (!this.last_stats_updated || Date.now() - this.last_stats_updated > 1000) {
-            let dt = this.last_stats_updated ? Date.now() - this.last_stats_updated : 0;
-            let r = dt ? 1000 / dt : 0;
-            this.stats_fps = this.last_frame_count ? this.renderer.info.render.frame-this.last_frame_count : 0;
-            this.stats_fps *= r;
-            this.stats_model_tris_rendered = this.stats_fps ? (this.renderer.info.render.triangles / this.stats_fps) : 0;
-            this.stats_model_lines_rendered = this.stats_fps ? (this.renderer.info.render.lines / this.stats_fps) : 0;
+        this.last_frame_count = this.renderer.info.render.frame;
+        this.renderer.info.reset(); // resets tris & lines but not frames
 
-            this.last_stats_updated = Date.now();
-            this.last_frame_count = this.renderer.info.render.frame;
-            this.renderer.info.reset(); // resets tris & lines but not frames
-        }
-
-        this.rendering_stats_el.html(this.stats_fps.toFixed(0)+' FPS<br>\n'
-                                    + 'Model: '+this.stats_model_verts.toLocaleString('en-US') + ' verts, '
-                                    + this.stats_model_tris.toLocaleString('en-US') + ' tris<br>\n'
-                                    + 'Rendered: ' + this.stats_model_lines_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' lines, '
-                                    + this.stats_model_tris_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' tris'
-                                    );
+        return this.stats_fps.toFixed(0)+' FPS<br>\n'
+                + 'Model: '+this.stats_model_verts.toLocaleString('en-US') + ' verts, '
+                + this.stats_model_tris.toLocaleString('en-US') + ' tris<br>\n'
+                + 'Rendered: ' + this.stats_model_lines_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' lines, '
+                + this.stats_model_tris_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' tris'
+                ;
     }
 
     moveCameraToView(position) {
@@ -615,17 +603,20 @@ export class DescriptionTFWidget extends EventTarget {
         };
     }
 
-    setupMenu() {
+    setupMenu(menu_els) {
        
         if (this.sources) {
-            this.sources.setupMenu();
+            this.sources.setupMenu(menu_els);
         }
 
         let that = this;
 
-        $('<div class="menu_line"><label for="render_joints_'+this.panel.n+'"><input type="checkbox" '+(this.vars.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"> Render joints</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_joints_'+this.panel.n).change(function(ev) {
+        // render joints
+        let render_joints_line_el = $('<div class="menu_line"></div>');
+        let render_joints_label = $('<label for="render_joints_'+this.panel.n+'">Render joints</label>');
+        let render_joints_cb = $('<input type="checkbox" '+(this.vars.render_joints?'checked':'')+' id="render_joints_'+this.panel.n+'" title="Render joints"/>');
+        render_joints_label.append(render_joints_cb).appendTo(render_joints_line_el);
+        render_joints_cb.change(function(ev) {
             that.vars.render_joints = $(this).prop('checked');
             if (that.vars.render_joints) {
                 that.camera.layers.enable(DescriptionTFWidget.L_JOINTS);
@@ -640,10 +631,14 @@ export class DescriptionTFWidget extends EventTarget {
             // that.panel.ui.updateUrlHash(); 
             that.renderDirty();          
         });
+        menu_els.push(render_joints_line_el);
 
-        $('<div class="menu_line"><label for="render_links_'+this.panel.n+'"><input type="checkbox" '+(this.vars.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links"> Render links</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_links_'+this.panel.n).change(function(ev) {
+        // render links
+        let render_links_line_el = $('<div class="menu_line"></div>');
+        let render_links_label = $('<label for="render_links_'+this.panel.n+'">Render links</label>');
+        let render_links_cb = $('<input type="checkbox" '+(this.vars.render_links?'checked':'')+' id="render_links_'+this.panel.n+'" title="Render links">');
+        render_links_label.append(render_links_cb).appendTo(render_links_line_el);
+        render_links_cb.change(function(ev) {
             that.vars.render_links = $(this).prop('checked');
             if (that.vars.render_links) {
                 that.camera.layers.enable(DescriptionTFWidget.L_LINKS);
@@ -657,10 +652,14 @@ export class DescriptionTFWidget extends EventTarget {
                 that.makeRobotMarkers();
             that.renderDirty();
         });
+        menu_els.push(render_links_line_el);
 
-        $('<div class="menu_line"><label for="render_ros_origin_'+this.panel.n+'"><input type="checkbox" '+(this.vars.render_ros_origin?'checked':'')+' id="render_ros_origin_'+this.panel.n+'" title="Show ROS origin"> Show ROS origin</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_ros_origin_'+this.panel.n).change(function(ev) {
+        // render ros origin marker
+        let render_ros_origin_line_el = $('<div class="menu_line"></div>');
+        let render_ros_origin_label = $('<label for="render_ros_origin_'+this.panel.n+'">Show ROS origin</label>');
+        let render_ros_origin_cb = $('<input type="checkbox" '+(this.vars.render_ros_origin?'checked':'')+' id="render_ros_origin_'+this.panel.n+'" title="Show ROS origin"/>')
+        render_ros_origin_label.append(render_ros_origin_cb).appendTo(render_ros_origin_line_el);
+        render_ros_origin_cb.change(function(ev) {
             that.vars.render_ros_origin = $(this).prop('checked');
             if (that.vars.render_ros_origin) {
                 that.camera.layers.enable(DescriptionTFWidget.L_ROS_ORIGIN_MARKER);
@@ -673,10 +672,14 @@ export class DescriptionTFWidget extends EventTarget {
             that.makeROSOriginMarker();
             that.renderDirty();
         });
+        menu_els.push(render_ros_origin_line_el);
 
-        $('<div class="menu_line"><label for="render_visuals_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"> Show visuals</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_visuals_'+this.panel.n).change(function(ev) {
+        // render visuals
+        let render_visuals_line_el = $('<div class="menu_line"></div>');
+        let render_visuals_label = $('<label for="render_visuals_'+this.panel.n+'"">Show visuals</label>');
+        let render_visuals_cb = $('<input type="checkbox" '+(this.vars.render_visuals?'checked':'')+' id="render_visuals_'+this.panel.n+'" title="Render visuals"/>');
+        render_visuals_label.append(render_visuals_cb).appendTo(render_visuals_line_el);
+        render_visuals_cb.change(function(ev) {
             that.vars.render_visuals = $(this).prop('checked');
             if (that.vars.render_visuals)
                 that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
@@ -685,10 +688,14 @@ export class DescriptionTFWidget extends EventTarget {
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
+        menu_els.push(render_visuals_line_el);
 
-        $('<div class="menu_line"><label for="render_collisions_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"> Show collisions</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_collisions_'+that.panel.n).change(function(ev) {
+        // render colliders
+        let render_collisions_line_el = $('<div class="menu_line"></div>');
+        let render_collisions_label = $('<label for="render_collisions_'+this.panel.n+'"">Show collisions</label>');
+        let render_collisions_cb = $('<input type="checkbox" '+(this.vars.render_collisions?'checked':'')+' id="render_collisions_'+this.panel.n+'" title="Render collisions"/>')
+        render_collisions_label.append(render_collisions_cb).appendTo(render_collisions_line_el);
+        render_collisions_cb.change(function(ev) {
             that.vars.render_collisions = $(this).prop('checked');
             if (that.vars.render_collisions)
                 that.camera.layers.enable(DescriptionTFWidget.L_COLLIDERS);
@@ -697,18 +704,26 @@ export class DescriptionTFWidget extends EventTarget {
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
+        menu_els.push(render_collisions_line_el);
 
-        $('<div class="menu_line"><label for="fix_base_'+this.panel.n+'""><input type="checkbox" '+(this.vars.fix_robot_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"> Fix robot base</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#fix_base_'+this.panel.n).change(function(ev) {
+        // fix base (robot will not move linearly, only rotate)
+        let fix_base_line_el = $('<div class="menu_line"></div>');
+        let fix_base_label = $('<label for="fix_base_'+this.panel.n+'"">Fix robot base</label>');
+        let fix_base_cb = $('<input type="checkbox" '+(this.vars.fix_robot_base?'checked':'')+' id="fix_base_'+this.panel.n+'" title="Fix robot base"/>');
+        fix_base_label.append(fix_base_cb).appendTo(fix_base_line_el);
+        fix_base_cb.change(function(ev) {
             that.vars.fix_robot_base = $(this).prop('checked');
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
+        menu_els.push(fix_base_line_el);
 
-        $('<div class="menu_line"><label for="render_pg_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"> Render trace</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_pg_'+this.panel.n).change(function(ev) {
+        // render pose graph trail
+        let render_pg_line_el = $('<div class="menu_line"></div>');
+        let render_pg_label = $('<label for="render_pg_'+this.panel.n+'"">Render trace</label>');
+        let render_pg_cb = $('<input type="checkbox" '+(this.vars.render_pose_graph?'checked':'')+' id="render_pg_'+this.panel.n+'" title="Render pose trace"/>');
+        render_pg_label.append(render_pg_cb).appendTo(render_pg_line_el);
+        render_pg_cb.change(function(ev) {
             that.vars.render_pose_graph = $(this).prop('checked');
             if (that.vars.render_pose_graph)
                 that.camera.layers.enable(DescriptionTFWidget.L_POSE_GRAPH);
@@ -717,23 +732,20 @@ export class DescriptionTFWidget extends EventTarget {
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
+        menu_els.push(render_pg_line_el);
 
-        $('<div class="menu_line"><label for="render_grnd_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"> Ground plane</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_grnd_'+this.panel.n).change(function(ev) {
+        // render ground plane
+        let render_grnd_line_el = $('<div class="menu_line"></div>');
+        let render_grnd_label = $('<label for="render_grnd_'+this.panel.n+'"">Ground plane</label>');
+        let render_grnd_cb = $('<input type="checkbox" '+(this.vars.render_ground_plane?'checked':'')+' id="render_grnd_'+this.panel.n+'" title="Render ground plane"/>');
+        render_grnd_label.append(render_grnd_cb).appendTo(render_grnd_line_el);
+        render_grnd_cb.change(function(ev) {
             that.vars.render_ground_plane = $(this).prop('checked');
             that.ground_plane.visible = that.vars.render_ground_plane;
             // that.panel.ui.updateUrlHash();
             that.renderDirty();
         });
-
-        $('<div class="menu_line"><label for="render_stats_'+this.panel.n+'""><input type="checkbox" '+(this.vars.render_stats?'checked':'')+' id="render_stats_'+this.panel.n+'" title="Show rendering stats"> Rendering stats</label></div>')
-            .insertBefore($('#close_panel_menu_'+this.panel.n));
-        $('#render_stats_'+this.panel.n).change(function(ev) {
-            that.vars.render_stats = $(this).prop('checked');
-            that.panel.ui.updateUrlHash();
-            that.updateRenderingStats();
-        });
+        menu_els.push(render_grnd_line_el);
     }
 
     onClose() {
@@ -1526,7 +1538,7 @@ export class DescriptionTFWidget extends EventTarget {
             }
         }
 
-        this.updateRenderingStats(true);
+        this.panel.updateFps();
         requestAnimationFrame((t) => this.renderingLoop());
     }
 

@@ -45,56 +45,60 @@ export class OccupancyGrid extends Zoomable2DTiles {
         let that = this;
 
         this.topic_map = '/map';
-        // this.topic_odo = '/odometry/filtered';
-        // this.topic_scan = '/scan';
-
-        //zoom menu control
-        panel.widgetMenuCb = () => {
-
-            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_'+panel.n+'">'
-                + '<span class="minus">-</span>'
-                + '<button class="val" title="Reset zoom">Zoom: '+panel.zoom.toFixed(1)+'x</button>'
-                + '<span class="plus">+</span>'
-                + '</div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
-                that.setZoom(panel.zoom + panel.zoom/2.0);
-            });
-
-            $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
-                that.setZoom(panel.zoom - panel.zoom/2.0);
-            });
-
-            $('#zoom_ctrl_'+panel.n+' .val').click(function(ev) {
-                that.setZoom(1.0);
-            });
-
-            $('<div class="menu_line"><label for="follow_target_'+panel.n+'" class="follow_target_label" id="follow_target_label_'+panel.n+'"><input type="checkbox" id="follow_target_'+panel.n+'" class="follow_target" checked title="Follow target"/> Follow target</label></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-
-            $('<div class="menu_line"><a href="#" id="clear_panel_link_'+panel.n+'">Clear</a></div>')
-                .insertBefore($('#close_panel_menu_'+panel.n));
-            
-            $('#clear_panel_link_'+panel.n).click((ev)=>{
-                ev.preventDefault(); //stop from moving the panel
-                that.clear();
-            });
-
-            $('#follow_target_'+panel.n).change(function(ev) {
-                that.follow_target = $(this).prop('checked');
-            });
-        }
        
         this.renderingLoop();
     }
     
+    setupMenu(menu_els) {
+        
+        let that = this;
+
+        let zoom = this.panel.zoom === null || this.panel.zoom === undefined ? '?' : this.panel.zoom.toFixed(1);
+
+        // zoom control
+        let zoom_ctrl_line_el = $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + this.panel.n + '"></div>');
+        let zoom_minus_btn = $('<span class="minus">-</span>');
+        this.zoom_val_btn = $('<button class="val" title="Reset zoom">Zoom: ' + zoom + 'x</button>');
+        let zoom_plus_btn = $('<span class="plus">+</span>');
+        zoom_ctrl_line_el.append( [zoom_minus_btn, this.zoom_val_btn, zoom_plus_btn] );
+        zoom_plus_btn.click(function(ev) {
+            that.setZoom(that.panel.zoom + that.panel.zoom/2.0);
+        });
+        zoom_minus_btn.click(function(ev) {
+            that.setZoom(that.panel.zoom - that.panel.zoom/2.0);
+        });
+        this.zoom_val_btn.click(function(ev) {
+            that.setZoom(that.panel.default_zoom);
+        });
+        menu_els.push(zoom_ctrl_line_el);
+
+        // camera follows target
+        let follow_line_el = $('<div class="menu_line"></div>');
+        let follow_label = $('<label for="follow_target_'+this.panel.n+'">Follow target</label>');
+        let follow_cb = $('<input type="checkbox" '+(this.follow_target?'checked':'')+' id="follow_target_'+this.panel.n+'" title="Follow target"/>');
+        follow_label.append(follow_cb).appendTo(follow_line_el);
+        follow_cb.change(function(ev) {
+            that.follow_target = $(this).prop('checked');
+        });
+        menu_els.push(follow_line_el);
+
+        // $('<div class="menu_line"><a href="#" id="save_panel_link_'+panel.n+'">Save data</a></div>')
+        //     .insertBefore($('#close_panel_menu_'+panel.n));
+
+        // $('<div class="menu_line"><a href="#" id="configure_panel_link_'+panel.n+'">Settings</a></div>')
+        //     .insertBefore($('#close_panel_menu_'+panel.n));
+
+         // clear display
+         let clear_line_el = $('<div class="menu_line"></div>');
+         let clear_btn = $('<a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a>');
+         clear_btn.appendTo(clear_line_el);
+         clear_btn.click((ev)=>{
+             ev.preventDefault(); //stop from moving the panel
+             that.clear();
+         });
+         menu_els.push(clear_line_el);
+    }
+
     onData = (map_msg, ns_stamp=null, k = -1) => {
 
         this.map_width = map_msg.info.width;

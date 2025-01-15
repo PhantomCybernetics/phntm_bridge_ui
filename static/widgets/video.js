@@ -14,16 +14,16 @@ export class VideoWidget {
             .addClass('enabled video')
             .html('<video id="panel_video_'+panel.n+'" autoplay="true" playsinline="true" muted="true" preload="metadata"></video>' //muted allows video autoplay in chrome before user interactions
                 + '<span id="video_stats_'+panel.n+'" class="video_stats"></span>'
-                + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
+                // + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
                 + '<div id="video_overlay_'+panel.n+'" class="video_overlay"></div>'
                 ); //muted allows video autoplay in chrome before user interactions
 
         this.el = $('#panel_video_'+panel.n);
         this.overlay_el = $('#video_overlay_'+panel.n);
-        this.last_stats_string = '';
+        this.last_video_stats_string = '';
         this.video_stats_el = $('#video_stats_' + panel.n);
-        this.last_fps_string = '0 FPS';
-        this.video_fps_el = $('#video_fps_' + panel.n);
+        // this.last_fps_string = '0 FPS';
+        // this.video_fps_el = $('#video_fps_' + panel.n);
 
         this.videoWidth = -1;
         this.videoHeight = -1;
@@ -108,8 +108,6 @@ export class VideoWidget {
         this.clear_overlays_timeout = {}
         this.next_overlay_id = 0;
         this.overlay_crop_display_control_menu_el = null;
-
-        this.panel.widgetMenuCb = () => that.setupMenu();
 
         this.overlay_sources = new MultiTopicSource(this);
         this.overlay_sources.on('change', (topics) => that.onOverlaySourcesChange(topics));
@@ -215,35 +213,21 @@ export class VideoWidget {
         });
     }
 
-    setupMenu() {
+    setupMenu(menu_els) {
 
-        this.overlay_sources.setupMenu("Overlay");
-
-        //fps menu toggle
-        $('<div class="menu_line"><label for="video_fps_cb_'+this.panel.n+'" class="video_fps_cb_label" id="video_fps_cb_label_'+this.panel.n+'">'
-            +'<input type="checkbox" id="video_fps_cb_'+this.panel.n+'" checked class="video_fps_cb" title="Display video FPS"> FPS</label></div>'
-            ).insertBefore($('#close_panel_menu_'+this.panel.n));
-
+        this.overlay_sources.setupMenu(menu_els, "Overlay");
         let that = this;
-        $('#video_fps_cb_'+this.panel.n).change(function(ev) {
-            if ($(this).prop('checked')) {
-                that.video_fps_el.text(that.last_fps_string);
-                that.video_fps_el.addClass('enabled');
-            } else {
-                that.video_fps_el.removeClass('enabled');
-            }
-        });
-
-        this.video_fps_el.addClass('enabled'); //on by default
 
         //stats menu toggle
-        $('<div class="menu_line"><label for="video_stats_cb_'+this.panel.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+this.panel.n+'">'
-            +'<input type="checkbox" id="video_stats_cb_'+this.panel.n+'" class="video_stats_cb" title="Display video stats"> Stats for nerds</label></div>'
-            ).insertBefore($('#close_panel_menu_'+this.panel.n));
+        let stats_menu_line_el = $('<div class="menu_line"></div>');
+        let stats_cb_label_el = $('<label for="video_stats_cb_'+this.panel.n+'" class="video_stats_cb_label" id="video_stats_cb_label_'+this.panel.n+'">Stats for nerds</label>');
+        let stats_cb = $('<input type="checkbox" id="video_stats_cb_'+this.panel.n+'" class="video_stats_cb" title="Display video stats"/>');
+        stats_cb_label_el.append(stats_cb).appendTo(stats_menu_line_el);
+        menu_els.push(stats_menu_line_el); 
 
-        $('#video_stats_cb_'+this.panel.n).change(function(ev) {
+        stats_cb.change(function(ev) {
             if ($(this).prop('checked')) {
-                that.video_stats_el.html(that.last_stats_string);
+                that.video_stats_el.html(that.last_video_stats_string);
                 that.video_stats_el.addClass('enabled');
             } else {
                 that.video_stats_el.removeClass('enabled');
@@ -454,6 +438,11 @@ export class VideoWidget {
                     break;
             }
         });
+    }
+
+    updateFps() {
+        if (this.video_stats_el && this.video_stats_el.hasClass('enabled'))
+            this.video_stats_el.html(this.last_video_stats_string);
     }
 
 }

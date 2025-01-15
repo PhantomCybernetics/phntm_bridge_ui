@@ -3109,7 +3109,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
 } 
 
 
-.video_stats, .video_fps, .rendering_stats {
+.video_stats, .panel_fps {
     color: #ffffffa3;
     position: absolute;
     z-index: 3;
@@ -3123,8 +3123,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     border-radius: 3px;
     display: none;
 }
-.rendering_stats {
-    top: 20px;
+.panel_fps.rendering_stats {
     text-align: right;
 }
 .video_stats {
@@ -3137,11 +3136,12 @@ BODY.touch-ui .editing .grid-stack-item-content {
 .grid-stack-item.maximized .video_stats {
     top: 90px;
 }
-.video_fps, .rendering_stats {
+.panel_fps {
     left: auto;
     right: 10px;
+    top: 20px;
 }
-.video_stats.enabled, .video_fps.enabled, .rendering_stats.enabled {
+.video_stats.enabled, .panel_fps.enabled {
     display: block;
 }
 

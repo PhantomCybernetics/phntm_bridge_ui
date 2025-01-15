@@ -281,7 +281,7 @@ export class MultiTopicSource extends EventTarget {
     }
 
 
-    setupMenu (label="Edit input") {
+    setupMenu (menu_els, label="Edit input") {
 
         let menu_line_el = $('<div class="menu_line src_ctrl"></div>');
         if (this.menu_open)
@@ -305,13 +305,16 @@ export class MultiTopicSource extends EventTarget {
 
         label_el.appendTo(menu_line_el);
         $('<span class="icon"></span>').appendTo(menu_line_el);
-        $('<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>').appendTo(menu_line_el);
+        this.src_ctrl_menu = $('<div id="src_ctrl_'+this.panel.n+'" class="src_ctrl_menu"></div>')
+        this.src_ctrl_menu.appendTo(menu_line_el);
 
-        menu_line_el.insertBefore($('#close_panel_menu_'+this.panel.n));
+        if (menu_els.length > 0 && menu_els[0].hasClass('panel_msg_types_line')) {
+            menu_els.splice(1, 0, menu_line_el); // add after msg type info
+        } else {
+            menu_els.unshift(menu_line_el); // add as first
+        }
 
-        menu_line_el.parent().parent().addClass('wider');
-
-        this.src_ctrl_menu = $('#src_ctrl_'+this.panel.n);
+        this.panel.menu_extra_class = 'wider';
 
         this.updateMenuContent();
     }

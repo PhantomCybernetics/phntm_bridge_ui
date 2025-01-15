@@ -13,6 +13,7 @@ export class Panel {
     id_stream = null;
     msg_type = null; //str
     msg_type_class = null;
+    is_image_topic = false;
 
     static PANEL_NO = 0;
 
@@ -36,10 +37,17 @@ export class Panel {
     init_data = null;
     resizeEventHandler = null;
     src_visible = false;
+    fps_visible = false;
+    show_fps_menu_label = 'Show FPS';
+    last_fps_updated = null;
+    fps = 0;
+    fps_frame_count = 0;
+    fps_string = ''
+    menu_extra_class = null;
     editing = false;
     //const event = new Event("build");
 
-    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, rot, custom_url_vars) {
+    constructor(id_source, ui, w, h, x=null, y=null, src_visible=false, zoom, rot, fps_visible, custom_url_vars) {
         this.ui = ui;
         let panels = ui.panels;
         let grid = ui.grid;
@@ -49,10 +57,10 @@ export class Panel {
         this.paused = false;
         this.zoom = zoom;
         this.rot = rot;
+        this.fps_visible = fps_visible;
         this.custom_url_vars = custom_url_vars;
         console.log('Panel created for '+this.id_source + ' src_visible='+this.src_visible+'; custom_url_vars=', this.custom_url_vars);
-
-        this.widgetMenuCb = null;
+        
         this.floating_menu_top = null;
 
         this.n = Panel.PANEL_NO++;
@@ -69,8 +77,8 @@ export class Panel {
                 '<div class="panel_content_space" id="panel_content_space_'+this.n+'">' +
                     '<div class="panel_widget'+(this.src_visible?' source_visible':'')+'" id="panel_widget_'+this.n+'"></div>' +
                     '<div class="panel_source'+(this.src_visible?' enabled':'')+'" id="panel_source_'+this.n+'">Waiting for data...</div>' +
+                    '<div class="panel_fps" id="panel_fps_'+this.n+'"></div>' +
                     '<div class="cleaner"></div>' +
-                '</div>' +
                 //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
             '</div>'
 
@@ -116,6 +124,7 @@ export class Panel {
         }, 300); // resize at the end of the animation
 
         this.panel_btns = $('#panel_btns_'+this.n);
+        this.fps_el = $('#panel_fps_'+this.n);
 
         if (!this.editBtn) {
             // pause panel updates
@@ -254,6 +263,7 @@ export class Panel {
 
         if (msg_type && !this.initiated) {
 
+            this.is_image_topic = IsImageTopic(msg_type);
             console.log('Initiating panel '+this.id_source+' for '+msg_type)
 
             if (this.ui.widgets[msg_type]) {
@@ -314,6 +324,11 @@ export class Panel {
             }
 
             this.initiated = true;
+            
+            if (this.fps_visible) {
+                this.updateFps();
+                this.fps_el.addClass('enabled');
+            }
 
             if (this.init_data != null) {
                 this.onDataContextWrapper(this.init_data[0], this.init_data[1]);
@@ -360,6 +375,34 @@ export class Panel {
         }
     }
 
+    updateFps() {
+        if (this.paused)
+            return;
+
+        if (this.is_image_topic) {
+            this.fps_string = this.fps.toFixed(0) + ' FPS'; // set in ui.updateAllVideoStats
+        } else {
+            this.fps_frame_count++;
+
+            if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
+                if (this.display_widget && this.display_widget.updateFps) {
+                    this.fps_string = this.display_widget.updateFps(); // widget sets string
+                } else {
+                    let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
+                    let r = dt ? 1000 / dt : 0;
+                    this.fps = this.fps_frame_count * r;
+                    this.fps_string = ((this.fps > 0.01 && this.fps < 1.0) ? this.fps.toFixed(1) : this.fps.toFixed(0)) + ' FPS';
+                }
+                this.last_fps_updated = Date.now();
+                this.fps_frame_count = 0;
+            }
+        }
+        
+        if (this.fps_visible) {
+            this.fps_el.html(this.fps_string);
+        }
+    }
+
     onDataContextWrapper = (msg, ev) => {
 
         if (!this.initiated) {
@@ -382,6 +425,7 @@ export class Panel {
 
         let els = []
         let that = this;
+
         if (this.msg_type != null && this.msg_type != 'video') {
 
             // message type info dialog
@@ -412,7 +456,7 @@ export class Panel {
                         that.panel_w_src_hidden = w;
                         if (w < 5) {
                             w *= 2;
-                            that.ui.grid.update(that.grid_widget, {w : w}); //updates url hash, triggers onResize
+                            that.ui.grid.update(that.grid_widget, {w : w}); // updates url hash, triggers onResize
                         } else {
                             that.onResize();
                             that.ui.updateUrlHash();
@@ -438,37 +482,55 @@ export class Panel {
             els.push(msgTypesEl);
         }
 
-        let closeEl = $('<div class="menu_line close_panel" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel<span class="icon"></span></a></div>');
-        closeEl.click(function(ev) {
+        // fps toggle button
+        let fps_visible_cb_el = $('<div class="menu_line"></div>');
+        let fps_visible_label_el = $('<label for="show_fps_cb_'+this.n+'" id="show_fps_cb_label_'+this.n+'">'+this.show_fps_menu_label+'</>');
+        let fps_visible_cb = $('<input type="checkbox" id="show_fps_cb_'+this.n+'"'+(this.fps_visible ? ' checked':'')+' title="'+this.show_fps_menu_label+'"/>');
+        fps_visible_label_el.append(fps_visible_cb);
+        fps_visible_cb_el.append(fps_visible_label_el);
+        fps_visible_cb.change(function(ev) {
+            that.fps_visible = $(this).prop('checked');
+            that.updateFps();
+            if (that.fps_visible) {
+                that.fps_el.addClass('enabled');
+            } else {
+                that.fps_el.removeClass('enabled');
+            }
+            that.ui.updateUrlHash();
+        });
+        els.push(fps_visible_cb_el);
 
-            if (!isTouchDevice() || closeEl.hasClass('warn')) {
+        // custom widget buttons are added to els
+        if (this.display_widget && this.display_widget.setupMenu != null) {
+            this.display_widget.setupMenu(els);
+        }
+
+        // close panel button
+        this.close_el = $('<div class="menu_line close_panel" id="close_panel_menu_'+this.n+'"><a href="#" id="close_panel_link_'+this.n+'">Remove panel<span class="icon"></span></a></div>');
+        this.close_el.click(function(ev) {
+            if (!isTouchDevice() || that.close_el.hasClass('warn')) {
                 that.close();
                 if (that.ui.widgets[that.id_source])
                     that.ui.widgetsMenu();    
             } else {
-                closeEl.addClass('warn');
+                that.close_el.addClass('warn');
             }
-            
             ev.cancelBubble = true;
             ev.preventDefault();
         });
-        // if (els.length == 0)
-        //     closeEl.addClass('solo');
-        els.push(closeEl);
-        this.close_el = closeEl;
+        els.push(this.close_el);
 
         $('#monitor_menu_content_'+this.n).empty();
         $('#monitor_menu_content_'+this.n).html('<div class="hover_keeper"></div>');
         this.menu_content_underlay = $('<div class="menu_content_underlay"></div>');
         $('#monitor_menu_content_'+this.n).append(this.menu_content_underlay);
+        
+        if (this.menu_extra_class)
+            $('#monitor_menu_content_'+this.n).parent().addClass(this.menu_extra_class);
 
         // let linesCont = $('<div class="menu_lines"></div>');
         for (let i = 0; i < els.length; i++) {
             $('#monitor_menu_content_'+this.n).append(els[i]);
-        }
-
-        if (this.widgetMenuCb != null) {
-            this.widgetMenuCb();
         }
 
     }
@@ -690,9 +752,10 @@ export class Panel {
         //     this.ui.type_widgets[this.msg_type].widget(this, msg);
 
         if (this.display_widget) {
-
             this.display_widget.onData(msg);
         }
+
+        this.updateFps();
 
         if (this.src_visible) {
             $('#panel_source_'+this.n).html(
@@ -755,7 +818,7 @@ export class Panel {
         
 
         function trySet() {
-            
+
             // window.setTimeout(()=>{
             //     
             //     trySet();

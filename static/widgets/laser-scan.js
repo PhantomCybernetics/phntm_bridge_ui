@@ -22,66 +22,6 @@ export class LaserScanWidget {
 
         let that = this;
 
-        //const div = d3.selectAll();
-        //console.log('d3 div', div)
-        //panel.display_widget = new ApexCharts(document.querySelector('#panel_widget_'+panel.n), options);
-
-        //panel.display_widget.render();
-        // panel.zoom = 8.0;
-
-        //zoom menu control
-        panel.widgetMenuCb = () => {
-
-            let zoom = panel.zoom === null || panel.zoom === undefined ? '?' : panel.zoom.toFixed(1);
-            let rot = panel.rot === null || panel.rot === undefined ? '?' : panel.rot.toFixed(0);
-
-            $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + panel.n + '">' +
-              '<span class="minus">-</span>' +
-              '<button class="val" title="Reset zoom">Zoom: ' + zoom + 'x</button>' +
-              '<span class="plus">+</span>' +
-              '</div>')
-              .insertAfter($('#panel_msg_types_'+panel.n).parent());
-            
-            $('#zoom_ctrl_'+panel.n+' .plus').click(function(ev) {
-                that.setZoom(that.panel.zoom + that.panel.zoom/2.0);
-            });
-            $('#zoom_ctrl_'+panel.n+' .minus').click(function(ev) {
-                that.setZoom(that.panel.zoom - that.panel.zoom/2.0);
-            });
-
-            $('#zoom_ctrl_'+this.panel.n+' .val').click(function(ev) {
-                that.setZoom(that.panel.default_zoom);
-            });
-
-            $('<div class="menu_line rot_ctrl" id="rot_ctrl_' + panel.n + '">' +
-                '<span class="rot-left"><span class="icon"></span></span>' +
-                '<button class="val" title="Reset zoom">Rotate: ' + rot + '°</button>' +
-                '<span class="rot-right"><span class="icon"></span></span>' +
-                '</div>')
-                .insertAfter($('#zoom_ctrl_'+panel.n));
-              
-              $('#rot_ctrl_'+panel.n+' .rot-right').click(function(ev) {
-                  that.setRot(that.panel.rot + 45.0);
-              });
-              $('#rot_ctrl_'+panel.n+' .rot-left').click(function(ev) {
-                  that.setRot(that.panel.rot - 45.0);
-              });
-  
-              $('#rot_ctrl_'+this.panel.n+' .val').click(function(ev) {
-                  that.setRot(that.panel.default_rot);
-              });
-        }
-
-        // window.addEventListener('resize', () => {
-        //     ResizeWidget(panel);
-        //     RenderScan(panel);
-        // });
-        // $('#display_panel_source_'+panel.n).change(() => {
-        //     ResizeWidget(panel);
-        //     RenderScan(panel);
-        // });
-        
-
         $('#panel_widget_'+panel.n).on('mousewheel', (ev) => {
             ev.preventDefault();
             let d = ev.originalEvent.deltaY;
@@ -190,11 +130,49 @@ export class LaserScanWidget {
         requestAnimationFrame((t)=> this.renderingLoop());
     }
 
-    setZoom(zoom) {
+    setupMenu(menu_els) {
 
-        // panel.zoom +=1.0;
-        // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        // panel.ui.updateUrlHash();
+        let that = this;
+
+        let zoom = this.panel.zoom === null || this.panel.zoom === undefined ? '?' : this.panel.zoom.toFixed(1);
+        let rot = this.panel.rot === null || this.panel.rot === undefined ? '?' : this.panel.rot.toFixed(0);
+
+        // zoom control
+        let zoom_ctrl_line_el = $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + this.panel.n + '"></div>');
+        let zoom_minus_btn = $('<span class="minus">-</span>');
+        this.zoom_val_btn = $('<button class="val" title="Reset zoom">Zoom: ' + zoom + 'x</button>');
+        let zoom_plus_btn = $('<span class="plus">+</span>');
+        zoom_ctrl_line_el.append( [zoom_minus_btn, this.zoom_val_btn, zoom_plus_btn] );
+        zoom_plus_btn.click(function(ev) {
+            that.setZoom(that.panel.zoom + that.panel.zoom/2.0);
+        });
+        zoom_minus_btn.click(function(ev) {
+            that.setZoom(that.panel.zoom - that.panel.zoom/2.0);
+        });
+        this.zoom_val_btn.click(function(ev) {
+            that.setZoom(that.panel.default_zoom);
+        });
+        menu_els.push(zoom_ctrl_line_el);
+
+        // rotation control
+        let rot_ctrl_line_el = $('<div class="menu_line rot_ctrl" id="rot_ctrl_' + this.panel.n + '"></div>');
+        let rot_left_btn = $('<span class="rot-left"><span class="icon"></span></span>');
+        this.rot_val_btn = $('<button class="val" title="Reset zoom">Rotate: ' + rot + '°</button>');
+        let rot_rigt_btn = $('<span class="rot-right"><span class="icon"></span></span>');
+        rot_ctrl_line_el.append( [rot_left_btn, this.rot_val_btn, rot_rigt_btn] );
+        rot_rigt_btn.click(function(ev) {
+            that.setRot(that.panel.rot + 45.0);
+        });
+        rot_left_btn.click(function(ev) {
+            that.setRot(that.panel.rot - 45.0);
+        });
+        this.rot_val_btn.click(function(ev) {
+            that.setRot(that.panel.default_rot);
+        });
+        menu_els.push(rot_ctrl_line_el);
+    }
+
+    setZoom(zoom) {
 
         let panel = this.panel;
         if (zoom < 0.1) {
@@ -203,18 +181,13 @@ export class LaserScanWidget {
             zoom = 30.0;
         }
         panel.zoom = zoom;
-        $('#zoom_ctrl_'+panel.n+' .val')
-            .html('Zoom: '+panel.zoom.toFixed(1)+'x');
+        this.zoom_val_btn.html('Zoom: '+panel.zoom.toFixed(1)+'x');
         panel.ui.updateUrlHash();
         
         this.renderDirty();
     }
 
     setRot(rot) {
-
-        // panel.zoom +=1.0;
-        // $('#zoom_ctrl_'+panel.n+' .val').html('Zoom: '+panel.zoom.toFixed(1)+'x');
-        // panel.ui.updateUrlHash();
 
         let panel = this.panel;
         if (rot < -1.0) {
@@ -223,8 +196,7 @@ export class LaserScanWidget {
             rot = 0.0;
         }
         panel.rot = rot;
-        $('#rot_ctrl_'+panel.n+' .val')
-            .html('Rotate: '+panel.rot.toFixed(0)+'°');
+        this.rot_val_btn.html('Rotate: '+panel.rot.toFixed(0)+'°');
         panel.ui.updateUrlHash();
         
         this.renderDirty();
@@ -239,17 +211,12 @@ export class LaserScanWidget {
     }
 
     onResize() {
-        // [ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize()
         this.renderDirty()
     }
-
-    //console.log('widget', [panel.widget_width, panel.widget_height], frame);
 
     async onData (decoded) {
         let numSamples = decoded.ranges.length;
         let anglePerSample = 360.0 / numSamples;
-
-        //panel.display_widget.fillStyle = "#ff0000";
 
         this.scale = (this.panel.widget_height/2.0 - 20.0) / decoded.range_max;
 
@@ -297,7 +264,7 @@ export class LaserScanWidget {
         requestAnimationFrame((t)=> this.renderingLoop());
     }
 
-    render = () => {
+    render() {
 
         let frame = [
             this.panel.widget_width/2.0,
@@ -306,7 +273,6 @@ export class LaserScanWidget {
     
         let range = this.range_max;
     
-        //panel.display_widget.fillStyle = "#fff";
         this.ctx.clearRect(0, 0, this.panel.widget_width, this.panel.widget_height);
     
         for (let i = 0; i < this.data_trace.length; i++) {

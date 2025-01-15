@@ -465,7 +465,7 @@ export class PanelUI {
         client.on('peer_stats', (stats) => {
             that.last_pc_stats = stats;
             setTimeout(()=>{
-                that.updateVideoStats(stats);
+                that.updateAllVideoStats(stats);
             }, 0);
         });
 
@@ -2043,12 +2043,12 @@ export class PanelUI {
         }
     }
 
-    makePanelFromConfig(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, custom_url_vars) {
+    makePanelFromConfig(id_source, w, h, x = null, y = null, src_visible = false, zoom, rot, fps, custom_url_vars) {
         if (this.panels[id_source])
             return this.panels[id_source];
 
         //msg type unknown here
-        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, rot, custom_url_vars);
+        let panel = new Panel(id_source, this, w, h, x, y, src_visible, zoom, rot, fps, custom_url_vars);
         panel.init(null);
 
         if (isTouchDevice()) {
@@ -2060,7 +2060,7 @@ export class PanelUI {
         return panel;
     }
 
-    updateVideoStats(results) {
+    updateAllVideoStats(results) {
         let panel_ids = Object.keys(this.panels);
         let that = this;
 
@@ -2086,18 +2086,11 @@ export class PanelUI {
                             }
                         }
                     });
+                    
+                    panel.display_widget.last_video_stats_string = statsString;
+                    panel.fps = fps;
 
-                    if (panel.display_widget) {
-                        panel.display_widget.last_stats_string = statsString;
-                        panel.display_widget.last_fps_string = fps + ' FPS';
-
-                        if (!panel.paused) {
-                            if (panel.display_widget.video_stats_el && panel.display_widget.video_stats_el.hasClass('enabled'))
-                                panel.display_widget.video_stats_el.html(statsString);
-                            if (panel.display_widget.video_fps_el && panel.display_widget.video_fps_el.hasClass('enabled'))
-                                panel.display_widget.video_fps_el.text(fps + ' FPS');
-                        }
-                    }                
+                    panel.updateFps();
                 }
             });
         });
@@ -2160,6 +2153,9 @@ export class PanelUI {
                 let r = that.panels[id_source].rot.toFixed(0);
                 parts.push('r=' + r);
             }
+            if (that.panels[id_source].fps_visible !== undefined && that.panels[id_source].fps_visible) {;
+                parts.push('fps=1');
+            }
             // console.log('updateUrlHash for ' + id_source + ': ', that.panels[id_source].display_widget);
             if (that.panels[id_source].display_widget && typeof that.panels[id_source].display_widget.getUrlHashParts !== 'undefined') {
                 that.panels[id_source].display_widget.getUrlHashParts(parts);
@@ -2217,6 +2213,7 @@ export class PanelUI {
             let src_on = false;
             let zoom = null;
             let rot = null;
+            let fps = null;
             let custom_vars = [];
             for (let j = 3; j < src_vars.length; j++) {
                 if (src_vars[j] == 'src') {
@@ -2226,8 +2223,11 @@ export class PanelUI {
                     zoom = parseFloat(src_vars[j].substr(2));
                     console.log('Found zoom for ' + id_source + ': ' + src_vars[j] + ' => ', zoom);
                 } else if (src_vars[j].indexOf('r=') === 0) {
-                        rot = parseFloat(src_vars[j].substr(2));
-                        console.log('Found rot for ' + id_source + ': ' + src_vars[j] + ' => ', rot);
+                    rot = parseFloat(src_vars[j].substr(2));
+                    console.log('Found rot for ' + id_source + ': ' + src_vars[j] + ' => ', rot);
+                } else if (src_vars[j].indexOf('fps=') === 0) {
+                    fps = parseInt(src_vars[j].substr(4)) == 1;
+                    console.log('Found fps for ' + id_source + ': ' + src_vars[j] + ' => ', fps);
                 } else {
                     custom_vars.push(src_vars[j].split('='));
                 }
@@ -2245,6 +2245,7 @@ export class PanelUI {
                 'y': y,
                 'src_on': src_on,
                 'zoom': zoom,
+                'fps': fps,
                 'rot': rot,
                 'custom_vars': custom_vars
             });
@@ -2256,7 +2257,7 @@ export class PanelUI {
                     let p = panels_to_make_sorted[j];
                     if (p.x == x && p.y == y) {
 
-                        this.makePanelFromConfig(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.rot, p.custom_vars)
+                        this.makePanelFromConfig(p.id_source, p.w, p.h, p.x, p.y, p.src_on, p.zoom, p.rot, p.fps, p.custom_vars)
                         if (this.widgets[p.id_source]) {
                             this.panels[p.id_source].init(p.id_source, true);
                         } // else if (this.widgets[id_source]) {
