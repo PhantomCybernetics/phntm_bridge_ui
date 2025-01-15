@@ -157,7 +157,7 @@ export class LaserScanWidget {
         // rotation control
         let rot_ctrl_line_el = $('<div class="menu_line rot_ctrl" id="rot_ctrl_' + this.panel.n + '"></div>');
         let rot_left_btn = $('<span class="rot-left"><span class="icon"></span></span>');
-        this.rot_val_btn = $('<button class="val" title="Reset zoom">Rotate: ' + rot + '°</button>');
+        this.rot_val_btn = $('<button class="val" title="Reset rotation">Rotate: ' + rot + '°</button>');
         let rot_rigt_btn = $('<span class="rot-right"><span class="icon"></span></span>');
         rot_ctrl_line_el.append( [rot_left_btn, this.rot_val_btn, rot_rigt_btn] );
         rot_rigt_btn.click(function(ev) {

@@ -13,7 +13,6 @@ export class Panel {
     id_stream = null;
     msg_type = null; //str
     msg_type_class = null;
-    is_image_topic = false;
 
     static PANEL_NO = 0;
 
@@ -263,7 +262,6 @@ export class Panel {
 
         if (msg_type && !this.initiated) {
 
-            this.is_image_topic = IsImageTopic(msg_type);
             console.log('Initiating panel '+this.id_source+' for '+msg_type)
 
             if (this.ui.widgets[msg_type]) {
@@ -379,23 +377,19 @@ export class Panel {
         if (this.paused)
             return;
 
-        if (this.is_image_topic) {
-            this.fps_string = this.fps.toFixed(0) + ' FPS'; // set in ui.updateAllVideoStats
-        } else {
-            this.fps_frame_count++;
+        this.fps_frame_count++;
 
-            if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
-                if (this.display_widget && this.display_widget.updateFps) {
-                    this.fps_string = this.display_widget.updateFps(); // widget sets string
-                } else {
-                    let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
-                    let r = dt ? 1000 / dt : 0;
-                    this.fps = this.fps_frame_count * r;
-                    this.fps_string = ((this.fps > 0.01 && this.fps < 1.0) ? this.fps.toFixed(1) : this.fps.toFixed(0)) + ' FPS';
-                }
-                this.last_fps_updated = Date.now();
-                this.fps_frame_count = 0;
+        if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
+            if (this.display_widget && this.display_widget.updateFps) {
+                this.fps_string = this.display_widget.updateFps(); // widget sets string
+            } else {
+                let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
+                let r = dt ? 1000 / dt : 0;
+                this.fps = this.fps_frame_count * r;
+                this.fps_string = ((this.fps > 0.01 && this.fps < 1.0) ? this.fps.toFixed(1) : this.fps.toFixed(0)) + ' FPS';
             }
+            this.last_fps_updated = Date.now();
+            this.fps_frame_count = 0;
         }
         
         if (this.fps_visible) {
