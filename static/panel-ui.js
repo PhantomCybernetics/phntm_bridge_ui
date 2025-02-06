@@ -2930,18 +2930,29 @@ export class PanelUI {
                     show_reply = false;
                 }
             }
+
+            let message, detail;
             if (service_reply && service_reply.err) { // showing errors always
-                this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+service_reply.msg+'</pre>');
+                message = 'Service '+short_id+' returned error';
+                detail = service_reply.msg;
                 is_err = true;
             } else if (service_reply && (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error))  { // showing errors always
-                this.showNotification('Service '+short_id+' returned error', 'error', id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+                message = 'Service '+short_id+' returned error';
+                detail = JSON.stringify(service_reply, replacer, 2);
                 is_err = true;
             } else if (service_reply && service_reply.success === true && show_reply) { //std set bool & trugger
-                this.showNotification('Service '+short_id+' replied: Success', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+                message = 'Service '+short_id+' replied: Success';
+                detail = JSON.stringify(service_reply, replacer, 2);
             } else if (show_reply) {
-                this.showNotification('Service '+short_id+' replied', null, id_service+'<br><pre>'+JSON.stringify(service_reply, replacer, 2)+'</pre>');
+                message = 'Service '+short_id+' replied';
+                detail = JSON.stringify(service_reply, replacer, 2);
             }
 
+            if (service_reply.message) {
+                message = service_reply.message;
+            }
+
+            this.showNotification(message, is_err ? 'error' : null, id_service+'<br><pre>'+detail+'</pre>');
         }
 
         if (is_err && btn_el) { // do the error btn wobble
