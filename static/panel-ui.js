@@ -168,7 +168,7 @@ export class PanelUI {
 
             if (client.name) {
                 $('#robot_name .label').html(client.name);
-                document.title = client.name + ' @ PHNTM bridge';
+                document.title = client.name + ' @ PHNTM Bridge';
                 that.saveLastRobotName();
             }
 
@@ -565,7 +565,7 @@ export class PanelUI {
                 return;
             console.log('Delayed disconnect');
             that.client.disconnect();
-            document.title = '{Zzz) ' + client.name + ' @ PHNTM bridge';
+            document.title = '{Zzz) ' + client.name + ' @ PHNTM Bridge';
         }
 
         const onUIVisibilityChange = async () => {
@@ -575,7 +575,7 @@ export class PanelUI {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = null;
                 that.client.connect();
-                document.title = client.name + ' @ PHNTM bridge';
+                document.title = client.name + ' @ PHNTM Bridge';
             } else if (!visibility && that.is_visible && !that.run_in_background) {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = setTimeout(delayedDisconnectSockerTimer, that.background_disconnect_delay)
