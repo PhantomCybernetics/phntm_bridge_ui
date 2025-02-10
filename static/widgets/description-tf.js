@@ -1327,7 +1327,7 @@ export class DescriptionTFWidget extends EventTarget {
                     if (!this.missing_transform_error_logged[t_child]) {
                         this.missing_transform_error_logged[t_child] = true;
                         let msg = id_child+' not found in the URDF model';
-                        this.panel.ui.showNotification(msg, 'error');
+                        this.panel.ui.showNotification(msg, 'error', '<pre>Source: transform</pre>');
                         console.error(msg);
                     }
                     continue; 
