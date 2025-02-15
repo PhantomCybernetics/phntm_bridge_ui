@@ -320,136 +320,107 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on('nodes', (nodes_data) => {
 
-            if (!nodes_data[this.id_robot])
+            if (!nodes_data[that.id_robot])
                 return;
 
-            console.warn('Raw nodes: ', nodes_data);
+            // console.warn('Raw nodes: ', nodes_data);
 
             setTimeout(()=>{
-                this.discovered_nodes = {};
-                Object.keys(nodes_data[this.id_robot]).forEach((node)=>{
-                    this.discovered_nodes[node] = {
+                that.discovered_nodes = {};
+                that.discovered_topics = {};
+                that.discovered_services = {}; // rewrites all
+
+                Object.keys(nodes_data[that.id_robot]).forEach((node)=>{
+                    that.discovered_nodes[node] = {
                         node: node,
-                        namespace: nodes_data[this.id_robot][node]['namespace'],
+                        namespace: nodes_data[that.id_robot][node]['namespace'],
                         publishers: {},
                         subscribers: {},
                         services: {},
                         params_editable: false
                     }
-                    if (nodes_data[this.id_robot][node]['publishers']) {
-                        let topics = Object.keys(nodes_data[this.id_robot][node]['publishers']);
+                    if (nodes_data[that.id_robot][node]['publishers']) {
+                        let topics = Object.keys(nodes_data[that.id_robot][node]['publishers']);
                         topics.forEach((topic) => {
-                            let msg_type = nodes_data[this.id_robot][node]['publishers'][topic]['msg_type'];
-                            let qos = nodes_data[this.id_robot][node]['publishers'][topic]['qos'];
-                            this.discovered_nodes[node].publishers[topic] = {
+                            let msg_type = nodes_data[that.id_robot][node]['publishers'][topic]['msg_type'];
+                            let qos = nodes_data[that.id_robot][node]['publishers'][topic]['qos'];
+                            that.discovered_nodes[node].publishers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
-                                msg_type_supported: this.findMessageType(msg_type) != null,
+                                msg_type_supported: that.findMessageType(msg_type) != null,
                                 qos: qos
+                            }
+
+                            that.discovered_topics[topic] = {
+                                msg_type: msg_type,
+                                id: topic,
+                                is_video: IsImageTopic(msg_type),
+                                msg_type_supported: that.findMessageType(msg_type) != null,
                             }
                         })
                     }
-                    if (nodes_data[this.id_robot][node]['subscribers']) {
-                        let topics = Object.keys(nodes_data[this.id_robot][node]['subscribers']);
+                    if (nodes_data[that.id_robot][node]['subscribers']) {
+                        let topics = Object.keys(nodes_data[that.id_robot][node]['subscribers']);
                         topics.forEach((topic) => {
-                            let msg_type = nodes_data[this.id_robot][node]['subscribers'][topic]['msg_type'];
-                            let qos = nodes_data[this.id_robot][node]['subscribers'][topic]['qos'];
-                            let qos_error = nodes_data[this.id_robot][node]['subscribers'][topic]['qos_error'];
-                            let qos_warning = nodes_data[this.id_robot][node]['subscribers'][topic]['qos_warning'];
-                            this.discovered_nodes[node].subscribers[topic] = {
+                            let msg_type = nodes_data[that.id_robot][node]['subscribers'][topic]['msg_type'];
+                            let qos = nodes_data[that.id_robot][node]['subscribers'][topic]['qos'];
+                            let qos_error = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_error'];
+                            let qos_warning = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_warning'];
+                            that.discovered_nodes[node].subscribers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
-                                msg_type_supported: this.findMessageType(msg_type) != null,
+                                msg_type_supported: that.findMessageType(msg_type) != null,
                                 qos: qos,
                                 qos_error: qos_error,
                                 qos_warning: qos_warning
                             }
                         })
                     }
-                    if (nodes_data[this.id_robot][node]['services']) {
-                        let services = Object.keys(nodes_data[this.id_robot][node]['services']);
+                    if (nodes_data[that.id_robot][node]['services']) {
+                        let services = Object.keys(nodes_data[that.id_robot][node]['services']);
                         services.forEach((service) => {
-                            let msg_type = nodes_data[this.id_robot][node]['services'][service];
-                            this.discovered_nodes[node].services[service] = {
+                            let msg_type = nodes_data[that.id_robot][node]['services'][service];
+                            that.discovered_nodes[node].services[service] = {
                                 service: service,
                                 msg_type: msg_type
                             }
 
                             if (msg_type == 'rcl_interfaces/srv/ListParameters')
-                                this.discovered_nodes[node]['_srvListParameters'] = service;
+                                that.discovered_nodes[node]['_srvListParameters'] = service;
                             if (msg_type == 'rcl_interfaces/srv/DescribeParameters')
-                                this.discovered_nodes[node]['_srvDescribeParameters'] = service;
+                                that.discovered_nodes[node]['_srvDescribeParameters'] = service;
                             if (msg_type == 'rcl_interfaces/srv/GetParameters')
-                                this.discovered_nodes[node]['_srvGetParameters'] = service;
+                                that.discovered_nodes[node]['_srvGetParameters'] = service;
                             if (msg_type == 'rcl_interfaces/srv/SetParameters')
-                                this.discovered_nodes[node]['_srvSetParameters'] = service;
+                                that.discovered_nodes[node]['_srvSetParameters'] = service;
 
-                            if (this.discovered_nodes[node]['_srvListParameters'] &&
-                                this.discovered_nodes[node]['_srvDescribeParameters'] &&
-                                this.discovered_nodes[node]['_srvGetParameters'] &&
-                                this.discovered_nodes[node]['_srvSetParameters']
+                            if (that.discovered_nodes[node]['_srvListParameters'] &&
+                                that.discovered_nodes[node]['_srvDescribeParameters'] &&
+                                that.discovered_nodes[node]['_srvGetParameters'] &&
+                                that.discovered_nodes[node]['_srvSetParameters']
                             ) {
-                                this.discovered_nodes[node].params_editable = true;
+                                that.discovered_nodes[node].params_editable = true;
                             }
+
+                            that.discovered_services[service] = {
+                                service: service,
+                                msg_type: msg_type
+                            };
                         })
                     }
                 });
 
-                console.log('Got nodes ', this.discovered_nodes);
-                this.emit('nodes', this.discovered_nodes);
+                console.log('Got nodes ', that.discovered_nodes);
+                that.emit('nodes', that.discovered_nodes);
+
+                console.log('Got topics ', that.discovered_topics);
+                that.emit('topics', that.discovered_topics);
+
+                console.log('Got services:', that.discovered_services);
+                that.emit('services', that.discovered_services);
 
             }, 0);
 
-        });
-
-
-        this.socket.on('topics', (topics_data) => {
-
-            if (!topics_data[this.id_robot])
-                return;
-
-            setTimeout(()=>{
-                this.discovered_topics = {};
-                topics_data[this.id_robot].forEach((topic_data)=>{
-                    let topic = topic_data[0];
-                    let msg_type = topic_data[1];
-                    this.discovered_topics[topic] = {
-                        msg_type: msg_type,
-                        id: topic,
-                        is_video: IsImageTopic(msg_type),
-                        msg_type_supported: this.findMessageType(msg_type) != null,
-                    }
-                });
-
-                console.log('Got topics ', this.discovered_topics);
-                this.emit('topics', this.discovered_topics);
-            }, 0);
-
-        });
-
-        this.socket.on('services', (services_data) => {
-            
-            if (!services_data[this.id_robot])
-                return;
-
-            let that = this;
-
-            setTimeout(()=>{
-                this.discovered_services = {}; // reqrites all
-
-                // let i = 0;
-                services_data[this.id_robot].forEach((service_data) => {
-                    let service = service_data[0];
-                    let msg_type = service_data[1];
-                    this.discovered_services[service] = {
-                        service: service,
-                        msg_type: msg_type
-                    };
-                });
-
-                // console.log('Got services:', this.discovered_services);
-                that.emit('services', this.discovered_services);
-            }, 0);
         });
 
         this.socket.on('cameras', (cameras_data) => {

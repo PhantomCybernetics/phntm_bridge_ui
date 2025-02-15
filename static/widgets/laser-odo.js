@@ -76,6 +76,7 @@ export class LaserOdometryWidget extends Zoomable2DTiles {
 
         let that = this;
 
+        // clear display
         let clear_line_el = $('<div class="menu_line"></div>');
         let clear_btn = $('<a href="#" id="clear_panel_link_'+this.panel.n+'">Clear</a>');
         clear_btn.appendTo(clear_line_el);
