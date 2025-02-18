@@ -267,6 +267,7 @@ export class PanelUI {
         this.subscribed_docker_monitor_topic = null;
         this.iw_topic = null;
         this.battery_shown = this.loadLastRobotBatteryShown();
+        this.introspection_control_shown = this.loadLastRobotIntrospectionControlShown();
         // display ui elements as last time to prevent them moving around too much during init
         if (this.battery_shown) {
             $('#battery-info').css('display', 'block');
@@ -307,6 +308,18 @@ export class PanelUI {
             }
             that.saveLastRobotBatteryShown(that.battery_shown);
 
+            // introspection control
+            if (robot_ui_config['introspection_control'] !== undefined) {
+
+                that.introspection_control_shown = robot_ui_config['introspection_control'];
+                if (that.introspection_control_shown) {
+                    $('#introspection_state').css('display', 'block');
+                } else {
+                    $('#introspection_state').css('display', 'none');
+                }
+                that.saveLastRobotIntrospectionControlShown(robot_ui_config['introspection_control']);
+            }
+
             // docker control optional
             if (robot_ui_config['docker_monitor_topic']) {
                 that.docker_monitor_topic = robot_ui_config['docker_monitor_topic'];
@@ -323,7 +336,7 @@ export class PanelUI {
                 }
                 that.subscribed_docker_monitor_topic = null;
             }
-            that.saveLastRobotDockerControlShown(that.docker_control_shown);
+            
             if (old_docker_control_shown != that.docker_control_shown) {
                 $('#docker_controls').css('display', that.docker_control_shown ? '' : 'none');
                 that.updateLayout();
@@ -2426,6 +2439,15 @@ export class PanelUI {
         return name;
     }
 
+    saveLastRobotIntrospectionControlShown(val) {
+        localStorage.setItem('last-robot-introspection-shown:' + this.client.id_robot, val);
+    }
+
+    loadLastRobotIntrospectionControlShown() {
+        let val = localStorage.getItem('last-robot-introspection-shown:' + this.client.id_robot) == 'true';
+        return val;
+    }
+
     saveLastRobotBatteryShown(val) {
         localStorage.setItem('last-robot-battery-shown:' + this.client.id_robot, val);
     }
@@ -2577,7 +2599,11 @@ export class PanelUI {
 
     updateInputButtons() {
 
-        $('#introspection_state').css('display', 'block'); //always
+        if (this.introspection_control_shown) {
+            $('#introspection_state').css('display', 'block');
+        } else {
+            $('#introspection_state').css('display', 'none');
+        }
 
         let w_body = $('body').innerWidth();
 
