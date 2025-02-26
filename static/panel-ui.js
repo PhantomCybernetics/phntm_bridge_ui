@@ -318,6 +318,10 @@ export class PanelUI {
                     $('#introspection_state').css('display', 'none');
                 }
                 that.saveLastRobotIntrospectionControlShown(robot_ui_config['introspection_control']);
+            } else { // python bridge doens't send introspection_control
+                that.introspection_control_shown = true;
+                $('#introspection_state').css('display', 'block');
+                that.saveLastRobotIntrospectionControlShown(that.introspection_control_shown);
             }
 
             // docker control optional
