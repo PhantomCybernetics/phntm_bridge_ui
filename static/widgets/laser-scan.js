@@ -215,13 +215,10 @@ export class LaserScanWidget {
     }
 
     async onData (decoded) {
-        let numSamples = decoded.ranges.length;
-        let anglePerSample = 360.0 / numSamples;
-
         this.scale = (this.panel.widget_height/2.0 - 20.0) / decoded.range_max;
 
         let newScanPts = [];
-        for (let i = 0; i < numSamples; i++) {
+        for (let i = 0; i < decoded.ranges.length; i++) {
 
             if (decoded.ranges[i] == null || decoded.ranges[i] > decoded.range_max || decoded.ranges[i] < decoded.range_min)
                 continue;
@@ -231,7 +228,7 @@ export class LaserScanWidget {
                 decoded.ranges[i] * this.scale
             ]
 
-            let arad = deg2rad(anglePerSample * i - this.panel.rot);
+            let arad = decoded.angle_min + i*decoded.angle_increment - deg2rad(this.panel.rot);
             let p = [
                 Math.cos(arad)*pos[0] - Math.sin(arad)*pos[1],
                 Math.sin(arad)*pos[0] + Math.cos(arad)*pos[1]
