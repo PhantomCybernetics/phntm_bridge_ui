@@ -180,7 +180,7 @@ export class PanelUI {
             if (!client.robot_socket_online) {
                 that.updateWifiSignal(-1);
                 that.updateNumPeers(-1);
-                that.updateRTT(-1);
+                that.updateRTT(false);
             }
             that.updateWebrtcStatus()
             that.updateLayout(); // robot name length affects layout
@@ -440,7 +440,7 @@ export class PanelUI {
             that.setDotState(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
             that.updateWifiSignal(-1);
             that.updateNumPeers(-1);
-            that.updateRTT(-1);
+            that.updateRTT(false);
             // this.updateWifiStatus();
             that.trigger_wifi_scan_el.css('display', 'none');
             that.robot_wifi_info_el.empty().css('display', 'none');
@@ -483,6 +483,7 @@ export class PanelUI {
             that.last_pc_stats = stats;
             setTimeout(()=>{
                 that.updateAllVideoStats(stats);
+                that.updateRTT();
             }, 0);
         });
 
@@ -2385,7 +2386,23 @@ export class PanelUI {
         }
     }
 
-    updateRTT(rtt_sec) {
+    updateRTT(connected = true) {
+
+        let rtt_sec = -1;
+
+        if (connected && this.last_pc_stats) { // from timer
+
+            this.last_pc_stats.forEach((report) => {
+                if (report.type != 'candidate-pair' || !report.nominated)
+                    return;
+                Object.keys(report).forEach((statName) => {
+                    if (statName == 'currentRoundTripTime') {
+                        if (rtt_sec < 0 || report[statName] < rtt_sec)
+                            rtt_sec = report[statName];
+                    }
+                });
+            });
+        }
 
         if (rtt_sec > 0) {
             let rtt_ms = rtt_sec * 1000; //ms
@@ -3150,38 +3167,7 @@ export class PanelUI {
         // let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
         // console.log('Selected pair', selected_pair);
 
-        if (this.last_pc_stats) { // from timer
-            // this.last_pc_stats.forEach((report) => {
-
-            //     if (report.type == 'local-candidate') {
-            //         console.warn('Report local-candidate', report);
-            //         // return;
-            //     }
-
-            //     if (report.type == 'remote-candidate') {
-            //         console.warn('Report remote-candidate', report);
-            //         // return;
-            //     }
-
-            // });
-
-            let min_rtt = -1;
-
-            this.last_pc_stats.forEach((report) => {
-                if (report.type != 'candidate-pair' || !report.nominated)
-                    return;
-                Object.keys(report).forEach((statName) => {
-                    if (statName == 'currentRoundTripTime') {
-                        if (min_rtt < 0 || report[statName] < min_rtt)
-                            min_rtt = report[statName];
-                    }
-                });
-            });
-
-            if (min_rtt > 0) {
-                this.updateRTT(min_rtt);
-            }
-        }
+        this.updateRTT();
 
         this.robot_wifi_info_el
             .html(html)
