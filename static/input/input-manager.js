@@ -3898,15 +3898,12 @@ export class InputManager {
     }
 
     onKeyboardKeyDown(ev, c) {
-        
-        if (ev.repeat)
-            return;
-
+            
         if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
             return; // ignore input fields
         }
 
-        if (['Escape', 'Delete', 'Backspace'].indexOf(ev.code) > -1) { // kb cancel / del work for all controllers
+        if (['Escape', 'Delete', 'Backspace'].indexOf(ev.code) > -1) { // kb cancel & del work for all controllers
             let that = this;
             Object.values(this.controllers).forEach((c)=>{
                 if (!c.profiles)
@@ -3941,9 +3938,7 @@ export class InputManager {
 
         for (let i = 0; i < driver.buttons.length; i++) {
             let btn = driver.buttons[i];
-            if (btn.pressed)
-                continue;
-
+                
             if (btn.id_src == ev.key.toLowerCase()) {
                 if (btn.key_mod == 'shift' && !ev.shiftKey)
                     continue;
@@ -3967,7 +3962,7 @@ export class InputManager {
                 btn.raw = 1.0;
 
                 // down handlers & repeat
-                if (btn.trigger == 1) {
+                if (btn.trigger == 1 && !ev.repeat) {
                     that.triggerBtnAction(c, btn);
                     if (btn.repeat) {
                         btn.repeat_timer = setInterval(
