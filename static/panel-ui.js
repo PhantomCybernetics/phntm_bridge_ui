@@ -2088,6 +2088,7 @@ export class PanelUI {
 
             panel_ids.forEach((id_panel) => {
                 let panel = that.panels[id_panel];
+                
                 if (panel.id_stream == res.trackIdentifier) {
                     let statsString = ''
                     statsString += `${res.timestamp}<br>`;
@@ -2105,7 +2106,9 @@ export class PanelUI {
                         }
                     });
                     
-                    panel.display_widget.last_video_stats_string = statsString;
+                    if (panel.display_widget)
+                        panel.display_widget.last_video_stats_string = statsString;
+                    
                     panel.fps = fps;
 
                     panel.updateFps();
