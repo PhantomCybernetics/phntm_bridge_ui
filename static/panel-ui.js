@@ -3002,7 +3002,8 @@ export class PanelUI {
                 message = service_reply.message;
             }
 
-            this.showNotification(message, is_err ? 'error' : null, id_service+'<br><pre>'+detail+'</pre>');
+            if (show_reply)
+                this.showNotification(message, is_err ? 'error' : null, id_service+'<br><pre>'+detail+'</pre>');
         }
 
         if (is_err && btn_el) { // do the error btn wobble
