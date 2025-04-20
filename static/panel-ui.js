@@ -73,6 +73,7 @@ export class PanelUI {
         this.client.ui = this;
         
         this.is_visible = true;
+        this.is_sleeping = false;
         this.run_in_background = false; //disconnects when backgrounded or computer goes to sleep
         this.reconnection_timer = null;
         this.disconnect_timer = null;
@@ -168,8 +169,8 @@ export class PanelUI {
 
             if (client.name) {
                 $('#robot_name .label').html(client.name);
-                document.title = client.name + ' @ PHNTM Bridge';
                 that.saveLastRobotName();
+                that.setDocumentTitle();
             }
 
             let ip_display = client.ip ? client.ip.replace('::ffff:', '') : null;
@@ -593,8 +594,9 @@ export class PanelUI {
             if (that.is_visible)
                 return;
             console.log('Delayed disconnect');
+            that.is_sleeping = true;
             that.client.disconnect();
-            document.title = '{Zzz) ' + client.name + ' @ PHNTM Bridge';
+            that.setDocumentTitle();
         }
 
         const onUIVisibilityChange = async () => {
@@ -604,7 +606,8 @@ export class PanelUI {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = null;
                 that.client.connect();
-                document.title = client.name + ' @ PHNTM Bridge';
+                that.is_sleeping = false;
+                that.setDocumentTitle();
             } else if (!visibility && that.is_visible && !that.run_in_background) {
                 clearTimeout(that.disconnect_timer)
                 that.disconnect_timer = setTimeout(delayedDisconnectSockerTimer, that.background_disconnect_delay)
@@ -685,6 +688,17 @@ export class PanelUI {
             };
 
             document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+    }
+
+    setDocumentTitle() {
+        if (!this.client.name)
+            return;
+        
+        if (this.is_sleeping) {
+            document.title = '{Zzz) ' + this.client.name + ' @ PHNTM Bridge';
+        } else {
+            document.title = this.client.name + ' @ PHNTM Bridge';
         }
     }
 
