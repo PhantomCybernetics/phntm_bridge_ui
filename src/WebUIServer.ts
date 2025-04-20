@@ -113,7 +113,7 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
     .then((response: AxiosResponse) => {
         if (response.status != 200) {
             $d.err('Locate returned code '+response.status+' for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
-            res.send('Error locating robot on Cloud Bridge, Web UI credentials misconfigured');
+            res.send('Error locating robot on Cloud Bridge, Web UI credentials misconfigured (err: '+response.status+')');
             return;
         }
         if (response.data['id_robot'] != idRobot) {
@@ -137,12 +137,16 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
             $d.err('Locating request timed out for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
             res.send('Timed out locating robot on Cloud Bridge');
         }
+        if (error.code === 'ECONNREFUSED') {
+            $d.err('Locating request refused for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
+            res.send('Error connecing to Cloud Bridge, connection refused');
+        }
         else if (error.status == 404) {
             $d.err('Locate returned code 404 for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
             res.send('Robot not found on Cloud Bridge');
         } else {
             $d.err('Error locating robot '+idRobot+' at '+BRIDGE_LOCATE_URL+':', error.message);
-            res.send('Error locating robot on Cloud Bridge, Web UI seems misconfigured');
+            res.send('Error locating robot on Cloud Bridge, Web UI seems misconfigured (err: '+error.code+')');
         }
     });
 });

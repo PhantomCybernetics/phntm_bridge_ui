@@ -234,7 +234,7 @@ export class InputManager {
         document.addEventListener('keyup', (ev) => that.onKeyboardKeyUp(ev, that.controllers['keyboard']));
         window.addEventListener("blur", (event) => {
             // reset all controllers
-            console.log('Window lost focus');
+            // console.log('Window lost focus');
             that.resetAll();
         });
 

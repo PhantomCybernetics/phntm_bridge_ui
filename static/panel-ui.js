@@ -172,11 +172,13 @@ export class PanelUI {
                 that.saveLastRobotName();
             }
 
+            let ip_display = client.ip ? client.ip.replace('::ffff:', '') : null;
             $('#robot_info').html('<span class="label">Robot ID:</span> ' + client.id_robot + '<br>'
-                + '<span class="label">Robot IP (public):</span> ' + (client.robot_socket_online ? '<span class="online">' + client.ip.replace('::ffff:', '') + '</span>' : '<span class="offline">Offline</span>')
+                + '<span class="label">Robot IP (public):</span> '
+                + (client.robot_socket_online ? '<span class="online">' + ip_display + '</span>' : '<span class="offline">' + (ip_display ? ip_display :'Offline') + '</span>')
             );
 
-            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge [Socket.io]');
             if (!client.robot_socket_online) {
                 that.updateWifiSignal(-1);
                 that.updateNumPeers(-1);
@@ -207,7 +209,7 @@ export class PanelUI {
 
         client.on('socket_disconnect', () => {
             
-            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge (Socket.io)');
+            that.setDotState(1, client.robot_socket_online ? 'green' : 'red', 'Robot ' + (client.robot_socket_online ? 'conected to' : 'disconnected from') + ' Cloud Bridge [Socket.io]');
             console.log('UI got socket_disconnect, timer=', that.reconnection_timer);
 
             if (!that.reconnection_timer) {
@@ -430,14 +432,23 @@ export class PanelUI {
             }, 1000);
         });
 
+        client.on('peer_conection_changed', () => {
+            that.updateWebrtcStatus();
+            if (that.client.pc && that.client.pc.connectionState == 'new' || that.client.pc.connectionState == 'connecting') {
+                clearInterval(that.connection_uptime_timer);
+                that.connection_uptime_timer = null; // stop the timer but keep the last uptime displayed
+                that.webrtc_uptime_el.empty();
+            }
+        });
+
         client.on('peer_disconnected', () => {
 
             clearInterval(that.connection_uptime_timer);
-            that.connection_uptime_timer = null;
+            that.connection_uptime_timer = null; // stop the timer but keep the last uptime displayed
 
             $('#introspection_state').addClass('inactive').removeClass('active').attr('title', 'Run introspection...');
 
-            that.setDotState(2, 'red', 'Robot disconnected from Cloud Bridge (Socket.io)');
+            that.setDotState(2, 'red', 'Robot disconnected from Cloud Bridge [Socket.io]');
             that.updateWifiSignal(-1);
             that.updateNumPeers(-1);
             that.updateRTT(false);
@@ -467,15 +478,15 @@ export class PanelUI {
         // browser's Socket.io connection to the Cloud Bridge's server
         client.socket.on('connect', () => {
             setTimeout(()=>{
-                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected (Socket.io)</span>');
-                that.setDotState(0, 'green', 'This client is conected to Cloud Bridge (Socket.io)')
+                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="online">Connected [Socket.io]</span>');
+                that.setDotState(0, 'green', 'This client is conected to Cloud Bridge [Socket.io]')
             }, 0);
         });
 
         client.socket.on('disconnect', () => {
             setTimeout(()=>{
-                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected (Socket.io)</span>');
-                that.setDotState(0, 'red', 'This client is disconnected from Cloud Bridge (Socket.io)')
+                $('#socketio_status').html('<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected [Socket.io]</span>');
+                that.setDotState(0, 'red', 'This client is disconnected from Cloud Bridge [Socket.io]')
             }, 0);
         });
 
@@ -483,7 +494,7 @@ export class PanelUI {
             that.last_pc_stats = stats;
             setTimeout(()=>{
                 that.updateAllVideoStats(stats);
-                that.updateRTT();
+                that.updateRTT(that.client.pc.connected);
             }, 0);
         });
 
@@ -2303,34 +2314,29 @@ export class PanelUI {
 
     updateWebrtcStatus() {
         let state = null;
-        const [via_turn, ip] = this.client.getTURNConnectionInfo();
+        const [remote_type, remote_ip] = this.client.getTURNConnectionInfo();
         let pc = this.client.pc;
         if (pc) {
-            state = pc.connectionState            
-        }
-       
-        if (state != null)
-            state = state.charAt(0).toUpperCase() + state.slice(1);
-        else
-            state = 'n/a'
+            state = pc.connectionState.charAt(0).toUpperCase() + pc.connectionState.slice(1);   
+        } else {
+            state = 'Offline'
+        }        
 
-        let wrtc_info = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">'+this.last_connection_uptime+'</span>' ];
-        if (via_turn)
-            wrtc_info.push('<span class="label">TURN Server: </span> <span id="turn_ip" class="turn">'+ip+'</span>')
-        else if (ip && ip.indexOf('redacted') === -1)
-            wrtc_info.push('<span class="label">IP: </span> <span id="robot_ip">'+ip+'</span>')
+        let wrtc_info_lines = [ '<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">'+this.last_connection_uptime+'</span>' ];
+        if (remote_ip && remote_ip.indexOf('redacted') === -1)
+            wrtc_info_lines.push('<span class="label">IP: </span> <span id="robot_ip">'+remote_ip+'</span>');
 
-        this.webrtc_info_el.html(wrtc_info.join('<br>'));
+        this.webrtc_info_el.html(wrtc_info_lines.join('<br>'));
         this.webrtc_status_el = $('#webrtc_status');
         this.webrtc_uptime_el = $('#webrtc_connection_uptime');
 
         if (state == 'Connected') {
-            this.webrtc_status_el.html('<span class="online">' + state + '</span>' + (via_turn ? ' <span class="turn">[TURN]</span>' : '<span class="online"> [P2P]</span>'));
+            this.webrtc_status_el.html('<span class="online">' + state + '</span> ' + (remote_type == 'host' ? '<span class="online">[p2p]</span>' : '<span class="turn">['+remote_type+']</span>' ));
             this.trigger_wifi_scan_el.removeClass('working')
-            if (via_turn)
-                this.setDotState(2, 'yellow', 'WebRTC connected to robot (TURN)');
+            if (remote_type == 'host')
+                this.setDotState(2, 'green', 'WebRTC connected to robot (p2p)');
             else
-                this.setDotState(2, 'green', 'WebRTC connected to robot (P2P)');
+                this.setDotState(2, 'yellow', 'WebRTC connected to robot ('+remote_type+')');
         } else if (state == 'Connecting') {
             this.webrtc_status_el.html('<span class="connecting">' + state + '</span>');
             // $('#robot_wifi_info').addClass('offline')
@@ -2342,7 +2348,6 @@ export class PanelUI {
             this.trigger_wifi_scan_el.removeClass('working')
             this.setDotState(2, 'red', 'WebRTC ' + state)
         }
-
     }
 
     setDotState(dot_no, color, label) {
@@ -2412,14 +2417,9 @@ export class PanelUI {
 
             // TODO: customize these in config maybe?
             let rttc = '';
-            if (rtt_ms > 100)
-                rttc = 'red'
-            else if (rtt_ms > 50)
-                rttc = 'orange'
-            else if (rtt_ms > 30)
-                rttc = 'yellow'
-            else
-                rttc = 'lime'
+            if (rtt_ms > 250) rttc = 'red';
+            else if (rtt_ms > 50) rttc = 'orange';
+            else rttc = 'lime';
 
             this.network_rtt_el
                 .html(Math.floor(rtt_ms) + 'ms')

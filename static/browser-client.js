@@ -182,34 +182,10 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.socket.on("connect", () => {
 
-            let subscribe = Object.keys(that.subscribers);
-            let writers = [];
-            Object.keys(that.topic_writers).forEach((topic)=>{
-                writers.push([ topic, that.topic_writers[topic].msg_type ]);
-            });
-            that.init_complete = true;
-
-            let req_data = {
-                id_robot: that.id_robot,
-                read: subscribe,
-                write: writers,
-            }
-
-            console.log('Socket.io connected with id '+that.socket.id+', requesting:', req_data);
+            console.log('Socket.io connected with id '+that.socket.id);
 
             setTimeout(()=>{
-                that.socket.emit('robot', req_data,
-                    (robot_data) => {
-                        that._processRobotData(robot_data, (answer_data) => {
-                            that.socket.emit('sdp:answer', answer_data, (res_answer) => {
-                                if (!res_answer || !res_answer['success']) {
-                                    console.error('Error answering topic read subscription offer: ', res_answer);
-                                    return;
-                                }
-                            });
-                        });
-                    }
-                );
+                that._initRobotConnection();
             }, 0);
 
             setTimeout(()=>{
@@ -217,31 +193,27 @@ export class PhntmBridgeClient extends EventTarget {
             }, 0);
         });
 
+        this.on('socket_disconnect', () =>{
+            console.log('Got robot socket disconect');
+            that.robot_socket_online = false;
+            that.emit('update');
+            that._clearConnection();
+        });
+
         this.socket.on("disconnect", (reason) => {
             console.log('Socket.io disconnected, reason: ', reason);
             // io client disconnect
-            that.robot_socket_online = false;
-            that.init_complete = false; 
-            if (that.pc && that.pc.signalingState == 'closed') {
-                that._clearConnection();
-            }
-            setTimeout(()=>{
-                that.emit('socket_disconnect'); // ui reconnects
-            }, 0);
+            that.emit('socket_disconnect'); // ui reconnects
         });
 
         this.socket.on("error", (err) => {
             console.error('Socket.io error: ' + err);
-            setTimeout(()=>{
-                that.emit('socket_disconnect'); // ui reconnects
-            }, 0);
+            that.emit('socket_disconnect'); // ui reconnects
         });
 
         this.socket.on("connect_error", (err) => {
             console.error('Socket.io connect error: ' + err);
-            setTimeout(()=>{
-                that.emit('socket_disconnect'); // ui reconnects
-            }, 0);
+            that.emit('socket_disconnect'); // ui reconnects
         });
 
         this.socket.on('instance', (id_instance) => {
@@ -473,9 +445,16 @@ export class PhntmBridgeClient extends EventTarget {
             // debugger;
         });
 
-        this.on('peer_connected', () => this.startHeartbeat());
+        this.on('peer_connected', () => {
+            that.startHeartbeat()
+        });
+
         this.on('peer_disconnected', () => {
-            this.stopHeartbeat();
+            that.stopHeartbeat();
+        });
+
+        this.on('peer_conection_changed', () => {
+            that.reportConectionState(); // update webrtc state on cloud bridge that sends it to the robot 
         });
         // pc = InitPeerConnection(id_robot);
     }
@@ -685,6 +664,10 @@ export class PhntmBridgeClient extends EventTarget {
     delayedBulkCreateSubscribers () {
 
         if (!this.can_change_subscriptions || this.requested_subscription_change) {
+            if (!this.can_change_subscriptions)
+                console.warn('can_change_subscriptions=false');
+            if (this.requested_subscription_change)
+                console.warn('requested_subscription_change=true');
             this.add_subscribers_timeout = window.setTimeout(
                 () => this.delayedBulkCreateSubscribers(),
                 100 // wait
@@ -809,6 +792,39 @@ export class PhntmBridgeClient extends EventTarget {
         this.startHeartbeat(); // make webrtc data channel (at least one needed to open webrtc connection)
     }
 
+    _initRobotConnection() {
+
+        let that = this;
+
+        let subscribe = Object.keys(this.subscribers);
+        let writers = [];
+        Object.keys(this.topic_writers).forEach((topic)=>{
+            writers.push([ topic, that.topic_writers[topic].msg_type ]);
+        });
+        this.init_complete = true;
+
+        let req_data = {
+            id_robot: this.id_robot,
+            read: subscribe,
+            write: writers,
+        }
+
+        console.log('Socket.io requesting robot connection with request:', req_data);
+
+        this.socket.emit('robot', req_data,
+            (robot_data) => {
+                that._processRobotData(robot_data, (answer_data) => {
+                    that.socket.emit('sdp:answer', answer_data, (res_answer) => {
+                        if (!res_answer || !res_answer['success']) {
+                            console.error('Error answering topic read subscription offer: ', res_answer);
+                            return;
+                        }
+                    });
+                });
+            }
+        );
+    }
+
     disconnect() {
         
         if (!this.socket.connected) {
@@ -846,7 +862,7 @@ export class PhntmBridgeClient extends EventTarget {
                     that.heartbeat_logged = true;
                 }
 
-            }, 10000);
+            }, 5000);
         }
     }
 
@@ -903,19 +919,7 @@ export class PhntmBridgeClient extends EventTarget {
         if (robot_data['session']) { // no session means server pushed just brief info
             if (this.session != robot_data['session']) {
                 console.warn('NEW PC SESSION '+robot_data['session']);
-
-                Object.keys(this.topic_writers).forEach((topic)=>{
-                    if (that.topic_writers[topic].dc) {
-                        that.topic_writers[topic].dc.close();
-                        that.topic_writers[topic].dc_id = -1;
-                        delete that.topic_writers[topic].dc;
-                    }
-                });
-
-                if (this.pc != null) {
-                    this.pc.close(); // make new pc
-                    this.pc = null;
-                }
+                this._clearConnection(); // closes the pc so that we can start a new one
             }
             this.session = robot_data['session'];
         }
@@ -935,8 +939,13 @@ export class PhntmBridgeClient extends EventTarget {
 
         this.name = robot_data['name'];
         let prev_online = this.robot_socket_online;
-        this.robot_socket_online = robot_data['ip'] ? true : false;
-        this.ip = robot_data['ip'];
+        if (robot_data['ip']) {
+            this.ip = robot_data['ip']
+            this.robot_socket_online = true;
+        } else {
+            this.robot_socket_online = false;
+        }
+
         let prev_introspection = this.introspection;
         this.introspection = robot_data['introspection'];
         if (robot_data['files_fw_secret']) {
@@ -979,7 +988,7 @@ export class PhntmBridgeClient extends EventTarget {
         if (prev_online != this.robot_socket_online)
             this.emit('robot-socket-connected', this.robot_socket_online);
 
-        this.emit('update');
+        this.emit('update'); //updates the ui
 
         if (prev_introspection != this.introspection)
             this.emit('introspection', this.introspection);
@@ -1332,12 +1341,17 @@ export class PhntmBridgeClient extends EventTarget {
                 that.topic_writers[topic].dc_id = -1;
             }
         });
+        dc.addEventListener("message", (msg_evt) => {
+            console.warn('Write DC '+topic+' got message');
+        });
     }
 
     _clearConnection() {
-        console.warn('Peer disconnected; clearing session');
-        this.session = null;
-        // this.init_complete = false; 
+        console.warn('Clearing session');
+        this.session = null; // pc session
+        //this.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
+        this.init_complete = false; 
+
         let that = this;
         Object.keys(this.topic_writers).forEach((topic)=>{
             if (that.topic_writers[topic].dc) {
@@ -1355,6 +1369,8 @@ export class PhntmBridgeClient extends EventTarget {
             this.pc.close(); // make new pc
             this.pc = null;
         }
+
+        this.emit('peer_disconnected'); // updates the ui
     }
 
     _onDCMessage(dc, msg_evt) { //arraybuffer
@@ -1475,6 +1491,7 @@ export class PhntmBridgeClient extends EventTarget {
         pc.addEventListener('datachannel', (evt) => {
             console.log('New read data channel added '+ch.label);
         });
+
         pc.addEventListener('negotiationneeded', (evt) => {
             console.warn('negotiationneeded!', evt);
         });
@@ -1483,57 +1500,39 @@ export class PhntmBridgeClient extends EventTarget {
             console.warn('signalingstatechange', pc.signalingState);
 
             that.can_change_subscriptions = (pc.signalingState == 'stable');
-
-            if (pc.signalingState == 'closed' && !that.robot_socket_online) {
-               that._clearConnection();
-            }
         });
 
         pc.addEventListener("connectionstatechange", (evt) => {
 
             let newState = evt.currentTarget.connectionState;
-            if (newState == 'failed' || newState == 'disconnected') {
-                console.warn('Peer connection state: ', evt.currentTarget.connectionState);
-            } else {
-                console.warn('Peer connection state: ', evt.currentTarget.connectionState);
-            }
+            console.log('Peer connection state: ', newState);
 
-            if (evt.currentTarget.connectionState == 'connected') {
+            if (newState == 'connected') {
                 if (!pc.connected) { //just connected
                     pc.connected = true;
                     that.emit('peer_connected')
                     that.runPeerStatsLoop();
                 }
-            } else if (evt.currentTarget.connectionState != 'connecting' && pc.connected) { //just disconnected
+            } else if (newState == 'disconnected' || newState == 'failed') { //just disconnected
 
                 console.warn(`Peer disconnected, robot_socket_online=${that.robot_socket_online}`);
 
-                let was_connected = pc.connected;
+                // let was_connected = pc.connected;
                 that.peer_stats_loop_running = false;
                 pc.connected = false;
-
-                Object.keys(that.topic_writers).forEach((topic)=>{
-                    if (that.topic_writers[topic].dc) {
-                        that.topic_writers[topic].dc.close();
-                        // delete that.topic_writers[topic].dc;
-                    }
-                });
-
-                if (was_connected) {
-                    if (!that.robot_socket_online) {
-                        console.warn('Clearing peer connection & instance id');
-                        that.pc.close();
-                        that.pc = null;
-                        that.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
-                    }
-
-                    that.emit('peer_disconnected');
-                }
+                that.emit('peer_disconnected'); // updates the ui & sends webrtc state to robot
             }
 
-            that.reportConectionState();
+            if (newState == 'failed') {
+                console.log('Connection failed, clearing...');
+                that._clearConnection();
+            }
+
+            that.emit('peer_conection_changed'); 
         });
 
+        this.emit('peer_conection_changed'); // updates the ui & sends webrtc state to robot
+        
         return pc;
     }
     
@@ -1541,32 +1540,32 @@ export class PhntmBridgeClient extends EventTarget {
         if (this.pc && this.pc.connectionState == 'connected' && this.pc.sctp && this.pc.sctp.transport && this.pc.sctp.transport.iceTransport) {
             let selectedPair = this.pc.sctp.transport.iceTransport.getSelectedCandidatePair()
             if (selectedPair && selectedPair.remote) {
+                console.log("Remote peer: ", selectedPair.remote);
                 return [
-                    selectedPair.remote.type == 'relay' ? true : false,
+                    selectedPair.remote.type,
                     selectedPair.remote.address
                 ]
             } else {
-                return [ false, null ];
+                return [ null, null ];
             }
         } else {
-            return [ false, null ];
+            return [ null, null ];
         }
     }
 
     // post connection update to cloud bridge
+    // this is only used in for system diagnostics
     reportConectionState() {
         let con_data = {
             id_robot: this.id_robot,
             state: this.pc ? this.pc.connectionState : 'n/a',
         }
         if (this.pc && this.pc.connectionState == 'connected') {
-            const [via_turn, turn_ip] = this.getTURNConnectionInfo();
-            con_data['method'] = via_turn ? 'turn' : 'p2p';
-            if (via_turn) {
-                con_data['turn_ip'] = turn_ip;
-            }
+            const [remote_type, remote_ip] = this.getTURNConnectionInfo();
+            con_data['method'] = remote_type;
+            con_data['ip'] = remote_ip;
         }
-        this.socket.emit('con-info', con_data);
+        this.socket.emit('wrtc-info', con_data); 
     }
 
     async getPeerStats() {
