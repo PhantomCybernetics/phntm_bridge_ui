@@ -685,7 +685,7 @@ export class GraphMenu {
             this.nodeFocusToggle(this.focused_id_node);
         }
         if (focused && this.focused_topic && this.focused_topic != topic) {
-            this.topic_focus_toggle(this.focused_topic);
+            this.topicFocusToggle(this.focused_topic);
         }
         if (focused)
             this.focused_topic = topic;

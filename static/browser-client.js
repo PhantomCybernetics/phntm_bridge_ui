@@ -53,7 +53,7 @@ class TopicReader {
         this.dc = opts.dc;
         this.msg_reader = null;
         this.msg_queue = []; //stores early messages until we have msg_type definition
-        this.logged =false;
+        this.logged = false;
     }
 
     tryGetMessageReader(client) {
@@ -919,7 +919,9 @@ export class PhntmBridgeClient extends EventTarget {
         if (robot_data['session']) { // no session means server pushed just brief info
             if (this.session != robot_data['session']) {
                 console.warn('NEW PC SESSION '+robot_data['session']);
-                this._clearConnection(); // closes the pc so that we can start a new one
+                if (this.session || this.pc) {
+                    this._clearConnection(); // closes the pc so that we can start a new one
+                }
             }
             this.session = robot_data['session'];
         }
@@ -1284,6 +1286,12 @@ export class PhntmBridgeClient extends EventTarget {
             delete that.topic_readers[topic];
         });
         dc.addEventListener("message", (msg_evt) => {
+
+            if (!reader.logged) {
+                console.info('Read channel '+topic+' receiving messages');
+                reader.logged = true;
+            }
+            
             if (!reader.tryGetMessageReader(that)) {
                 reader.msg_queue.push(msg_evt);
                 return;
@@ -1350,7 +1358,7 @@ export class PhntmBridgeClient extends EventTarget {
         console.warn('Clearing session');
         this.session = null; // pc session
         //this.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
-        this.init_complete = false; 
+        // this.init_complete = false; 
 
         let that = this;
         Object.keys(this.topic_writers).forEach((topic)=>{
