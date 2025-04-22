@@ -495,7 +495,7 @@ export class PanelUI {
             that.last_pc_stats = stats;
             setTimeout(()=>{
                 that.updateAllVideoStats(stats);
-                that.updateRTT(that.client.pc.connected);
+                that.updateRTT(that.client.pc ? that.client.pc.connected : false);
             }, 0);
         });
 
@@ -694,7 +694,7 @@ export class PanelUI {
     setDocumentTitle() {
         if (!this.client.name)
             return;
-        
+
         if (this.is_sleeping) {
             document.title = '{Zzz) ' + this.client.name + ' @ PHNTM Bridge';
         } else {
