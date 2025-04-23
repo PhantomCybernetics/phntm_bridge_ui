@@ -140,6 +140,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.manager.onError = (url) => {
             console.error('Error loading mesh for: '+url);
             that.panel.ui.showNotification('Error loading mesh', 'error', url);
+            that.renderDirty();
         };
        
         $('#panel_widget_'+panel.n).addClass('enabled imu');
@@ -1396,6 +1397,8 @@ export class DescriptionTFWidget extends EventTarget {
                     this.robot_pose_initialized = true;
                     this.light.target = this.robot;                    
 
+                    this.renderDirty();
+                    
                 } else if (t_child && t_parent) { // animate all other model joints
                     
                     let orig_p = t_child.parent;
@@ -1408,10 +1411,11 @@ export class DescriptionTFWidget extends EventTarget {
                         t_child.quaternion.copy(new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w));
                     }
                     orig_p.attach(t_child);
-    
+                    
+                    this.renderDirty();
                 }
 
-                this.renderDirty();
+                
             }
         }
 
@@ -1515,6 +1519,7 @@ export class DescriptionTFWidget extends EventTarget {
                 this.renderer.render(this.scene, this.camera);
                 this.labelRenderer.render(this.scene, this.camera);
                 this.rendering_error_logged = false;
+                this.panel.updateFps();
 
             } catch (e) {
                 if (!this.rendering_error_logged) {
@@ -1533,7 +1538,6 @@ export class DescriptionTFWidget extends EventTarget {
             }
         }
 
-        this.panel.updateFps();
         requestAnimationFrame((t) => this.renderingLoop());
     }
 
