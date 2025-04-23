@@ -1332,6 +1332,7 @@ export class PhntmBridgeClient extends EventTarget {
         }
 
         let that = this;
+        let is_heartbeat = topic == "_heartbeat";
         dc.addEventListener('open', (ev)=> {
             console.warn('Write DC '+topic+' open', dc.id)
         });
@@ -1351,7 +1352,11 @@ export class PhntmBridgeClient extends EventTarget {
             }
         });
         dc.addEventListener("message", (msg_evt) => {
-            console.warn('Write DC '+topic+' got message');
+            if (is_heartbeat) {
+                //console.info("Heartbeat got PONG");
+                return;
+            }
+            console.warn("Write DC "+topic+" got message");
         });
     }
 
