@@ -864,6 +864,11 @@ export class Panel {
             this.ui.graph_menu.uncheckTopic(this.id_source);
         }
 
+        if (this.fps_clear_timeout) {
+            clearTimeout(this.fps_clear_timeout);
+            this.fps_clear_timeout = null;
+        }
+
         // uncheck in cam menu if cam
         if ($('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').length > 0) {
             $('.camera[data-src="'+this.id_source+'"] INPUT:checkbox').removeClass('enabled'); //prevent eventhandler

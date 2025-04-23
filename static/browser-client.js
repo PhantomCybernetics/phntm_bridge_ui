@@ -489,6 +489,7 @@ export class PhntmBridgeClient extends EventTarget {
             return;
 
         this.event_calbacks[event].push(cb);
+        console.warn('Handler added for '+event+"; "+this.event_calbacks[event].length+" total");
 
         if (event.indexOf('/') === 0) {  // topic or camera id
             this.createSubscriber(event);

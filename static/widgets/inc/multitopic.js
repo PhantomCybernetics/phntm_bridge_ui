@@ -11,7 +11,10 @@ export class MultiTopicSource extends EventTarget {
         this.subscribed_topics = {};
 
         let that = this;
-        this.widget.panel.ui.client.on('topics', (discovered_topics) => { that.onTopicsDiscovered(discovered_topics); });
+        this.onTopicsDiscoveredWrapper = (discovered_topics) => {
+            that.onTopicsDiscovered(discovered_topics);
+        }
+        this.widget.panel.ui.client.on('topics', this.onTopicsDiscoveredWrapper);
 
         this.event_calbacks = {};
 
@@ -368,6 +371,7 @@ export class MultiTopicSource extends EventTarget {
 
     //clear all subs
     close() {
+        this.widget.panel.ui.client.off('topics', this.onTopicsDiscoveredWrapper);
         let topics = Object.keys(this.subscribed_topics);
         let that = this;
         topics.forEach((topic)=>{
