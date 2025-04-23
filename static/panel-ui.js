@@ -634,14 +634,16 @@ export class PanelUI {
             }
         });
 
-        // TODO: UNCOMMENT THIS
         $(window).blur((ev)=>{
             console.log('Window lost focus');
             if (that.input_manager.touch_gamepad_on) {
-                that.toggleTouchGamepad();
+                that.toggleTouchGamepad(); // disable touch controls
+            }
+            if (that.maximized_panel) {
+                that.maximized_panel.maximize(false); // minimize
             }
             if (that.fullscreen_mode) {
-                that.closeFullscreen();
+                that.closeFullscreen(); // reset fs
             }
         });
 
