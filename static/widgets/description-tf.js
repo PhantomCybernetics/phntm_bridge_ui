@@ -114,16 +114,18 @@ export class DescriptionTFWidget extends EventTarget {
                         depthWrite: true,
                         transparent: false
                     });
-                    
-                    const mesh = new THREE.Mesh(geom, stl_base_mat);
-                    done_cb(mesh);
+                    let clean_model = new THREE.Mesh(geom, stl_base_mat);;
+                    that.cleanURDFModel(clean_model, 0, true);
+                    done_cb(clean_model);
                 });
     
             } else if (/\.dae$/i.test(path)) {
     
                 const loader = new ColladaLoader(manager);
                 loader.load(path, dae => {
-                    done_cb(dae.scene);
+                    let clean_model = dae.scene;
+                    that.cleanURDFModel(clean_model, 0, true);
+                    done_cb(clean_model);
                 });
     
             } else {
@@ -132,22 +134,12 @@ export class DescriptionTFWidget extends EventTarget {
 
         }
         this.manager.onLoad = () => {
-            console.info('Robot URDF loaded', that.robot_model);
-            that.stats_model_tris = 0;
-            that.stats_model_verts = 0;
-            if (that.robot_model) {
-                if (!that.cleanURDFModel(that.robot_model)) { //clear after urdf fully loades; sets mats
-                    console.error('Invalid URDF model imported; ignoring')
-                    that.robot_model.removeFromParent();
-                    that.robot_model = null;
-                    that.renderDirty();
-                    return;
-                } 
-
-                that.robot_model.visible = true; // hidden until clear
-                that.makeRobotMarkers(); 
-                that.renderDirty();
-            }
+            console.info('Robot URDF done loading', that.robot_model);
+            that.renderDirty();
+        };
+        this.manager.onError = (url) => {
+            console.error('Error loading mesh for: '+url);
+            that.panel.ui.showNotification('Error loading mesh', 'error', url);
         };
        
         $('#panel_widget_'+panel.n).addClass('enabled imu');
@@ -893,9 +885,12 @@ export class DescriptionTFWidget extends EventTarget {
         this.last_processed_desc = desc.data;
 
         console.warn('Parsing robot description...');
+        this.stats_model_tris = 0;
+        this.stats_model_verts = 0;
         this.robot_model = this.urdf_loader.parse(desc.data);
-        this.robot_model.visible = false; // show when all loading is done and model cleaned
-        this.robot.add(this.robot_model)
+        // this.robot_model.visible = false; // show when all loading is done and model cleaned
+        this.cleanURDFModel(this.robot_model);
+        this.robot.add(this.robot_model);
         this.robot_model.position.set(0,0,0); //reset pose, transform move with this.robot
         this.robot_model.quaternion.set(0,0,0,1);
         console.log('Robot desc received, model: ', this.robot_model);
@@ -908,7 +903,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         if (obj.isLight || obj.isScene || obj.isCamera) {
             return false;
-        }   
+        }
 
         if (obj.isURDFVisual) {
             inVisual = true;
@@ -1201,7 +1196,7 @@ export class DescriptionTFWidget extends EventTarget {
             label_el.position.set(0, 0, 0);
             label_el.layers.set(layer_labels);
 
-            // console.log('Making label "'+label_text+'", type='+layer_labels);
+            console.log('Making label "'+label_text+'", type='+layer_labels+"; target=", target);
         }
 
         return [ axesHelper, label_el];
