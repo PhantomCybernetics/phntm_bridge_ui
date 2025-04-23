@@ -5545,10 +5545,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     cursor: help;
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #fff 6px,
-        #fff 7px
+        transparent 0px 4px,
+        #fff 5px 6px
     );
     background-position: -3px 0px;
 }
@@ -5563,20 +5561,16 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .panel_widget.system-load .bar.mem-buffers {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #676CFA 6px,
-        #676CFA 7px
+        transparent 0px 4px,
+        #676CFA 5px 6px
     );    
 }
 
 .panel_widget.system-load .bar.disk-used {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #00C6C7 6px,
-        #00C6C7 7px
+        transparent 0px 4px,
+        #00C6C7 5px 6px
     );
 }
 
@@ -5584,10 +5578,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .panel_widget.system-load .bar.mem-used {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #00C52C 6px,
-        #00C52C 7px
+        transparent 0px 4px,
+        #00C52C 5px 6px
     );
 }
 
@@ -5595,30 +5587,24 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .panel_widget.system-load .bar.swp-used {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #C71702 6px,
-        #C71702 7px
+        transparent 0px 4px,
+        #C71702 5px 6px
     );
 }
 
 .panel_widget.system-load .bar.cpu-idle {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        rgba(128, 128, 128) 6px,
-        rgba(128, 128, 128) 7px
+        transparent 0px 4px,
+        rgba(128, 128, 128) 5px 6px
     );
 }
 
 .panel_widget.system-load .bar.mem-shared {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #C722BF 6px,
-        #C722BF 7px
+        transparent 0px 4px,
+        #C722BF 5px 6px
     );
 }
 
@@ -5626,10 +5612,8 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 .panel_widget.system-load .bar.swp-cache {
     background-image: repeating-linear-gradient(
         to right,
-        transparent,
-        transparent 6px,
-        #C7C62D 6px,
-        #C7C62D 7px
+        transparent 0px 4px,
+        #C7C62D 5px 6px
     );
 }
 

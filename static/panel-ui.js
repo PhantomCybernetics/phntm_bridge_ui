@@ -635,12 +635,15 @@ export class PanelUI {
         });
 
         // TODO: UNCOMMENT THIS
-        // $(window).blur((ev)=>{
-        //     console.log('window blur');
-        //     if (that.touch_gamepad_on) {
-        //         that.toggleTouchGamepad();
-        //     }
-        // });
+        $(window).blur((ev)=>{
+            console.log('Window lost focus');
+            if (that.input_manager.touch_gamepad_on) {
+                that.toggleTouchGamepad();
+            }
+            if (that.fullscreen_mode) {
+                that.closeFullscreen();
+            }
+        });
 
         // window.addEventListener('touchstart', (ev) => {
         //     // ev.preventDefault();

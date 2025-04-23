@@ -203,6 +203,8 @@ export class SystemLoadWidget {
         let w = this.panel.widget_width;
         let h = this.panel.widget_height;
 
+        let step_size = 6;
+
         for (let i = 0; i < decoded.cpu.length; i++) {
             let total = decoded.cpu[i].user_percent 
                       + decoded.cpu[i].nice_percent 
@@ -216,37 +218,37 @@ export class SystemLoadWidget {
                 this.cpu_total_labels[i].removeClass('warn');
 
             let ww = w - (!this.is_thin && !this.is_narrower ? 25 : 2) - 2;
-            let nice_w = Math.ceil(ww/100.0 * decoded.cpu[i].nice_percent / 7) * 7;
+            let nice_w = Math.ceil(ww/100.0 * decoded.cpu[i].nice_percent / step_size) * step_size;
             this.cpu_bars[i]['nice'].css('width', nice_w+'px');
-            let user_w = Math.ceil(ww/100.0 * decoded.cpu[i].user_percent / 7) * 7;
+            let user_w = Math.ceil(ww/100.0 * decoded.cpu[i].user_percent / step_size) * step_size;
             this.cpu_bars[i]['user'].css('width', user_w+'px');
-            let system_w = Math.ceil(ww/100.0 * decoded.cpu[i].system_percent / 7) * 7;
+            let system_w = Math.ceil(ww/100.0 * decoded.cpu[i].system_percent / step_size) * step_size;
             this.cpu_bars[i]['system'].css('width', system_w+'px');
             // this.cpu_bars[i]['idle'].css('width', decoded.cpu[i].idle_percent+'%');
         }
 
         let mem_total_b = Number(decoded.mem_total_bytes);
-        this.mem_total_label.text(formatBytes(decoded.mem_used_bytes, false, true) + ' / '+formatBytes(mem_total_b, false, true));
-        let mem_used_w = Math.ceil(w * (Number(decoded.mem_used_bytes)/mem_total_b) / 7) * 7;
+        this.mem_total_label.text(formatBytes(decoded.mem_used_bytes, false, true) + ' / '+ formatBytes(mem_total_b, false, true));
+        let mem_used_w = Math.ceil(w * (Number(decoded.mem_used_bytes)/mem_total_b) / step_size) * step_size;
         this.mem_bars['used']
             .css('width', mem_used_w+'px')
             .attr('title', 'Used ' + formatBytes(decoded.mem_used_bytes, false, true));
-        let mem_buffers_w = Math.ceil(w * (Number(decoded.mem_buffers_bytes)/mem_total_b) / 7) * 7;
+        let mem_buffers_w = Math.ceil(w * (Number(decoded.mem_buffers_bytes)/mem_total_b) / step_size) * step_size;
         this.mem_bars['buffers']
             .css('width', mem_buffers_w+'px')
             .attr('title', 'Buffers ' + formatBytes(decoded.mem_buffers_bytes, false, true));
-        let mem_shared_w = Math.ceil(w * (Number(decoded.mem_shared_bytes)/mem_total_b) / 7) * 7;
+        let mem_shared_w = Math.ceil(w * (Number(decoded.mem_shared_bytes)/mem_total_b) / step_size) * step_size;
         this.mem_bars['shared']
             .css('width', mem_shared_w+'px')
             .attr('title', 'Shared ' + formatBytes(decoded.mem_shared_bytes, false, true));
-        let mem_cached_w = Math.ceil(w * (Number(decoded.mem_cached_bytes)/mem_total_b) / 7) * 7;
+        let mem_cached_w = Math.ceil(w * (Number(decoded.mem_cached_bytes)/mem_total_b) / step_size) * step_size;
         this.mem_bars['cached']
             .css('width', mem_cached_w+'px')
             .attr('title', 'Cached ' + formatBytes(decoded.mem_cached_bytes, false, true));
 
         let swp_total_b = Number(decoded.swp_total_bytes);
         this.swp_total_label.text(formatBytes(decoded.swp_used_bytes, false, true) + ' / '+formatBytes(decoded.swp_total_bytes, false, true));
-        let swp_used_w = Math.ceil(w * (Number(decoded.swp_used_bytes)/swp_total_b) / 7) * 7;
+        let swp_used_w = Math.ceil(w * (Number(decoded.swp_used_bytes)/swp_total_b) / step_size) * step_size;
         this.swp_bars['used']
             .css('width', swp_used_w+'px')
             .attr('title', 'Used ' + formatBytes(decoded.swp_used_bytes, false, true));
@@ -256,7 +258,7 @@ export class SystemLoadWidget {
             let disk_total_b = Number(disk.total_bytes);
             let disk_used_b = Number(disk.used_bytes);
             this.disk_total_labels[disk.path].text(formatBytes(disk.free_bytes, false, true) + ' / '+formatBytes(disk_total_b, false, true))
-            let disk_used_w = Math.ceil(w * (disk_used_b/disk_total_b) / 7) * 7;
+            let disk_used_w = Math.ceil(w * (disk_used_b/disk_total_b) / step_size) * step_size;
             this.disk_bars[disk.path]
                 .css('width', disk_used_w+'px')
                 .attr('title', 'Used ' + formatBytes(disk_used_b, false, true));
