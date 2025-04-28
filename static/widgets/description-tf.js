@@ -108,14 +108,13 @@ export class DescriptionTFWidget extends EventTarget {
                 const loader = new STLLoader(manager);
                 loader.load(path, (geom) => {
     
-                    const stl_base_mat = new THREE.MeshPhongMaterial({
+                    let stl_base_mat = new THREE.MeshStandardMaterial({
                         color: 0xffffff,
                         side: THREE.DoubleSide,
                         depthWrite: true,
-                        transparent: false
                     });
-                    let clean_model = new THREE.Mesh(geom, stl_base_mat);;
-                    that.cleanURDFModel(clean_model, 0, true);
+                    let clean_model = new THREE.Mesh(geom, stl_base_mat);
+                    that.cleanURDFModel(clean_model, true);
                     done_cb(clean_model);
                 });
     
@@ -124,7 +123,7 @@ export class DescriptionTFWidget extends EventTarget {
                 const loader = new ColladaLoader(manager);
                 loader.load(path, dae => {
                     let clean_model = dae.scene;
-                    that.cleanURDFModel(clean_model, 0, true);
+                    that.cleanURDFModel(clean_model, true);
                     done_cb(clean_model);
                 });
     
@@ -900,7 +899,7 @@ export class DescriptionTFWidget extends EventTarget {
         this.renderDirty();
     }
 
-    cleanURDFModel(obj, lvl=0, inVisual=false, inCollider=false) {
+    cleanURDFModel(obj, inVisual=false, inCollider=false) {
 
         if (obj.isLight || obj.isScene || obj.isCamera) {
             return false;
@@ -914,20 +913,22 @@ export class DescriptionTFWidget extends EventTarget {
 
         obj.frustumCulled = true;
 
+        if (obj.isMesh && !inVisual) {
+            console.error(obj);
+        }
+
         // mesh visuals
         if (obj.isMesh && inVisual) {
             if (!obj.material) {
-                obj.material = new THREE.MeshBasicMaterial({
+                obj.material = new THREE.MeshStandardMaterial({
                     color: 0xffffff,
-                    side: THREE.FrontSide,
+                    side: THREE.DoubleSide,
                     depthWrite: true,
-                    transparent: false
                 });
                 obj.material.needsUpdate = true;
             } else  {
                 obj.material.depthWrite = true;
-                obj.material.transparent = false;
-                obj.material.side = THREE.FrontSide;
+                obj.material.side = THREE.DoubleSide;
             }
             obj.material.needsUpdate = true;
             obj.castShadow = true;
@@ -954,7 +955,7 @@ export class DescriptionTFWidget extends EventTarget {
         if (obj.children && obj.children.length) {
             for (let i = 0; i < obj.children.length; i++) {
                 let ch = obj.children[i];
-                let res = this.cleanURDFModel(ch, lvl+1, inVisual, inCollider); // recursion
+                let res = this.cleanURDFModel(ch, inVisual, inCollider); // recursion
                 if (!res) {
                     obj.remove(ch);
                     i--;
