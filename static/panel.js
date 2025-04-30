@@ -282,18 +282,31 @@ export class Panel {
                     this.rot = this.default_rot;
                 }
                 if (msg_type != 'video') {
-                    this.msg_type_class = msg_type ? this.ui.client.findMessageType(this.msg_type) : null;
+                    this.msg_type_class = this.ui.client.findMessageType(this.msg_type);
                     $('#panel_msg_types_'+this.n).html(this.msg_type ? this.msg_type : '');
     
-                    if (this.msg_type_class == null && this.msg_type != null) {
-                        $('#panel_msg_types_'+this.n).addClass('err');
-                        $('#panel_source_'+this.n).html('<span class="error">Message type '+ this.msg_type +' not loaded</span>');
+                    if (this.msg_type_class == null) { // message type not loaded yet
+                        let that = this;
+
+                        function delayedDisplayMessageTypeError() {
+                            $('#panel_msg_types_'+that.n).addClass('err');
+                            $('#panel_source_'+that.n).html('<span class="error">Message type '+ that.msg_type +' not loaded</span>');
+                        }
+                        let delayed_error_timeout = setTimeout(delayedDisplayMessageTypeError, 3000); //if message def doesn't arrive within 3s, display error (defs may be a bit late sometimes)
+
+                        function updateOnMessageTypesChanged() {
+                            that.msg_type_class = that.ui.client.findMessageType(that.msg_type);
+                            if (that.msg_type_class == null)
+                                return;
+                            clearTimeout(delayed_error_timeout);
+                            delayed_error_timeout = null;
+                            that.ui.client.off('defs_updated', updateOnMessageTypesChanged); //only once
+                            console.log('Redrawing panel for '+that.id_source);
+                            $('#panel_msg_types_'+that.n).removeClass('err');
+                            $('#panel_source_'+that.n).html('Waiting for data...');
+                        }
+                        this.ui.client.on('defs_updated', updateOnMessageTypesChanged); // redraw on defs received
                     }
-    
-                    // if (this.msg_type != null) {
-                    //     let Reader = window.Serialization.MessageReader;
-                    //     this.msg_reader = new Reader( [ this.msg_type_class ].concat(supported_msg_types) );
-                    // }
                 }
             }
 
@@ -353,7 +366,7 @@ export class Panel {
                 return false;
             });
         } else if (!this.initiated) {
-            this.setMenu(); //draw menu placeholder fast without type
+            this.setMenu(); //draw menu placeholder fast without the type
         }
         
         this.onResize();
@@ -428,7 +441,7 @@ export class Panel {
 
     setMenu() {
 
-        console.log('Setting up panel menu of ' + this.id_source)
+        console.log('Setting up panel menu of ' + this.id_source+'; msg_type=' + this.msg_type);
 
         let els = []
         let that = this;

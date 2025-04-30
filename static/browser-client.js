@@ -288,6 +288,8 @@ export class PhntmBridgeClient extends EventTarget {
                     dc_reader.tryGetMessageReader(that); // clears the queue of early messages
                 }
             });
+
+            that.emit('defs_updated');
         });
 
         this.socket.on('nodes', (nodes_data) => {
@@ -336,15 +338,20 @@ export class PhntmBridgeClient extends EventTarget {
                         topics.forEach((topic) => {
                             let msg_type = nodes_data[that.id_robot][node]['subscribers'][topic]['msg_type'];
                             let qos = nodes_data[that.id_robot][node]['subscribers'][topic]['qos'];
-                            // let qos_error = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_error'];
-                            // let qos_warning = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_warning'];
                             that.discovered_nodes[node].subscribers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
                                 msg_type_supported: that.findMessageType(msg_type) != null,
-                                qos: qos,
-                                // qos_error: qos_error,
-                                // qos_warning: qos_warning
+                                qos: qos
+                            }
+
+                            if (!that.discovered_topics[topic]) {
+                                that.discovered_topics[topic] = {
+                                    msg_type: msg_type,
+                                    id: topic,
+                                    is_video: IsImageTopic(msg_type),
+                                    msg_type_supported: that.findMessageType(msg_type) != null,
+                                }
                             }
                         })
                     }
@@ -665,13 +672,13 @@ export class PhntmBridgeClient extends EventTarget {
     delayedBulkCreateSubscribers () {
 
         if (!this.can_change_subscriptions || this.requested_subscription_change) {
-            if (!this.can_change_subscriptions)
-                console.warn('can_change_subscriptions=false');
-            if (this.requested_subscription_change)
-                console.warn('requested_subscription_change=true');
+            // if (!this.can_change_subscriptions)
+            //     console.warn('can_change_subscriptions=false');
+            // if (this.requested_subscription_change)
+            //     console.warn('requested_subscription_change=true');
             this.add_subscribers_timeout = window.setTimeout(
                 () => this.delayedBulkCreateSubscribers(),
-                100 // wait
+                10 // wait
             );
             return;
         }

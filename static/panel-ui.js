@@ -1143,6 +1143,7 @@ export class PanelUI {
     initPanels(topics) {
         let that = this;
         let topic_ids = Object.keys(topics);
+        // console.warn("Initializing panels for topics", topics);
         topic_ids.forEach((id_topic) => {
             if (!that.panels[id_topic] || that.panels[id_topic].initiated)
                 return;
