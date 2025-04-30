@@ -61,7 +61,7 @@ export class GraphMenu {
             available_w = window.innerWidth - 35;
             available_h = $(window).height()-110;
         }
-        this.set_dimensions(available_w, available_h);
+        this.setDimensions(available_w, available_h);
 
         // append the svg object to the body of the page
         this.svg = d3.select("#graph_topics_scrolling")
@@ -97,40 +97,20 @@ export class GraphMenu {
         this.svg_el = this.graph_display_el.find('svg');
 
         this.topic_scrolling_el.on('scroll', (e) => {
-            that.force_link_unfocus();
-            that.redraw_links();
+            that.forceLinkUnfocus();
+            that.redrawLinks();
         });
         this.node_container_el.on('scroll', (e) => {
-            that.force_link_unfocus();
-            that.redraw_links();
+            that.forceLinkUnfocus();
+            that.redrawLinks();
         });
-        // document.getElementById('svg-graph').addEventListener('wheel', (ev) => {
-        //     console.log(ev);
-        // });
-        // $(this.svg_el)[0].addEventListener('wheel', (ev) => {
-        //     ev.preventDefault();
-        //     let curr = that.topic_scrolling_el.scrollTop();
-        //     that.topic_scrolling_el.scrollTop(curr+ev.deltaY);
-        // });
-
-        // let touchStartY;
-        // $(this.svg_el)[0].addEventListener('touchstart', (ev) => {
-        //     touchStartY = ev.touches[0].clientY;
-        // });
-        // $(this.svg_el)[0].addEventListener('touchmove', (ev) => {
-        //     const touchEndY = ev.touches[0].clientY;
-        //     const deltaY = touchStartY - touchEndY;
-        //     let curr = that.topic_scrolling_el.scrollTop();
-        //     that.topic_scrolling_el.scrollTop(curr+deltaY);
-        //     touchStartY = touchEndY;
-        // });
     }
 
-    set_narrow(state=true) {
+    setNarrow(state=true) {
         if (state) {
             if (!this.is_narrow) {
                 this.graph_display_el.addClass('narrow');
-                this.reset_focus();
+                this.resetFocus();
             }
         } else if (this.is_narrow) {
             this.graph_display_el.removeClass('narrow');
@@ -138,42 +118,31 @@ export class GraphMenu {
         this.is_narrow = state;
     }
 
-    set_dimensions(available_w, h) {
+    setDimensions(available_w, h) {
         
         if (h === null) {
             h = this.graph_display_el.innerHeight()-20;
-            // console.log('h was null, is '+h+'; is_narrow'+this.is_narrow);
         }
-
-        // console.log('set_dimensions w='+available_w+' h='+h+'; is_narrow='+this.is_narrow);
 
         if (this.is_narrow) {
             this.graph_display_el.css({
                 'width': available_w
             });
-            // this.topic_scrolling_el.css({
-            //     // 'padding-left': 0,
-            //     'width': available_w-20
-            // });
         } else {
             let old_w = this.width_svg;
             let old_h = this.height;
     
             let w_svg = available_w - 300 - 300 - 20;
-            // console.log('Setting GM dimentions for available w: '+full_w+' => svg='+w_svg);
             this.width_svg = w_svg - this.margin.left - this.margin.right;
             this.height = h - this.margin.top - this.margin.bottom;
     
             if (this.width_svg < 0)
                 this.width_svg = 0;
-            // if (this.width > )
     
             if (this.height < 0)
                 this.height = 0;
     
-            // this.topic_scrolling_el.css('padding-left', this.width_svg);
             if (this.svg) {
-                // console.log('updating svg dimenstions to ' + this.width + 'x' + this.height +'');
                 $('#graph_display svg').attr({
                     "width": this.width_svg,
                     "height": this.height
@@ -182,14 +151,14 @@ export class GraphMenu {
                     .attr("width", this.width_svg)
                     .attr("height", this.height);
                 if (old_w != this.width_svg || old_h != this.height) {
-                    this.force_link_unfocus();
-                    this.redraw_links();
+                    this.forceLinkUnfocus();
+                    this.redrawLinks();
                 }
             }
         } 
     }
 
-    set_link_tooltip (link, el, topic=false) {
+    setLinkTooltip (link, el, topic=false) {
 
         const NS_TO_SEC = 1000000000.0;
 
@@ -270,7 +239,6 @@ export class GraphMenu {
         
         this.svg.selectAll("path").remove();
 
-        // console.log('Graphing ', nodes);
         let that = this;
 
         let node_offset = 0;
@@ -290,44 +258,61 @@ export class GraphMenu {
             if (nodes[id_node].publishers) {
                 let topic_ids = Object.keys(nodes[id_node].publishers);
                 topic_ids.forEach((id_topic)=>{
-                    if (this.topics[id_topic] === undefined) {
-                        this.topics[id_topic] = {
-                            connections: 1,
-                            msg_type: nodes[id_node].publishers[id_topic].msg_type
-                        };
-                    } else {
-                        this.topics[id_topic]['connections']++;
+                    let qos = nodes[id_node].publishers[id_topic].qos;
+                    if (!qos.length) {
+                        qos = [ qos ]; // python bridge used to send only one qos object
                     }
-                    this.nodes[id_node]['connections']++;
-                    node_links.push({
-                        node: id_node,
-                        topic: id_topic,
-                        group: 1, // write
-                        qos: nodes[id_node].publishers[id_topic].qos
-                    });
+                    for (let i = 0; i < qos.length; i++) { // multiple publishes of the same topic on one node
+
+                        if (this.topics[id_topic] === undefined) {
+                            this.topics[id_topic] = {
+                                connections: 1,
+                                msg_type: nodes[id_node].publishers[id_topic].msg_type
+                            };
+                        } else {
+                            this.topics[id_topic]['connections']++;
+                        }
+    
+                        this.nodes[id_node]['connections']++;
+                        node_links.push({
+                            node: id_node,
+                            topic: id_topic,
+                            group: 1, // write
+                            qos: qos[i]
+                        });
+
+                    }
                 });
             }
 
             if (nodes[id_node].subscribers) {
                 let topic_ids = Object.keys(nodes[id_node].subscribers);
                 topic_ids.forEach((id_topic)=>{
-                    if (this.topics[id_topic] === undefined) {
-                        this.topics[id_topic] = {
-                            connections: 1,
-                            msg_type: nodes[id_node].subscribers[id_topic].msg_type
-                        };
-                    } else {
-                        this.topics[id_topic]['connections']++;
+                    let qos = nodes[id_node].subscribers[id_topic].qos;
+                    if (!qos.length) {
+                        qos = [ qos ]; // python bridge used to send only one qos object
                     }
-                    this.nodes[id_node]['connections']++;
-                    node_links.push({
-                        node: id_node,
-                        topic: id_topic,
-                        group: 2, // read
-                        qos: nodes[id_node].subscribers[id_topic].qos,
-                        qos_error: nodes[id_node].subscribers[id_topic].qos_error,
-                        qos_warning: nodes[id_node].subscribers[id_topic].qos_warning
-                    });
+                    for (let i = 0; i < qos.length; i++) { // multiple subscribers to the same topic on one node
+
+                        if (this.topics[id_topic] === undefined) {
+                            this.topics[id_topic] = {
+                                connections: 1,
+                                msg_type: nodes[id_node].subscribers[id_topic].msg_type
+                            };
+                        } else {
+                            this.topics[id_topic]['connections']++;
+                        }
+                        this.nodes[id_node]['connections']++;
+                        node_links.push({
+                            node: id_node,
+                            topic: id_topic,
+                            group: 2, // read
+                            qos: qos[i]['qos'] ? qos[i]['qos'] : qos[i], // c++ bridge sends qos[i]['qos'], python version didn't
+                            qos_error: qos[i]['error'], // c++ bridge only
+                            qos_warning: qos[i]['warning']
+                        });
+
+                    }
                 });
             }
 
@@ -363,7 +348,7 @@ export class GraphMenu {
                         let icon_tooltip_el = $('<span class="tooltip"></span>');
                         icon_tooltip_el.appendTo(icon_err);
                         icon_err.appendTo(node_icons_el);
-                        that.set_link_tooltip(node_link, icon_tooltip_el, true);
+                        that.setLinkTooltip(node_link, icon_tooltip_el, true);
                         icon_err.on('click', (ev) => {
                             if (isTouchDevice()) {
                                 if (!icon_err.hasClass('active')) {
@@ -446,11 +431,11 @@ export class GraphMenu {
 
             if (!isTouchDevice()) {
                 topic_el.on('mouseenter', (e) => {
-                    that.hover_topic(topic, true); 
+                    that.hoverTopic(topic, true); 
                 });
      
                 topic_el.on('mouseleave', (e) => {
-                    that.hover_topic(topic, false); 
+                    that.hoverTopic(topic, false); 
                 });
             }
 
@@ -527,7 +512,7 @@ export class GraphMenu {
             
             link.path = this.svg
                 .append("path")
-                .attr("d", this.get_link_path(link))
+                .attr("d", this.getLinkPath(link))
                 .style("stroke", link.qos_error || link.qos_warning ? this.color_err : (link.group == 1 ? this.color_write : this.color_read))
                 .style("class", link.group == 1 ? 'write-link' : 'read-link')
                 .style("cursor", 'help')
@@ -542,7 +527,7 @@ export class GraphMenu {
                 that.hovered_path = link.path;
                 d3.select(this).style("stroke", c)
                 link.path.attr(link.group == 1 ? 'marker-end' : 'marker-start', link.group == 1 ? 'url(#marker-hover-write)' : 'url(#marker-hover-read)')
-                that.set_link_tooltip(link, that.tooltip_el);
+                that.setLinkTooltip(link, that.tooltip_el);
                 that.tooltip_el
                     .css({
                         display: 'block',
@@ -605,14 +590,13 @@ export class GraphMenu {
         }
     }    
 
-    redraw_links() {
-        // this.svg_el.css('top', (this.topic_scrolling_el.scrollTop()) + 'px');
+    redrawLinks() {
         this.links.forEach((link) => {
-            link.path.attr("d", this.get_link_path(link))
+            link.path.attr("d", this.getLinkPath(link))
         });
     }
 
-    get_link_path(link) {
+    getLinkPath(link) {
         let n = this.nodes[link.node];
         let t = this.topics[link.topic];
 
@@ -630,7 +614,7 @@ export class GraphMenu {
              + ', ' + x_offset_topic+' ' + y_topic;
     }
 
-    reset_focus( ) {
+    resetFocus( ) {
         if (this.focused_id_node) {
             this.nodeFocusToggle(this.focused_id_node);
         }
@@ -656,8 +640,7 @@ export class GraphMenu {
             this.focused_id_node = id_node;
         else if (this.focused_id_node == id_node)
             this.focused_id_node = null;
-            
-        // console.log('Node '+id_node+' focused: '+focused);
+
         this.nodes[id_node].focused = focused;
 
         let connected_topics = [];
@@ -671,7 +654,7 @@ export class GraphMenu {
             this.topics[topic].focused_connection = focused;
         });
 
-        this.update_highlights();
+        this.updateHighlights();
     }
 
     topicFocusToggle(topic) {
@@ -692,7 +675,6 @@ export class GraphMenu {
         else if (this.focused_topic == topic)
             this.focused_topic = null;
 
-        // console.log('Topic '+topic+' focused: '+focused);
         this.topics[topic].focused = focused;
 
         let connected_nodes = [];
@@ -706,7 +688,7 @@ export class GraphMenu {
             this.nodes[node].focused_connection = focused;
         });
 
-        this.update_highlights();
+        this.updateHighlights();
     }
 
     uncheckTopic(topic) {
@@ -719,9 +701,6 @@ export class GraphMenu {
     }
 
     hoverNode(id_node, state) {
-
-        // if (state && ((focused_id_node && focused_id_node != id_node) || focused_topic))
-        //     return;
 
         this.nodes[id_node].highlighted = state;
 
@@ -742,16 +721,16 @@ export class GraphMenu {
             this.topics[topic].highlighted_connection = state;
         });
 
-        this.update_highlights();
+        this.updateHighlights();
     }
 
-    force_link_unfocus() {
+    forceLinkUnfocus() {
         if (!this.hovered_path)
             return;
         this.hovered_path.dispatch('mouseout');
     }
 
-    hover_topic(topic, state) {
+    hoverTopic(topic, state) {
 
         this.topics[topic].highlighted = state;
 
@@ -772,10 +751,10 @@ export class GraphMenu {
             this.nodes[id_node].highlighted_connection = state;
         });
 
-        this.update_highlights();
+        this.updateHighlights();
     }
 
-    update_highlights() {
+    updateHighlights() {
 
         let something_focused = this.focused_topic || this.focused_id_node;
 
@@ -822,7 +801,4 @@ export class GraphMenu {
             }
         });
     }
-
-    
-
 }

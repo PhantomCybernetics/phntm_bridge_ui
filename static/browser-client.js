@@ -336,15 +336,15 @@ export class PhntmBridgeClient extends EventTarget {
                         topics.forEach((topic) => {
                             let msg_type = nodes_data[that.id_robot][node]['subscribers'][topic]['msg_type'];
                             let qos = nodes_data[that.id_robot][node]['subscribers'][topic]['qos'];
-                            let qos_error = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_error'];
-                            let qos_warning = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_warning'];
+                            // let qos_error = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_error'];
+                            // let qos_warning = nodes_data[that.id_robot][node]['subscribers'][topic]['qos_warning'];
                             that.discovered_nodes[node].subscribers[topic] = {
                                 msg_type: msg_type,
                                 is_video: IsImageTopic(msg_type),
                                 msg_type_supported: that.findMessageType(msg_type) != null,
                                 qos: qos,
-                                qos_error: qos_error,
-                                qos_warning: qos_warning
+                                // qos_error: qos_error,
+                                // qos_warning: qos_warning
                             }
                         })
                     }

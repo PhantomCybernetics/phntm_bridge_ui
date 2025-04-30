@@ -913,10 +913,6 @@ export class DescriptionTFWidget extends EventTarget {
 
         obj.frustumCulled = true;
 
-        if (obj.isMesh && !inVisual) {
-            console.error(obj);
-        }
-
         // mesh visuals
         if (obj.isMesh && inVisual) {
             if (!obj.material) {

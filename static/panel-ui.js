@@ -973,10 +973,10 @@ export class PanelUI {
 
         if (what == '#graph_display') {
             if (menu_w > w_body - 20) {
-                this.graph_menu.set_narrow(true);
+                this.graph_menu.setNarrow(true);
                 menu_w = 320; // only topics are shown on narrow screens
             } else {
-                this.graph_menu.set_narrow(false);
+                this.graph_menu.setNarrow(false);
             }
         }
         if (what == '#docker_list') {
@@ -993,7 +993,7 @@ export class PanelUI {
         }
 
         if (what == '#graph_display') {
-            this.graph_menu.set_dimensions(menu_w, h); // h passed from updateLayout is graph height
+            this.graph_menu.setDimensions(menu_w, h); // h passed from updateLayout is graph height
         }
 
         this.setBurgerMenuWidth(menu_w);
@@ -2867,7 +2867,7 @@ export class PanelUI {
                 'top': ''
             }); // unset
             if (this.graph_menu) { // fixed desktop look
-                this.graph_menu.set_dimensions(805, 600); // defaults
+                this.graph_menu.setDimensions(805, 600); // defaults
             }
 
             $('#service_list').css('height', ''); //unset
