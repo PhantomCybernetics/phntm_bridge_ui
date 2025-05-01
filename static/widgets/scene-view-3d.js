@@ -22,7 +22,7 @@ export class SceneView3DWidget extends DescriptionTFWidget {
         this.overlays = {};
         this.sources.on('change', (topics) => this.onSourcesChange(topics));
 
-        this.laser_delay = 150; // ms
+        this.laser_delay = 0; //150; // ms
         this.sources.add('sensor_msgs/msg/LaserScan', 'Lidar source', null, -1,
             (t, s) => this.onLaserData(t, s),
             (t) => this.clearLaser(t)
@@ -707,32 +707,31 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
         let that = this;
 
-        // TODO ??
-        // experimental laser delay control
-        if (this.sources.hasType('sensor_msgs/msg/LaserScan')) {
+        // experimental laser delay control (doesn't seem to synchronize laser and odometry)
+        // if (this.sources.hasType('sensor_msgs/msg/LaserScan')) {
 
-            let line_el = $('<div class="menu_line plus_minus_ctrl" id="laser_delay_ctrl_'+this.panel.n+'"></div>');
-            let minus_btn = $('<span class="minus">-</span>');
-            let val_btn = $('<button class="val" title="Reset delay">Laser delay: '+this.laser_delay.toFixed(0)+'ms</button>');
-            let plus_btn = $( '<span class="plus">+</span>');
-            line_el.append([ minus_btn, val_btn, plus_btn]);
+        //     let line_el = $('<div class="menu_line plus_minus_ctrl" id="laser_delay_ctrl_'+this.panel.n+'"></div>');
+        //     let minus_btn = $('<span class="minus">-</span>');
+        //     let val_btn = $('<button class="val" title="Reset delay">Laser delay: '+this.laser_delay.toFixed(0)+'ms</button>');
+        //     let plus_btn = $( '<span class="plus">+</span>');
+        //     line_el.append([ minus_btn, val_btn, plus_btn]);
             
-            plus_btn.click(function(ev) {
-                that.setLaserDelay(that.laser_delay + 10);
-            });
+        //     plus_btn.click(function(ev) {
+        //         that.setLaserDelay(that.laser_delay + 10);
+        //     });
     
-            minus_btn.click(function(ev) {
-                let val = that.laser_delay - 10;
-                if (val < 0)
-                    val = 0;
-                that.setLaserDelay(val);
-            });
+        //     minus_btn.click(function(ev) {
+        //         let val = that.laser_delay - 10;
+        //         if (val < 0)
+        //             val = 0;
+        //         that.setLaserDelay(val);
+        //     });
     
-            val_btn.click(function(ev) {
-                that.setLaserDelay(0);
-            });
+        //     val_btn.click(function(ev) {
+        //         that.setLaserDelay(0);
+        //     });
 
-            menu_els.push(line_el);
-        }
+        //     menu_els.push(line_el);
+        // }
     }
 }
