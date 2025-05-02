@@ -137,7 +137,7 @@ webExpressApp.get(UI_URL+':ID', async function(req:express.Request, res:express.
             $d.err('Locating request timed out for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
             res.send('Timed out locating robot on Cloud Bridge');
         }
-        if (error.code === 'ECONNREFUSED') {
+        else if (error.code === 'ECONNREFUSED') {
             $d.err('Locating request refused for '+idRobot+' ('+BRIDGE_LOCATE_URL+')');
             res.send('Error connecing to Cloud Bridge, connection refused');
         }

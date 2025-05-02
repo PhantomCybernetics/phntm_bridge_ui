@@ -3977,16 +3977,6 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
     /* background-color: #e90fe9; */
 }
 
-#gamepad_settings #gamepad-output-panel {
-    white-space: pre;
-    font-size: 12px;
-    font-family: monospace;
-}
-
-
-
-
-
 #gamepad_settings h3 {
     white-space: nowrap;
     overflow: hidden;
@@ -4590,6 +4580,7 @@ BODY.desktop-ui #gamepad-settings-panel {
     line-height: 30px;
     display: block;
     opacity: 0.5;
+    padding-left: 5px;
     /* background: lime; */
 }
 
@@ -4750,6 +4741,22 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
     color: white;
     font-size: 15px;
     margin-top: -5px;
+}
+
+#gamepad-axes-panel .waiting-for-controller,
+#gamepad-buttons-panel .waiting-for-controller {
+    padding: 10px 5px 11px 5px;
+    font-size: 14px;
+    line-height: 14px;
+    display: block;
+}
+
+#gamepad_settings #gamepad-output-panel {
+    white-space: pre;
+    font-size: 12px;
+    line-height: 12px;
+    font-family: monospace;
+    padding: 21px 10px 17px 10px;
 }
 
 #input-controller-selection {

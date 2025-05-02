@@ -48,6 +48,9 @@ export class InputManager {
         this.open = false;
         this.open_panel = 'axes'; // axes, buttons, output, settings
 
+        this.pressed_kb_keys = [];
+        this.pressed_kb_mods = [];
+
         this.input_status_icon.click(() => {
             // if (!that.initiated)
             //     return; //wait 
@@ -1028,6 +1031,8 @@ export class InputManager {
 
     resetAll() {
         let that = this;
+        this.pressed_kb_keys = [];
+        this.pressed_kb_mods = [];
         Object.values(this.controllers).forEach((c)=>{
             if (!c.profiles || !that.current_profile)
                 return;
@@ -1853,7 +1858,8 @@ export class InputManager {
         this.debug_output_panel.html('{}');
 
         if (!this.edited_controller || !this.enabled_drivers || !this.current_profile) {
-            $('#gamepad-axes-panel').html('Waiting for controllers...');    
+            $('#gamepad-axes-panel').html('<span class="waiting-for-controller">Waiting for controllers...</a>');
+            $('#gamepad-buttons-panel').html('<span class="waiting-for-controller">Waiting for controllers...</a>');
             // $('#gamepad-profile-config').css('display', 'none');
             this.controller_enabled_cb.attr('disabled', true);
             $('#gamepad_settings').removeClass('unsaved');
@@ -2870,16 +2876,39 @@ export class InputManager {
             case 'ENTER': label = 'Enter'; break;
             case 'SHIFT': label = 'Shift'; break;
             case 'CONTROL': label = 'Ctrl'; break;
-            case 'META': label = 'Meta'; break;
+            // case 'META': label = 'Meta'; break;
             case 'ALT': label = 'Alt'; break;
         }
         switch (mod) {
             case 'alt': label = 'Alt+'+label; break;
             case 'ctrl': label = 'Ctrl+'+label; break;
-            case 'meta': label = 'Meta+'+label; break;
+            // case 'meta': label = 'Meta+'+label; break;
             case 'shift': label = 'Shift+'+label; break;
         }
         return label;
+    }
+
+    modKeyFromKeyboardEvent(ev) {
+        if (ev.shiftKey)
+            return 'shift';
+        else if (ev.ctrlKey)
+            return 'ctrl';
+        else if (ev.altKey)
+            return 'alt';
+        return null;
+    }
+
+    modKeyFromKeyboardKey(key) {
+        switch (key) {
+            case 'shift':
+                return 'shift';
+            case 'control':
+                return 'ctrl';
+            case 'alt':
+                return 'alt';
+            default:
+                return null;
+        }
     }
 
     makeBtnRow(driver, btn) {
@@ -2929,16 +2958,7 @@ export class InputManager {
                     }
 
                     if (that.edited_controller.type == 'keyboard') {
-                        btn.key_mod = null;
-                        if (kb_ev.altKey)
-                            btn.key_mod = 'alt';
-                        else if (kb_ev.ctrlKey)
-                            btn.key_mod = 'ctrl';
-                        else if (kb_ev.metaKey)
-                            btn.key_mod = 'meta';
-                        else if (kb_ev.shiftKey)
-                            btn.key_mod = 'shift';
-
+                        btn.key_mod = that.modKeyFromKeyboardEvent(kb_ev);
                         btn.id_src = kb_ev.key.toLowerCase(); // comparing lower cases
                         btn.src_label = that.keyboardKeyLabel(btn.id_src, btn.key_mod);
                         
@@ -3887,21 +3907,93 @@ export class InputManager {
         requestAnimationFrame((t) => this.runInputLoop());
     }
 
-    driverHasKeyModBinding(driver, key, key_mod) {
+    driverHasKeyBinding(driver, key) {
         for (let i = 0; i < driver.buttons.length; i++) {
             let btn = driver.buttons[i];
-            if (btn.id_src == key && btn.key_mod == key_mod) {
+            if (btn.id_src == key) {
                 return true;
             }
         }
         return false;
     }
 
+    driverHasKeyModBinding(driver, key, mod) {
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+            if (btn.id_src == key && btn.key_mod == mod) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    debugPressedKeyboardKeys() {
+        console.log("Down: " + (this.pressed_kb_keys.length ? this.pressed_kb_keys.join(', ') : '-') + " Mods: " + (this.pressed_kb_mods.length ? this.pressed_kb_mods.join() : '-'));
+    }
+
+    updatePressedKeybaordButtons(controller, driver) {
+        for (let i = 0; i < driver.buttons.length; i++) {
+            let btn = driver.buttons[i];
+
+            let key_pass = this.pressed_kb_keys.indexOf(btn.id_src) > -1;
+            let mod_pass = false;
+            if (key_pass) {
+                if ([ 'shift', 'control', 'alt' ].indexOf(btn.id_src) > -1) {
+                    mod_pass = true;
+                } else if (!btn.key_mod) {
+                    let competing_with_mod_found = false;
+                    for (let j = 0; j < this.pressed_kb_mods.length; j++) {
+                        if (this.driverHasKeyModBinding(driver, btn.id_src, this.pressed_kb_mods[j])) {
+                            competing_with_mod_found = true;
+                            break;
+                        }
+                    }
+                    mod_pass = !competing_with_mod_found;
+                } else {
+                    mod_pass = this.pressed_kb_mods.indexOf(btn.key_mod) > -1;
+                }
+            }
+            
+            if (!btn.pressed && key_pass && mod_pass) {
+                btn.pressed = true;
+                btn.raw = 1.0;
+        
+                // down handlers & repeat
+                if (btn.trigger == 1) {
+                    this.triggerBtnAction(controller, btn);
+                    if (btn.repeat) {
+                        btn.repeat_timer = setInterval(
+                            () => { this.triggerBtnAction(controller, btn); },
+                            this.input_repeat_delay
+                        );
+                    }
+                }
+            } else if (btn.pressed && (!key_pass || !mod_pass)) {
+                btn.pressed = false;
+                btn.raw = 0.0;
+
+                if (btn.repeat_timer) {
+                    clearInterval(btn.repeat_timer);
+                    delete btn.repeat_timer;
+                }
+
+                // up handlers
+                if (btn.trigger == 2) {
+                    this.triggerBtnAction(controller, btn);
+                }
+            }
+        }
+    }
+
     onKeyboardKeyDown(ev, c) {
             
-        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
+        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1)
             return; // ignore input fields
-        }
+
+        let key = ev.key.toLowerCase();
+        let mod = this.modKeyFromKeyboardKey(key);
+
+        if (ev.metaKey || key == 'meta') return; // ignore all 
 
         if (['Escape', 'Delete', 'Backspace'].indexOf(ev.code) > -1) { // kb cancel & del work for all controllers
             let that = this;
@@ -3917,109 +4009,80 @@ export class InputManager {
             return;
         }
 
-        if (!c || !c.profiles)
-            return;
-
+        if (!c || !c.profiles) return;
         let c_profile = c.profiles[this.current_profile];
         let driver = c_profile.driver_instances[c_profile.driver];
-
-        if (!driver)
-            return; // not loaded
-
-        let that = this;
+        if (!driver) return; // not loaded
 
         if (driver.on_button_press) { // user is mapping a key
-            if (['Shift', 'Control', 'Alt', 'Meta'].indexOf(ev.key) > -1) {
+            if ([ 'shift', 'control', 'alt' ].indexOf(key) > -1) {
                 return; // ignore single modifiers here
             }
             driver.on_button_press(ev.code, ev);
             return;
         }
 
-        for (let i = 0; i < driver.buttons.length; i++) {
-            let btn = driver.buttons[i];
-                
-            if (btn.id_src == ev.key.toLowerCase()) {
-                if (btn.key_mod == 'shift' && !ev.shiftKey)
-                    continue;
-                if (ev.shiftKey && btn.key_mod != 'shift' && this.driverHasKeyModBinding(driver, ev.key.toLowerCase(), 'shift'))
-                    continue;
-                if (btn.key_mod == 'meta' && !ev.metaKey)
-                    continue;
-                if (ev.metaKey && btn.key_mod != 'meta' && this.driverHasKeyModBinding(driver, ev.key.toLowerCase(), 'meta'))
-                    continue;
-                if (btn.key_mod == 'ctrl' && !ev.ctrlKey)
-                    continue;
-                if (ev.ctrlKey && btn.key_mod != 'ctrl' && this.driverHasKeyModBinding(driver, ev.key.toLowerCase(), 'ctrl'))
-                    continue;
-                if (btn.key_mod == 'alt' && !ev.altKey)
-                    continue;
-                if (ev.altKey && btn.key_mod != 'alt' && this.driverHasKeyModBinding(driver, ev.key.toLowerCase(), 'alt'))
-                    continue;
+        let change = false;
+        if (this.pressed_kb_keys.indexOf(key) === -1) {
+            this.pressed_kb_keys.push(key);
+            change = true;
+        }
+        if (mod && this.pressed_kb_mods.indexOf(mod) === -1) {
+            this.pressed_kb_mods.push(mod);
+            change = true;
+        }
 
-                ev.preventDefault();
-                btn.pressed = true;
-                btn.raw = 1.0;
+        if (change) {
+            // this.debugPressedKeyboardKeys();
+            this.updatePressedKeybaordButtons(c, driver);
+        }
 
-                // down handlers & repeat
-                if (btn.trigger == 1 && !ev.repeat) {
-                    that.triggerBtnAction(c, btn);
-                    if (btn.repeat) {
-                        btn.repeat_timer = setInterval(
-                            () => { that.triggerBtnAction(c, btn); }, that.input_repeat_delay
-                        );
-                    }
-                }
-            }
+        if (this.driverHasKeyBinding(driver, key)) {
+            ev.preventDefault();
         }
     }
 
     onKeyboardKeyUp(ev, c) {
 
-        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1) {
+        if (ev.srcElement && ev.srcElement.nodeName && ['input', 'textarea'].indexOf(ev.srcElement.nodeName.toLowerCase()) > -1)
             return; // ignore input fields
-        }
 
-        if (!c || !c.profiles)
-            return;
+        let key = ev.key.toLowerCase();
+        let mod = this.modKeyFromKeyboardKey(key);
 
+        if (ev.metaKey || key == 'meta') return; // ignore all 
+
+        if (!c || !c.profiles) return;
         let c_profile = c.profiles[this.current_profile];
         let driver = c_profile.driver_instances[c_profile.driver];
+        if (!driver) return; // not loaded
 
-        if (!driver)
-            return; // not loaded
-
-        let that = this;
-
-        if (driver.on_button_press) { // if still listening on up, thus must be a single modifier
+        if (driver.on_button_press) { // user still mapping (if still listening for key up, this must be a single modifier)
             driver.on_button_press(ev.code, ev); 
             return; // assigned
         }
 
-        for (let i = 0; i < driver.buttons.length; i++) {
-            let btn = driver.buttons[i];
-            if (!btn.pressed)
-                continue;
-
-            if (btn.id_src == ev.key.toLowerCase() || 
-                (ev.key == 'Shift' && btn.key_mod == 'shift') ||
-                (ev.key == 'Alt' && btn.key_mod == 'alt') ||
-                (ev.key == 'Ctrl' && btn.key_mod == 'ctrl') ||
-                (ev.key == 'Meta' && btn.key_mod == 'meta')
-            ) {
-                btn.pressed = false;
-                btn.raw = 0.0;
-
-                if (btn.repeat_timer) {
-                    clearInterval(btn.repeat_timer);
-                    delete btn.repeat_timer;
-                }
-
-                // up handlers
-                if (btn.trigger == 2) {
-                    that.triggerBtnAction(c, btn);
-                }
+        let change = false;
+        let pos = this.pressed_kb_keys.indexOf(key);
+        if (pos > -1) {
+            this.pressed_kb_keys.splice(pos, 1);
+            change = true;
+        }
+        if (mod) {
+            pos = this.pressed_kb_mods.indexOf(mod);
+            if (pos > -1) {
+                this.pressed_kb_mods.splice(pos, 1);
+                change = true;
             }
+        }
+
+        if (change) {
+            // this.debugPressedKeyboardKeys();
+            this.updatePressedKeybaordButtons(c, driver);
+        }
+        
+        if (this.driverHasKeyBinding(driver, key)) {
+            ev.preventDefault();
         }
     }
 
