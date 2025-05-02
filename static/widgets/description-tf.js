@@ -916,15 +916,17 @@ export class DescriptionTFWidget extends EventTarget {
         // mesh visuals
         if (obj.isMesh && inVisual) {
             if (!obj.material) {
+                console.log('Obj didn\t have material: ', obj);
                 obj.material = new THREE.MeshStandardMaterial({
                     color: 0xffffff,
-                    side: THREE.DoubleSide,
+                    side: THREE.FrontSide,
                     depthWrite: true,
                 });
                 obj.material.needsUpdate = true;
             } else  {
+                console.log('Obj had material: ', obj);
                 obj.material.depthWrite = true;
-                obj.material.side = THREE.DoubleSide;
+                obj.material.side = THREE.FrontSide;
             }
             obj.material.needsUpdate = true;
             obj.castShadow = true;
