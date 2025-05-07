@@ -1068,6 +1068,25 @@ export class DescriptionTFWidget extends EventTarget {
         this.makeROSOriginMarker();
     }
 
+    setCameraTargetPosition(new_target_pos) {
+
+        console.log('Setting cam target positino to: ['+new_target_pos.x.toFixed(2)+';'+new_target_pos.y.toFixed(2)+';'+new_target_pos.z.toFixed(3)+']');
+        this.camera_target_pos.position.copy(new_target_pos);
+        this.camera.lookAt(this.camera_target_pos);
+        this.controls.update();
+        
+        // this.camera_target = null;
+        // this.camera_target_key = null;
+
+        if (this.vars.follow_target) {
+            this.vars.follow_target = false;
+            this.focus_btn.removeClass('on');
+            this.panel.ui.updateUrlHash();
+            this.makeRobotMarkers();
+            this.makeROSOriginMarker();
+        }
+    }
+
     makeRobotMarkers() {
 
         this.joint_markers.forEach((m)=>{
@@ -1196,7 +1215,7 @@ export class DescriptionTFWidget extends EventTarget {
             label_el.position.set(0, 0, 0);
             label_el.layers.set(layer_labels);
 
-            console.log('Making label "'+label_text+'", type='+layer_labels+"; target=", target);
+            // console.log('Making label "'+label_text+'", type='+layer_labels+"; target=", target);
         }
 
         return [ axesHelper, label_el];

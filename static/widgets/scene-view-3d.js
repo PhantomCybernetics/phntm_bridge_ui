@@ -503,16 +503,25 @@ export class SceneView3DWidget extends DescriptionTFWidget {
                 l = this.overlays[topic].config['nn_detection_labels'][d.class_id];
             l += ' (' + d.score.toFixed(2)+')\n';
                + '['+center.x.toFixed(2)+';'+center.y.toFixed(2)+';'+center.z.toFixed(2)+']'
-            let label_el = null;
             if (!this.detection_labels[topic][i]) {
                 const el = document.createElement('div');
                 el.className = 'detection_label';
                 const label2d = new CSS2DObject(el);
+                let that = this;
+                el.addEventListener('pointerdown', function(ev) {
+                    // that.setCameraTargetPosition(center.clone().applyMatrix4(f.matrixWorld));
+                    let m = that.detection_markers[topic][i];
+                    console.log(m, topic, i, that.detection_markers);
+                    let pos = new THREE.Vector3();
+                    m.getWorldPosition(pos)
+                    that.setCameraTargetPosition(pos);
+                    ev.preventDefault();
+                });
                 label2d.center.set(0.5, 0);
                 f.add(label2d);
                 this.detection_labels[topic][i] = label2d;
             }
-            label_el = this.detection_labels[topic][i];
+            let label_el = this.detection_labels[topic][i];
             label_el.element.textContent = l;
             label_el.element.hidden = false;
             label_el.position.set(center.x, center.y, center.z);

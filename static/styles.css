@@ -5408,9 +5408,10 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     color: #ffffff;
     font-size: 12px;
     text-align: center;
+    cursor: pointer;
 }
 
-.marker_label:hover {
+.marker_label:hover, .detection_label:hover {
     background-color: rgba(255, 255, 0, 0.932);
     color: black;
     color: black;
@@ -5423,10 +5424,6 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
 }
 .marker_label.focused:hover {
     color: black;
-}
-
-.marker_label {
-    cursor: pointer;
 }
 
 .marker_label.joint {
