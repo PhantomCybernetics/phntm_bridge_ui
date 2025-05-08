@@ -3192,19 +3192,29 @@ export class InputManager {
 
         switch (btn.action) {
             case 'ros-srv':
+                let local_error = false;
                 if (!btn.ros_srv_id) {
                     this.ui.showNotification('ROS service not set', 'error');
                     console.warn('ROS service ID not set');
-                    return;
+                    local_error = true;
                 }
-                if (!btn.ros_srv_msg_type) {
+                else if (!btn.ros_srv_msg_type) {
                     console.error('Service msg_type not set');
-                    this.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, true, { err: 1, msg: 'Service not yet discovered, missing message type'});
-                    return;
+                    this.ui.showNotification('Service '+btn.ros_srv_id+' not yet discovered, missing message type', 'error');
+                    local_error = true;
                 }
-                if (btn.service_blocked) {
+                else if (btn.service_blocked) {
                     this.ui.showNotification('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)', 'error');
                     console.warn('Skipping service '+btn.ros_srv_id+' call (previous call unfinished)');
+                    local_error = true;
+                }
+                if (local_error) {
+                    if (btn.touch_btn_el) { // do the error btn wobble
+                        btn.touch_btn_el.addClass('btn_err');
+                        setTimeout(()=>{
+                            btn.touch_btn_el.removeClass('btn_err');
+                        }, 600); 
+                    }
                     return;
                 }
 
