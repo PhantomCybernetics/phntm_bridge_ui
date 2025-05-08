@@ -44,6 +44,8 @@ export class InputManager {
 
         client.on('input_config', (drivers, defaults)=>{ that.setConfig(drivers, defaults); });
         client.on('services', (discovered_services)=>{ that.onServicesUpdated(discovered_services); });
+        client.on('peer_connected', ()=>{ that.unlockAllServices(); });
+        client.on('peer_disconnected', ()=>{ that.unlockAllServices(); });
 
         this.open = false;
         this.open_panel = 'axes'; // axes, buttons, output, settings
@@ -3252,6 +3254,28 @@ export class InputManager {
             default: 
                 break; 
         }
+    }
+
+    unlockAllServices() {
+        let that = this;
+        Object.values(this.controllers).forEach((c)=>{
+            if (!c.profiles)
+                return; //not yet configured
+
+            Object.values(c.profiles).forEach((c_profile)=>{
+
+                Object.values(c_profile.driver_instances).forEach((driver)=>{
+                    if (!driver)
+                        return; // not loaded
+
+                    for (let i_btn = 0; i_btn < driver.buttons.length; i_btn++) {
+                        let btn = driver.buttons[i_btn];
+                        if (btn.service_blocked)
+                            btn.service_blocked = false;
+                    }
+                });
+            });
+        });
     }
 
     async updateAxesUIValues () {
