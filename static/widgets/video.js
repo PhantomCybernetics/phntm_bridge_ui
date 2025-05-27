@@ -21,6 +21,9 @@ export class VideoWidget {
         this.el = $('#panel_video_'+panel.n);
         this.overlay_el = $('#video_overlay_'+panel.n);
         this.last_video_stats_string = '';
+        this.last_video_packets_lost = 0;
+        this.last_video_frames_dropped = 0;
+        this.last_video_freeze_count = 0;
         this.video_stats_el = $('#video_stats_' + panel.n);
         // this.last_fps_string = '0 FPS';
         // this.video_fps_el = $('#video_fps_' + panel.n);
@@ -124,7 +127,7 @@ export class VideoWidget {
     
     onOverlaySourcesChange(overlay_topics) {
 
-        console.warn('onOverlaySourcesChange', overlay_topics)
+        //console.warn('onOverlaySourcesChange', overlay_topics)
 
         let client = this.panel.ui.client;
         let that = this;

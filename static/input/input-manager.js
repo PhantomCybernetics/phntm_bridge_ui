@@ -1001,7 +1001,7 @@ export class InputManager {
         if (!this.enabled)
             return;
 
-        console.log('input manager got services', discovered_services);
+        console.log('Input Manager got services', discovered_services);
         let that = this;
         Object.values(this.controllers).forEach((c)=>{
             if (!c.profiles)

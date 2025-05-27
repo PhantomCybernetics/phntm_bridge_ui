@@ -226,7 +226,7 @@ export class PanelUI {
         });
 
         client.on('media_stream', (id_src, stream) => {
-            console.warn('Client got a stream for ' + id_src, stream);
+            // console.warn('Client got a stream for ' + id_src, stream);
 
             let panel = that.panels[id_src];
             // console.log('id_panel: '+id_src+'; panel=', panel, that.panels)
@@ -435,7 +435,7 @@ export class PanelUI {
 
         client.on('peer_conection_changed', () => {
             that.updateWebrtcStatus();
-            if (that.client.pc && that.client.pc.connectionState == 'new' || that.client.pc.connectionState == 'connecting') {
+            if (that.client.pc && (that.client.pc.connectionState == 'new' || that.client.pc.connectionState == 'connecting')) {
                 clearInterval(that.connection_uptime_timer);
                 that.connection_uptime_timer = null; // stop the timer but keep the last uptime displayed
                 that.webrtc_uptime_el.empty();
@@ -1251,7 +1251,7 @@ export class PanelUI {
     }
 
     dockerMenuFromAllHosts(msg_by_host) {
-        console.warn('Got full Docker containers: ', msg_by_host);
+        console.log('Got Docker containers: ', msg_by_host);
         this.docker_hosts = {}; // always redraw completely
         this.num_docker_containers = 0;
         $('#docker_list').empty();
@@ -2114,13 +2114,16 @@ export class PanelUI {
         let that = this;
 
         results.forEach(res => {
+
             if (res.type != 'inbound-rtp' || !res.trackIdentifier)
                 return; //continue
+
+            console.log(res);
 
             panel_ids.forEach((id_panel) => {
                 let panel = that.panels[id_panel];
                 
-                if (panel.id_stream == res.trackIdentifier) {
+                if (id_panel == res.trackIdentifier) {
                     let statsString = ''
                     statsString += `${res.timestamp}<br>`;
                     let fps = 0;
@@ -2128,17 +2131,34 @@ export class PanelUI {
                         if (k == 'framesPerSecond') {
                             fps = res[k];
                         }
+                        let mark_change = false;
+                        if (k == 'packetsLost') {
+                            mark_change = res[k] != panel.last_video_packets_lost;
+                            panel.last_video_packets_lost = res[k];
+                        }
+                        if (k == 'framesDropped') {
+                            mark_change = res[k] != panel.last_video_frames_dropped;
+                            panel.last_video_frames_dropped = res[k];
+                        }
+                        if (k == 'freezeCount') {
+                            mark_change = res[k] != panel.last_video_freeze_count;
+                            panel.last_video_freeze_count = res[k];
+                        }
                         if (k !== 'timestamp' && k !== 'type' && k !== 'id') {
                             if (typeof res[k] === 'object') {
                                 statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
                             } else {
-                                statsString += `${k}: ${res[k]}<br>`;
+                                if (mark_change)
+                                    statsString += `${k}: <span class="change">${res[k]}</span><br>`;
+                                else
+                                    statsString += `${k}: ${res[k]}<br>`;
                             }
                         }
                     });
                     
-                    if (panel.display_widget)
+                    if (panel.display_widget) {
                         panel.display_widget.last_video_stats_string = statsString;
+                    }
                     
                     panel.fps = fps;
 

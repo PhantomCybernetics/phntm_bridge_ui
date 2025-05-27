@@ -402,26 +402,26 @@ export class PhntmBridgeClient extends EventTarget {
 
         });
 
-        this.socket.on('cameras', (cameras_data) => {
+        // this.socket.on('cameras', (cameras_data) => {
 
-            if (!cameras_data[this.id_robot])
-                return;
+        //     if (!cameras_data[this.id_robot])
+        //         return;
 
-            setTimeout(()=>{
-                this.discovered_cameras = {};
+        //     setTimeout(()=>{
+        //         this.discovered_cameras = {};
 
-                Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
+        //         Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
 
-                    this.discovered_cameras[id_camera] = {
-                        id: id_camera,
-                        info: cameras_data[this.id_robot][id_camera],
-                    };
-                });
+        //             this.discovered_cameras[id_camera] = {
+        //                 id: id_camera,
+        //                 info: cameras_data[this.id_robot][id_camera],
+        //             };
+        //         });
 
-                console.log('Got Cameras:', this.discovered_cameras);
-                this.emit('cameras', this.discovered_cameras);
-            }, 0);
-        });
+        //         console.log('Got Cameras:', this.discovered_cameras);
+        //         this.emit('cameras', this.discovered_cameras);
+        //     }, 0);
+        // });
 
         this.socket.on('docker', (docker_containers_data) => {
 
@@ -645,8 +645,12 @@ export class PhntmBridgeClient extends EventTarget {
 
         if (this.topic_streams[id_source]) {
             console.log('Clearing media stream for '+id_source);
+
+            // not deleting media streams! same on the bridge node
             // if (this.media_streams[this.topic_streams[id_source]])
             //     delete this.media_streams[this.topic_streams[id_source]];
+
+            // deleting data topic channel
             delete this.topic_streams[id_source];
         }
 
@@ -1139,24 +1143,27 @@ export class PhntmBridgeClient extends EventTarget {
                     let src_type = id_stream[1] // sensor_msgs/msg/Image
                 }
 
-                if (id_stream) {
+                if (id_stream) { // stream open
                     if (!that.topic_streams[id_src] || that.topic_streams[id_src] != id_stream) {
                         console.log('Setting stream to '+id_stream+' for '+id_src);
                         that.topic_streams[id_src] = id_stream;
-                        
                     } else {
-                        console.log('Stream already exists for '+id_src +'; old='+that.topic_streams[id_src]+' new='+id_stream+'');
+                        console.log('Stream already in use for '+id_src +'; old='+that.topic_streams[id_src]+' new='+id_stream+'');
                     }
 
                     if (that.media_streams[id_stream]) {
-                         that.emit('media_stream', id_src, that.media_streams[id_stream]);
+                        console.log('Re-using stream for '+id_src +'; '+that.topic_streams[id_src]);
+                        that.emit('media_stream', id_src, that.media_streams[id_stream]);
                     }
 
-                } else if (that.topic_streams[id_src]) {
-                    //stream closed
+                } else if (that.topic_streams[id_src]) { //stream closed
                     console.log('Stream closed for '+id_src +'; '+that.topic_streams[id_src]);
-                    // if (this.media_streams[this.topic_streams[id_src]])
-                    //     delete this.media_streams[this.topic_streams[id_src]];
+
+                    // not deleting media stream!
+                    // if (this.media_streams[this.topic_streams[id_source]])
+                    //     delete this.media_streams[this.topic_streams[id_source]];
+
+                    // deleting data topic channel
                     delete that.topic_streams[id_src];
                 }
             });
@@ -1196,7 +1203,7 @@ export class PhntmBridgeClient extends EventTarget {
                 });
             });
         } else {
-            console.log('Initiated without subs, unlocking...');
+            console.log('Processed robot data without a SDP Offer, unlocking subs..');
             this.can_change_subscriptions = true;
         }
     }
@@ -1476,7 +1483,7 @@ export class PhntmBridgeClient extends EventTarget {
         // connect audio / video
         pc.addEventListener('track', (evt) => {
 
-            console.log('New track added: ', evt);
+            console.warn('New track added: ', evt);
 
             for (let i = 0; i < evt.streams.length; i++) {
                 let stream = evt.streams[i];
@@ -1490,16 +1497,16 @@ export class PhntmBridgeClient extends EventTarget {
                 });
 
                 stream.addEventListener('addtrack', (evt) => {
-                    console.warn('Stream added track '+stream.id, evt);
+                    console.info('Stream added track '+stream.id, evt);
                 });
                 stream.addEventListener('removetrack', (evt) => {
-                    console.info('Stream removed track '+stream.id, evt);
+                    console.error('Stream removed track '+stream.id, evt);
                 });
                 stream.addEventListener('onactive', (evt) => {
-                    console.info('Stream active '+stream.id, evt);
+                    console.warn('Stream active '+stream.id, evt);
                 });
                 stream.addEventListener('oninactive', (evt) => {
-                    console.info('Stream inactive '+stream.id, evt);
+                    console.error('Stream inactive '+stream.id, evt);
                 });
             }
 

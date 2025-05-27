@@ -256,12 +256,12 @@ export class MultiTopicSource extends EventTarget {
         let changed = false;
         let that = this;
 
-        console.log('Multisource got dicovered topics', discovered_topics)
+        console.log(`[${this.panel.id_source}] Multisource got dicovered topics`, discovered_topics)
 
         Object.values(discovered_topics).forEach((topic)=>{
 
             if (that.subscribed_topics[topic.id]) {
-                console.log(`Multisource already subscribed to ${topic.id}`)
+                console.log(`[${that.panel.id_source}] Multisource already subscribed to ${topic.id}`);
                 return; // already subscribed
             }
 

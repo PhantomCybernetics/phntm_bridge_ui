@@ -251,8 +251,6 @@ export class Panel {
     // might get called with null gefore we receive the message type
     init(msg_type=null, from_url_hash=false) {
 
-        console.log('Panel init '+this.id_source+'; msg_type='+msg_type);
-
         let fallback_show_src = true;
 
         if (!this.pauseEl) {
@@ -399,10 +397,11 @@ export class Panel {
         if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
             if (this.display_widget && this.display_widget.updateFps) {
                 this.fps_string = this.display_widget.updateFps(); // widget sets string
+                // this.fps_val = 
             } else {
                 let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
                 let r = dt ? 1000 / dt : 0;
-                this.fps = this.fps_frame_count * r;
+                // this.fps = this.fps_frame_count * r;
                 this.fps_string = ((this.fps > 0.01 && this.fps < 1.0) ? this.fps.toFixed(1) : this.fps.toFixed(0)) + ' Hz';
             }
             this.last_fps_updated = Date.now();
@@ -416,9 +415,14 @@ export class Panel {
             
         if (this.fps_visible) {
             this.fps_el.html(this.fps_string);
-
+            if (this.fps < 26) {
+                this.fps_el.addClass('error');
+            } else {
+                this.fps_el.removeClass('error');
+            }
             this.fps_clear_timeout = setTimeout(() => {
                 that.updateFps(false);
+                this.fps_el.removeClass('error');
             }, 1000);
         }
     }
@@ -801,60 +805,49 @@ export class Panel {
     setMediaStream(id_stream=null) {
 
         if (!id_stream && !this.id_stream) {
-            console.debug('setMediaStream: no media stream given nor stored');
+            console.debug('No media stream given, nor set for panel yet');
             return;
         }
-
         if (id_stream)
             this.id_stream = id_stream;
 
-        console.log('setMediaStream: setting stream '+this.id_stream);
+        console.log('Panel setting stream to id_stream=', this.id_stream);
 
         // if (this.ui.client.media_streams[this.id_stream]) { // assign stream, if already available            
         //     this.setMediaStream(panel.ui.client.media_streams[panel.id_stream]);
         // }
 
-        let that = this;
         let video_el = document.getElementById('panel_video_' + this.n);
-
         if (!video_el) {
-            console.log('setMediaStream Panel video element #panel_video_' + this.n + ' not yet ready');
+            console.log('Panel video element #panel_video_' + this.n + ' not ready yet');
             return;
         }
-
-        
-        let stream = that.ui.client.media_streams[that.id_stream];
+        let stream = this.ui.client.media_streams[this.id_stream];
         if (!stream) {
-            console.error('setMediaStream: stream '+that.id_stream+' not an object', stream);
+            console.error('Stream '+this.id_stream+' not an object', stream);
             return;
         }
         if (!stream.active) {
-            console.error('setMediaStream: stream '+that.id_stream+' inactive', stream);
+            console.error('Stream '+this.id_stream+' inactive', stream);
             return;
         }
-        stream.getTracks().forEach(track => {
-            console.log('setMediaStream: Stream track'+track.id+'; readyState='+track.readyState, track);
-        });
+
+        // stream.getTracks().forEach(track => {
+        //     console.debug('setMediaStream: Stream track'+track.id+'; readyState='+track.readyState, track);
+        // });
         
-
+        let that = this;
         function trySet() {
-
-            // window.setTimeout(()=>{
-            //     
-            //     trySet();
-            // }, 0);
-
             try {
                 if (video_el.srcObject === stream) {
-                    console.warn('Stream identical, ignoring')
+                    console.log('Stream identical for '+that.id_stream+', ignoring', stream);
                 } else {
-                    console.log('setMediaStream: !!! Assigning stream '+that.id_stream+' to panel', stream);
-                    console.log('setMediaStream: PC iceConnectionState = '+that.ui.client.pc.iceConnectionState+'; video readyState='+ video_el.readyState);
+                    console.warn('Assigning stream '+that.id_stream+' to panel', stream);
+                    console.log('PC iceConnectionState='+that.ui.client.pc.iceConnectionState+'; video.el readyState='+ video_el.readyState);
                     video_el.srcObject = stream;
-                    // video_el.play().catch(error => console.error('setMediaStream: Autoplay error:', error));
                 }
             } catch(e) {
-                console.error('setMediaStream threw exception', e);
+                console.error('Trying to set stream for '+that.id_stream+' threw an exception', e);
             }
         }
 

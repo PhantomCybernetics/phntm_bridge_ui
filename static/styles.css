@@ -3119,7 +3119,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
     font-size: 11px;
     font-weight: normal;
     display: block;
-    background: #0000005e;
+    background: #0000009c;
     padding: 5px;
     border-radius: 3px;
     display: none;
@@ -3127,15 +3127,22 @@ BODY.touch-ui .editing .grid-stack-item-content {
 .panel_fps.rendering_stats {
     text-align: right;
 }
+.panel_fps.error {
+    background: #ff0000ce;
+}
 .video_stats {
     bottom: 20px;
     overflow: scroll;
     scrollbar-width: none;
-    max-width: 50%;
+    max-width: 80%;
     color: white;
 }
 .grid-stack-item.maximized .video_stats {
     top: 90px;
+}
+.video_stats .change {
+    color: #fff;
+    background-color: red;
 }
 .panel_fps {
     left: auto;
