@@ -401,7 +401,7 @@ export class Panel {
             } else {
                 let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
                 let r = dt ? 1000 / dt : 0;
-                // this.fps = this.fps_frame_count * r;
+                this.fps = this.fps_frame_count * r;
                 this.fps_string = ((this.fps > 0.01 && this.fps < 1.0) ? this.fps.toFixed(1) : this.fps.toFixed(0)) + ' Hz';
             }
             this.last_fps_updated = Date.now();
@@ -415,7 +415,7 @@ export class Panel {
             
         if (this.fps_visible) {
             this.fps_el.html(this.fps_string);
-            if (this.fps < 26) {
+            if (this.fps < 26 && this.display_widget && this.display_widget.videoWidth) {
                 this.fps_el.addClass('error');
             } else {
                 this.fps_el.removeClass('error');
@@ -423,7 +423,7 @@ export class Panel {
             this.fps_clear_timeout = setTimeout(() => {
                 that.updateFps(false);
                 this.fps_el.removeClass('error');
-            }, 1000);
+            }, 2000);
         }
     }
 

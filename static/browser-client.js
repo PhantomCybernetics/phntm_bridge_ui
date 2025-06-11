@@ -1259,7 +1259,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         let dc = null;
         try {
-            console.log('Creating read DC for '+topic+'; pc=', this.pc);
+            console.log('Creating read DC#'+dc_id+' for '+topic+'; reliable='+reliable+'; pc=', this.pc);
             dc = this.pc.createDataChannel(
                 topic,
                 {
@@ -1552,7 +1552,7 @@ export class PhntmBridgeClient extends EventTarget {
             }
 
             if (newState == 'failed') {
-                console.log('Connection failed, clearing...');
+                console.log('Connection failed, clearing...', evt);
                 that._clearConnection();
             }
 

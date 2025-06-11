@@ -2118,7 +2118,7 @@ export class PanelUI {
             if (res.type != 'inbound-rtp' || !res.trackIdentifier)
                 return; //continue
 
-            console.log(res);
+            // console.log(res);
 
             panel_ids.forEach((id_panel) => {
                 let panel = that.panels[id_panel];

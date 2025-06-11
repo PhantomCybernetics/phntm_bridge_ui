@@ -21,11 +21,11 @@ export class MultiTopicSource extends EventTarget {
         this.menu_open = false;
     }
 
-    add(msg_type, label, selected_topic, num, cb, clear_cb) {
+    add(msg_type, label, default_topic, num, cb, clear_cb) {
         let new_src = {
             msg_type: msg_type,
             label: label,
-            selected_topic: selected_topic,
+            default_topic: default_topic,
             num: num,
             cb: cb,
             clear_cb: clear_cb,
@@ -188,18 +188,26 @@ export class MultiTopicSource extends EventTarget {
 
         let num_slots = src.topic_slots.length;
         let all_slots_full = true;
+        let default_topic_assigned = false;
         src.topic_slots.forEach((slot) => {
             if (!slot.selected_topic)
                 all_slots_full = false;
+            if (slot.selected_topic == src.default_topic)
+                default_topic_assigned = true;
         });
 
         while ((all_slots_full && src.num == -1) || (num_slots < src.num)) {
+            let assign_topic = null;
+            if (!default_topic_assigned) {
+                assign_topic = src.default_topic;
+                default_topic_assigned = true;
+            }
             let new_topic_slot = {
                 src: src,
                 topic: null,
                 msg_type: src.msg_type,
                 label: src.label,
-                selected_topic: src.selected_topic,
+                selected_topic: assign_topic,
                 // cb: src.cb,
                 clear_cb: src.clear_cb
             }

@@ -259,7 +259,7 @@ export class DescriptionTFWidget extends EventTarget {
 
         this.sources = new MultiTopicSource(this);
         this.sources.add('tf2_msgs/msg/TFMessage', 'Static transforms source', '/tf_static', 1, (topic, tf)=> { that.onTFData(topic, tf); });
-        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', 1, (topic, tf) => { that.onTFData(topic, tf); });
+        this.sources.add('tf2_msgs/msg/TFMessage', 'Real-time transforms source', '/tf', -1, (topic, tf) => { that.onTFData(topic, tf); });
         this.sources.add('std_msgs/msg/String', 'URDF description source', '/robot_description', 1, (topic, tf) => { that.onDescriptionData(topic, tf); });
 
         // this.set_camera_target_pos_on_description = null;
@@ -528,15 +528,15 @@ export class DescriptionTFWidget extends EventTarget {
         
         let dt = this.panel.last_fps_updated ? Date.now() - this.panel.last_fps_updated : 0;
         let r = dt ? 1000 / dt : 0;
-        this.stats_fps = this.last_frame_count ? this.renderer.info.render.frame-this.last_frame_count : 0;
-        this.stats_fps *= r;
-        this.stats_model_tris_rendered = this.stats_fps ? (this.renderer.info.render.triangles / this.stats_fps) : 0;
-        this.stats_model_lines_rendered = this.stats_fps ? (this.renderer.info.render.lines / this.stats_fps) : 0;
+        this.panel.fps = this.last_frame_count ? this.renderer.info.render.frame-this.last_frame_count : 0;
+        this.panel.fps *= r;
+        this.stats_model_tris_rendered = this.panel.fps ? (this.renderer.info.render.triangles / this.panel.fps) : 0;
+        this.stats_model_lines_rendered = this.panel.fps ? (this.renderer.info.render.lines / this.panel.fps) : 0;
 
         this.last_frame_count = this.renderer.info.render.frame;
         this.renderer.info.reset(); // resets tris & lines but not frames
 
-        return this.stats_fps.toFixed(0)+' FPS<br>\n'
+        return this.panel.fps.toFixed(0)+' FPS<br>\n'
                 + 'Model: '+this.stats_model_verts.toLocaleString('en-US') + ' verts, '
                 + this.stats_model_tris.toLocaleString('en-US') + ' tris<br>\n'
                 + 'Rendered: ' + this.stats_model_lines_rendered.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' lines, '
@@ -1231,8 +1231,8 @@ export class DescriptionTFWidget extends EventTarget {
             let id_child = tf.transforms[i].child_frame_id;
             let t = tf.transforms[i].transform;
 
-            if (this.smooth_transforms_queue[id_child] !== undefined && this.smooth_transforms_queue[id_child].stamp > ns_stamp)
-                continue; //throw out older transforms
+            // if (this.smooth_transforms_queue[id_child] !== undefined && this.smooth_transforms_queue[id_child].stamp > ns_stamp)
+            //     continue; //throw out older transforms
 
             t.rotation = new Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w).normalize();
             t.translation = new THREE.Vector3(t.translation.x, t.translation.y, t.translation.z);
