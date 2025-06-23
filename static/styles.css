@@ -54,6 +54,8 @@ body::after{
         url('/static/graph/icon-label.svg')
         url('/static/graph/icon-label-on.svg')
         url('/static/graph/icon-view.svg')
+        url('/static/graph/icon-external-link.svg')
+        url('/static/graph/phantom-cybernetics-logo-white.svg')
  }
 
 BODY.desktop-ui {
@@ -110,6 +112,10 @@ h1 .label  {
     white-space: nowrap;
     height: 35px;
     /* min-width: 200px; */
+}
+
+h1 .label.opens-description  {
+    cursor: help;
 }
 
 h1 .label.smaller {
@@ -5404,6 +5410,113 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     position: relative;
     top: 1px;
     outline: none;
+}
+
+
+#description-dialog {
+    display: none;
+    position: fixed;
+    background-color: #021d61de;
+    z-index: 200;
+    /* min-width: 520px; */
+    padding: 20px;
+    min-width: min(970px, calc(100% - 60px));
+    max-width: calc(100% - 60px);
+    max-height: calc(100% - 60px);
+    font-size: 17px;
+    color: #fff;
+    border-radius: 10px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 22px;
+    text-align: center;
+    overflow: scroll;
+}
+
+BODY.desktop-ui #description-dialog .touch-only {
+    display: none;
+}
+
+BODY.touch-ui #description-dialog .desktop-only {
+    display: none;
+}
+
+#description-dialog H2 {
+    font-size: 30px;
+    padding: 9px 0px 0px 0px;
+    display: block;
+    margin: 0px;
+}
+
+#description-dialog-buttons {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#description-dialog-buttons BUTTON {
+    display: block;
+    background: black;
+    color: white;
+    line-height: 40px;
+    border: 0px;
+    outline: 0px;
+    padding: 0px 15px;
+    margin: 0px auto;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+#description-dialog .num-peers, #description-dialog .key-mapping  {
+    background-color: rgb(255 255 0);
+    color: black;
+    border-radius: 3px;
+    padding: 2px 4px;
+    white-space: nowrap;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#description-dialog A {
+     color: #fff;
+}
+
+#description-dialog A.external {
+    padding-right: 17px;
+    background-image: url('/static/graph/icon-external-link.svg');
+    background-position: right;
+    background-size: 15px;
+    background-repeat: no-repeat;
+}
+
+#description-dialog INPUT#map-consent {
+    margin-right: 5px;
+}
+
+#description-dialog #phntm-cybernetics-logo IMG {
+    width: 300px;
+    float: right;
+    margin-right: 20px;
+}
+
+#description-dialog H2.with-phntm-cybernetics-logo {
+    float: left;
+    margin-top: 22px;
+    margin-left: 20px;
+}
+
+/* If viewport is less than this*/
+@media (max-width: 660px) {
+  #description-dialog #phntm-cybernetics-logo IMG {
+    width: calc(100% - 40px);
+    margin-bottom: 10px;
+  }
+  #description-dialog H2.with-phntm-cybernetics-logo {
+    float: none;
+    margin-top: 22px;
+    margin-left: 0px;
+    display: block;
+  }
 }
 
 .marker_label, .detection_label {

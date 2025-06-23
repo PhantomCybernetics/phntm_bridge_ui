@@ -4,7 +4,7 @@ import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from '/static/browser-cl
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
 
 import { Panel } from "./panel.js";
-import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes } from "./inc/lib.js";
+import { isPortraitMode, isTouchDevice, isSafari, msToTime, formatBytes, nl2br } from "./inc/lib.js";
 import { UserButtonsServiceInput, ServiceInput_Empty } from "./input/service-widgets.js"
 
 import { ServiceInputDialog } from "./inc/service-input-dialog.js"
@@ -310,6 +310,11 @@ export class PanelUI {
                 that.battery_shown = false;
             }
             that.saveLastRobotBatteryShown(that.battery_shown);
+
+            // description dialog
+             if (robot_ui_config['description']) {
+                that.makeDescriptionDialog(robot_ui_config['description']);
+             }
 
             // introspection control
             if (robot_ui_config['introspection_control'] !== undefined) {
@@ -2549,6 +2554,66 @@ export class PanelUI {
         return val;
     }
 
+    makeDescriptionDialog(description) {
+        
+        let html_str = nl2br(description);
+        let content = $('<div>').html(html_str);
+        let links = content.find('A');
+        links.each(function(index, anchor) {
+            console.log(index, anchor);
+            $(anchor).on('click', (ev) => {
+                ev.preventDefault();
+                window.open($(this).attr('href'), '_blank');
+            });
+        });
+        let that = this;
+
+        let btns = $('<div id="description-dialog-buttons"></div>');
+        let btn_close = $('<button>Close</button>');
+        btn_close.click((ev)=>{
+            that.closeDescriptionDialog(true); // don't show again
+        });
+        btn_close.appendTo(btns);
+
+        $('#description-dialog').empty()
+                                .append(content)
+                                .append(btns);
+
+        if (html_str) {
+            $('#robot_name .label').addClass('opens-description')
+                                   .unbind()
+                                   .click((ev) => {
+                                        that.showDescriptionDialog();
+                                        ev.stopPropagation();
+                                    });
+            let show_description_dialog = localStorage.getItem('description-dialog-closed:'+this.client.id_robot) != 'true';
+            if (show_description_dialog) {
+                this.showDescriptionDialog();
+            }
+        } else {
+            $('#robot_name .label').addClass('opens-description')
+                                   .unbind();
+        }
+    }
+
+    showDescriptionDialog() {
+        let that = this;
+        $('BODY').addClass('no-scroll');
+        $('#description-dialog').css('display', 'block');
+        $('#dialog-modal-confirm-underlay').css('display', 'block')
+                                           .click((ev)=>{
+                                                that.closeDescriptionDialog(false);
+                                                ev.stopPropagation();
+                                           });
+    }
+
+    closeDescriptionDialog(save) {
+        if (save)
+            localStorage.setItem('description-dialog-closed:'+this.client.id_robot, 'true');
+        $('#description-dialog').css('display', 'none');
+        $('#dialog-modal-confirm-underlay').css('display', 'none').unbind();
+        $('BODY').removeClass('no-scroll');
+    }
 
     setMaximizedPanel(max_panel) {
         this.maximized_panel = max_panel;
