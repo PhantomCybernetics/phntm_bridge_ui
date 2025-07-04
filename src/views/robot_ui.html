@@ -2,171 +2,194 @@
 
 <div id="page_message"></div>
 
-<div id="notifications"></div> <!-- z-index: 220 -->
+<div id="notifications"></div>
+<!-- z-index: 220 -->
 
 <div id="mapping-confirmation"></div>
 <!-- <div id="msg_type-dialog"></div> -->
 
-<div id="service-input-dialog"></div> <!-- z-index: 200 -->
-<div id="node-params-dialog"></div> <!-- z-index: 200 -->
-<div id="description-dialog"></div> <!-- z-index: 2000 -->
-<div id="dialog-modal-confirm"></div> <!-- z-index: 200 -->
+<div id="service-input-dialog"></div>
+<!-- z-index: 200 -->
+<div id="node-params-dialog"></div>
+<!-- z-index: 200 -->
+<div id="description-dialog"></div>
+<!-- z-index: 2000 -->
+<div id="dialog-modal-confirm"></div>
+<!-- z-index: 200 -->
 
-<div id="dialog-modal-confirm-underlay" class="prevent-select"></div> <!-- z-index: 199 -->
+<div id="dialog-modal-confirm-underlay" class="prevent-select"></div>
+<!-- z-index: 199 -->
 
 <!-- z-index: 100 -->
-<!-- <div id="touch-ui-dialog">  
+<!-- <div id="touch-ui-dialog">
     <div class="title"></div>
     <div class="content"></div>
     <button id="close-touch-ui-dialog" class="close">Close</button>
 </div> -->
 <!-- z-index: 100 -->
-<div id="touch-ui-selector"> 
-    <div class="content"></div>
+<div id="touch-ui-selector">
+	<div class="content"></div>
 </div>
-<div id="touch-ui-dialog-underlay" class="prevent-select"></div> <!-- z-index: 91 -->
+<div id="touch-ui-dialog-underlay" class="prevent-select"></div>
+<!-- z-index: 91 -->
 
 <div id="topic-selector-dialog"></div>
 
-<div id="msg-type-dialog">  <!-- z-index: 100 -->
-    <div class="title"></div>
-    <div class="content"></div>
-    <button id="close-msg-type-dialog" class="close">Close</button>
+<div id="msg-type-dialog">
+	<!-- z-index: 100 -->
+	<div class="title"></div>
+	<div class="content"></div>
+	<button id="close-msg-type-dialog" class="close">Close</button>
 </div>
-<div id="msg-type-dialog-underlay" class="prevent-select"></div> <!-- z-index: 91 -->
+<div id="msg-type-dialog-underlay" class="prevent-select"></div>
+<!-- z-index: 91 -->
 
-<div id="touch-gamepad-left"></div>  <!-- z-index: 15 -->
-<div id="touch-gamepad-right"></div>  <!-- z-index: 15 -->
-<ul id="touch-ui-bottom-buttons" class="touch_buttons"></ul> <!-- z-index: 17 -->
+<div id="touch-gamepad-left"></div>
+<!-- z-index: 15 -->
+<div id="touch-gamepad-right"></div>
+<!-- z-index: 15 -->
+<ul id="touch-ui-bottom-buttons" class="touch_buttons"></ul>
+<!-- z-index: 17 -->
 
 <div id="fixed-header">
+	<div id="modal-underlay" class="prevent-select"></div>
+	<!-- z-index: 80 -->
+	<div id="menu-underlay" class="prevent-select"></div>
+	<!-- z-index: 82 -->
+	<div id="input-underlay" class="prevent-select"></div>
+	<!-- z-index: 2 -->
 
-    <div id="modal-underlay" class="prevent-select"></div> <!-- z-index: 80 -->
-    <div id="menu-underlay" class="prevent-select"></div> <!-- z-index: 82 -->
-    <div id="input-underlay" class="prevent-select"></div> <!-- z-index: 2 -->
+	<div id="fixed-left">
+		<h1 id="robot_name">
+			<span class="label">Connecting...</span>
+			<span id="network-info-peers"></span>
+		</h1>
 
-    <div id="fixed-left">
+		<div id="battery-info" style="display: none">
+			<span id="battery-bar">
+				<span id="battery-bar-0"></span>
+				<span id="battery-bar-1"></span>
+				<span id="battery-bar-2"></span>
+				<span id="battery-bar-3"></span>
+			</span>
+			<div id="battery-details">Loading...</div>
+		</div>
 
-        <h1 id="robot_name">
-            <span class="label">Connecting...</span>
-            <span id="network-info-peers"></span>
-        </h1>
+		<div id="network-info-wrapper">
+			<div id="network-info">
+				<span id="signal-monitor" style="display: none"></span>
 
-        <div id="battery-info" style="display: none;">
-            <span id="battery-bar">
-                <span id="battery-bar-0"></span>
-                <span id="battery-bar-1"></span>
-                <span id="battery-bar-2"></span>
-                <span id="battery-bar-3"></span>
-            </span>
-            <div id="battery-details">Loading...</div>
-        </div>
+				<span id="dot-0" class="network-info-dot"></span>
+				<span id="dot-1" class="network-info-dot"></span>
+				<span id="dot-2" class="network-info-dot"></span>
 
-        <div id="network-info-wrapper">
-            <div id="network-info">
-                <span id="signal-monitor" style="display: none;"></span>
+				<!-- <span id="network-info-ip" title="Robot's IP address"></span> -->
+				<span id="network-info-rtt" title="RTT"></span>
+			</div>
+			<div id="network-details" style="display: none">
+				<div id="socketio_status"></div>
+				<div id="robot_info"></div>
+				<div id="webrtc_info"></div>
+				<div id="robot_wifi_info"></div>
+				<div id="wifi_scan_roam_cont">
+					<button id="trigger_wifi_scan">Scan Wi-Fi</button>
+					<button id="trigger_wifi_roam">Scan &amp; Roam</button>
+				</div>
+			</div>
+		</div>
+	</div>
 
-                <span id="dot-0" class="network-info-dot"></span>
-                <span id="dot-1" class="network-info-dot"></span>
-                <span id="dot-2" class="network-info-dot"></span>
+	<div id="fixed-right">
+		<%- include('partial/touch-ui.html'); %> <%-
+		include('partial/input-manager.html'); %>
+		<div id="introspection_state" class="inactive"></div>
+	</div>
 
-                <!-- <span id="network-info-ip" title="Robot's IP address"></span> -->
-                <span id="network-info-rtt" title="RTT"></span>
-            </div>
-            <div id="network-details" style="display: none;"> 
-                <div id="socketio_status"></div>
-                <div id="robot_info"></div>
-                <div id="webrtc_info"></div>
-                <div id="robot_wifi_info"></div>
-                <div id="wifi_scan_roam_cont">
-                    <button id="trigger_wifi_scan">Scan Wi-Fi</button>
-                    <button id="trigger_wifi_roam">Scan &amp; Roam</button>
-                </div>
-            </div>
-        </div>
+	<div id="fixed-center">
+		<ul id="touch-ui-top-buttons" class="touch_buttons"></ul>
 
-    </div>
+		<div id="menubar">
+			<div id="menubar_content">
+				<span id="menubar_hamburger"></span>
+				<div id="menubar_items">
+					<span id="menubar_hamburger_close" class="prevent-select">Close</span>
+					<span id="hamburger_menu_label"></span>
 
-    <div id="fixed-right">
-        <%- include('partial/touch-ui.html'); %>
-        <%- include('partial/input-manager.html'); %>
-        <div id="introspection_state" class="inactive"></div>
-    </div>
-
-    <div id="fixed-center">
-        
-        <ul id="touch-ui-top-buttons" class="touch_buttons"></ul>
-
-        <div id="menubar">
-
-            <div id="menubar_content">
-                <span id="menubar_hamburger"></span>
-                <div id="menubar_items">
-
-                    <span id="menubar_hamburger_close" class="prevent-select">Close</span>
-                    <span id="hamburger_menu_label"></span>
-
-                    <div id="menubar_scrollable"><!--
+					<div id="menubar_scrollable">
+						<!--
                         removing white-spaces betweeb inline-blocks
-                        
-                    --><div id="graph_controls">
-                            <h3 id="graph_controls_heading" title="Graph view">
-                                <span id="graph_nodes_label">
-                                    <b>0</b>
-                                    <span class="full-w narrow-w">Nodes</span>
-                                    <span class="narrower-w">Nds</span>
-                                </span>
-                                <span id="graph_topics_label">
-                                    <b>0</b>
-                                    <span class="full-w narrow-w">Topics</span>
-                                    <span class="narrower-w">Tpcs</span>
-                                </span>
-                            </h3>
-                            <div id="graph_display" data-min-width="805" data-max-width="1005"></div>
-                        </div><!-- 
 
-                    --><div id="service_controls">
-                            <h3 id="services_heading">
-                                <b>0</b>
-                                <span class="full-w">Services</span>
-                                <span class="narrow-w narrower-w">Srv</span>
-                            </h3>
-                            <div id="service_list" data-min-width="350"></div>
-                        </div><!--
+                    -->
+						<div id="graph_controls">
+							<h3 id="graph_controls_heading" title="Graph view">
+								<span id="graph_nodes_label">
+									<b>0</b>
+									<span class="full-w narrow-w">Nodes</span>
+									<span class="narrower-w">Nds</span>
+								</span>
+								<span id="graph_topics_label">
+									<b>0</b>
+									<span class="full-w narrow-w">Topics</span>
+									<span class="narrower-w">Tpcs</span>
+								</span>
+							</h3>
+							<div
+								id="graph_display"
+								data-min-width="805"
+								data-max-width="1005"
+							></div>
+						</div>
+						<!--
 
-                    --><div id="camera_controls">
-                            <h3 id="cameras_heading">
-                                <b>0</b>
-                                <span class="full-w">Cameras</span>
-                                <span class="narrow-w narrower-w">Cam</span>
-                            </h3>
-                            <div id="cameras_list" data-min-width="350"></div>
-                        </div><!--
+                    -->
+						<div id="service_controls">
+							<h3 id="services_heading">
+								<b>0</b>
+								<span class="full-w">Services</span>
+								<span class="narrow-w narrower-w">Srv</span>
+							</h3>
+							<div id="service_list" data-min-width="350"></div>
+						</div>
+						<!--
 
-                    --><div id="docker_controls">
-                            <h3 id="docker_heading">
-                                <b>0</b>
-                                <span class="full-w">Containers</span>
-                                <span class="narrow-w narrower-w">Cont</span>
-                            </h3>
-                            </h3>
-                            <div id="docker_list" data-min-width="560"></div>
-                        </div><!--
+                    -->
+						<div id="camera_controls">
+							<h3 id="cameras_heading">
+								<b>0</b>
+								<span class="full-w">Cameras</span>
+								<span class="narrow-w narrower-w">Cam</span>
+							</h3>
+							<div id="cameras_list" data-min-width="350"></div>
+						</div>
+						<!--
 
-                    --><div id="widget_controls">
-                            <h3 id="widgets_heading">
-                                <b>+</b>
-                                <span class="hamburger-w">Widgets</span>
-                            </h3>
-                            <div id="widget_list" data-min-width="350"></div>
-                        </div><!--
+                    -->
+						<div id="docker_controls">
+							<h3 id="docker_heading">
+								<b>0</b>
+								<span class="full-w">Containers</span>
+								<span class="narrow-w narrower-w">Cont</span>
+							</h3>
+							<div id="docker_list" data-min-width="560"></div>
+						</div>
+						<!--
 
-                --></div>
-                </div>
-            </div>
+                    -->
+						<div id="widget_controls">
+							<h3 id="widgets_heading">
+								<b>+</b>
+								<span class="hamburger-w">Widgets</span>
+							</h3>
+							<div id="widget_list" data-min-width="350"></div>
+						</div>
+						<!--
 
-        </div>
-    </div>
+                -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 <div id="grid-stack-container"><div class="grid-stack" id="grid-stack"></div></div>
@@ -174,94 +197,99 @@
 <!-- <div id="monitors" style="display:none"></div> -->
 
 <script type="module">
-    
-    import { BatteryStateWidget } from '/static/widgets/battery.js';
-    import { OccupancyGrid } from '/static/widgets/occupacy-grid.js';
-    import { VideoWidget } from '/static/widgets/video.js';
-    import { RangeWidget } from '/static/widgets/range.js';
-    import { LaserScanWidget } from '/static/widgets/laser-scan.js';
-    import { ImuWidget } from '/static/widgets/imu.js';
-    import { LogWidget } from '/static/widgets/log.js';
-    import { SystemLoadWidget } from '/static/widgets/system-load.js';
-    import { PointCloudWidget } from '/static/widgets/pointcloud.js';
+	import { BatteryStateWidget } from "/static/widgets/battery.js";
+	import { OccupancyGrid } from "/static/widgets/occupacy-grid.js";
+	import { VideoWidget } from "/static/widgets/video.js";
+	import { RangeWidget } from "/static/widgets/range.js";
+	import { LaserScanWidget } from "/static/widgets/laser-scan.js";
+	import { ImuWidget } from "/static/widgets/imu.js";
+	import { LogWidget } from "/static/widgets/log.js";
+	import { SystemLoadWidget } from "/static/widgets/system-load.js";
+	import { PointCloudWidget } from "/static/widgets/pointcloud.js";
 
-    import { PhntmBridgeClient } from '/static/browser-client.js';
-    import { InputManager } from '/static/input/input-manager.js';
-    import { PanelUI } from '/static/panel-ui.js';
-    import { LaserOdometryWidget } from '/static/widgets/laser-odo.js';
-    import { DescriptionTFWidget } from '/static/widgets/description-tf.js';
-    import { NavigationWidget } from '/static/widgets/navigation.js';
-    import { SceneView3DWidget } from '/static/widgets/scene-view-3d.js';
+	import { PhntmBridgeClient } from "/static/browser-client.js";
+	import { InputManager } from "/static/input/input-manager.js";
+	import { PanelUI } from "/static/panel-ui.js";
+	import { LaserOdometryWidget } from "/static/widgets/laser-odo.js";
+	import { DescriptionTFWidget } from "/static/widgets/description-tf.js";
+	import { NavigationWidget } from "/static/widgets/navigation.js";
+	import { SceneView3DWidget } from "/static/widgets/scene-view-3d.js";
 
-    import { JoyInputDriver } from '/static/input/joy-driver.js';
-    import { TwistInputDriver } from '/static/input/twist-driver.js';
+	import { JoyInputDriver } from "/static/input/joy-driver.js";
+	import { TwistInputDriver } from "/static/input/twist-driver.js";
 
-    import { ServiceInput_Empty, ServiceInput_Bool } from '/static/input/service-widgets.js'
+	import {
+		ServiceInput_Empty,
+		ServiceInput_Bool,
+	} from "/static/input/service-widgets.js";
 
-    $(document).ready(function() {
+	$(document).ready(function () {
+		try {
+			let robot = new PhntmBridgeClient({
+				socket_url: "<%= bridge_socket_url %>",
+				socket_path: "/app/socket.io/",
+				socket_auto_connect: false,
+				bridge_files_url: "<%= bridge_files_url %>",
+				app_id: "<%= app_id %>",
+				id_robot: "<%= id_robot %>",
+				force_turn: window.location.search.indexOf("force_turn") !== -1, // force TURN connection with ?force_turn=1 (debug)
+			});
 
-        try {
+			let input_manager = new InputManager(robot);
+			input_manager.registerDriver("Joy", JoyInputDriver);
+			input_manager.registerDriver("Twist", TwistInputDriver);
 
-            let robot = new PhntmBridgeClient({
-                socket_url: '<%= bridge_socket_url %>',
-                socket_path: '/app/socket.io/',
-                socket_auto_connect: false,
-                bridge_files_url: '<%= bridge_files_url %>',
-                app_id: '<%= app_id %>',
-                id_robot: '<%= id_robot %>',
-                force_turn: window.location.search.indexOf('force_turn') !== -1 // force TURN connection with ?force_turn=1 (debug)
-            });
+			let panel_ui = new PanelUI(robot, 119, input_manager);
 
-            let input_manager = new InputManager(robot);
-            input_manager.registerDriver('Joy', JoyInputDriver);
-            input_manager.registerDriver('Twist', TwistInputDriver);
+			panel_ui.addTypeWidget("sensor_msgs/msg/BatteryState", BatteryStateWidget);
+			(panel_ui.addTypeWidget("sensor_msgs/msg/Range", RangeWidget),
+				panel_ui.addTypeWidget("sensor_msgs/msg/LaserScan", LaserScanWidget));
+			panel_ui.addTypeWidget("sensor_msgs/msg/Imu", ImuWidget);
+			panel_ui.addTypeWidget("rcl_interfaces/msg/Log", LogWidget);
 
-            let panel_ui = new PanelUI(robot, 119, input_manager);
+			panel_ui.addTypeWidget("video", VideoWidget);
+			panel_ui.addTypeWidget("sensor_msgs/msg/Image", VideoWidget);
+			panel_ui.addTypeWidget("sensor_msgs/msg/CompressedImage", VideoWidget);
+			panel_ui.addTypeWidget(
+				"ffmpeg_image_transport_msgs/msg/FFMPEGPacket",
+				VideoWidget,
+			);
 
-            panel_ui.addTypeWidget('sensor_msgs/msg/BatteryState', BatteryStateWidget);
-            panel_ui.addTypeWidget('sensor_msgs/msg/Range', RangeWidget),
-            panel_ui.addTypeWidget('sensor_msgs/msg/LaserScan', LaserScanWidget);
-            panel_ui.addTypeWidget('sensor_msgs/msg/Imu', ImuWidget);
-            panel_ui.addTypeWidget('rcl_interfaces/msg/Log', LogWidget);
+			// TODO:
+			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
+			// panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
+			panel_ui.addTypeWidget("phntm_interfaces/msg/SystemInfo", SystemLoadWidget);
 
-            panel_ui.addTypeWidget('video', VideoWidget);
-            panel_ui.addTypeWidget('sensor_msgs/msg/Image', VideoWidget);
-            panel_ui.addTypeWidget('sensor_msgs/msg/CompressedImage', VideoWidget);
-            panel_ui.addTypeWidget('ffmpeg_image_transport_msgs/msg/FFMPEGPacket', VideoWidget);
-            
-            // TODO:
-            // panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
-            // panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
-            panel_ui.addTypeWidget('phntm_interfaces/msg/SystemInfo', SystemLoadWidget);
+			panel_ui.addCustomWidget(SceneView3DWidget);
+			// panel_ui.addCustomWidget(NavigationWidget);
+			// panel_ui.addCustomWidget(DescriptionTFWidget);
+			// panel_ui.addCustomWidget(LaserOdometryWidget);
 
-            panel_ui.addCustomWidget(SceneView3DWidget);
-            // panel_ui.addCustomWidget(NavigationWidget);
-            // panel_ui.addCustomWidget(DescriptionTFWidget);
-            // panel_ui.addCustomWidget(LaserOdometryWidget);
+			panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
+			panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
+			panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
 
-            panel_ui.addServiceTypeWidget('std_srvs/srv/Empty', ServiceInput_Empty);
-            panel_ui.addServiceTypeWidget('std_srvs/srv/Trigger', ServiceInput_Empty);
-            panel_ui.addServiceTypeWidget('std_srvs/srv/SetBool', ServiceInput_Bool);
+			// init panel setup from url
+			// also subscribes to topics and cameras required by panel widgets
+			panel_ui.panelsFromURLHash(window.location.hash);
 
-            // init panel setup from url
-            // also subscribes to topics and cameras required by panel widgets
-            panel_ui.panelsFromURLHash(window.location.hash);
+			robot.on("error", (err, msg) => {
+				console.error("Robot returned error: " + err, msg);
+			});
 
-            robot.on('error', (err, msg)=>{
-                console.error('Robot returned error: '+err, msg);
-            })
+			//connects socket.io, then runs handshake with the robot
+			robot.connect();
 
-            //connects socket.io, then runs handshake with the robot
-            robot.connect();
-
-            if (navigator.userAgent.toLowerCase().includes('firefox')) {
-                panel_ui.showPageError(null, 'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    });
-
+			if (navigator.userAgent.toLowerCase().includes("firefox")) {
+				panel_ui.showPageError(
+					null,
+					'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>',
+				);
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	});
 </script>
 
 <%- include('partial/footer.html'); %>

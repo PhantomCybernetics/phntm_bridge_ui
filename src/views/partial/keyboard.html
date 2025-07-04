@@ -1,50 +1,52 @@
 <div id="keyboard">
-    <div id="keyboard_status" title="Keyboard Settings"></div>
+	<div id="keyboard_status" title="Keyboard Settings"></div>
 
-    <div id="keyboard_settings">
-        <h3>Keyboard Controls</h3>
-        <div class="cleaner"></div>
-        <input type="checkbox" id="keyboard_enabled"/>
-        <label for="keyboard_enabled" class="prevent-select">Enabled and generating </label>
-        <select id="keyboard_driver"></select>
-        <span id="keyboard_debug_output_label"></span>
+	<div id="keyboard_settings">
+		<h3>Keyboard Controls</h3>
+		<div class="cleaner"></div>
+		<input type="checkbox" id="keyboard_enabled" />
+		<label for="keyboard_enabled" class="prevent-select"
+			>Enabled and generating
+		</label>
+		<select id="keyboard_driver"></select>
+		<span id="keyboard_debug_output_label"></span>
 
-        <div id="keyboard_settings_controls">
-            <button id="kb_config_toggle">Driver config</button>
-            <button id="kb_shortcuts_toggle">Shortcuts</button>
-        </div>
+		<div id="keyboard_settings_controls">
+			<button id="kb_config_toggle">Driver config</button>
+			<button id="kb_shortcuts_toggle">Shortcuts</button>
+		</div>
 
-        <div id="keyboard_debug">
-            <div class="col" id="keyboard_debug_input">
-                <b>Keyboard input:</b><br>
-                <div class="p">{}</div>
-            </div>
-            <div class="col" id="keyboard_config">
-                <b>Driver config:</b><br>
-                <textarea id="kb_config_input" spellcheck="false"></textarea>
-                <div id="keyboard_config_controls">
-                    <button id="kb_config_listen">Listen</button>
-                    <button id="kb_config_cancel">Close</button>
-                    <button id="kb_config_default">Reset</button>
-                    <button id="kb_config_apply">Apply</button>
-                    <button id="kb_config_save">Save</button>
-                </div>
-            </div>
-            <div class="col" id="keyboard_shortcuts">
-                <b>Shortcuts config: </b> <span class="comment">(always on)</span><br>
-                <textarea id="kb_shortcuts_input" spellcheck="false"></textarea>
-                <div id="keyboard_shortcuts_controls">
-                    <button id="kb_shortcuts_listen">Listen</button>
-                    <button id="kb_shortcuts_cancel">Close</button>
-                    <button id="kb_shortcuts_default">Reset</button>
-                    <button id="kb_shortcuts_apply">Apply</button>
-                    <button id="kb_shortcuts_save">Save</button>
-                </div>
-            </div>
-            <div class="col" id="keyboard_debug_output">
-                <b>Output:</b><br>
-                <div class="p">{}</div>
-            </div>
-        </div>
-    </div>
+		<div id="keyboard_debug">
+			<div class="col" id="keyboard_debug_input">
+				<b>Keyboard input:</b><br />
+				<div class="p">{}</div>
+			</div>
+			<div class="col" id="keyboard_config">
+				<b>Driver config:</b><br />
+				<textarea id="kb_config_input" spellcheck="false"></textarea>
+				<div id="keyboard_config_controls">
+					<button id="kb_config_listen">Listen</button>
+					<button id="kb_config_cancel">Close</button>
+					<button id="kb_config_default">Reset</button>
+					<button id="kb_config_apply">Apply</button>
+					<button id="kb_config_save">Save</button>
+				</div>
+			</div>
+			<div class="col" id="keyboard_shortcuts">
+				<b>Shortcuts config: </b> <span class="comment">(always on)</span><br />
+				<textarea id="kb_shortcuts_input" spellcheck="false"></textarea>
+				<div id="keyboard_shortcuts_controls">
+					<button id="kb_shortcuts_listen">Listen</button>
+					<button id="kb_shortcuts_cancel">Close</button>
+					<button id="kb_shortcuts_default">Reset</button>
+					<button id="kb_shortcuts_apply">Apply</button>
+					<button id="kb_shortcuts_save">Save</button>
+				</div>
+			</div>
+			<div class="col" id="keyboard_debug_output">
+				<b>Output:</b><br />
+				<div class="p">{}</div>
+			</div>
+		</div>
+	</div>
 </div>
