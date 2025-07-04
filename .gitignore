@@ -1,8 +1,10 @@
 .DS_Store
 node_modules
 config.jsonc
+config.local.*.jsonc
 ssl/*.pem
 ssl/*.crt
 *.swp
 build/
 data/*
+
