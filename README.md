@@ -48,11 +48,11 @@ Description=phntm bridge_ui service
 After=network.target
 
 [Service]
-ExecStart=/home/ubuntu/bridge/ui/run.web-ui.sh
+ExecStart=/home/ubuntu/bridge_ui/run.web-ui.sh
 Restart=always
 User=root
 Environment=NODE_ENV=production
-WorkingDirectory=/home/ubuntu/bridge/ui/
+WorkingDirectory=/home/ubuntu/bridge_ui/
 StandardOutput=append:/var/log/bridge_ui.log
 StandardError=append:/var/log/bridge_ui.err.log
 
