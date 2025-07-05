@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 COPY static /app/static
 COPY src /app/src
 
-# needs to be mapped as docker volume if needed
+# config file and certs needs to be mapped as docker volume
 ENV CONFIG_FILE=/app/config.jsonc
 
 USER bun
