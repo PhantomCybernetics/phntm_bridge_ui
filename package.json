@@ -4,7 +4,7 @@
 	"packageManager": "bun@1.2.10",
 	"description": "Web UI for Phantom Bridge",
 	"scripts": {
-		"dev": "bun --watch src/WebUIServer.ts",
+		"dev": "NODE_ENV=development bun --watch src/WebUIServer.ts",
 		"start": "bun src/WebUIServer.ts",
 		"format": "prettier --write src static"
 	},
