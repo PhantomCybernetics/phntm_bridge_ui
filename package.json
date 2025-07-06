@@ -1,8 +1,8 @@
 {
 	"name": "phntm_bridge_ui",
 	"version": "0.0.1",
-	"packageManager": "bun@1.2.10",
 	"description": "Web UI for Phantom Bridge",
+	"packageManager": "bun@1.2.10",
 	"scripts": {
 		"dev": "NODE_ENV=development bun --watch src/WebUIServer.ts",
 		"start": "bun src/WebUIServer.ts",
