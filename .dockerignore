@@ -1,3 +1,4 @@
-node_modules
-.vscode
-ssl
+/.vscode
+/node_modules
+/ssl
+/config.jsonc
