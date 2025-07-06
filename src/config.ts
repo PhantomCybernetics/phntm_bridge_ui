@@ -25,6 +25,7 @@ const envConfigSchema = z
 
 // final config schema, with default values and strict types
 const fullConfigSchema = z.object({
+	name: z.string().default("PHNTM BRIDGE WEB UI"),
 	https: z.boolean().default(false),
 	ssl: z.object({ private: z.string(), public: z.string() }).optional(),
 	port: z.number().positive().int(),
