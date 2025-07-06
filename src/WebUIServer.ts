@@ -23,7 +23,7 @@ const uiVersion = (await import("../package.json")).version;
 console.log(
 	"-----------------------------------------------------------------------".yellow,
 );
-console.log(" PHNTM BRIDGE WEB UI".yellow);
+console.log(` ${config.name}`.yellow);
 console.log("");
 console.log(
 	` ${config.https ? "https" : "http"}://${config.host}${
