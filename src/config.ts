@@ -71,3 +71,5 @@ export async function getConfig() {
 
 	return fullConfigSchema.parse(Object.assign({}, fileConfig, envConfigRenamed));
 }
+
+export type BridgeUiConfig = Awaited<ReturnType<typeof getConfig>>;
