@@ -1,3 +1,3 @@
 #!/bin/bash
 
-run ./src/WebUIServer.ts "$@"
+run ./src/main.ts "$@"
