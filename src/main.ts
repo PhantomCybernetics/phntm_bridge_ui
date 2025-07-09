@@ -2,6 +2,7 @@ import fs from "node:fs";
 import https from "node:https";
 import http from "node:http";
 
+import express from "express";
 import C from "colors";
 C; //force import typings with string prototype extension
 
@@ -16,7 +17,9 @@ const uiVersion = (await import("../package.json")).version;
 
 printStartupMessage({ uiVersion }, config);
 
-const webExpressApp = createWebUIServerExpressApp({ $d, uiVersion }, config);
+const webExpressApp = express();
+
+createWebUIServerExpressApp({ $d, uiVersion }, config, webExpressApp);
 
 function httpsOptions() {
 	const SSL_CERT_PRIVATE = config.ssl!.private;
