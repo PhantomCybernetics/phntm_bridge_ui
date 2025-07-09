@@ -36,9 +36,8 @@ export function printStartupMessage(
 export function createWebUIServerExpressApp(
 	{ $d, uiVersion }: { $d: Debugger; uiVersion: string },
 	config: BridgeUiConfig,
+	webExpressApp: express.Express,
 ) {
-	const webExpressApp = express();
-
 	webExpressApp.engine(".html", ejs.renderFile);
 	webExpressApp.set("views", path.join(__dirname, "../src/views"));
 	webExpressApp.set("view engine", "html");
