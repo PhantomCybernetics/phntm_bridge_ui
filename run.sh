@@ -1,3 +1,3 @@
 #!/bin/bash
 
-run ./src/main.ts "$@"
+bun ./src/main.ts "$@"

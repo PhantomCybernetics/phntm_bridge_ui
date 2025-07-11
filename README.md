@@ -2,9 +2,9 @@
 
 This package contains web UI for the Phantom Bridge and a web server to serve it.
 
-The web server itself does not connect to anything, it merely servers semi-static HTML and JavaScript to users. The UI in the web browser establishes connection to Cloud Bridge via Socket.io, and to the Bridge node on a robot via WebRTC P2P connection.
+The web server itself does not connect to anything, it merely servers semi-static HTML and JavaScript to users. The UI in the web browser establishes connection to Bridge Server via Socket.io, and to the Bridge node on a robot via WebRTC P2P connection.
 
-You can fork this repository and host it yourself to customize the default UI provided. The configuration file specifies which Cloud Bridge server shall the client connect to.
+You can fork this repository and host it yourself to customize the default UI provided. The configuration file specifies which Bridge Server server shall the client connect to.
 
 ![Infrastructure map](https://raw.githubusercontent.com/PhantomCybernetics/phntm_bridge_docs/refs/heads/main/img/Architecture_UI_Server.png)
 
@@ -25,9 +25,9 @@ cd bridge/ui
 bun install
 ```
 
-### Register a new App on the Cloud Bridge
+### Register a new App on the Bridge Server
 
-To Phantom Bridge, this UI represents an app, individual browser clients running web ui are considered app instances. New app needs to register with the Cloud Bridge server it intends to use. The following link will return a new appId/appKey pair, put these in your config.jsonc below.
+To Phantom Bridge, this UI represents an app, individual browser clients running web ui are considered app instances. New app needs to register with the Bridge Server server it intends to use. The following link will return a new appId/appKey pair, put these in your config.jsonc below.
 [https://register.phntm.io/app](https://register.phntm.io/app)
 
 ### Create config file

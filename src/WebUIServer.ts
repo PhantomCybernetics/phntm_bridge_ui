@@ -88,7 +88,7 @@ export function createWebUIServerExpressApp(
 		async function (req: express.Request, res: express.Response) {
 			res.setHeader("Content-Type", "text/html; charset=utf-8");
 
-			// query the cloud bridge server (closest) for the registered
+			// query the Bridge Server server (closest) for the registered
 			// instance of this robot
 			let idRobot: string = req.params.ID;
 			axios
@@ -113,7 +113,7 @@ export function createWebUIServerExpressApp(
 								")",
 						);
 						res.send(
-							"Error locating robot on Cloud Bridge, Web UI credentials misconfigured (err: " +
+							"Error locating robot on Bridge Server, Web UI credentials misconfigured (err: " +
 								response.status +
 								")",
 						);
@@ -124,7 +124,7 @@ export function createWebUIServerExpressApp(
 							"Locate returned code wrong robot id for " + idRobot + ":",
 							response.data,
 						);
-						res.send("Error locating robot on Cloud Bridge");
+						res.send("Error locating robot on Bridge Server");
 						return;
 					}
 					let robot_bridge_sever: string =
@@ -154,7 +154,7 @@ export function createWebUIServerExpressApp(
 								config.bridgeLocateUrl +
 								")",
 						);
-						res.send("Timed out locating robot on Cloud Bridge");
+						res.send("Timed out locating robot on Bridge Server");
 					} else if (error.code === "ECONNREFUSED") {
 						$d.err(
 							"Locating request refused for " +
@@ -163,7 +163,7 @@ export function createWebUIServerExpressApp(
 								config.bridgeLocateUrl +
 								")",
 						);
-						res.send("Error connecing to Cloud Bridge, connection refused");
+						res.send("Error connecing to Bridge Server, connection refused");
 					} else if (error.status == 404) {
 						$d.err(
 							"Locate returned code 404 for " +
@@ -172,7 +172,7 @@ export function createWebUIServerExpressApp(
 								config.bridgeLocateUrl +
 								")",
 						);
-						res.send("Robot not found on Cloud Bridge");
+						res.send("Robot not found on Bridge Server");
 					} else {
 						$d.err(
 							"Error locating robot " +
@@ -183,7 +183,7 @@ export function createWebUIServerExpressApp(
 							error.message,
 						);
 						res.send(
-							"Error locating robot on Cloud Bridge, Web UI seems misconfigured (err: " +
+							"Error locating robot on Bridge Server, Web UI seems misconfigured (err: " +
 								error.code +
 								")",
 						);

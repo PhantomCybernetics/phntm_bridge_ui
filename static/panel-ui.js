@@ -209,7 +209,7 @@ export class PanelUI {
 				client.robot_socket_online ? "green" : "red",
 				"Robot " +
 					(client.robot_socket_online ? "conected to" : "disconnected from") +
-					" Cloud Bridge [Socket.io]",
+					" Bridge Server [Socket.io]",
 			);
 			if (!client.robot_socket_online) {
 				that.updateWifiSignal(-1);
@@ -248,7 +248,7 @@ export class PanelUI {
 				client.robot_socket_online ? "green" : "red",
 				"Robot " +
 					(client.robot_socket_online ? "conected to" : "disconnected from") +
-					" Cloud Bridge [Socket.io]",
+					" Bridge Server [Socket.io]",
 			);
 			console.log("UI got socket_disconnect, timer=", that.reconnection_timer);
 
@@ -518,7 +518,7 @@ export class PanelUI {
 			that.setDotState(
 				2,
 				"red",
-				"Robot disconnected from Cloud Bridge [Socket.io]",
+				"Robot disconnected from Bridge Server [Socket.io]",
 			);
 			that.updateWifiSignal(-1);
 			that.updateNumPeers(-1);
@@ -549,16 +549,16 @@ export class PanelUI {
 			}, 0);
 		});
 
-		// browser's Socket.io connection to the Cloud Bridge's server
+		// browser's Socket.io connection to the Bridge Server's server
 		client.socket.on("connect", () => {
 			setTimeout(() => {
 				$("#socketio_status").html(
-					'<span class="label">Cloud Bridge:</span> <span class="online">Connected [Socket.io]</span>',
+					'<span class="label">Bridge Server:</span> <span class="online">Connected [Socket.io]</span>',
 				);
 				that.setDotState(
 					0,
 					"green",
-					"This client is conected to Cloud Bridge [Socket.io]",
+					"This client is conected to Bridge Server [Socket.io]",
 				);
 			}, 0);
 		});
@@ -566,12 +566,12 @@ export class PanelUI {
 		client.socket.on("disconnect", () => {
 			setTimeout(() => {
 				$("#socketio_status").html(
-					'<span class="label">Cloud Bridge:</span> <span class="offline">Disconnected [Socket.io]</span>',
+					'<span class="label">Bridge Server:</span> <span class="offline">Disconnected [Socket.io]</span>',
 				);
 				that.setDotState(
 					0,
 					"red",
-					"This client is disconnected from Cloud Bridge [Socket.io]",
+					"This client is disconnected from Bridge Server [Socket.io]",
 				);
 			}, 0);
 		});

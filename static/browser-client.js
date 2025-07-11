@@ -109,7 +109,7 @@ export function IsFastVideoTopic(t) {
 export class PhntmBridgeClient extends EventTarget {
 	id_robot = null;
 	session = null;
-	supported_msg_types = []; // served from Cloud Bridge
+	supported_msg_types = []; // served from Bridge Server
 
 	pc = null;
 
@@ -496,7 +496,7 @@ export class PhntmBridgeClient extends EventTarget {
 		});
 
 		this.on("peer_conection_changed", () => {
-			that.reportConectionState(); // update webrtc state on cloud bridge that sends it to the robot
+			that.reportConectionState(); // update webrtc state on Bridge Server that sends it to the robot
 		});
 		// pc = InitPeerConnection(id_robot);
 	}
@@ -1624,7 +1624,7 @@ export class PhntmBridgeClient extends EventTarget {
 	_clearConnection() {
 		console.warn("Clearing session");
 		this.session = null; // pc session
-		//this.socket_auth.id_instance = null; // cloud bridge will generate new instance id on connection
+		//this.socket_auth.id_instance = null; // Bridge Server will generate new instance id on connection
 		// this.init_complete = false;
 
 		let that = this;
@@ -1835,7 +1835,7 @@ export class PhntmBridgeClient extends EventTarget {
 		}
 	}
 
-	// post connection update to cloud bridge
+	// post connection update to Bridge Server
 	// this is only used in for system diagnostics
 	reportConectionState() {
 		let con_data = {

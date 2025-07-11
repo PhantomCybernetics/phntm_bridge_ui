@@ -9,13 +9,13 @@
 	"host": "bridge.example.com", // Only informational, included in startup logs
 	"path": "/", // base address of the UI (ID_ROBOT will be appended)
 
-	// address where robot's Cloud Bridge instance will be requested
+	// address where robot's Bridge Server instance will be requested
 	"bridgeLocateUrl": "https://register.phntm.io/locate",
 
-	"bridgeSocketPort": 1337, // Cloud Bridge port for Socket.io
-	"bridgeFilesPort": 1338, // Cloud Bridge port for file requests
+	"bridgeSocketPort": 1337, // Bridge Server port for Socket.io
+	"bridgeFilesPort": 1338, // Bridge Server port for file requests
 
-	// app credentials generated upon registration on Cloud Bridge
+	// app credentials generated upon registration on Bridge Server
 	"appId": "APP_ID",
 	"appKey": "APP_KEY",
 	"name": "Phntm Bridge Web UI",
