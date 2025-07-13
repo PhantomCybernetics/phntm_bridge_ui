@@ -794,7 +794,7 @@ BODY.top-menu #graph_controls.active.hover_waiting #graph_display {
 	border-radius: 0px 0px 5px 5px;
 	position: relative;
 	display: inline-block;
-	margin: 0px 5px 5px 0px;
+	margin: 0px 0px 5px 0px;
 	z-index: 1;
 	white-space: nowrap;
 	height: 20px;
