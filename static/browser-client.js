@@ -1329,7 +1329,7 @@ export class PhntmBridgeClient extends EventTarget {
 
         let dc = null;
         try {
-            console.log('Creating write DC for '+topic+'; pc=', this.pc);
+            console.log('Creating write DC for '+topic+' '+msg_type+'}; pc=', this.pc);
             dc = this.pc.createDataChannel(
                 topic,
                 {

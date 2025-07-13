@@ -5420,9 +5420,9 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     z-index: 200;
     /* min-width: 520px; */
     padding: 20px;
-    min-width: min(970px, calc(100% - 60px));
-    max-width: calc(100% - 60px);
-    max-height: calc(100% - 60px);
+    min-width: min(970px, calc(100% - 100px));
+    max-width: calc(100% - 100px);
+    /* max-height: calc(100% - 100px); */
     font-size: 17px;
     color: #fff;
     border-radius: 10px;
@@ -5430,8 +5430,29 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover{
     left: 50%;
     transform: translate(-50%, -50%);
     line-height: 22px;
-    text-align: center;
+    text-align: left;
+    overflow: hidden;
+}
+
+#description-dialog #descriptoin-dialog-header {
+    margin-bottom: 10px;
+}
+
+#description-dialog #descriptoin-dialog-content {
     overflow: scroll;
+    background-color: #031139;
+    margin-bottom: 40px;
+    max-height: calc(100vh - 300px);
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#description-dialog-buttons {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
 }
 
 BODY.desktop-ui #description-dialog .touch-only {
@@ -5447,11 +5468,6 @@ BODY.touch-ui #description-dialog .desktop-only {
     padding: 9px 0px 0px 0px;
     display: block;
     margin: 0px;
-}
-
-#description-dialog-buttons {
-    margin-top: 20px;
-    text-align: center;
 }
 
 #description-dialog-buttons BUTTON {
@@ -5475,6 +5491,10 @@ BODY.touch-ui #description-dialog .desktop-only {
     white-space: nowrap;
     font-weight: bold;
     font-size: 14px;
+}
+
+#description-dialog .num-peers {
+    background-color: rgb(255 255 255);
 }
 
 #description-dialog A {
@@ -5503,18 +5523,21 @@ BODY.touch-ui #description-dialog .desktop-only {
     float: left;
     margin-top: 22px;
     margin-left: 20px;
+    text-align: center;
 }
 
 /* If viewport is less than this*/
-@media (max-width: 660px) {
+@media (max-width: 695px) {
   #description-dialog #phntm-cybernetics-logo IMG {
     width: calc(100% - 40px);
+    max-height: 100px;
     margin-bottom: 10px;
   }
   #description-dialog H2.with-phntm-cybernetics-logo {
     float: none;
     margin-top: 22px;
     margin-left: 0px;
+    margin-bottom: 10px;
     display: block;
   }
 }

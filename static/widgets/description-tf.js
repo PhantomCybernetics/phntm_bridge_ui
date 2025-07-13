@@ -924,7 +924,7 @@ export class DescriptionTFWidget extends EventTarget {
                 });
                 obj.material.needsUpdate = true;
             } else  {
-                console.log('Obj had material: ', obj);
+                console.log('Obj "' + obj.name + '" had material: ', obj);
                 obj.material.depthWrite = true;
                 obj.material.side = THREE.FrontSide;
             }

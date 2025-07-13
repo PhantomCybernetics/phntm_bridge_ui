@@ -312,8 +312,8 @@ export class PanelUI {
             that.saveLastRobotBatteryShown(that.battery_shown);
 
             // description dialog
-             if (robot_ui_config['description']) {
-                that.makeDescriptionDialog(robot_ui_config['description']);
+             if (robot_ui_config['description'] || robot_ui_config['description_header']) {
+                that.makeDescriptionDialog(robot_ui_config['description_header'], robot_ui_config['description']);
              }
 
             // introspection control
@@ -2554,19 +2554,29 @@ export class PanelUI {
         return val;
     }
 
-    makeDescriptionDialog(description) {
+    makeDescriptionDialog(description_header, description) {
         
+        let that = this;
+
+        let header = $('<div id="descriptoin-dialog-header"></div>');
+        if (description_header) {
+            header.html(description_header + '<div class="cleaner"/>');
+            header.find('A').each(function(index, anchor) {
+                $(anchor).on('click', (ev) => {
+                    ev.preventDefault();
+                    window.open($(this).attr('href'), '_blank');
+                });
+            });
+        }
+
         let html_str = nl2br(description);
-        let content = $('<div>').html(html_str);
-        let links = content.find('A');
-        links.each(function(index, anchor) {
-            console.log(index, anchor);
+        let content = $('<div id="descriptoin-dialog-content">').html(html_str);
+        content.find('A').each(function(index, anchor) {
             $(anchor).on('click', (ev) => {
                 ev.preventDefault();
                 window.open($(this).attr('href'), '_blank');
             });
         });
-        let that = this;
 
         let btns = $('<div id="description-dialog-buttons"></div>');
         let btn_close = $('<button>Close</button>');
@@ -2575,8 +2585,13 @@ export class PanelUI {
         });
         btn_close.appendTo(btns);
 
-        $('#description-dialog').empty()
-                                .append(content)
+        $('#description-dialog').empty();
+        if (description_header) {
+            $('#description-dialog').append(header);
+            $('#description-dialog').append($('<div class="cleaner"/>'));
+        }
+            
+        $('#description-dialog').append(content)
                                 .append(btns);
 
         if (html_str) {
