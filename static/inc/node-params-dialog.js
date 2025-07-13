@@ -1,418 +1,628 @@
-import { ServiceInputDialog } from './service-input-dialog.js';
+import { ServiceInputDialog } from "./service-input-dialog.js";
 
 export class NodeParamsDialog {
+	constructor(client) {
+		this.client = client;
 
-    constructor(client) {
-        this.client = client;
+		this.cont_el = $("#node-params-dialog");
+		this.bg = $("#dialog-modal-confirm-underlay");
+		this.editor_size = 0;
+	}
 
-        this.cont_el = $('#node-params-dialog');
-        this.bg = $('#dialog-modal-confirm-underlay');
-        this.editor_size = 0;
-        
-    }
+	updateLayout() {
+		let vW = window.innerWidth;
+		let vH = window.innerHeight;
 
-    updateLayout() {
-        let vW = window.innerWidth;
-        let vH = window.innerHeight;
+		if (vW < 570) this.cont_el.addClass("narrow");
+		else this.cont_el.removeClass("narrow");
 
-        if (vW < 570)
-            this.cont_el.addClass('narrow');
-        else
-            this.cont_el.removeClass('narrow');
+		if (vH < 570) this.cont_el.addClass("thin");
+		else this.cont_el.removeClass("thin");
+	}
 
-        if (vH < 570)
-            this.cont_el.addClass('thin');
-        else
-            this.cont_el.removeClass('thin');
-    }
+	selectParam(name, value, description, i_list_param, param_label_el) {
+		this.list_el.addClass("editor-open");
 
-    selectParam(name, value, description, i_list_param, param_label_el) {
+		if (this.selected_param_label && param_label_el != this.selected_param_label) {
+			this.selected_param_label.removeClass("selected");
+			this.selected_param_label = null;
+		}
 
-        this.list_el.addClass('editor-open');
+		this.editor_el.addClass("open");
+		this.param_btns_el.addClass("editor-open");
 
-        if (this.selected_param_label && param_label_el != this.selected_param_label) {
-            this.selected_param_label.removeClass('selected');
-            this.selected_param_label = null;
-        }
-        
-        this.editor_el.addClass('open');
-        this.param_btns_el.addClass('editor-open');
+		param_label_el.addClass("selected");
+		this.selected_param_label = param_label_el;
+		this.selected_param_name = name;
+		this.selected_param_value = value;
+		this.selected_param_description = description;
 
-        param_label_el.addClass('selected');
-        this.selected_param_label = param_label_el;
-        this.selected_param_name = name;
-        this.selected_param_value = value;
-        this.selected_param_description = description;
+		this.renderParam(name, value, i_list_param);
+	}
 
-        this.renderParam(name, value, i_list_param);
-    }
+	renderParam(name, value, i_list_param) {
+		let field = {
+			type: null,
+			name: name,
+		};
 
-    renderParam(name, value, i_list_param) {
-        
-        let field = {
-            type: null,
-            name: name,
-        }
+		console.log(
+			"Rendering param " + name + ", value/desc=",
+			value,
+			this.selected_param_description,
+		);
 
-        console.log('Rendering param '+name+', value/desc=', value, this.selected_param_description);
+		let default_value = null;
 
-        let default_value = null;
+		let is_array = false;
+		switch (value["type"]) {
+			case 1:
+				field.type = "bool";
+				default_value = value.bool_value;
+				break;
+			case 2:
+				field.type = "int64";
+				default_value = value.integer_value;
+				break;
+			case 3:
+				field.type = "float64";
+				default_value = value.double_value;
+				break;
+			case 4:
+				field.type = "string";
+				default_value = value.string_value;
+				if (
+					default_value.indexOf("\n") > -1 ||
+					default_value.indexOf("\r") > -1 ||
+					default_value.length > 50
+				) {
+					field.is_long_text = true; // shows textarea
+				}
+				break;
+			case 5:
+				field.type = "uint8";
+				is_array = true;
+				default_value = [];
+				value.byte_array_value.forEach((buff) => {
+					const uint8Array = new Uint8Array(buff);
+					default_value.push(uint8Array[0]);
+				});
+				break;
+			case 6:
+				field.type = "bool";
+				is_array = true;
+				default_value = [].concat(value.bool_array_value);
+				break;
+			case 7:
+				field.type = "int64";
+				is_array = true;
+				default_value = [].concat(value.integer_array_value);
+				break;
+			case 8:
+				field.type = "float64";
+				is_array = true;
+				default_value = [].concat(value.double_array_value);
+				break;
+			case 9:
+				field.type = "string";
+				is_array = true;
+				default_value = [].concat(value.string_array_value);
+				break;
+		}
 
-        let is_array = false;
-        switch (value['type']) {
-            case 1: field.type = 'bool'; default_value = value.bool_value; break;
-            case 2: field.type = 'int64'; default_value = value.integer_value; break;
-            case 3: field.type = 'float64'; default_value = value.double_value; break;
-            case 4:
-                field.type = 'string';
-                default_value = value.string_value;
-                if (default_value.indexOf("\n") > -1 ||
-                    default_value.indexOf("\r") > -1 ||
-                    default_value.length > 50)
-                {
-                    field.is_long_text = true; // shows textarea
-                }
-                break;
-            case 5:
-                field.type = 'uint8'; is_array = true;
-                default_value = [];
-                value.byte_array_value.forEach((buff)=>{
-                    const uint8Array = new Uint8Array(buff);
-                    default_value.push(uint8Array[0]);
-                });
-                break;
-            case 6: field.type = 'bool'; is_array = true; default_value = [].concat(value.bool_array_value); break;
-            case 7: field.type = 'int64'; is_array = true; default_value = [].concat(value.integer_array_value); break;
-            case 8: field.type = 'float64'; is_array = true; default_value = [].concat(value.double_array_value); break;
-            case 9: field.type = 'string'; is_array = true; default_value = [].concat(value.string_array_value); break;
-        }
+		this.output_value = default_value;
 
-        this.output_value = default_value;
+		this.editor_el.empty();
 
-        this.editor_el.empty();
+		let editor_size = this.editor_size;
 
-        let editor_size = this.editor_size;
-        
-        let that = this;
+		let that = this;
 
-        let hint_lines = [];
-        if (this.selected_param_description.description) {
-            hint_lines.push($('<span class="hint-line">'+this.selected_param_description.description+'</span>'));
-        }
-        if (this.selected_param_description.additional_constraints) {
-            hint_lines.push($('<span class="hint-line">'+this.selected_param_description.additional_constraints+'</span>'));
-        }
-        if (this.selected_param_description.integer_range && this.selected_param_description.integer_range.length) {
-            let ranges = [];
-            this.selected_param_description.integer_range.forEach(range => {
-                let rr = [];
-                if (range.from_value !== undefined)
-                    rr.push('From '+range.from_value);
-                if (range.to_value !== undefined)
-                    rr.push((rr.length?'to':'To')+' '+range.to_value);
-                ranges.push(rr.join(' '));
-            });
-            hint_lines.push($('<span class="hint-line">'+ranges.join(', ')+'</span>'));
-        }
-        if (this.selected_param_description.floating_point_range && this.selected_param_description.floating_point_range.length) {
-            let ranges = [];
-            this.selected_param_description.floating_point_range.forEach(range => {
-                let rr = [];
-                if (range.from_value !== undefined)
-                    rr.push('From '+range.from_value.toFixed(1));
-                if (range.to_value !== undefined)
-                    rr.push((rr.length?'to':'To')+' '+range.to_value.toFixed(1));
-                ranges.push(rr.join(' '));
-            });
-            hint_lines.push($('<span class="hint-line">'+ranges.join(', ')+'</span>'));
-        }
-        hint_lines.forEach((hint_line_el) => {
-            this.editor_el.append(hint_line_el);
-        });
+		let hint_lines = [];
+		if (this.selected_param_description.description) {
+			hint_lines.push(
+				$(
+					'<span class="hint-line">' +
+						this.selected_param_description.description +
+						"</span>",
+				),
+			);
+		}
+		if (this.selected_param_description.additional_constraints) {
+			hint_lines.push(
+				$(
+					'<span class="hint-line">' +
+						this.selected_param_description.additional_constraints +
+						"</span>",
+				),
+			);
+		}
+		if (
+			this.selected_param_description.integer_range &&
+			this.selected_param_description.integer_range.length
+		) {
+			let ranges = [];
+			this.selected_param_description.integer_range.forEach((range) => {
+				let rr = [];
+				if (range.from_value !== undefined) rr.push("From " + range.from_value);
+				if (range.to_value !== undefined)
+					rr.push((rr.length ? "to" : "To") + " " + range.to_value);
+				ranges.push(rr.join(" "));
+			});
+			hint_lines.push(
+				$('<span class="hint-line">' + ranges.join(", ") + "</span>"),
+			);
+		}
+		if (
+			this.selected_param_description.floating_point_range &&
+			this.selected_param_description.floating_point_range.length
+		) {
+			let ranges = [];
+			this.selected_param_description.floating_point_range.forEach((range) => {
+				let rr = [];
+				if (range.from_value !== undefined)
+					rr.push("From " + range.from_value.toFixed(1));
+				if (range.to_value !== undefined)
+					rr.push((rr.length ? "to" : "To") + " " + range.to_value.toFixed(1));
+				ranges.push(rr.join(" "));
+			});
+			hint_lines.push(
+				$('<span class="hint-line">' + ranges.join(", ") + "</span>"),
+			);
+		}
+		hint_lines.forEach((hint_line_el) => {
+			this.editor_el.append(hint_line_el);
+		});
 
-        if (is_array) {
-            editor_size = 7; //-ish
-            
-            this.list_el
-                .removeClass('one-line-editor')
-                .css('height', '');
-            this.editor_el
-                .removeClass('one-line')
-                .css('height', '');
+		if (is_array) {
+			editor_size = 7; //-ish
 
-            ServiceInputDialog.MakePrimitiveArray(field, default_value, this.editor_el, true, (index, val) => {
-                // console.log('Output val ['+index+'] changed to ', val);
-                if (index === undefined && val === undefined)
-                    that.output_value.pop(); // trimmed
-                else
-                    that.output_value[index] = val;
-            });
-    
-        } else {
-            if (!field.is_long_text) { // one line
-                editor_size = 1+hint_lines.length;
-            } else {
-                editor_size = 4+hint_lines.length;
-            }
+			this.list_el.removeClass("one-line-editor").css("height", "");
+			this.editor_el.removeClass("one-line").css("height", "");
 
-            this.list_el
-                .addClass('one-line-editor')
-                .css('height', 'calc(60vh - 60px + 5px - '+(34*editor_size)+'px - 20px)');
-            this.editor_el
-                .addClass('one-line')
-                .css('height', (34*editor_size)+'px');
-                
-            const r = ServiceInputDialog.MakePrimitiveType(field, default_value, true, true, (val) => {
-                // console.log('Output val changed to ', val);
-                that.output_value = val;
-            });
-            this.editor_el.append(r.line);
-        }
+			ServiceInputDialog.MakePrimitiveArray(
+				field,
+				default_value,
+				this.editor_el,
+				true,
+				(index, val) => {
+					// console.log('Output val ['+index+'] changed to ', val);
+					if (index === undefined && val === undefined)
+						that.output_value.pop(); // trimmed
+					else that.output_value[index] = val;
+				},
+			);
+		} else {
+			if (!field.is_long_text) {
+				// one line
+				editor_size = 1 + hint_lines.length;
+			} else {
+				editor_size = 4 + hint_lines.length;
+			}
 
-        //fix scroll when list gets smaller
-        if (editor_size > this.editor_size) { 
-            let scroll_offset = i_list_param * 30 - this.list_el.height()/2.0;
-            this.list_el.scrollTop(scroll_offset);
-        }
-        this.editor_size = editor_size;
+			this.list_el
+				.addClass("one-line-editor")
+				.css(
+					"height",
+					"calc(60vh - 60px + 5px - " + 34 * editor_size + "px - 20px)",
+				);
+			this.editor_el.addClass("one-line").css("height", 34 * editor_size + "px");
 
-        if (this.selected_param_description.read_only) {
-            this.btn_set.addClass('read-only');
-            this.btn_set.attr('title', 'Parameter is read-only');
-        } else {
-            this.btn_set.removeClass('read-only');
-            this.btn_set.attr('title', '');
-        }
+			const r = ServiceInputDialog.MakePrimitiveType(
+				field,
+				default_value,
+				true,
+				true,
+				(val) => {
+					// console.log('Output val changed to ', val);
+					that.output_value = val;
+				},
+			);
+			this.editor_el.append(r.line);
+		}
 
-        this.editor_el.find('INPUT, SELECT').on('keypress', (ev)=>{
-            if (ev.keyCode == 13 && !that.btn_set.hasClass('read-only') && !that.btn_set.hasClass('working')) {
-                // btn_edit_confirm.trigger('click');
-                console.warn('ENTER');
-                that.btn_set.click();
-            }
-        });
-    }
+		//fix scroll when list gets smaller
+		if (editor_size > this.editor_size) {
+			let scroll_offset = i_list_param * 30 - this.list_el.height() / 2.0;
+			this.list_el.scrollTop(scroll_offset);
+		}
+		this.editor_size = editor_size;
 
-    show(node) {
-        this.node = node;
+		if (this.selected_param_description.read_only) {
+			this.btn_set.addClass("read-only");
+			this.btn_set.attr("title", "Parameter is read-only");
+		} else {
+			this.btn_set.removeClass("read-only");
+			this.btn_set.attr("title", "");
+		}
 
-        let that = this;
+		this.editor_el.find("INPUT, SELECT").on("keypress", (ev) => {
+			if (
+				ev.keyCode == 13 &&
+				!that.btn_set.hasClass("read-only") &&
+				!that.btn_set.hasClass("working")
+			) {
+				// btn_edit_confirm.trigger('click');
+				console.warn("ENTER");
+				that.btn_set.click();
+			}
+		});
+	}
 
-        this.cont_el.empty();
-        this.cont_el.append($('<h3>'+this.node.node+'</h3><span class="title">Runtime ROS Parameters</span>'))
+	show(node) {
+		this.node = node;
 
-        this.list_el = $('<div class="params-list"></div>')
-        this.selected_param_label = null;
-        this.list_el_loader = $('<span class="loader"></span>');
-        this.list_el.append(this.list_el_loader);
+		let that = this;
 
-        this.editor_el = $('<div class="json-editor"></div>')
-        
-        let list_msg = {
-            "prefixes": [],
-            "depth": 0
-        }
+		this.cont_el.empty();
+		this.cont_el.append(
+			$(
+				"<h3>" +
+					this.node.node +
+					'</h3><span class="title">Runtime ROS Parameters</span>',
+			),
+		);
 
-        this.client.serviceCall(node['_srvListParameters'], list_msg, true, (list_reply) =>{
-            if (list_reply.err) {
-                if (that.node == node) {
-                    that.list_el.empty();
-                    that.list_el.append($('<div class="load-err">'+(list_reply.msg?list_reply.msg:'Error while fetching params')+'</div>'));
-                }
-                return;
-            }
-            list_reply.result.names.sort()
-            this.client.serviceCall(node['_srvDescribeParameters'], { "names": list_reply.result.names }, true, (descriptions_reply) =>{
-                if (descriptions_reply.err) {
-                    if (that.node == node) {
-                        that.list_el.empty();
-                        that.list_el.append($('<div class="load-err">'+(descriptions_reply.msg?descriptions_reply.msg:'Error while fetching param descriptions')+'</div>'));
-                    }
-                    return;
-                }
-                this.client.serviceCall(node['_srvGetParameters'], { "names": list_reply.result.names }, true, (vals_reply) =>{
-                    if (vals_reply.err) {
-                        if (that.node == node) {
-                            that.list_el.empty();
-                            that.list_el.append($('<div class="load-err">'+(vals_reply.msg?vals_reply.msg:'Error while fetching params')+'</div>'));
-                        }
-                        return;
-                    }
-                    that.list_el.empty();
+		this.list_el = $('<div class="params-list"></div>');
+		this.selected_param_label = null;
+		this.list_el_loader = $('<span class="loader"></span>');
+		this.list_el.append(this.list_el_loader);
 
-                    for (let i = 0; i < list_reply.result.names.length; i++) {
-                        let name = list_reply.result.names[i];
-                        let value = vals_reply.values[i];
-                        let description = descriptions_reply.descriptors[i];
-                        let type_hr = that.getTypeHR(value['type']);
-                        let param_label_el = $('<div class="param-name prevent-select">'+name+'<span class="param-type">'+type_hr+'</span></div>');
-                        that.list_el.append(param_label_el);
-                        param_label_el.click((ev)=>{
-                            that.selectParam(name, value, description, i, param_label_el);
-                        });
-                    }
+		this.editor_el = $('<div class="json-editor"></div>');
 
-                });
-            });
-        });
+		let list_msg = {
+			prefixes: [],
+			depth: 0,
+		};
 
-        this.bottom_btns_el = $('<div class="buttons"></div>');
-        let btn_close = $('<button class="btn-close">Close</button>');
-        btn_close.click((ev)=>{
-            that.hide();
-        });
+		this.client.serviceCall(
+			node["_srvListParameters"],
+			list_msg,
+			true,
+			(list_reply) => {
+				if (list_reply.err) {
+					if (that.node == node) {
+						that.list_el.empty();
+						that.list_el.append(
+							$(
+								'<div class="load-err">' +
+									(list_reply.msg
+										? list_reply.msg
+										: "Error while fetching params") +
+									"</div>",
+							),
+						);
+					}
+					return;
+				}
+				list_reply.result.names.sort();
+				this.client.serviceCall(
+					node["_srvDescribeParameters"],
+					{ names: list_reply.result.names },
+					true,
+					(descriptions_reply) => {
+						if (descriptions_reply.err) {
+							if (that.node == node) {
+								that.list_el.empty();
+								that.list_el.append(
+									$(
+										'<div class="load-err">' +
+											(descriptions_reply.msg
+												? descriptions_reply.msg
+												: "Error while fetching param descriptions") +
+											"</div>",
+									),
+								);
+							}
+							return;
+						}
+						this.client.serviceCall(
+							node["_srvGetParameters"],
+							{ names: list_reply.result.names },
+							true,
+							(vals_reply) => {
+								if (vals_reply.err) {
+									if (that.node == node) {
+										that.list_el.empty();
+										that.list_el.append(
+											$(
+												'<div class="load-err">' +
+													(vals_reply.msg
+														? vals_reply.msg
+														: "Error while fetching params") +
+													"</div>",
+											),
+										);
+									}
+									return;
+								}
+								that.list_el.empty();
 
-        this.param_btns_el = $('<div class="pram-buttons"></div>');
+								for (let i = 0; i < list_reply.result.names.length; i++) {
+									let name = list_reply.result.names[i];
+									let value = vals_reply.values[i];
+									let description = descriptions_reply.descriptors[i];
+									let type_hr = that.getTypeHR(value["type"]);
+									let param_label_el = $(
+										'<div class="param-name prevent-select">' +
+											name +
+											'<span class="param-type">' +
+											type_hr +
+											"</span></div>",
+									);
+									that.list_el.append(param_label_el);
+									param_label_el.click((ev) => {
+										that.selectParam(
+											name,
+											value,
+											description,
+											i,
+											param_label_el,
+										);
+									});
+								}
+							},
+						);
+					},
+				);
+			},
+		);
 
-        let btn_reload = $('<button class="btn-reload">Reload</button>');
-        btn_reload.click((ev) => {
-        
-            btn_reload.addClass('working');
+		this.bottom_btns_el = $('<div class="buttons"></div>');
+		let btn_close = $('<button class="btn-close">Close</button>');
+		btn_close.click((ev) => {
+			that.hide();
+		});
 
-            this.client.serviceCall(node['_srvGetParameters'], { "names": [ that.selected_param_name ] }, true, (value_reply) =>{
-                that.client.ui.serviceReplyNotification(btn_reload, node['_srvGetParameters'], false, value_reply);
-                btn_reload.removeClass('working');
+		this.param_btns_el = $('<div class="pram-buttons"></div>');
 
-                if (value_reply.err) {
-                    if (that.node == node) {
-                        that.editor_el.empty();
-                        that.editor_el.append($('<div class="load-err">'+(value_reply.msg?value_reply.msg:'Error while fetching param value')+'</div>'));
-                    }
-                    return;
-                }
-                
-                that.selected_param_value.bool_value = value_reply.values[0].bool_value;
-                that.selected_param_value.integer_value = value_reply.values[0].integer_value;
-                that.selected_param_value.double_value = value_reply.values[0].double_value;
-                that.selected_param_value.string_value = value_reply.values[0].string_value;
+		let btn_reload = $('<button class="btn-reload">Reload</button>');
+		btn_reload.click((ev) => {
+			btn_reload.addClass("working");
 
-                that.selected_param_value.byte_array_value.length = 0;
-                that.selected_param_value.byte_array_value.push(...value_reply.values[0].byte_array_value)
+			this.client.serviceCall(
+				node["_srvGetParameters"],
+				{ names: [that.selected_param_name] },
+				true,
+				(value_reply) => {
+					that.client.ui.serviceReplyNotification(
+						btn_reload,
+						node["_srvGetParameters"],
+						false,
+						value_reply,
+					);
+					btn_reload.removeClass("working");
 
-                that.selected_param_value.bool_array_value.length = 0;
-                that.selected_param_value.bool_array_value.push(...value_reply.values[0].bool_array_value)
-                
-                that.selected_param_value.integer_array_value.length = 0;
-                that.selected_param_value.integer_array_value.push(...value_reply.values[0].integer_array_value)
+					if (value_reply.err) {
+						if (that.node == node) {
+							that.editor_el.empty();
+							that.editor_el.append(
+								$(
+									'<div class="load-err">' +
+										(value_reply.msg
+											? value_reply.msg
+											: "Error while fetching param value") +
+										"</div>",
+								),
+							);
+						}
+						return;
+					}
 
-                that.selected_param_value.double_array_value.length = 0;
-                that.selected_param_value.double_array_value.push(...value_reply.values[0].double_array_value)
+					that.selected_param_value.bool_value =
+						value_reply.values[0].bool_value;
+					that.selected_param_value.integer_value =
+						value_reply.values[0].integer_value;
+					that.selected_param_value.double_value =
+						value_reply.values[0].double_value;
+					that.selected_param_value.string_value =
+						value_reply.values[0].string_value;
 
-                that.selected_param_value.string_array_value.length = 0;
-                that.selected_param_value.string_array_value.push(...value_reply.values[0].string_array_value)
+					that.selected_param_value.byte_array_value.length = 0;
+					that.selected_param_value.byte_array_value.push(
+						...value_reply.values[0].byte_array_value,
+					);
 
-                // console.log('local val set to', that.selected_param_value);
+					that.selected_param_value.bool_array_value.length = 0;
+					that.selected_param_value.bool_array_value.push(
+						...value_reply.values[0].bool_array_value,
+					);
 
-                that.renderParam(that.selected_param_name, that.selected_param_value, -1);
-            });
+					that.selected_param_value.integer_array_value.length = 0;
+					that.selected_param_value.integer_array_value.push(
+						...value_reply.values[0].integer_array_value,
+					);
 
-        }); 
+					that.selected_param_value.double_array_value.length = 0;
+					that.selected_param_value.double_array_value.push(
+						...value_reply.values[0].double_array_value,
+					);
 
-        let btn_set = $('<button class="btn-save">Set</button>');
-        this.btn_set = btn_set;
-        btn_set.click((ev) => {
-            
-            if (btn_set.hasClass('read-only'))
-                return;
+					that.selected_param_value.string_array_value.length = 0;
+					that.selected_param_value.string_array_value.push(
+						...value_reply.values[0].string_array_value,
+					);
 
-            btn_set.addClass('working');
+					// console.log('local val set to', that.selected_param_value);
 
-            console.log('setting val ', that.output_value);
+					that.renderParam(
+						that.selected_param_name,
+						that.selected_param_value,
+						-1,
+					);
+				},
+			);
+		});
 
-            let param_val = {
-                name: that.selected_param_name,
-                value: {
-                    type: that.selected_param_value.type,
-                    bool_value: false,
-                    integer_value: 0,
-                    double_value: 0.0,
-                    string_value: '',
-                    byte_array_value: [],
-                    bool_array_value: [],
-                    integer_array_value: [],
-                    double_array_value: [],
-                    string_array_value: [],
-                }
-            }
-            switch (param_val.value.type) {
-                case 1: param_val.value.bool_value = that.output_value; break;
-                case 2: param_val.value.integer_value = that.output_value; break;
-                case 3: param_val.value.double_value = that.output_value; break;
-                case 4: param_val.value.string_value = that.output_value; break;
-                case 5:
-                    param_val.value.byte_array_value = that.output_value;
-                    for (let j = 0; j < param_val.value.byte_array_value.length; j++) 
-                        param_val.value.byte_array_value[j] = param_val.value.byte_array_value[j] === null ? 0 : param_val.value.byte_array_value[j];
-                    break;
-                case 6:
-                    param_val.value.bool_array_value = that.output_value;
-                    for (let j = 0; j < param_val.value.bool_array_value.length; j++)
-                        param_val.value.bool_array_value[j] = param_val.value.bool_array_value[j] === null ? false : param_val.value.bool_array_value[j];
-                    break;
-                case 7:
-                    param_val.value.integer_array_value = that.output_value;
-                    for (let j = 0; j < param_val.value.integer_array_value.length; j++)
-                        param_val.value.integer_array_value[j] = param_val.value.integer_array_value[j] === null ? 0 : param_val.value.integer_array_value[j];
-                    break;
-                case 8:
-                    param_val.value.double_array_value = that.output_value;
-                    for (let j = 0; j < param_val.value.double_array_value.length; j++)
-                        param_val.value.double_array_value[j] = param_val.value.double_array_value[j] === null ? 0.0 : param_val.value.double_array_value[j];
-                    break;
-                case 9:
-                    param_val.value.string_array_value = that.output_value;
-                    for (let j = 0; j < param_val.value.string_array_value.length; j++)
-                        param_val.value.string_array_value[j] = param_val.value.string_array_value[j] === null ? '' : param_val.value.string_array_value[j];
-                    break;
-            }
-            
-            console.log('param val ', param_val);
+		let btn_set = $('<button class="btn-save">Set</button>');
+		this.btn_set = btn_set;
+		btn_set.click((ev) => {
+			if (btn_set.hasClass("read-only")) return;
 
-            that.client.serviceCall(node['_srvSetParameters'], { 'parameters' : [ param_val ] } , true, (set_reply) =>{
-                that.client.ui.serviceReplyNotification(btn_set, node['_srvSetParameters'], false, set_reply);
-                btn_set.removeClass('working');
-                if (set_reply['results'] && set_reply['results'].length == 1 && set_reply['results'][0]['successful'] === true) {
-                    btn_reload.trigger('click');
-                }
-            });
-        }); 
+			btn_set.addClass("working");
 
-        this.param_btns_el.append([ btn_set, btn_reload ]);
-       
-        this.bottom_btns_el.append([ this.param_btns_el,  btn_close ]);
-        this.cont_el.append([ this.list_el, $('<div class="cleaner"/>'), this.editor_el, $('<div class="cleaner"/>'), this.bottom_btns_el ]);
+			console.log("setting val ", that.output_value);
 
-        this.cont_el.draggable({
-            handle: 'h3',
-            cursor: 'move'
-        });
+			let param_val = {
+				name: that.selected_param_name,
+				value: {
+					type: that.selected_param_value.type,
+					bool_value: false,
+					integer_value: 0,
+					double_value: 0.0,
+					string_value: "",
+					byte_array_value: [],
+					bool_array_value: [],
+					integer_array_value: [],
+					double_array_value: [],
+					string_array_value: [],
+				},
+			};
+			switch (param_val.value.type) {
+				case 1:
+					param_val.value.bool_value = that.output_value;
+					break;
+				case 2:
+					param_val.value.integer_value = that.output_value;
+					break;
+				case 3:
+					param_val.value.double_value = that.output_value;
+					break;
+				case 4:
+					param_val.value.string_value = that.output_value;
+					break;
+				case 5:
+					param_val.value.byte_array_value = that.output_value;
+					for (let j = 0; j < param_val.value.byte_array_value.length; j++)
+						param_val.value.byte_array_value[j] =
+							param_val.value.byte_array_value[j] === null
+								? 0
+								: param_val.value.byte_array_value[j];
+					break;
+				case 6:
+					param_val.value.bool_array_value = that.output_value;
+					for (let j = 0; j < param_val.value.bool_array_value.length; j++)
+						param_val.value.bool_array_value[j] =
+							param_val.value.bool_array_value[j] === null
+								? false
+								: param_val.value.bool_array_value[j];
+					break;
+				case 7:
+					param_val.value.integer_array_value = that.output_value;
+					for (let j = 0; j < param_val.value.integer_array_value.length; j++)
+						param_val.value.integer_array_value[j] =
+							param_val.value.integer_array_value[j] === null
+								? 0
+								: param_val.value.integer_array_value[j];
+					break;
+				case 8:
+					param_val.value.double_array_value = that.output_value;
+					for (let j = 0; j < param_val.value.double_array_value.length; j++)
+						param_val.value.double_array_value[j] =
+							param_val.value.double_array_value[j] === null
+								? 0.0
+								: param_val.value.double_array_value[j];
+					break;
+				case 9:
+					param_val.value.string_array_value = that.output_value;
+					for (let j = 0; j < param_val.value.string_array_value.length; j++)
+						param_val.value.string_array_value[j] =
+							param_val.value.string_array_value[j] === null
+								? ""
+								: param_val.value.string_array_value[j];
+					break;
+			}
 
-        this.cont_el.show();
+			console.log("param val ", param_val);
 
-        this.bg.unbind().show().click((ev)=>this.hide());
-        $('BODY').addClass('no-scroll');
-    }
+			that.client.serviceCall(
+				node["_srvSetParameters"],
+				{ parameters: [param_val] },
+				true,
+				(set_reply) => {
+					that.client.ui.serviceReplyNotification(
+						btn_set,
+						node["_srvSetParameters"],
+						false,
+						set_reply,
+					);
+					btn_set.removeClass("working");
+					if (
+						set_reply["results"] &&
+						set_reply["results"].length == 1 &&
+						set_reply["results"][0]["successful"] === true
+					) {
+						btn_reload.trigger("click");
+					}
+				},
+			);
+		});
 
-    getTypeHR(i_type) {
-        let type_hr = 'n/a';
-        switch (i_type) {
-            case 0: type_hr = 'unset'; break;
-            case 1: type_hr = 'bool'; break;
-            case 2: type_hr = 'int'; break;
-            case 3: type_hr = 'double'; break;
-            case 4: type_hr = 'string'; break;
-            case 5: type_hr = 'byte[]'; break;
-            case 6: type_hr = 'bool[]'; break;
-            case 7: type_hr = 'int[]'; break;
-            case 8: type_hr = 'double[]'; break;
-            case 9: type_hr = 'string[]'; break;
-        }
-        return type_hr;
-    }
+		this.param_btns_el.append([btn_set, btn_reload]);
 
-    hide() {
-        this.cont_el.hide();
-        this.bg.unbind().hide();
-        $('BODY').removeClass('no-scroll');
-    }
+		this.bottom_btns_el.append([this.param_btns_el, btn_close]);
+		this.cont_el.append([
+			this.list_el,
+			$('<div class="cleaner"/>'),
+			this.editor_el,
+			$('<div class="cleaner"/>'),
+			this.bottom_btns_el,
+		]);
+
+		this.cont_el.draggable({
+			handle: "h3",
+			cursor: "move",
+		});
+
+		this.cont_el.show();
+
+		this.bg
+			.unbind()
+			.show()
+			.click((ev) => this.hide());
+		$("BODY").addClass("no-scroll");
+	}
+
+	getTypeHR(i_type) {
+		let type_hr = "n/a";
+		switch (i_type) {
+			case 0:
+				type_hr = "unset";
+				break;
+			case 1:
+				type_hr = "bool";
+				break;
+			case 2:
+				type_hr = "int";
+				break;
+			case 3:
+				type_hr = "double";
+				break;
+			case 4:
+				type_hr = "string";
+				break;
+			case 5:
+				type_hr = "byte[]";
+				break;
+			case 6:
+				type_hr = "bool[]";
+				break;
+			case 7:
+				type_hr = "int[]";
+				break;
+			case 8:
+				type_hr = "double[]";
+				break;
+			case 9:
+				type_hr = "string[]";
+				break;
+		}
+		return type_hr;
+	}
+
+	hide() {
+		this.cont_el.hide();
+		this.bg.unbind().hide();
+		$("BODY").removeClass("no-scroll");
+	}
 }
