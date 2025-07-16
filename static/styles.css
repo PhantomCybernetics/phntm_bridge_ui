@@ -64,11 +64,11 @@ BODY.touch-ui.gamepad-editing {
 	color: yellow;
 }
 
-.online {
+.online, .online-p2p {
 	color: lime;
 }
 
-.turn {
+.online-relay{
 	color: yellow;
 }
 

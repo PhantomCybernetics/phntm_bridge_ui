@@ -2716,22 +2716,23 @@ export class PanelUI {
 		this.webrtc_uptime_el = $("#webrtc_connection_uptime");
 
 		if (state == "Connected") {
+			let is_p2p = [ "host", "prflx", "srflx" ].indexOf(remote_type) > -1;
 			this.webrtc_status_el.html(
 				'<span class="online">' +
 					state +
 					"</span> " +
-					(remote_type == "host"
-						? '<span class="online">[p2p]</span>'
-						: '<span class="turn">[' + remote_type + "]</span>"),
+					(is_p2p
+						? '<span class="online-p2p">[' + remote_type +' p2p]</span>'
+						: '<span class="online-relay">[' + remote_type + "]</span>"),
 			);
 			this.trigger_wifi_scan_el.removeClass("working");
-			if (remote_type == "host")
+			if (is_p2p)
 				this.setDotState(2, "green", "WebRTC connected to robot (p2p)");
 			else
 				this.setDotState(
 					2,
 					"yellow",
-					"WebRTC connected to robot (" + remote_type + ")",
+					"WebRTC connected to robot via relay (" + remote_type + ")",
 				);
 		} else if (state == "Connecting") {
 			this.webrtc_status_el.html('<span class="connecting">' + state + "</span>");
