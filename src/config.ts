@@ -17,8 +17,6 @@ const envConfigSchema = z
 		BRIDGE_LOCATE_URL: z.string().url(),
 		BRIDGE_SOCKET_PORT: z.coerce.number(),
 		BRIDGE_FILES_PORT: z.coerce.number().positive().int(),
-		APP_ID: z.string(),
-		APP_KEY: z.string(),
 		ANALYTICS_CODE: z.array(z.string()),
 	})
 	.partial();
@@ -34,8 +32,6 @@ const fullConfigSchema = z.object({
 	bridgeLocateUrl: z.string().url(),
 	bridgeSocketPort: z.number().positive().int().default(1337),
 	bridgeFilesPort: z.number().positive().int().default(1338),
-	appId: z.string(),
-	appKey: z.string(),
 	analyticsCode: z.array(z.string()).default([]),
 });
 
@@ -62,8 +58,6 @@ export async function getConfig() {
 		...(env.BRIDGE_FILES_PORT !== undefined && {
 			bridgeFilesPort: env.BRIDGE_FILES_PORT,
 		}),
-		...(env.APP_ID !== undefined && { appId: env.APP_ID }),
-		...(env.APP_KEY !== undefined && { appKey: env.APP_KEY }),
 		...(env.ANALYTICS_CODE !== undefined && {
 			analyticsCode: env.ANALYTICS_CODE,
 		}),

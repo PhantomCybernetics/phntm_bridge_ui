@@ -24,8 +24,6 @@ export function printStartupMessage(
 		}${config.path}__ID__`.green,
 	);
 	console.log((" Bridge Locate URL: " + config.bridgeLocateUrl + "").green);
-	console.log((" App ID: " + config.appId + "").green);
-	console.log((" App Key: " + config.appKey + "").green);
 	console.log((" UI version: " + uiVersion).green);
 	console.log(" ".green);
 	console.log(
@@ -96,8 +94,6 @@ export function createWebUIServerExpressApp(
 					config.bridgeLocateUrl,
 					{
 						id_robot: idRobot,
-						app_id: config.appId,
-						app_key: config.appKey,
 					},
 					{ timeout: 5000 },
 				)
@@ -138,7 +134,6 @@ export function createWebUIServerExpressApp(
 						id_robot: req.params.ID,
 						bridge_socket_url: robot_bridge_sever, //
 						bridge_files_url: robot_bridge_files_url,
-						app_id: config.appId,
 						analytics_code: config.analyticsCode
 							? config.analyticsCode.join("\n")
 							: "",

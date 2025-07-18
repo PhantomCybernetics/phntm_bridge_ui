@@ -16,8 +16,6 @@
 	"bridgeFilesPort": 1338, // Bridge Server port for file requests
 
 	// app credentials generated upon registration on Bridge Server
-	"appId": "APP_ID",
-	"appKey": "APP_KEY",
 	"name": "Phntm Bridge Web UI",
 
 	// lines of an analytics tracker code to be appended to HTML
