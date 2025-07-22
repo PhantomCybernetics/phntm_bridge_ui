@@ -988,11 +988,13 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	getBridgeFileUrl(url) {
-		let res = this.bridge_files_url
-			.replace("%ROBOT_ID%", this.id_robot)
-			.replace("%SECRET%", this.bridge_files_secret)
-			.replace("%URL%", encodeURIComponent(url));
-		return res;
+		return [
+			this.bridge_files_url,
+			"file-from-robot",
+			this.bridge_files_secret,
+			this.id_robot,
+			encodeURIComponent(url),
+		].join("/");
 	}
 
 	_loadExternalScript(url, class_to_load) {
