@@ -990,9 +990,9 @@ export class PhntmBridgeClient extends EventTarget {
 	getBridgeFileUrl(url) {
 		return [
 			this.bridge_files_url,
+			this.id_robot,
 			"file-from-robot",
 			this.bridge_files_secret,
-			this.id_robot,
 			encodeURIComponent(url),
 		].join("/");
 	}
