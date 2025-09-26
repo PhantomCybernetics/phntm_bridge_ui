@@ -1352,6 +1352,7 @@ export class PhntmBridgeClient extends EventTarget {
 			robot_data["read_video_streams"].forEach((stream_data) => {
 				let id_src = stream_data[0];
 				let id_stream = stream_data[1];
+				let topic_config = stream_data[2]; //extra topic config
 
 				if (Array.isArray(id_stream) && id_stream.length > 1) {
 					id_stream = id_stream[0];
@@ -1399,6 +1400,16 @@ export class PhntmBridgeClient extends EventTarget {
 
 					// deleting data topic channel
 					delete that.topic_streams[id_src];
+				}
+
+				if (topic_config && Object.keys(topic_config).length) {
+					console.log("Got " + id_src + " extra config:", topic_config);
+					that.topic_configs[id_src] = topic_config;
+					that.emitTopicConfig(id_src, that.topic_configs[id_src]);
+				} else if (that.topic_configs[id_src]) {
+					console.log("Deleted " + id_src + " extra config");
+					delete that.topic_configs[id_src];
+					that.emitTopicConfig(id_src, null);
 				}
 			});
 		}

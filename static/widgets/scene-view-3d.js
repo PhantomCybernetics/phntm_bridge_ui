@@ -551,10 +551,10 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
 			let l = "Class " + d.class_id;
 			if (
-				this.overlays[topic].config["nn_detection_labels"] &&
-				this.overlays[topic].config["nn_detection_labels"][d.class_id]
+				this.overlays[topic].config["label_map"] &&
+				this.overlays[topic].config["label_map"][d.class_id]
 			)
-				l = this.overlays[topic].config["nn_detection_labels"][d.class_id];
+				l = this.overlays[topic].config["label_map"][d.class_id];
 			l += " (" + d.score.toFixed(2) + ")\n";
 			+"[" +
 				center.x.toFixed(2) +

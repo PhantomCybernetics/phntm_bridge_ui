@@ -47,6 +47,7 @@ export class Panel {
 	show_fps_menu_label = "Show FPS";
 	last_fps_updated = null;
 	fps = 0;
+	low_fps = 0;
 	fps_frame_count = 0;
 	fps_clear_timeout = null;
 	fps_string = "";
@@ -170,6 +171,7 @@ export class Panel {
 		this.grid_widget = grid.addWidget(widget_opts);
 
 		this.ui.client.on(id_source, this.onDataContextWrapper);
+		this.ui.client.onTopicConfig(id_source, this.onTopicConfig);
 
 		setTimeout(() => {
 			panels[id_source].onResize();
@@ -517,7 +519,7 @@ export class Panel {
             
         if (this.fps_visible) {
             this.fps_el.html(this.fps_string);
-            if (this.fps < 20 && this.display_widget && this.display_widget.videoWidth) {
+            if (this.fps < this.low_fps && this.display_widget && this.display_widget.videoWidth) {
                 this.fps_el.addClass('error');
             } else {
                 this.fps_el.removeClass('error');
@@ -528,6 +530,13 @@ export class Panel {
             }, 2000);
         }
     }
+
+	onTopicConfig = (config) => {
+		console.log("Panel for " + this.id_source+" got topic config: ", config);
+		if (config['low_fps'] !== undefined) {
+			this.low_fps = config['low_fps'];
+		}
+	}
 
 	onDataContextWrapper = (msg, ev) => {
 		if (!this.initiated) {
@@ -1057,6 +1066,7 @@ export class Panel {
 		}
 
 		this.ui.client.off(this.id_source, this.onDataContextWrapper);
+		this.ui.client.removeTopicConfigHandler(this.id_source, this.onTopicConfig);
 
 		if (this.display_widget && this.display_widget.onClose) {
 			this.display_widget.onClose();

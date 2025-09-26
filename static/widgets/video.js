@@ -166,11 +166,11 @@ export class VideoWidget {
 
 	setupOverlay(topic, config) {
 		if (config) {
-			if (config["nn_input_w"] && config["nn_input_h"]) {
-				this.overlays[topic].nn_w = config["nn_input_w"];
-				this.overlays[topic].nn_h = config["nn_input_h"];
+			if (config["input_width"] && config["input_height"]) {
+				this.overlays[topic].nn_w = config["input_width"];
+				this.overlays[topic].nn_h = config["input_height"];
 				this.overlays[topic].overlay_aspect =
-					config["nn_input_w"] / config["nn_input_h"];
+					config["input_width"] / config["input_height"];
 			} else {
 				this.overlays[topic].overlay_aspect = -1;
 			}
@@ -352,10 +352,10 @@ export class VideoWidget {
 				let l = "Class " + c;
 				if (
 					this.overlays[topic].config &&
-					this.overlays[topic].config["nn_detection_labels"] &&
-					this.overlays[topic].config["nn_detection_labels"][c]
+					this.overlays[topic].config["label_map"] &&
+					this.overlays[topic].config["label_map"][c]
 				)
-					l = this.overlays[topic].config["nn_detection_labels"][c];
+					l = this.overlays[topic].config["label_map"][c];
 				l += " (" + d.results[j].hypothesis.score.toFixed(2) + ")";
 
 				// 3d distance
