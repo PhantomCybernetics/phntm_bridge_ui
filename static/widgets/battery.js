@@ -18,7 +18,7 @@ export class BatteryStateWidget {
 		let that = this;
 
 		this.onTopicConfigUpdate = (config) => {
-			console.warn("battery onTopicConfigUpdate", config, this);
+			// console.warn("battery onTopicConfigUpdate", config, this);
 			if (config) {
 				this.minVoltage = config.min_voltage;
 				this.maxVoltage = config.max_voltage;

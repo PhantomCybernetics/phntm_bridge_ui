@@ -3,6 +3,8 @@ import { MultiTopicSource } from "./inc/multitopic.js";
 import * as THREE from "three";
 import { lerpColor, deg2rad } from "../inc/lib.js";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
+import { STLLoader } from "stl-loader";
+import { ColladaLoader } from "collada-loader";
 
 export class SceneView3DWidget extends DescriptionTFWidget {
 	static label = "3D Scene View";
@@ -80,8 +82,10 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
 		this.dirty_detection_results = {}; // topic => []
 		this.detection_frames = {}; // topic => frame obj
-		this.detection_labels = {}; // topic => []
-		this.detection_markers = {}; // topic => []
+		this.detection_labels = {}; // topic => { class => [ obj ] }
+		this.detection_markers = {}; // topic => { class => [ obj ] }
+		this.loaded_models = {}; // path => true (loading) || false (err) || object
+		this.detection_models = {}; // topic => []
 		this.detection_lines = {}; // topic => []
 		this.detection_lines_geometry = {};
 		this.clear_detections_timeout = {}; // timer refs
@@ -92,7 +96,8 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 		this.camera_frustum_geometry = {};
 
 		this.base_link_frame = null;
-
+		this.detections_magenta_material = new THREE.MeshBasicMaterial({color: 0xff00ff, transparent: true, opacity: 0.5});
+		this.detection_materials_by_color = {};
 		this.onSourcesChange(this.sources.getSources());
 
 		this.rendering = true;
@@ -108,14 +113,111 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 			if (!that.overlays[topic]) {
 				that.overlays[topic] = {};
 				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("onTopicConfigUpdate", topic, config);
+					//console.warn("onTopicConfigUpdate", topic, config);
 					that.overlays[topic].config = config;
+					if (config && config["model_map"] !== undefined) {
+						that.loadDetectionModels(config["model_map"], config["use_model_materials"]);
+					}
 				};
 				client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
 			}
-		});
+		});	
 
 		this.panel.setMenu();
+	}
+
+	loadDetectionModels(model_map, use_model_materials) {
+		let that = this;
+		for (let class_id = 0; class_id < model_map.length; class_id++) {
+			let model_path = model_map[class_id];
+			if (this.loaded_models[model_path] !== undefined)
+				continue;
+
+			if (!model_path || ['none', 'null', 'default'].indexOf(model_path.toLowerCase()) != -1) {
+				this.loaded_models[model_path] = false;
+				continue;
+			}
+
+			this.loaded_models[model_path] = true;
+			let force_material = use_model_materials ? null : this.detections_magenta_material;
+			this.loadDetectionModel(model_path, force_material, (clean_model) => {
+				console.log("ModelLoader: Model loaded for " + model_path, clean_model);
+				// that.scene.add(clean_model);
+				// clean_model.position.set(i,1,1);
+				that.loaded_models[model_path] = clean_model;
+
+				// remove all temp bboxes so that the next update uses loaded model
+				let all_topics_with_detections = Object.keys(that.detection_markers);
+				all_topics_with_detections.forEach((topic) => {
+					if (that.detection_markers[topic] && that.detection_markers[topic][class_id]) {
+						that.detection_markers[topic][class_id].forEach((marker_el)=>{
+							marker_el.removeFromParent();
+						});
+						that.detection_markers[topic][class_id] = [];
+					}
+				});
+			});
+		}
+	}
+
+	loadDetectionModel(path, force_material, done_cb) {
+		let parts = path.split(' ');
+		let loadPath = parts[0];
+
+		let scale = new THREE.Vector3(1,1,1); // default scale
+		for (let i = 1; i < parts.length; i++) { // parse custom scale
+			if (parts[i].indexOf('scale=') !== -1) {
+				let scale_str = parts[i].replace('scale=', '').trim();
+				scale_str = scale_str.replace('[', ''); scale_str = scale_str.replace(']', '');
+				let scale_parts = scale_str.split(',');
+				if (scale_parts.length > 0) scale.x = parseFloat(scale_parts[0]);
+				if (scale_parts.length > 1) scale.y = parseFloat(scale_parts[1]);
+				if (scale_parts.length > 2) scale.z = parseFloat(scale_parts[2]);
+				console.warn("Parsed scale: ", scale);
+			}
+			else if (parts[i].indexOf('color=') !== -1) {
+				let color_str = parts[i].replace('color=', '').trim();
+				let color = new THREE.Color(color_str); // '#001100' or 'green' works
+				force_material = this.getMaterialForColor(color);
+				console.warn("Parsed color: ", color);
+			}
+		}
+		console.warn("ModelLoader: Loading model from path: ", loadPath);
+		let that = this;		
+		if (/\.stl$/i.test(loadPath)) {
+			const loader = new STLLoader(this.loading_manager);
+			loader.load(path, (geom) => {
+				let stl_mat = force_material ? force_material : new THREE.MeshStandardMaterial({
+					color: 0xffffff,
+					side: THREE.DoubleSide,
+					depthWrite: true,
+				});
+				let clean_model = new THREE.Mesh(geom, stl_mat);
+				that.cleanURDFModel(clean_model, true);
+				clean_model.scale.copy(scale);
+				done_cb(clean_model);
+			});
+		} else if (/\.dae$/i.test(loadPath)) {
+			const loader = new ColladaLoader(this.loading_manager);
+			loader.load(loadPath, (dae) => {
+				let clean_model = dae.scene;
+				that.cleanURDFModel(clean_model, true, false, force_material);
+				clean_model.scale.copy(scale); // scale from config
+				done_cb(clean_model);
+			});
+		} else {
+			console.error(
+				`ModelLoader: Could not load model at ${loadPath}.\nNo loader available`,
+			);
+		}
+	}
+
+	getMaterialForColor(color) {
+		let id = color.getHexString();
+		if (!this.detection_materials_by_color[id]) {
+			this.detection_materials_by_color[id] = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.5});
+		}
+		return this.detection_materials_by_color[id];
 	}
 
 	renderingLoop() {
@@ -520,18 +622,25 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 		this.dirty_detection_results[topic] = [];
 
 		// console.log(data);
+		let num_detections_per_class = {};
 
 		for (let i = 0; i < data.detections.length; i++) {
+
 			let res = data.detections[i].results[0];
-			let center = new THREE.Vector3(
-				res["pose"]["pose"]["position"]["x"],
-				res["pose"]["pose"]["position"]["y"],
-				res["pose"]["pose"]["position"]["z"],
+			let box_center = new THREE.Vector3(
+				data.detections[i]["bbox"]["center"]["position"]["x"],
+				data.detections[i]["bbox"]["center"]["position"]["y"],
+				data.detections[i]["bbox"]["center"]["position"]["z"],
 			);
-			let scale = new THREE.Vector3(
+			let box_scale = new THREE.Vector3(
 				data.detections[i]["bbox"]["size"]["x"],
 				data.detections[i]["bbox"]["size"]["y"],
 				data.detections[i]["bbox"]["size"]["z"],
+			);
+			let position = new THREE.Vector3(
+				res["pose"]["pose"]["position"]["x"],
+				res["pose"]["pose"]["position"]["y"],
+				res["pose"]["pose"]["position"]["z"],
 			);
 			let rotation = new THREE.Quaternion(
 				res["pose"]["pose"]["orientation"]["x"],
@@ -542,36 +651,35 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 			let d = {
 				class_id: res.hypothesis.class_id,
 				score: res.hypothesis.score,
-				points: [center],
+				points: [ box_center ],
 			};
 
 			this.dirty_detection_results[topic].push(d);
 
+			if (!this.detection_markers[topic]) this.detection_markers[topic] = [];
+			if (!this.detection_markers[topic][d.class_id]) this.detection_markers[topic][d.class_id] = [];
 			if (!this.detection_labels[topic]) this.detection_labels[topic] = [];
+			if (!this.detection_labels[topic][d.class_id]) this.detection_labels[topic][d.class_id] = [];
+
+			if (!num_detections_per_class[d.class_id]) num_detections_per_class[d.class_id] = 1;
+			else num_detections_per_class[d.class_id]++;
+			let i_class = num_detections_per_class[d.class_id] - 1;
 
 			let l = "Class " + d.class_id;
-			if (
-				this.overlays[topic].config["label_map"] &&
-				this.overlays[topic].config["label_map"][d.class_id]
-			)
+			if (this.overlays[topic].config["label_map"] && this.overlays[topic].config["label_map"][d.class_id])
 				l = this.overlays[topic].config["label_map"][d.class_id];
 			l += " (" + d.score.toFixed(2) + ")\n";
-			+"[" +
-				center.x.toFixed(2) +
-				";" +
-				center.y.toFixed(2) +
-				";" +
-				center.z.toFixed(2) +
-				"]";
-			if (!this.detection_labels[topic][i]) {
+			//+"[" + box_center.x.toFixed(2) + ";" + box_center.y.toFixed(2) + ";" + box_center.z.toFixed(2) + "]";
+
+			if (!this.detection_labels[topic][d.class_id][i_class]) {
 				const el = document.createElement("div");
 				el.className = "detection_label";
 				const label2d = new CSS2DObject(el);
 				let that = this;
 				el.addEventListener("pointerdown", function (ev) {
-					// that.setCameraTargetPosition(center.clone().applyMatrix4(f.matrixWorld));
-					let m = that.detection_markers[topic][i];
-					console.log(m, topic, i, that.detection_markers);
+					// that.setCameraTargetPosition(box_center.clone().applyMatrix4(f.matrixWorld));
+					let m = that.detection_markers[topic][d.class_id][i_class];
+					//console.log(m, topic, i, that.detection_markers);
 					let pos = new THREE.Vector3();
 					m.getWorldPosition(pos);
 					that.setCameraTargetPosition(pos);
@@ -579,52 +687,65 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 				});
 				label2d.center.set(0.5, 0);
 				f.add(label2d);
-				this.detection_labels[topic][i] = label2d;
+				this.detection_labels[topic][d.class_id][i_class] = label2d;
 			}
-			let label_el = this.detection_labels[topic][i];
+			let label_el = this.detection_labels[topic][d.class_id][i_class];
 			label_el.element.textContent = l;
 			label_el.element.hidden = false;
-			label_el.position.set(center.x, center.y, center.z);
-
-			if (!this.detection_markers[topic]) this.detection_markers[topic] = [];
+			label_el.position.set(box_center.x, box_center.y, box_center.z);
 
 			let marker_el = null;
-			if (!this.detection_markers[topic][i]) {
-				const geometry = new THREE.BoxGeometry(1, 1, 1);
-				const material = new THREE.MeshBasicMaterial({
-					color: 0xff00ff,
-					transparent: true,
-					opacity: 0.5,
-				});
-				const cube = new THREE.Mesh(geometry, material);
-				f.add(cube);
-				this.detection_markers[topic][i] = cube;
+			if (!this.detection_markers[topic][d.class_id][i_class]) {
+				
+				if (this.overlays[topic].config["model_map"] && this.overlays[topic].config["model_map"][d.class_id]) {
+				
+					let model_path = this.overlays[topic].config["model_map"][d.class_id];
+					if (this.loaded_models[model_path] instanceof THREE.Object3D) {
+						let model = new THREE.Object3D();
+						model.copy(this.loaded_models[model_path]);
+						model.is_model = true;
+						f.add(model);
+						this.detection_markers[topic][d.class_id][i_class] = model;
+					}
+				}
+				
+				// make a fallback cube
+				if (!this.detection_markers[topic][d.class_id][i_class]) {
+					const geometry = new THREE.BoxGeometry(1, 1, 1);
+					const cube = new THREE.Mesh(geometry, this.detections_magenta_material);
+					f.add(cube);
+					this.detection_markers[topic][d.class_id][i_class] = cube;
+				}
 			}
-			marker_el = this.detection_markers[topic][i];
+
+			marker_el = this.detection_markers[topic][d.class_id][i_class];
 			marker_el.visible = true;
-			marker_el.position.copy(center);
+			
 			marker_el.quaternion.copy(rotation);
-			marker_el.scale.copy(scale);
+			if (!marker_el.is_model) { // bbox scale/pos
+				marker_el.scale.copy(box_scale);
+				marker_el.position.copy(box_center);
+			} else { // model scale pos
+				marker_el.position.copy(position);
+			}
 		}
 
 		// hide excess instances of labels and markers rather than destroying them
 		if (this.detection_labels[topic]) {
-			for (
-				let i = data.detections.length;
-				i < this.detection_labels[topic].length;
-				i++
-			) {
-				this.detection_labels[topic][i].element.hidden = true;
-			}
+			let class_ids = Object.keys(this.detection_labels[topic]);
+			class_ids.forEach((class_id)=>{
+				for (let i = num_detections_per_class[class_id] ? num_detections_per_class[class_id] : 0; i < this.detection_labels[topic][class_id].length; i++) {
+					this.detection_labels[topic][class_id][i].element.hidden = true;
+				}
+			});
 		}
 		if (this.detection_markers[topic]) {
-			for (
-				let i = data.detections.length;
-				i < this.detection_markers[topic].length;
-				i++
-			) {
-				this.detection_markers[topic][i].visible = false;
-			}
+			let class_ids = Object.keys(this.detection_markers[topic]);
+			class_ids.forEach((class_id)=>{
+				for (let i = num_detections_per_class[class_id] ? num_detections_per_class[class_id] : 0; i < this.detection_markers[topic][class_id].length; i++) {
+					this.detection_markers[topic][class_id][i].visible = false;
+				}
+			});
 		}
 
 		this.clearDetectionsOnTimeout(topic);
@@ -644,14 +765,20 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
 			that.dirty_detection_results[topic] = [];
 			if (this.detection_labels[topic]) {
-				for (let i = 0; i < this.detection_labels[topic].length; i++) {
-					this.detection_labels[topic][i].element.hidden = true;
-				}
+				let class_ids = Object.keys(this.detection_labels[topic]);
+				class_ids.forEach((class_id)=>{
+					for (let i = 0; i < this.detection_labels[topic][class_id].length; i++) {
+						this.detection_labels[topic][class_id][i].element.hidden = true;
+					}
+				});
 			}
 			if (this.detection_markers[topic]) {
-				for (let i = 0; i < this.detection_markers[topic].length; i++) {
-					this.detection_markers[topic][i].visible = false;
-				}
+				let class_ids = Object.keys(this.detection_markers[topic]);
+				class_ids.forEach((class_id)=>{
+					for (let i = 0; i < this.detection_markers[topic][class_id].length; i++) {
+						this.detection_markers[topic][class_id][i].visible = false;
+					}
+				});
 			}
 			that.renderDirty();
 		}, 300);
@@ -668,15 +795,23 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 		if (this.dirty_detection_results[topic])
 			delete this.dirty_detection_results[topic];
 		if (this.detection_labels[topic]) {
-			for (let i = 0; i < this.detection_labels[topic].length; i++) {
-				this.detection_labels[topic][i].removeFromParent();
-			}
+			let class_ids = Object.keys(this.detection_labels[topic]);
+			class_ids.forEach((class_id)=>{
+				for (let i = 0; i < this.detection_labels[topic][class_id].length; i++) {
+					this.detection_labels[topic][class_id][i].removeFromParent();
+				}
+				delete this.detection_labels[topic][class_id];
+			});
 			delete this.detection_labels[topic];
 		}
 		if (this.detection_markers[topic]) {
-			for (let i = 0; i < this.detection_markers[topic].length; i++) {
-				this.detection_markers[topic][i].removeFromParent();
-			}
+			let class_ids = Object.keys(this.detection_markers[topic]);
+			class_ids.forEach((class_id)=>{
+				for (let i = 0; i < this.detection_markers[topic][class_id].length; i++) {
+					this.detection_markers[topic][class_id][i].removeFromParent();
+				}
+				delete this.detection_markers[topic][class_id];
+			});
 			delete this.detection_markers[topic];
 		}
 	}

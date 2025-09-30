@@ -1001,6 +1001,14 @@ export class PhntmBridgeClient extends EventTarget {
 		return res;
 	}
 
+	getBridgeFileUrlPrefix() {
+		let res = this.bridge_files_url
+			.replace("%ROBOT_ID%", this.id_robot)
+			.replace("%SECRET%", this.bridge_files_secret)
+			.replace("%URL%", '');
+		return res;
+	}
+
 	_loadExternalScript(url, class_to_load) {
 		let that = this;
 		return new Promise((resolve, reject) => {

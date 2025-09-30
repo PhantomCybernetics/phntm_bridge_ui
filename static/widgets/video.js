@@ -155,7 +155,7 @@ export class VideoWidget {
 			if (!that.overlays[topic]) {
 				that.overlays[topic] = {};
 				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("onTopicConfigUpdate", topic, config);
+					//console.warn("onTopicConfigUpdate", topic, config);
 					that.overlays[topic].config = config;
 					that.setupOverlay(topic, config);
 				};
@@ -359,16 +359,9 @@ export class VideoWidget {
 				l += " (" + d.results[j].hypothesis.score.toFixed(2) + ")";
 
 				// 3d distance
-				if (
-					d.results[j]["pose"] &&
-					d.results[j]["pose"]["pose"] &&
-					d.results[j]["pose"]["pose"]["position"] &&
-					d.results[j]["pose"]["pose"]["position"]["z"] !== undefined
-				)
-					distances.push(
-						d.results[j]["pose"]["pose"]["position"]["z"].toFixed(2) + "m",
-					);
-				else distances.push(null);
+				if (d.results[j]["pose"] && d.results[j]["pose"]["pose"] && d.results[j]["pose"]["pose"]["position"] && d.results[j]["pose"]["pose"]["position"]["z"] !== undefined)
+					distances.push(d.results[j]["pose"]["pose"]["position"]["z"].toFixed(2) + "m");
+				else distances.push(0.0);
 				labels.push(l);
 			}
 			// let label = labels.join("<br/>\n");
@@ -418,7 +411,7 @@ export class VideoWidget {
 					.attr("dy", j * 2 + "em")
 					.text(labels[j]);
 
-				if (distances[j]) {
+				if (distances[j] > 0.0) {
 					svg.append("text")
 						.attr("class", "detection-res")
 						.attr("x", bbleft + 5.0)

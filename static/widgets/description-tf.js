@@ -71,18 +71,29 @@ export class DescriptionTFWidget extends EventTarget {
 
 		let that = this;
 
-		this.manager = new THREE.LoadingManager();
-		this.manager.setURLModifier((url) => {
+		function LoadingManagerURLMofifier(url) {
+
+			console.log("Loader requesting " + url);
+
+			// if (url.indexOf(panel.ui.client.getBridgeFileUrlPrefix()) === 0) {
+			// 	url = url.replace(panel.ui.client.getBridgeFileUrlPrefix(), '');
+			// 	console.warn("Loader actually requesting " + url);
+			// }
+
 			if (url.indexOf("http:/") === 0 || url.indexOf("https:/") === 0) return url;
 
-			if (url.indexOf("package:/") !== 0 && url.indexOf("file:/") !== 0) return url;
+			if (url.indexOf("package:/") !== 0 && url.indexOf("file:/") !== 0)
+				return url;
 
 			let url_fw = panel.ui.client.getBridgeFileUrl(url);
-			console.log("URDF Loader requesting " + url + " > " + url_fw);
+			console.log(">> URDF Loader requesting " + url + " > " + url_fw);
 			return url_fw;
-		});
-		this.tex_loader = new THREE.TextureLoader(this.manager);
-		this.urdf_loader = new URDFLoader(this.manager);
+		}
+
+		this.loading_manager = new THREE.LoadingManager();
+		this.loading_manager.setURLModifier(LoadingManagerURLMofifier);
+		this.tex_loader = new THREE.TextureLoader(this.loading_manager);
+		this.urdf_loader = new URDFLoader(this.loading_manager);
 		this.urdf_loader.parseCollision = true;
 		this.urdf_loader.packages = (targetPkg) => {
 			return "package://" + targetPkg; // put back the url scheme removed by URDFLoader
@@ -119,15 +130,15 @@ export class DescriptionTFWidget extends EventTarget {
 				});
 			} else {
 				console.error(
-					`URDFLoader: Could not load model at ${path}.\nNo loader available`,
+					`Could not load model at ${path}.\nNo loader available`,
 				);
 			}
 		};
-		this.manager.onLoad = () => {
-			console.info("Robot URDF done loading", that.robot_model);
+		this.loading_manager.onLoad = () => {
+			console.info("Robot URDF loader done loading", that.robot_model);
 			that.renderDirty();
 		};
-		this.manager.onError = (url) => {
+		this.loading_manager.onError = (url) => {
 			console.error("Error loading mesh for: " + url);
 			that.panel.ui.showNotification("Error loading mesh", "error", url);
 			that.renderDirty();
@@ -1094,22 +1105,24 @@ export class DescriptionTFWidget extends EventTarget {
 		this.renderDirty();
 	}
 
-	cleanURDFModel(obj, inVisual = false, inCollider = false) {
+	cleanURDFModel(obj, in_visual = false, in_collider = false, force_material = null) {
 		if (obj.isLight || obj.isScene || obj.isCamera) {
 			return false;
 		}
 
 		if (obj.isURDFVisual) {
-			inVisual = true;
+			in_visual = true;
 		} else if (obj.isURDFCollider) {
-			inCollider = true;
+			in_collider = true;
 		}
 
 		obj.frustumCulled = true;
 
         // mesh visuals
-        if (obj.isMesh && inVisual) {
-            if (!obj.material) {
+        if (obj.isMesh && in_visual) {
+			if (force_material) {
+				obj.material = force_material;
+			} else if (!obj.material) {
                 console.log('Obj didn\t have material: ', obj);
                 obj.material = new THREE.MeshStandardMaterial({
                     color: 0xffffff,
@@ -1117,19 +1130,20 @@ export class DescriptionTFWidget extends EventTarget {
                     depthWrite: true,
                 });
                 obj.material.needsUpdate = true;
-            } else  {
+            } else if (!force_material) {
                 console.log('Obj "' + obj.name + '" had material: ', obj);
                 obj.material.depthWrite = true;
                 obj.material.side = THREE.FrontSide;
             }
-            obj.material.needsUpdate = true;
+			if (!force_material)
+            	obj.material.needsUpdate = true;
             obj.castShadow = true;
             obj.receiveShadow = true;
             obj.renderOrder = -1;
             obj.layers.set(DescriptionTFWidget.L_VISUALS);
         
         // colliders
-        } else if (obj.isMesh && inCollider) {
+        } else if (obj.isMesh && in_collider) {
             obj.material = this.collider_mat;
             obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
             obj.layers.set(DescriptionTFWidget.L_COLLIDERS);
@@ -1147,7 +1161,7 @@ export class DescriptionTFWidget extends EventTarget {
 		if (obj.children && obj.children.length) {
 			for (let i = 0; i < obj.children.length; i++) {
 				let ch = obj.children[i];
-				let res = this.cleanURDFModel(ch, inVisual, inCollider); // recursion
+				let res = this.cleanURDFModel(ch, in_visual, in_collider, force_material); // recursion
 				if (!res) {
 					obj.remove(ch);
 					i--;
