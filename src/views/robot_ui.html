@@ -239,7 +239,7 @@
 			input_manager.registerDriver("Joy", JoyInputDriver);
 			input_manager.registerDriver("Twist", TwistInputDriver);
 
-			let panel_ui = new PanelUI(robot, 119, input_manager);
+			let panel_ui = new PanelUI(robot, 32, input_manager);
 
 			panel_ui.addTypeWidget("sensor_msgs/msg/BatteryState", BatteryStateWidget);
 			(panel_ui.addTypeWidget("sensor_msgs/msg/Range", RangeWidget),

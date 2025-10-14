@@ -3,8 +3,8 @@ import { deg2rad } from "../inc/lib.js";
 //laser scan visualization
 //TODO turn into class
 export class LaserScanWidget {
-	static default_width = 7;
-	static default_height = 4;
+	static default_width = 5;
+	static default_height = 13;
 
 	constructor(panel, topic) {
 		this.panel = panel;

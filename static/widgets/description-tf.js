@@ -11,7 +11,7 @@ import { Vector3, Quaternion, LoadingManager } from "three";
 export class DescriptionTFWidget extends EventTarget {
 	static label = "Robot description (URFD) + Transforms";
 	static default_width = 5;
-	static default_height = 4;
+	static default_height = 16;
 
 	static L_VISUALS = 1;
 	static L_COLLIDERS = 2;

@@ -138,8 +138,8 @@ export class Panel {
 		let widget_opts = {
 			w: w,
 			h: h,
-			minW: undefined,
-			minH: undefined,
+			minW: 1,
+			minH: 4,
 			content: html,
 		};
 		if (x != null && x != undefined) widget_opts.x = x;

@@ -1,7 +1,7 @@
 export class Zoomable2DTiles {
 	static label = null;
 	static default_width = 5;
-	static default_height = 4;
+	static default_height = 12;
 
 	constructor(panel) {
 		this.panel = panel;

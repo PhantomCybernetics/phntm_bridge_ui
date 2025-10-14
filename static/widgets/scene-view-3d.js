@@ -8,8 +8,8 @@ import { ColladaLoader } from "collada-loader";
 
 export class SceneView3DWidget extends DescriptionTFWidget {
 	static label = "3D Scene View";
-	static default_width = 8;
-	static default_height = 6;
+	static default_width = 5;
+	static default_height = 18;
 
 	constructor(panel) {
 		super(panel, false); // don't start rendering loop yet

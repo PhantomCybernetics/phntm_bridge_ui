@@ -3,7 +3,7 @@ import { lerpColor } from "../inc/lib.js";
 // RANGE VISUALIZATION
 export class RangeWidget {
 	static default_width = 1;
-	static default_height = 1;
+	static default_height = 5;
 
 	constructor(panel, topic) {
 		this.panel = panel;

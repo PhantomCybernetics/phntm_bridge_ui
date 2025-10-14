@@ -516,7 +516,7 @@ export class GraphMenu {
 				// console.log('CB '+topic+': '+state);
 
 				let w = 3;
-				let h = 3; //defaults overridden by widgets
+				let h = 12; //defaults overridden by widgets
 				let msg_type = that.topics[topic].msg_type;
 
 				if (that.ui.topic_widgets[topic]) {

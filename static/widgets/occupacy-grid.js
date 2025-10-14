@@ -4,7 +4,7 @@ import { Zoomable2DTiles } from "./inc/zoomable-2d-tiles.js";
 
 export class OccupancyGrid extends Zoomable2DTiles {
 	static default_width = 7;
-	static default_height = 4;
+	static default_height = 16;
 
 	constructor(panel, topic) {
 		super(panel);
