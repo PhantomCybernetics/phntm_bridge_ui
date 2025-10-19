@@ -5,6 +5,10 @@ import { lerpColor, deg2rad } from "../inc/lib.js";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
 import { STLLoader } from "stl-loader";
 import { ColladaLoader } from "collada-loader";
+import { LineSegments2 } from "line-segments2";
+import { LineMaterial } from "line-material2";
+// import { LineGeometry } from "line-geometry2";
+import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
 
 export class SceneView3DWidget extends DescriptionTFWidget {
 	static label = "3D Scene View";
@@ -186,7 +190,7 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 		let that = this;		
 		if (/\.stl$/i.test(loadPath)) {
 			const loader = new STLLoader(this.loading_manager);
-			loader.load(path, (geom) => {
+			loader.load(loadPath, (geom) => {
 				let stl_mat = force_material ? force_material : new THREE.MeshStandardMaterial({
 					color: 0xffffff,
 					side: THREE.DoubleSide,
@@ -195,7 +199,9 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 				let clean_model = new THREE.Mesh(geom, stl_mat);
 				that.cleanURDFModel(clean_model, true);
 				clean_model.scale.copy(scale);
-				done_cb(clean_model);
+				let model = new THREE.Object3D();
+				model.add(clean_model);
+				done_cb(model);
 			});
 		} else if (/\.dae$/i.test(loadPath)) {
 			const loader = new ColladaLoader(this.loading_manager);
@@ -205,6 +211,30 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 				clean_model.scale.copy(scale); // scale from config
 				done_cb(clean_model);
 			});
+		} else if (loadPath.toLowerCase() == 'cylinder') {
+			let mat = force_material ? force_material : new THREE.MeshStandardMaterial({
+				color: 0xffffff,
+				side: THREE.DoubleSide,
+				depthWrite: true,
+			});
+			let primitive = new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1,32), mat);
+			primitive.position.set(0,0,-0.5);
+			primitive.rotation.set(Math.PI/2, 0, 0);
+			let model = new THREE.Object3D();
+			model.scale.copy(scale);
+			model.add(primitive);
+			done_cb(model);
+		} else if (loadPath.toLowerCase() == 'sphere') {
+			let mat = force_material ? force_material : new THREE.MeshStandardMaterial({
+				color: 0xffffff,
+				side: THREE.DoubleSide,
+				depthWrite: true,
+			});
+			let primitive = new THREE.Mesh(new THREE.SphereGeometry(.5,32), mat);
+			let model = new THREE.Object3D();
+			model.scale.copy(scale);
+			model.add(primitive);
+			done_cb(model);
 		} else {
 			console.error(
 				`ModelLoader: Could not load model at ${loadPath}.\nNo loader available`,
@@ -236,24 +266,34 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
 			if (!that.sources.topicSubscribed(topic)) return;
 
+			// if number of verts in mesh too small, rebuild
+			if (that.laser_visuals[topic] && that.laser_visuals[topic].geometry
+				&& that.laser_visuals[topic].geometry.lastNumPositions < laser_points.length) {
+				that.laser_visuals[topic].removeFromParent();
+				delete that.laser_visuals[topic]
+				that.laser_geometry[topic].dispose();
+				delete that.laser_geometry[topic];
+			}
+
 			if (!that.laser_visuals[topic]) {
 				let color = new THREE.Color(0x00ffff);
-				const material = new THREE.LineBasicMaterial({
+				const material = new LineMaterial({
 					// color: color,
 					transparent: true,
 					// opacity: .85,
+					linewidth: 2,
 					vertexColors: true,
 				});
 
-				that.laser_geometry[topic] = new THREE.BufferGeometry().setFromPoints(
-					laser_points,
-				);
-				let colors_buf = new Float32Array(laser_point_colors);
-				that.laser_geometry[topic].setAttribute(
-					"color",
-					new THREE.BufferAttribute(colors_buf, 4),
-				);
-				that.laser_visuals[topic] = new THREE.LineSegments(
+				that.laser_geometry[topic] = new LineSegmentsGeometry2()
+					.setPositions(laser_points)
+					.setColors(laser_point_colors);
+				// let colors_buf = new Float32Array(laser_point_colors);
+				// that.laser_geometry[topic].setAttribute(
+				// 	"color",
+				// 	new THREE.BufferAttribute(colors_buf, 4),
+				// );
+				that.laser_visuals[topic] = new LineSegments2(
 					that.laser_geometry[topic],
 					material,
 				);
@@ -264,19 +304,22 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 					that.laser_frames[topic].add(that.laser_visuals[topic]);
 				}
 			} else {
-				that.laser_geometry[topic].setFromPoints(laser_points);
+				// that.laser_geometry[topic].dispose();
+				that.laser_geometry[topic]
+					.setPositions(laser_points)
+					.setColors(laser_point_colors);
 
-				const colorAttribute = that.laser_geometry[topic].getAttribute("color");
-				if (colorAttribute.count != laser_point_colors.length / 3) {
-					let colors_buf = new Float32Array(laser_point_colors);
-					that.laser_geometry[topic].setAttribute(
-						"color",
-						new THREE.BufferAttribute(colors_buf, 4),
-					);
-				} else {
-					colorAttribute.copyArray(laser_point_colors);
-				}
-				colorAttribute.needsUpdate = true;
+				// const colorAttribute = that.laser_geometry[topic].getAttribute("color");
+				// if (colorAttribute.count != laser_point_colors.length / 4) {
+				// 	let colors_buf = new Float32Array(laser_point_colors);
+				// 	that.laser_geometry[topic].setAttribute(
+				// 		"color",
+				// 		new THREE.BufferAttribute(colors_buf, 4),
+				// 	);
+				// } else {
+				// 	colorAttribute.copyArray(laser_point_colors);
+				// }
+				// colorAttribute.needsUpdate = true;
 			}
 		});
 
@@ -297,17 +340,16 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 						? that.overlays[topic].config["frustum_color"]
 						: 0x00ffff,
 				);
-				const material = new THREE.LineBasicMaterial({
+				const material = new LineMaterial({
 					color: color,
-					linewidth: 1,
+					linewidth: 2,
 					transparent: true,
 					opacity: 0.85,
 				});
 
-				that.camera_frustum_geometry[topic] =
-					new THREE.BufferGeometry().setFromPoints(frustum_points);
+				that.camera_frustum_geometry[topic] = new LineSegmentsGeometry2().setPositions(frustum_points);
 
-				that.camera_frustum_visuals[topic] = new THREE.LineSegments(
+				that.camera_frustum_visuals[topic] = new LineSegments2(
 					that.camera_frustum_geometry[topic],
 					material,
 				);
@@ -317,7 +359,7 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 					that.camera_frames[topic].add(that.camera_frustum_visuals[topic]);
 				}
 			} else {
-				that.camera_frustum_geometry[topic].setFromPoints(frustum_points);
+				that.camera_frustum_geometry[topic].setPositions(frustum_points); // number never changes
 			}
 		});
 
@@ -333,23 +375,32 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 			let detection_points = []; //all for this topic
 			let frame_base = new THREE.Vector3(0.0, 0.0, 0.0);
 			for (let i = 0; i < results.length; i++) {
-				detection_points.push(frame_base);
-				detection_points.push(results[i].points[0]);
+				detection_points.push(frame_base.x, frame_base.y, frame_base.z);
+				detection_points.push(results[i].points[0].x, results[i].points[0].y, results[i].points[0].z);
+			}
+			
+			// if number of verts in mesh too small, rebuild
+			if (that.detection_lines[topic] && that.detection_lines[topic].geometry
+				&& that.detection_lines[topic].geometry.lastNumPositions < detection_points.length) {
+				that.detection_lines[topic].removeFromParent();
+				delete that.detection_lines[topic]
+				that.detection_lines_geometry[topic].dispose();
+				delete that.detection_lines_geometry[topic];
 			}
 
 			if (!that.detection_lines[topic]) {
 				let color = new THREE.Color(0xff00ff);
-				const material = new THREE.LineBasicMaterial({
+				const material = new LineMaterial({
 					color: color,
-					linewidth: 1,
+					linewidth: 2,
 					transparent: true,
 					opacity: 0.95,
 				});
 
-				that.detection_lines_geometry[topic] =
-					new THREE.BufferGeometry().setFromPoints(detection_points);
+				that.detection_lines_geometry[topic] = new LineSegmentsGeometry2()
+					.setPositions(detection_points);
 
-				that.detection_lines[topic] = new THREE.LineSegments(
+				that.detection_lines[topic] = new LineSegments2(
 					that.detection_lines_geometry[topic],
 					material,
 				);
@@ -359,10 +410,9 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 					that.detection_frames[topic].add(that.detection_lines[topic]);
 				}
 			} else {
-				that.detection_lines_geometry[topic].setFromPoints(detection_points);
+				that.detection_lines_geometry[topic]
+					.setPositions(detection_points);
 			}
-
-			// console.log('Rendering '+results.length+' detections for '+topic, that.detection_lines[topic], detection_points);
 		});
 
 		super.renderingLoop(); //description-tf render
@@ -472,11 +522,13 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 			if (dist !== null && dist < scan.range_max && dist > scan.range_min) {
 				let p = new THREE.Vector3(dist, 0, 0);
 				p.applyAxisAngle(rot_axis, a);
-				laser_points.push(p); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
+				laser_points.push(p.x, p.y, p.z); // first the point, then the center, otherwise flickers a lot on android (prob. something with culling)
 				ray_dir.copy(p.clone().sub(center)).normalize();
 				// let d = dist / 2.0;
 				// laser_points.push(center.clone().add(ray_dir.multiplyScalar(scan.range_min)));
-				laser_points.push(p.clone().sub(ray_dir.multiplyScalar(0.15)));
+				let p1 = p.clone().sub(ray_dir.multiplyScalar(0.15))
+				laser_points.push(p1.x, p1.y, p1.z);
+
 				laser_point_colors.push(0, 1, 1, 1);
 				laser_point_colors.push(0, 0, 1, 0);
 			}
@@ -887,8 +939,8 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 
 		let frustum = this.calculatePinholeFrustum(data, near, far);
 
-		let frustum_pts = [
-			frustum.nearTopLeft,
+		let frustum_pts = [];
+		[	frustum.nearTopLeft,
 			frustum.nearTopRight,
 			frustum.nearTopRight,
 			frustum.nearBottomRight,
@@ -913,8 +965,11 @@ export class SceneView3DWidget extends DescriptionTFWidget {
 			frustum.farBottomRight,
 			frustum.farBottomLeft,
 			frustum.farBottomLeft,
-			frustum.farTopLeft,
-		];
+			frustum.farTopLeft ].forEach((v3)=>{
+				frustum_pts.push(v3.x, v3.y, v3.z);
+		});
+		
+
 		this.dirty_camera_frustums[topic] = frustum_pts;
 		this.renderDirty();
 	}

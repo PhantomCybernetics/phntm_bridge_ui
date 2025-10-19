@@ -154,11 +154,11 @@ export class DescriptionTFWidget extends EventTarget {
 		this.panel.panel_btns.append(this.perspective_btn);
 
 		this.focus_btn = $(
-			'<span class="panel-btn focus-btn" title="Focus camera on selection"></span>',
+			'<span class="panel-btn focus-btn" title="Camera follows selection"></span>',
 		);
 		this.panel.panel_btns.append(this.focus_btn);
 
-		let view_select = $('<span class="panel-select view-select"></span>');
+		let view_select = $('<span class="panel-select view-select" title="Set camera position"></span>');
 		let view_select_content = $('<span class="panel-select-content"></span>');
 		this.view_camera_top = $('<span data-focus="top">Top</span>');
 		this.view_camera_left = $('<span data-focus="left">Left</span>');
