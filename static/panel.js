@@ -1,4 +1,5 @@
 import { IsImageTopic } from "/static/browser-client.js";
+import * as THREE from "three";
 
 import {
 	lerpColor,
@@ -32,10 +33,6 @@ export class Panel {
 	graph_menu = null;
 
 	max_trace_length = 100;
-	zoom = null;
-	default_zoom = 1.0;
-	rot = null;
-	default_rot = 0.0;
 
 	grid_widget = null;
 
@@ -62,84 +59,51 @@ export class Panel {
 		h,
 		x = null,
 		y = null,
-		src_visible = false,
-		zoom,
-		rot,
-		fps_visible,
-		custom_url_vars,
+		panel_vars = {},
 	) {
 		this.ui = ui;
 		let panels = ui.panels;
 		let grid = ui.grid;
 
 		this.id_source = id_source;
-		this.src_visible = src_visible;
+
 		this.paused = false;
-		this.zoom = zoom;
-		this.rot = rot;
-		this.fps_visible = fps_visible;
-		this.custom_url_vars = custom_url_vars;
-		console.log(
-			"Panel created for " +
-				this.id_source +
-				" src_visible=" +
-				this.src_visible +
-				"; custom_url_vars=",
-			this.custom_url_vars,
-		);
+
+		this.panel_vars = panel_vars;
+		this.panel_vars_defaults = {};
+		this.panelVarsUpdateTimer = null;
+
+		// parse common panel vars
+		this.src_visible = this.getPanelVarAsBool('src', false);
+		// this.zoom = this.getPanelVarAsFloat('z', 1.0);
+		// this.rot = this.getPanelVarAsFloat('r', 0.0);
+		this.fps_visible = this.getPanelVarAsBool('fps', false);
+		
+
+		console.log("Panel created for " + this.id_source + " src_visible=" + this.src_visible + "; panel_vars=", this.panel_vars);
 
 		this.floating_menu_top = null;
 
 		this.n = Panel.PANEL_NO++;
-		//let display_source = false;
 
-		let html =
-			'<div class="grid_panel" data-source="' +
-			id_source +
-			'">' +
-			'<h3 class="panel-title" id="panel_title_' +
-			this.n +
-			'" title="' +
-			id_source +
-			'">' +
-			id_source +
-			"</h3>" +
-			'<span class="notes"></span>' +
-			'<span class="panel_btns"><span class="panel-btns-gradient"></span><spam class="panel-btns-content" id="panel_btns_' +
-			this.n +
-			'"></span></span>' +
-			'<div class="monitor_menu prevent-select" id="monitor_menu_' +
-			this.n +
-			'">' +
-			'<div class="monitor_menu_content" id="monitor_menu_content_' +
-			this.n +
-			'"></div>' +
-			"</div>" +
-			'<div class="panel_content_space" id="panel_content_space_' +
-			this.n +
-			'">' +
-			'<div class="panel_widget' +
-			(this.src_visible ? " source_visible" : "") +
-			'" id="panel_widget_' +
-			this.n +
-			'"></div>' +
-			'<div class="panel_source' +
-			(this.src_visible ? " enabled" : "") +
-			'" id="panel_source_' +
-			this.n +
-			'">Waiting for data...</div>' +
-			'<div class="panel_fps" id="panel_fps_' +
-			this.n +
-			'"></div>' +
-			'<div class="cleaner"></div>' +
-			//'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
-			"</div>";
+		let html = '<div class="grid_panel" data-source="' + id_source + '">' +
+				   '<h3 class="panel-title" id="panel_title_' + this.n + '" title="' + id_source + '">' + id_source + "</h3>" +
+				   '<span class="notes"></span>' +
+				   '<span class="panel_btns"><span class="panel-btns-gradient"></span><spam class="panel-btns-content" id="panel_btns_' +this.n + '"></span></span>' +
+				   '<div class="monitor_menu prevent-select" id="monitor_menu_' + this.n + '">' +
+					   '<div class="monitor_menu_content" id="monitor_menu_content_' + this.n + '"></div>' +
+				   '</div>' +
+				   '<div class="panel_content_space" id="panel_content_space_' + this.n + '">' +
+					   '<div class="panel_widget' + (this.src_visible ? " source_visible" : "") + '" id="panel_widget_' + this.n + '"></div>' +
+					   '<div class="panel_source' + (this.src_visible ? " enabled" : "") + '" id="panel_source_' + this.n + '">Waiting for data...</div>' +
+					   '<div class="panel_fps" id="panel_fps_' + this.n + '"></div>' +
+					   '<div class="cleaner"></div>' +
+					   //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
+					'</div>';
 
 		let widget_opts = {
-			w: w,
-			h: h,
-			minW: 1,
-			minH: 4,
+			w: w, h: h,
+			minW: 1, minH: 4,
 			content: html,
 		};
 		if (x != null && x != undefined) widget_opts.x = x;
@@ -182,11 +146,7 @@ export class Panel {
 
 		if (!this.editBtn) {
 			// pause panel updates
-			this.editBtn = $(
-				'<span id="edit_panel_' +
-					this.n +
-					'" class="edit-panel-button" title="Edit panel"></span>',
-			);
+			this.editBtn = $('<span id="edit_panel_' + this.n + '" class="edit-panel-button" title="Edit panel"></span>');
 			this.editBtn.appendTo(this.panel_btns);
 		}
 
@@ -330,54 +290,41 @@ export class Panel {
 
 		if (!this.pauseEl) {
 			// pause panel updates
-			this.pauseEl = $(
-				'<span id="pause_panel_' +
-					this.n +
-					'" class="pause-panel-button paused" title="Waiting for data..."></span>',
-			);
+			this.pauseEl = $('<span id="pause_panel_' + this.n + '" class="pause-panel-button paused" title="Waiting for data..."></span>');
 			this.pauseEl.insertBefore("#monitor_menu_" + this.n);
 		}
 
 		if (msg_type && !this.initiated) {
 			console.log("Initiating panel " + this.id_source + " for " + msg_type);
 
+			// custom (compound) widget like thw World Model
 			if (this.ui.widgets[msg_type]) {
-				if (!this.display_widget) {
-					// only once
-					this.display_widget = new this.ui.widgets[this.id_source].class(this); //no data yet
+
+				if (!this.display_widget) { // only once
+					this.display_widget = new this.ui.widgets[this.id_source].class(this, this.ui.widgets[this.id_source].conf); //no data yet
 					fallback_show_src = false;
 				}
+
 			} else {
+
+				// widget by topic type
 				this.msg_type = msg_type;
-				if (this.zoom === undefined || this.zoom === null) {
-					this.zoom = this.default_zoom;
-				}
-				if (this.rot === undefined || this.rot === null) {
-					this.rot = this.default_rot;
-				}
 				if (msg_type != "video") {
 					this.msg_type_class = this.ui.client.findMessageType(this.msg_type);
-					$("#panel_msg_types_" + this.n).html(
-						this.msg_type ? this.msg_type : "",
-					);
+					$("#panel_msg_types_" + this.n).html(this.msg_type ? this.msg_type : "");
 
+					// if message type not loaded yet, wait for 3s, then display error
 					if (this.msg_type_class == null) {
-						// message type not loaded yet
+						
 						let that = this;
-
 						function delayedDisplayMessageTypeError() {
 							$("#panel_msg_types_" + that.n).addClass("err");
-							$("#panel_source_" + that.n).html(
-								'<span class="error">Message type ' +
-									that.msg_type +
-									" not loaded</span>",
-							);
+							$("#panel_source_" + that.n).html('<span class="error">Message type ' + that.msg_type + " not loaded</span>");
 						}
 						let delayed_error_timeout = setTimeout(
 							delayedDisplayMessageTypeError,
 							3000,
-						); //if message def doesn't arrive within 3s, display error (defs may be a bit late sometimes)
-
+						);
 						function updateOnMessageTypesChanged() {
 							that.msg_type_class = that.ui.client.findMessageType(
 								that.msg_type,
@@ -385,10 +332,7 @@ export class Panel {
 							if (that.msg_type_class == null) return;
 							clearTimeout(delayed_error_timeout);
 							delayed_error_timeout = null;
-							that.ui.client.off(
-								"defs_updated",
-								updateOnMessageTypesChanged,
-							); //only once
+							that.ui.client.off("defs_updated", updateOnMessageTypesChanged); //only once
 							console.log("Redrawing panel for " + that.id_source);
 							$("#panel_msg_types_" + that.n).removeClass("err");
 							$("#panel_source_" + that.n).html("Waiting for data...");
@@ -398,34 +342,20 @@ export class Panel {
 				}
 			}
 
-			if (this.ui.topic_widgets[this.id_source] != undefined) {
-				if (!this.display_widget) {
-					//only once
-					console.log(
-						"Initiating display topic widget " + this.id_source,
-						this.display_widget,
-					);
+			if (!this.display_widget) { 
+			
+				// make widget by topic name
+				if (this.ui.topic_widgets[this.id_source] != undefined) {
+					console.log("Initiating display topic widget " + this.id_source, this.display_widget);
 					// $('#display_panel_source_link_'+this.n).css('display', 'block');
-					this.display_widget = new this.ui.topic_widgets[
-						this.id_source
-					].widget(this, this.id_source); //no data yet
+					this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
 					fallback_show_src = false;
-				}
-			} else if (this.ui.type_widgets[this.msg_type] != undefined) {
-				if (!this.display_widget) {
-					//only once
-					console.log(
-						"Initiating display type widget " +
-							this.id_source +
-							" w " +
-							this.msg_type,
-						this.display_widget,
-					);
+				
+				// make widget by topic type
+				} else if (this.ui.type_widgets[this.msg_type] != undefined) {
+					console.log("Initiating display type widget " + this.id_source + " w " + this.msg_type, this.display_widget);
 					// $('#display_panel_source_link_'+this.n).css('display', 'block');
-					this.display_widget = new this.ui.type_widgets[this.msg_type].widget(
-						this,
-						this.id_source,
-					); //no data yet
+					this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source, this.ui.type_widgets[this.msg_type].conf); //no data yet
 					fallback_show_src = false;
 				}
 			}
@@ -469,11 +399,152 @@ export class Panel {
 				e.cancelBubble = true;
 				return false;
 			});
+
 		} else if (!this.initiated) {
-			this.setMenu(); //draw menu placeholder fast without the type
+			this.setMenu(); //draw menu placeholder asap without the type
 		}
 
 		this.onResize();
+	}
+
+	getPanelVarAsBool(var_name, default_value) {
+		this.panel_vars_defaults[var_name] = default_value ? '1' : '0';
+		if (this.panel_vars[var_name] === undefined)
+			return default_value;
+		return parseInt(this.panel_vars[var_name]) ? true : false;
+	}
+
+	storePanelVarAsBool(var_name, value) {
+		value = value ? '1' : '0';
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name])
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name]; //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+	getPanelVarAsInt(var_name, default_value) {
+		this.panel_vars_defaults[var_name] = '' + default_value;
+		return this.panel_vars[var_name] !== undefined ? parseInt(this.panel_vars[var_name]) : default_value;
+	}
+
+	storePanelVarAsInt(var_name, value) {
+		value = '' + value;
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name])
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name]; //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+	getPanelVarAsFloat(var_name, default_value) {
+		this.panel_vars_defaults[var_name] = '' + default_value;
+		return this.panel_vars[var_name] !== undefined ? parseFloat(this.panel_vars[var_name]) : default_value;
+	}
+
+	storePanelVarAsFloat(var_name, value, precision=3) {
+		value = '' + value.toFixed(precision);
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name])
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name]; //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+	getPanelVarAsString(var_name, default_value) {
+		this.panel_vars_defaults[var_name] = '' + default_value;
+		return this.panel_vars[var_name] !== undefined ? this.panel_vars[var_name] : default_value;
+	}
+
+	storePanelVarAsString(var_name, value) {
+		value = '' + value;
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name])
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name];  //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+	getPanelVarAsStringArray(var_name, default_value) {
+		this.panel_vars_defaults[var_name] = default_value.join(',');
+		if (this.panel_vars[var_name] === undefined)
+			return default_value;
+		let parts = this.panel_vars[var_name].split(",");
+		if (parts.length < 1)
+			return default_value;
+		return parts;
+	}
+	
+	storePanelVarAsStringArray(var_name, value) {
+		value = value.join(',');
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name] && value != '')
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name];  //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+	getPanelVarAsVector3(var_name, default_value) {
+		if (this.panel_vars[var_name] === undefined)
+			return default_value;
+		if (this.panel_vars[var_name].indexOf(',') <= 0) 
+			return default_value;
+		let coords = this.panel_vars[var_name].split(",");
+		if (coords.length < 3)
+			return default_value;
+		return new THREE.Vector3(
+			parseFloat(coords[0]),
+			parseFloat(coords[1]),
+			parseFloat(coords[2]),
+		);
+	}
+
+	storePanelVarAsVector3(var_name, value, precision=3) {
+		value = value.x.toFixed(precision) + ',' + value.y.toFixed(precision) + ',' + value.z.toFixed(precision);
+		let change = this.panel_vars[var_name] !== value;
+		if (value !== this.panel_vars_defaults[var_name] && value != '')
+			this.panel_vars[var_name] = value; 
+		else delete this.panel_vars[var_name];  //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
+
+	getPanelVarAsFloatArray(var_name, default_value) {
+		if (this.panel_vars[var_name] === undefined)
+			return default_value;
+		if (this.panel_vars[var_name].indexOf(',') < 0) 
+			return default_value;
+		let parts = this.panel_vars[var_name].split(",");
+		if (parts.length < 1)
+			return default_value;
+		let ret = [];
+		parts.forEach((p_str)=>{
+			ret.push(parseFloat(p_str));
+		});
+		return ret;
+	}
+
+	storePanelVarsAsync() {
+		if (this.panelVarsUpdateTimer !== null) {
+			clearTimeout(this.panelVarsUpdateTimer);
+			this.panelVarsUpdateTimer = null;
+		}
+		this.panelVarsUpdateTimer = setTimeout(this.storePanelVars(), 1);
+	}
+
+	storePanelVars() {
+		this.panelVarsUpdateTimer = null;
+		this.ui.updateUrlHash();
+	}
+
+	getPanelVars() {
+		return this.panel_vars;
 	}
 
 	pauseToggle() {
@@ -561,22 +632,14 @@ export class Panel {
 	};
 
 	setMenu() {
-		console.log(
-			"Setting up panel menu of " + this.id_source + "; msg_type=" + this.msg_type,
-		);
+		console.log("Setting up panel menu of " + this.id_source + "; msg_type=" + this.msg_type);
 
 		let els = [];
 		let that = this;
 
 		if (this.msg_type != null && this.msg_type != "video") {
 			// message type info dialog
-			let msgTypesEl = $(
-				'<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_' +
-					this.n +
-					'" class="msg_types" title="View message type definition">' +
-					this.msg_type +
-					"</a></div>",
-			);
+			let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_' + this.n + '" class="msg_types" title="View message type definition">' + this.msg_type + "</a></div>");
 			msgTypesEl.click(function (ev) {
 				that.ui.messageTypeDialog(that.msg_type);
 
@@ -587,28 +650,17 @@ export class Panel {
 
 			// display source for widgets
 			if (this.display_widget && !IsImageTopic(this.msg_type)) {
-				let showSourceEl = $(
-					'<div class="menu_line" id="display_panel_source_link_' +
-						this.n +
-						'"><label for="display_panel_source_' +
-						this.n +
-						'" class="display_panel_source_label" id="display_panel_source_label_' +
-						this.n +
-						'"><input type="checkbox" id="display_panel_source_' +
-						this.n +
-						'" class="panel_display_source"' +
-						(this.src_visible ? " checked" : "") +
-						' title="Display source data"> Show source data</label></div>',
-				);
+				let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_' + this.n +'"><label for="display_panel_source_' + this.n + '" class="display_panel_source_label" id="display_panel_source_label_' + this.n + '"><input type="checkbox" id="display_panel_source_' + this.n + '" class="panel_display_source"' + (this.src_visible ? " checked" : "") + ' title="Display source data"> Show source data</label></div>');
 				let source_el = $("#panel_source_" + this.n);
 				let widget_el = $("#panel_widget_" + this.n);
 				let showSourceCB = showSourceEl.find(".panel_display_source");
 				showSourceCB.change(function (ev) {
-					if ($(this).prop("checked")) {
+					that.src_visible = $(this).prop("checked");
+					that.storePanelVarAsBool('src', that.src_visible);
+
+					if (that.src_visible) {
 						source_el.addClass("enabled");
 						widget_el.addClass("source_visible");
-						that.src_visible = true;
-
 						let w = parseInt($(that.grid_widget).attr("gs-w"));
 						that.panel_w_src_hidden = w;
 						if (w < 5) {
@@ -619,7 +671,6 @@ export class Panel {
 							that.ui.updateUrlHash();
 						}
 					} else {
-						that.src_visible = false;
 						source_el.removeClass("enabled");
 						widget_el.removeClass("source_visible");
 						let curr_w = parseInt($(that.grid_widget).attr("gs-w"));
@@ -634,36 +685,19 @@ export class Panel {
 			}
 		} else if (this.msg_type == "video") {
 			// message type info dialog
-			let msgTypesEl = $(
-				'<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>',
-			);
+			let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
 			els.push(msgTypesEl);
 		}
 
 		// fps toggle button
 		let fps_visible_cb_el = $('<div class="menu_line"></div>');
-		let fps_visible_label_el = $(
-			'<label for="show_fps_cb_' +
-				this.n +
-				'" id="show_fps_cb_label_' +
-				this.n +
-				'">' +
-				this.show_fps_menu_label +
-				"</>",
-		);
-		let fps_visible_cb = $(
-			'<input type="checkbox" id="show_fps_cb_' +
-				this.n +
-				'"' +
-				(this.fps_visible ? " checked" : "") +
-				' title="' +
-				this.show_fps_menu_label +
-				'"/>',
-		);
+		let fps_visible_label_el = $('<label for="show_fps_cb_' + this.n + '" id="show_fps_cb_label_' + this.n + '">' + this.show_fps_menu_label + "</>");
+		let fps_visible_cb = $('<input type="checkbox" id="show_fps_cb_' + this.n + '"' + (this.fps_visible ? " checked" : "") + ' title="' + this.show_fps_menu_label + '"/>');
 		fps_visible_label_el.append(fps_visible_cb);
 		fps_visible_cb_el.append(fps_visible_label_el);
 		fps_visible_cb.change(function (ev) {
 			that.fps_visible = $(this).prop("checked");
+			that.storePanelVarAsBool('fps', that.fps_visible);
 			that.updateFps();
 			if (that.fps_visible) {
 				that.fps_el.addClass("enabled");
@@ -680,17 +714,11 @@ export class Panel {
 		}
 
 		// close panel button
-		this.close_el = $(
-			'<div class="menu_line close_panel" id="close_panel_menu_' +
-				this.n +
-				'"><a href="#" id="close_panel_link_' +
-				this.n +
-				'">Remove panel<span class="icon"></span></a></div>',
-		);
+		this.close_el = $('<div class="menu_line close_panel" id="close_panel_menu_' + this.n + '"><a href="#" id="close_panel_link_' + this.n + '">Remove panel<span class="icon"></span></a></div>');
 		this.close_el.click(function (ev) {
 			if (!isTouchDevice() || that.close_el.hasClass("warn")) {
 				that.close();
-				if (that.ui.widgets[that.id_source]) that.ui.widgetsMenu();
+				if (that.ui.widgets[that.id_source]) that.ui.updateWidgetsMenu();
 			} else {
 				that.close_el.addClass("warn");
 			}

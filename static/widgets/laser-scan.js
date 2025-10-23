@@ -12,19 +12,15 @@ export class LaserScanWidget {
 
 		this.data_trace = [];
 		this.max_trace_length = 1;
+		this.default_zoom = 2.0;
+		this.default_rot = 0;
+		this.zoom = this.panel.getPanelVarAsFloat('z', this.default_zoom);
+		this.rot = this.panel.getPanelVarAsInt('r', this.default_rot);
 
 		$("#panel_widget_" + panel.n).addClass("enabled laser_scan");
 
 		this.canvas = $("#panel_widget_" + panel.n)
-			.html(
-				'<canvas id="panel_canvas_' +
-					panel.n +
-					'" width="' +
-					panel.widget_width +
-					'" height="' +
-					panel.widget_height +
-					'"></canvas>',
-			)
+			.html('<canvas id="panel_canvas_' + panel.n + '" width="' + panel.widget_width + '" height="' + panel.widget_height +'"></canvas>')
 			.find("canvas")[0];
 		this.ctx = this.canvas.getContext("2d");
 
@@ -33,7 +29,7 @@ export class LaserScanWidget {
 		$("#panel_widget_" + panel.n).on("mousewheel", (ev) => {
 			ev.preventDefault();
 			let d = ev.originalEvent.deltaY;
-			that.setZoom(that.panel.zoom - d * 0.005);
+			that.setZoom(that.zoom - d * 0.005);
 			// console.log('wheel', );
 		});
 
@@ -88,7 +84,7 @@ export class LaserScanWidget {
 
 				if (offsetDiff < 0) {
 					offsetDiff = curDiff;
-					baseZoom = that.panel.zoom;
+					baseZoom = that.zoom;
 				}
 
 				curDiff -= offsetDiff;
@@ -144,33 +140,22 @@ export class LaserScanWidget {
 	setupMenu(menu_els) {
 		let that = this;
 
-		let zoom =
-			this.panel.zoom === null || this.panel.zoom === undefined
-				? "?"
-				: this.panel.zoom.toFixed(1);
-		let rot =
-			this.panel.rot === null || this.panel.rot === undefined
-				? "?"
-				: this.panel.rot.toFixed(0);
-
 		// zoom control
 		let zoom_ctrl_line_el = $(
 			'<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + this.panel.n + '"></div>',
 		);
 		let zoom_minus_btn = $('<span class="minus">-</span>');
-		this.zoom_val_btn = $(
-			'<button class="val" title="Reset zoom">Zoom: ' + zoom + "x</button>",
-		);
+		this.zoom_val_btn = $('<button class="val" title="Reset zoom">Zoom: ' + this.zoom.toFixed(1) + "x</button>",);
 		let zoom_plus_btn = $('<span class="plus">+</span>');
 		zoom_ctrl_line_el.append([zoom_minus_btn, this.zoom_val_btn, zoom_plus_btn]);
 		zoom_plus_btn.click(function (ev) {
-			that.setZoom(that.panel.zoom + that.panel.zoom / 2.0);
+			that.setZoom(that.zoom + that.zoom / 2.0);
 		});
 		zoom_minus_btn.click(function (ev) {
-			that.setZoom(that.panel.zoom - that.panel.zoom / 2.0);
+			that.setZoom(that.zoom - that.zoom / 2.0);
 		});
 		this.zoom_val_btn.click(function (ev) {
-			that.setZoom(that.panel.default_zoom);
+			that.setZoom(that.default_zoom);
 		});
 		menu_els.push(zoom_ctrl_line_el);
 
@@ -179,47 +164,45 @@ export class LaserScanWidget {
 			'<div class="menu_line rot_ctrl" id="rot_ctrl_' + this.panel.n + '"></div>',
 		);
 		let rot_left_btn = $('<span class="rot-left"><span class="icon"></span></span>');
-		this.rot_val_btn = $(
-			'<button class="val" title="Reset rotation">Rotate: ' + rot + "°</button>",
-		);
+		this.rot_val_btn = $('<button class="val" title="Reset rotation">Rotate: ' + this.rot.toFixed(0) + "°</button>");
 		let rot_rigt_btn = $('<span class="rot-right"><span class="icon"></span></span>');
 		rot_ctrl_line_el.append([rot_left_btn, this.rot_val_btn, rot_rigt_btn]);
 		rot_rigt_btn.click(function (ev) {
-			that.setRot(that.panel.rot + 45.0);
+			that.setRot(that.rot + 45.0);
 		});
 		rot_left_btn.click(function (ev) {
-			that.setRot(that.panel.rot - 45.0);
+			that.setRot(that.rot - 45.0);
 		});
 		this.rot_val_btn.click(function (ev) {
-			that.setRot(that.panel.default_rot);
+			that.setRot(that.default_rot);
 		});
 		menu_els.push(rot_ctrl_line_el);
 	}
 
 	setZoom(zoom) {
-		let panel = this.panel;
+		
 		if (zoom < 0.1) {
 			zoom = 0.1;
 		} else if (zoom > 30.0) {
 			zoom = 30.0;
 		}
-		panel.zoom = zoom;
-		this.zoom_val_btn.html("Zoom: " + panel.zoom.toFixed(1) + "x");
-		panel.ui.updateUrlHash();
+		this.zoom = zoom;
+		this.zoom_val_btn.html("Zoom: " + this.zoom.toFixed(1) + "x");
+		this.panel.storePanelVarAsFloat('z', this.zoom, 3);
 
 		this.renderDirty();
 	}
 
 	setRot(rot) {
-		let panel = this.panel;
+		
 		if (rot < -1.0) {
 			rot = 270.0;
 		} else if (rot > 359.0) {
 			rot = 0.0;
 		}
-		panel.rot = rot;
-		this.rot_val_btn.html("Rotate: " + panel.rot.toFixed(0) + "°");
-		panel.ui.updateUrlHash();
+		this.rot = rot;
+		this.rot_val_btn.html("Rotate: " + this.rot.toFixed(0) + "°");
+		this.panel.storePanelVarAsFloat('r', this.rot);
 
 		this.renderDirty();
 	}
@@ -251,7 +234,7 @@ export class LaserScanWidget {
 			let pos = [0, decoded.ranges[i] * this.scale];
 
 			let arad =
-				decoded.angle_min + i * decoded.angle_increment - deg2rad(this.panel.rot);
+				decoded.angle_min + i * decoded.angle_increment - deg2rad(this.rot);
 			let p = [
 				Math.cos(arad) * pos[0] - Math.sin(arad) * pos[1],
 				Math.sin(arad) * pos[0] + Math.cos(arad) * pos[1],
@@ -293,7 +276,7 @@ export class LaserScanWidget {
 			let pts = this.data_trace[i];
 
 			for (let j = 0; j < pts.length; j++) {
-				let p = [pts[j][0] * this.panel.zoom, pts[j][1] * this.panel.zoom]; //zoom applied here
+				let p = [pts[j][0] * this.zoom, pts[j][1] * this.zoom]; //zoom applied here
 				this.ctx.fillStyle =
 					i == this.data_trace.length - 1 ? "#ff0000" : "#aa0000";
 				this.ctx.beginPath();
@@ -315,14 +298,14 @@ export class LaserScanWidget {
 				Math.sqrt(
 					Math.pow(range_int * this.panel.scale, 2) -
 						Math.pow(x * this.scale, 2),
-				) * this.panel.zoom;
-			this.ctx.moveTo(frame[0] + x * this.scale * this.panel.zoom, frame[1] - dd);
-			this.ctx.lineTo(frame[0] + x * this.scale * this.panel.zoom, frame[1] + dd);
+				) * this.zoom;
+			this.ctx.moveTo(frame[0] + x * this.scale * this.zoom, frame[1] - dd);
+			this.ctx.lineTo(frame[0] + x * this.scale * this.zoom, frame[1] + dd);
 			this.ctx.stroke();
 
 			//horizontal
-			this.ctx.moveTo(frame[0] - dd, frame[1] + x * this.scale * this.panel.zoom);
-			this.ctx.lineTo(frame[0] + dd, frame[1] + x * this.scale * this.panel.zoom);
+			this.ctx.moveTo(frame[0] - dd, frame[1] + x * this.scale * this.zoom);
+			this.ctx.lineTo(frame[0] + dd, frame[1] + x * this.scale * this.zoom);
 			this.ctx.stroke();
 		}
 

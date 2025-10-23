@@ -1,4 +1,8 @@
 import * as THREE from "three";
+import { AxesHelper2 } from 'axes-helper2';
+import { Line2 } from 'line2';
+import { LineMaterial } from "line-material2";
+import { LineGeometry } from 'line-geometry2';
 
 //IMU VISUALIZATION
 export class ImuWidget {
@@ -11,9 +15,9 @@ export class ImuWidget {
 
 		let that = this;
 
-		this.display_rot = true;
-		this.display_acc = true;
-		this.display_gyro = true;
+		this.display_rot = this.panel.getPanelVarAsBool('rot', true);
+		this.display_acc = this.panel.getPanelVarAsBool('acc', true);;
+		this.display_gyro = this.panel.getPanelVarAsBool('gyr', true);
 
 		$("#panel_widget_" + panel.n).addClass("enabled imu");
 		// let q = decoded.orientation;
@@ -50,28 +54,32 @@ export class ImuWidget {
 		this.camera.position.y = 1;
 		this.camera.lookAt(this.cube.position);
 
-		const acc_material = new THREE.LineBasicMaterial({
+		const acc_material = new LineMaterial({
 			color: 0x0000ff,
+			linewidth: 3,
 		});
 
-		const gyro_material = new THREE.LineBasicMaterial({
+		const gyro_material = new LineMaterial({
 			color: 0xff00ff,
+			linewidth: 3,
 		});
 
 		this.acc_vector_normalized = new THREE.Vector3().copy(this.zero);
-		this.acc_geometry = new THREE.BufferGeometry().setFromPoints([
-			this.zero,
-			this.acc_vector_normalized,
-		]);
-		this.acc_vector = new THREE.Line(this.acc_geometry, acc_material);
+		this.acc_geometry = new LineGeometry()
+			.setPositions([
+				0, 0, 0,
+				this.acc_vector_normalized.x, this.acc_vector_normalized.y, this.acc_vector_normalized.z
+			]);
+		this.acc_vector = new Line2(this.acc_geometry, acc_material);
 		this.scene.add(this.acc_vector);
 
 		this.gyro_vector_normalized = new THREE.Vector3().copy(this.zero);
-		this.gyro_geometry = new THREE.BufferGeometry().setFromPoints([
-			this.zero,
-			this.gyro_vector_normalized,
-		]);
-		this.gyro_vector = new THREE.Line(this.gyro_geometry, gyro_material);
+		this.gyro_geometry = new LineGeometry()
+			.setPositions([
+				0, 0, 0,
+				this.gyro_vector_normalized.x, this.gyro_vector_normalized.y, this.gyro_vector_normalized.z
+			]);
+		this.gyro_vector = new Line2(this.gyro_geometry, gyro_material);
 		this.scene.add(this.gyro_vector);
 
 		// const light = new THREE.AmbientLight( 0x404040 ); // soft white light
@@ -85,7 +93,7 @@ export class ImuWidget {
 		// const axesHelper = new THREE.AxesHelper( 5 );
 		// panel.scene.add( axesHelper );
 
-		const axesHelperCube = new THREE.AxesHelper(5);
+		const axesHelperCube = new AxesHelper2(5, 2);
 		axesHelperCube.scale.set(1, 1, 1); //show z forward like in ROS
 		this.cube.add(axesHelperCube);
 
@@ -113,57 +121,36 @@ export class ImuWidget {
 
 		// display rotation as a cube
 		let display_rot_line_el = $('<div class="menu_line"></div>');
-		let display_rot_label = $(
-			'<label for="display_rot_' + this.panel.n + '">Rotation</label>',
-		);
-		let display_ror_cb = $(
-			'<input type="checkbox" id="display_rot_' +
-				this.panel.n +
-				'" ' +
-				(this.display_rot ? "checked " : "") +
-				'title="Display rotation"/>',
-		);
+		let display_rot_label = $('<label for="display_rot_' + this.panel.n + '">Rotation</label>');
+		let display_ror_cb = $('<input type="checkbox" id="display_rot_' + this.panel.n + '" ' + (this.display_rot ? "checked " : "") + 'title="Display rotation"/>');
 		display_rot_label.append(display_ror_cb).appendTo(display_rot_line_el);
 		display_ror_cb.change(function (ev) {
 			that.display_rot = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('rot', that.display_rot);
 			that.updateDisplay();
 		});
 		menu_els.push(display_rot_line_el);
 
 		// display acceleration vector
 		let display_acc_line_el = $('<div class="menu_line"></div>');
-		let display_acc_label = $(
-			'<label for="display_acc_' + this.panel.n + '">Linear acceleration</label>',
-		);
-		let display_acc_cb = $(
-			'<input type="checkbox" id="display_acc_' +
-				this.panel.n +
-				'" ' +
-				(this.display_acc ? "checked " : "") +
-				'title="Display acceleration"/> ',
-		);
+		let display_acc_label = $('<label for="display_acc_' + this.panel.n + '">Linear acceleration</label>');
+		let display_acc_cb = $('<input type="checkbox" id="display_acc_' + this.panel.n + '" ' + (this.display_acc ? "checked " : "") + 'title="Display acceleration"/> ');
 		display_acc_label.append(display_acc_cb).appendTo(display_acc_line_el);
 		display_acc_cb.change(function (ev) {
 			that.display_acc = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('acc', that.display_acc);
 			that.updateDisplay();
 		});
 		menu_els.push(display_acc_line_el);
 
 		// display gyro vector
 		let display_gyro_line_el = $('<div class="menu_line"></div>');
-		let display_gyro_label = $(
-			'<label for="display_gyro_' + this.panel.n + '">Angular velocity</label>',
-		);
-		let display_gyro_cb = $(
-			'<input type="checkbox" id="display_gyro_' +
-				this.panel.n +
-				'" ' +
-				(this.display_gyro ? "checked " : "") +
-				'title="Display angular velocity"/>',
-		);
+		let display_gyro_label = $('<label for="display_gyro_' + this.panel.n + '">Angular velocity</label>');
+		let display_gyro_cb = $('<input type="checkbox" id="display_gyro_' + this.panel.n + '" ' + (this.display_gyro ? "checked " : "") + 'title="Display angular velocity"/>');
 		display_gyro_label.append(display_gyro_cb).appendTo(display_gyro_line_el);
 		display_gyro_cb.change(function (ev) {
 			that.display_gyro = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('gyr', that.display_gyro);
 			that.updateDisplay();
 		});
 		menu_els.push(display_gyro_line_el);

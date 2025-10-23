@@ -1,11 +1,11 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg } from "../inc/lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg } from "/static/inc/lib.js";
 import * as THREE from "three";
 import { STLLoader } from "stl-loader";
 import { ColladaLoader } from "collada-loader";
 import { OrbitControls } from "orbit-controls";
 import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
-import { MultiTopicSource } from "./inc/multitopic.js";
+import { MultiTopicSource } from "./multitopic.js";
 import { Vector3, Quaternion, LoadingManager } from "three";
 
 export class DescriptionTFWidget extends EventTarget {
@@ -25,7 +25,7 @@ export class DescriptionTFWidget extends EventTarget {
 
 	static ROS_SPACE_KEY = "ROS_SPACE";
 
-	constructor(panel, start_loop = true) {
+	constructor(panel, widget_conf, start_rendering_loop=true) {
 		super();
 
 		this.panel = panel;
@@ -42,11 +42,9 @@ export class DescriptionTFWidget extends EventTarget {
 			perspective_camera: true,
 			fix_robot_base: false, // robot will be fixed in place
 			render_pose_graph: false,
-			render_ground_plane: true,
+			render_ground_plane: 1, // basic plane 1
+			render_skybox: 1, // basic skybox
 			render_stats: false,
-			// passthrough vars:
-			_focus_target: "",
-			_cam_position_offset: "",
 		};
 
 		this.panel.fps_el.addClass("rendering_stats");
@@ -314,17 +312,19 @@ export class DescriptionTFWidget extends EventTarget {
 		this.camera_target_pos.visible = false; //enable when debugging
 		this.scene.add(this.camera_target_pos);
 
-		this.parseUrlParts(this.panel.custom_url_vars);
+		this.loadPanelConfig();
 
 		// - url vars parsed here - //
 
-		// cam follow action
 		this.last_camera_url_update = Number.NEGATIVE_INFINITY;
+
+		// follow target toggle
 		if (this.vars.follow_target) {
 			this.focus_btn.addClass("on");
 		}
 		this.focus_btn.click(function (ev) {
 			that.vars.follow_target = !$(this).hasClass("on");
+			that.panel.storePanelVarAsBool('f', that.vars.follow_target);
 			if (that.vars.follow_target) {
 				$(this).addClass("on");
 				that.controls.enablePan = false;
@@ -335,7 +335,7 @@ export class DescriptionTFWidget extends EventTarget {
 			}
 			that.makeRobotMarkers();
 			that.makeROSOriginMarker();
-			that.panel.ui.updateUrlHash();
+			that.storeCameraPosePanelVars();
 			that.renderDirty();
 		});
 
@@ -345,6 +345,7 @@ export class DescriptionTFWidget extends EventTarget {
 		}
 		this.labels_btn.click(function (ev) {
 			that.vars.render_labels = !$(this).hasClass("on");
+			that.panel.storePanelVarAsBool('lbl', that.vars.render_labels);
 			if (that.vars.render_labels) {
 				$(this).addClass("on");
 				if (that.vars.render_joints)
@@ -360,7 +361,7 @@ export class DescriptionTFWidget extends EventTarget {
 				that.camera.layers.disable(DescriptionTFWidget.L_ROS_ORIGIN_LABEL);
 			}
 			// that.makeRobotMarkers();
-			that.panel.ui.updateUrlHash();
+			
 			that.renderDirty();
 		});
 
@@ -372,13 +373,14 @@ export class DescriptionTFWidget extends EventTarget {
 		}
 		this.perspective_btn.click(function (ev) {
 			that.vars.perspective_camera = !$(this).hasClass("on");
+			that.panel.storePanelVarAsInt('ct', that.vars.perspective_camera ? 1 : 0);
 			if (that.vars.perspective_camera) {
 				$(this).addClass("on");
 			} else {
 				$(this).removeClass("on");
 			}
 			that.makeCamera();
-			that.panel.ui.updateUrlHash();
+			that.storeCameraPosePanelVars();
 			that.renderDirty();
 		});
 
@@ -400,7 +402,7 @@ export class DescriptionTFWidget extends EventTarget {
 			this.controlsChanged();
 		});
 		this.controls.addEventListener("end", () => {
-			that.panel.ui.updateUrlHash(); // saves camera pos in url
+			that.storeCameraPosePanelVars(); // saves camera pos in url
 		});
 		this.controls_dirty = false;
 
@@ -430,7 +432,7 @@ export class DescriptionTFWidget extends EventTarget {
 			);
 			that.ground_plane.position.set(0, 0, 0);
 			that.ground_plane.receiveShadow = true;
-			that.ground_plane.visible = that.vars.render_ground_plane;
+			that.ground_plane.visible = that.vars.render_ground_plane != 0;
 			that.scene.add(that.ground_plane);
 		});
 
@@ -468,7 +470,7 @@ export class DescriptionTFWidget extends EventTarget {
 			wireframe: true,
 		});
 
-		if (start_loop) {
+		if (start_rendering_loop) {
 			this.rendering = true;
 			this.renderDirty();
 			requestAnimationFrame((t) => this.renderingLoop());
@@ -595,52 +597,30 @@ export class DescriptionTFWidget extends EventTarget {
 	}
 
 	updateFps() {
-		let dt = this.panel.last_fps_updated
-			? Date.now() - this.panel.last_fps_updated
-			: 0;
+		let dt = this.panel.last_fps_updated ? Date.now() - this.panel.last_fps_updated : 0;
 		let r = dt ? 1000 / dt : 0;
-		this.panel.fps = this.last_frame_count
-			? this.renderer.info.render.frame - this.last_frame_count
-			: 0;
+		this.panel.fps = this.last_frame_count ? this.renderer.info.render.frame - this.last_frame_count : 0;
 		this.panel.fps *= r;
-		this.stats_model_tris_rendered = this.panel.fps
-			? this.renderer.info.render.triangles / this.panel.fps
-			: 0;
-		this.stats_model_lines_rendered = this.panel.fps
-			? this.renderer.info.render.lines / this.panel.fps
-			: 0;
+		this.stats_model_tris_rendered = this.panel.fps ? this.renderer.info.render.triangles / this.panel.fps : 0;
+		this.stats_model_lines_rendered = this.panel.fps ? this.renderer.info.render.lines / this.panel.fps : 0;
 
 		this.last_frame_count = this.renderer.info.render.frame;
 		this.renderer.info.reset(); // resets tris & lines but not frames
 
 		return (
-			this.panel.fps.toFixed(0) +
-			" FPS<br>\n" +
-			"Model: " +
-			this.stats_model_verts.toLocaleString("en-US") +
-			" verts, " +
-			this.stats_model_tris.toLocaleString("en-US") +
-			" tris<br>\n" +
-			"Rendered: " +
-			this.stats_model_lines_rendered.toLocaleString("en-US", {
-				maximumFractionDigits: 0,
-			}) +
-			" lines, " +
-			this.stats_model_tris_rendered.toLocaleString("en-US", {
-				maximumFractionDigits: 0,
-			}) +
-			" tris"
+			this.panel.fps.toFixed(0) + " FPS<br>\n" +
+			"Model: " + this.stats_model_verts.toLocaleString("en-US") + " verts, " + this.stats_model_tris.toLocaleString("en-US") + " tris<br>\n" +
+			"Rendered: " + this.stats_model_lines_rendered.toLocaleString("en-US", {maximumFractionDigits: 0}) + " lines, " +
+			this.stats_model_tris_rendered.toLocaleString("en-US", {maximumFractionDigits: 0}) + " tris"
 		);
 	}
 
 	moveCameraToView(position) {
 		let rwq = new THREE.Quaternion();
-		if (
-			this.vars.follow_target &&
-			this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
-		)
+		if (this.vars.follow_target && this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY)
 			this.ros_space.getWorldQuaternion(rwq);
-		else this.robot.getWorldQuaternion(rwq);
+		else
+			this.robot.getWorldQuaternion(rwq);
 
 		let target_pos = new THREE.Vector3();
 		let d = this.camera.position.distanceTo(this.camera_target_pos.position);
@@ -695,19 +675,12 @@ export class DescriptionTFWidget extends EventTarget {
 
 		// render joints
 		let render_joints_line_el = $('<div class="menu_line"></div>');
-		let render_joints_label = $(
-			'<label for="render_joints_' + this.panel.n + '">Render joints</label>',
-		);
-		let render_joints_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_joints ? "checked" : "") +
-				' id="render_joints_' +
-				this.panel.n +
-				'" title="Render joints"/>',
-		);
+		let render_joints_label = $('<label for="render_joints_' + this.panel.n + '">Render joints</label>');
+		let render_joints_cb = $('<input type="checkbox" ' + (this.vars.render_joints ? "checked" : "") + ' id="render_joints_' + this.panel.n + '" title="Render joints"/>');
 		render_joints_label.append(render_joints_cb).appendTo(render_joints_line_el);
 		render_joints_cb.change(function (ev) {
 			that.vars.render_joints = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('jnt', that.vars.render_joints);
 			if (that.vars.render_joints) {
 				that.camera.layers.enable(DescriptionTFWidget.L_JOINTS);
 				if (that.vars.render_labels)
@@ -716,27 +689,20 @@ export class DescriptionTFWidget extends EventTarget {
 				that.camera.layers.disable(DescriptionTFWidget.L_JOINTS);
 				that.camera.layers.disable(DescriptionTFWidget.L_JOINT_LABELS); //labels
 			}
-			if (that.robot_model) that.makeRobotMarkers();
-			// that.panel.ui.updateUrlHash();
+			if (that.robot_model)
+				that.makeRobotMarkers();
 			that.renderDirty();
 		});
 		menu_els.push(render_joints_line_el);
 
 		// render links
 		let render_links_line_el = $('<div class="menu_line"></div>');
-		let render_links_label = $(
-			'<label for="render_links_' + this.panel.n + '">Render links</label>',
-		);
-		let render_links_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_links ? "checked" : "") +
-				' id="render_links_' +
-				this.panel.n +
-				'" title="Render links">',
-		);
+		let render_links_label = $('<label for="render_links_' + this.panel.n + '">Render links</label>');
+		let render_links_cb = $('<input type="checkbox" ' + (this.vars.render_links ? "checked" : "") + ' id="render_links_' + this.panel.n + '" title="Render links">');
 		render_links_label.append(render_links_cb).appendTo(render_links_line_el);
 		render_links_cb.change(function (ev) {
 			that.vars.render_links = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('lnk', that.vars.render_links);
 			if (that.vars.render_links) {
 				that.camera.layers.enable(DescriptionTFWidget.L_LINKS);
 				if (that.vars.render_labels)
@@ -745,28 +711,20 @@ export class DescriptionTFWidget extends EventTarget {
 				that.camera.layers.disable(DescriptionTFWidget.L_LINKS);
 				that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS); //labels
 			}
-			if (that.robot_model) that.makeRobotMarkers();
+			if (that.robot_model)
+				that.makeRobotMarkers();
 			that.renderDirty();
 		});
 		menu_els.push(render_links_line_el);
 
 		// render ros origin marker
 		let render_ros_origin_line_el = $('<div class="menu_line"></div>');
-		let render_ros_origin_label = $(
-			'<label for="render_ros_origin_' + this.panel.n + '">Show ROS origin</label>',
-		);
-		let render_ros_origin_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_ros_origin ? "checked" : "") +
-				' id="render_ros_origin_' +
-				this.panel.n +
-				'" title="Show ROS origin"/>',
-		);
-		render_ros_origin_label
-			.append(render_ros_origin_cb)
-			.appendTo(render_ros_origin_line_el);
+		let render_ros_origin_label = $('<label for="render_ros_origin_' + this.panel.n + '">Show ROS origin</label>');
+		let render_ros_origin_cb = $('<input type="checkbox" ' + (this.vars.render_ros_origin ? "checked" : "") + ' id="render_ros_origin_' + this.panel.n + '" title="Show ROS origin"/>');
+		render_ros_origin_label.append(render_ros_origin_cb).appendTo(render_ros_origin_line_el);
 		render_ros_origin_cb.change(function (ev) {
 			that.vars.render_ros_origin = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('ro', that.vars.render_ros_origin);
 			if (that.vars.render_ros_origin) {
 				that.camera.layers.enable(DescriptionTFWidget.L_ROS_ORIGIN_MARKER);
 				if (that.vars.render_labels)
@@ -782,117 +740,148 @@ export class DescriptionTFWidget extends EventTarget {
 
 		// render visuals
 		let render_visuals_line_el = $('<div class="menu_line"></div>');
-		let render_visuals_label = $(
-			'<label for="render_visuals_' + this.panel.n + '"">Show visuals</label>',
-		);
-		let render_visuals_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_visuals ? "checked" : "") +
-				' id="render_visuals_' +
-				this.panel.n +
-				'" title="Render visuals"/>',
-		);
+		let render_visuals_label = $('<label for="render_visuals_' + this.panel.n + '"">Show visuals</label>');
+		let render_visuals_cb = $('<input type="checkbox" ' + (this.vars.render_visuals ? "checked" : "") + ' id="render_visuals_' + this.panel.n + '" title="Render visuals"/>');
 		render_visuals_label.append(render_visuals_cb).appendTo(render_visuals_line_el);
 		render_visuals_cb.change(function (ev) {
 			that.vars.render_visuals = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('vis', that.vars.render_visuals);
 			if (that.vars.render_visuals)
 				that.camera.layers.enable(DescriptionTFWidget.L_VISUALS);
 			else that.camera.layers.disable(DescriptionTFWidget.L_VISUALS);
-			// that.panel.ui.updateUrlHash();
 			that.renderDirty();
 		});
 		menu_els.push(render_visuals_line_el);
 
 		// render colliders
 		let render_collisions_line_el = $('<div class="menu_line"></div>');
-		let render_collisions_label = $(
-			'<label for="render_collisions_' +
-				this.panel.n +
-				'"">Show collisions</label>',
-		);
-		let render_collisions_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_collisions ? "checked" : "") +
-				' id="render_collisions_' +
-				this.panel.n +
-				'" title="Render collisions"/>',
-		);
+		let render_collisions_label = $('<label for="render_collisions_' + this.panel.n + '"">Show collisions</label>');
+		let render_collisions_cb = $('<input type="checkbox" ' + (this.vars.render_collisions ? "checked" : "") + ' id="render_collisions_' + this.panel.n + '" title="Render collisions"/>');
 		render_collisions_label
 			.append(render_collisions_cb)
 			.appendTo(render_collisions_line_el);
 		render_collisions_cb.change(function (ev) {
 			that.vars.render_collisions = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('col', that.vars.render_collisions);
 			if (that.vars.render_collisions)
 				that.camera.layers.enable(DescriptionTFWidget.L_COLLIDERS);
 			else that.camera.layers.disable(DescriptionTFWidget.L_COLLIDERS);
-			// that.panel.ui.updateUrlHash();
 			that.renderDirty();
 		});
 		menu_els.push(render_collisions_line_el);
 
 		// fix base (robot will not move linearly, only rotate)
 		let fix_base_line_el = $('<div class="menu_line"></div>');
-		let fix_base_label = $(
-			'<label for="fix_base_' + this.panel.n + '"">Fix robot base</label>',
-		);
-		let fix_base_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.fix_robot_base ? "checked" : "") +
-				' id="fix_base_' +
-				this.panel.n +
-				'" title="Fix robot base"/>',
-		);
+		let fix_base_label = $('<label for="fix_base_' + this.panel.n + '"">Fix robot base</label>');
+		let fix_base_cb = $('<input type="checkbox" ' + (this.vars.fix_robot_base ? "checked" : "") + ' id="fix_base_' + this.panel.n + '" title="Fix robot base"/>');
 		fix_base_label.append(fix_base_cb).appendTo(fix_base_line_el);
 		fix_base_cb.change(function (ev) {
 			that.vars.fix_robot_base = $(this).prop("checked");
-			// that.panel.ui.updateUrlHash();
+			that.panel.storePanelVarAsBool('fix', that.vars.fix_robot_base);
 			that.renderDirty();
 		});
 		menu_els.push(fix_base_line_el);
 
 		// render pose graph trail
 		let render_pg_line_el = $('<div class="menu_line"></div>');
-		let render_pg_label = $(
-			'<label for="render_pg_' + this.panel.n + '"">Render trace</label>',
-		);
-		let render_pg_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_pose_graph ? "checked" : "") +
-				' id="render_pg_' +
-				this.panel.n +
-				'" title="Render pose trace"/>',
-		);
+		let render_pg_label = $('<label for="render_pg_' + this.panel.n + '"">Render trace</label>');
+		let render_pg_cb = $('<input type="checkbox" ' + (this.vars.render_pose_graph ? "checked" : "") + ' id="render_pg_' + this.panel.n + '" title="Render pose trace"/>');
 		render_pg_label.append(render_pg_cb).appendTo(render_pg_line_el);
 		render_pg_cb.change(function (ev) {
 			that.vars.render_pose_graph = $(this).prop("checked");
+			that.panel.storePanelVarAsBool('pg', that.vars.render_pose_graph);
 			if (that.vars.render_pose_graph)
 				that.camera.layers.enable(DescriptionTFWidget.L_POSE_GRAPH);
 			else that.camera.layers.disable(DescriptionTFWidget.L_POSE_GRAPH);
-			// that.panel.ui.updateUrlHash();
 			that.renderDirty();
 		});
 		menu_els.push(render_pg_line_el);
 
-		// render ground plane
-		let render_grnd_line_el = $('<div class="menu_line"></div>');
-		let render_grnd_label = $(
-			'<label for="render_grnd_' + this.panel.n + '"">Ground plane</label>',
-		);
-		let render_grnd_cb = $(
-			'<input type="checkbox" ' +
-				(this.vars.render_ground_plane ? "checked" : "") +
-				' id="render_grnd_' +
-				this.panel.n +
-				'" title="Render ground plane"/>',
-		);
-		render_grnd_label.append(render_grnd_cb).appendTo(render_grnd_line_el);
-		render_grnd_cb.change(function (ev) {
-			that.vars.render_ground_plane = $(this).prop("checked");
-			that.ground_plane.visible = that.vars.render_ground_plane;
-			// that.panel.ui.updateUrlHash();
+		// ground plane type
+		let render_grnd_line_el = $('<div class="menu_line buttons_right"></div>');
+		let render_grnd_label = $('<label for="render_grnd_' + this.panel.n + '""></label>');
+		let render_grnd_label_value = $('<span></span>');
+		let render_grnd_btn_left = $('<button class="left">&laquo;</button>');
+		let render_grnd_btn_right = $('<button class="right">&raquo;</button>');
+		render_grnd_label.append([ render_grnd_label_value, render_grnd_btn_right, render_grnd_btn_left ]).appendTo(render_grnd_line_el);
+		menu_els.push(render_grnd_line_el);
+
+		function setGroundLabel() {
+			let label = '';
+			switch (that.vars.render_ground_plane) {
+				case 0: label = 'No ground plane'; break;
+				case 1: label = 'Ground plane 1'; break;
+				case 2: label = 'Ground plane 2'; break;
+				case 3: label = 'Black ground plane'; break;
+				case 4: label = 'White ground plane'; break;
+			}
+			render_grnd_label_value.text(label);
+		}
+		setGroundLabel();
+
+		render_grnd_btn_left.click(()=>{
+			if (that.vars.render_ground_plane <= 0)
+				that.vars.render_ground_plane = 4;
+			else
+				that.vars.render_ground_plane--;
+			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
+			setGroundLabel();
 			that.renderDirty();
 		});
-		menu_els.push(render_grnd_line_el);
+		render_grnd_btn_right.click(()=>{
+			if (that.vars.render_ground_plane >= 4)
+				that.vars.render_ground_plane = 0;
+			else
+				that.vars.render_ground_plane++;
+			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
+			setGroundLabel();
+			that.renderDirty();
+		});
+		
+		
+		// ground plane type
+		let render_skybox_line_el = $('<div class="menu_line buttons_right"></div>');
+		let render_skybox_label = $('<label for="render_sky_' + this.panel.n + '""></label>');
+		let render_skybox_label_value = $('<span></span>');
+		let render_skybox_btn_left = $('<button class="left">&laquo;</button>');
+		let render_skybox_btn_right = $('<button class="right">&raquo;</button>');
+		render_skybox_label.append([ render_skybox_label_value, render_skybox_btn_right, render_skybox_btn_left ]).appendTo(render_skybox_line_el);
+		menu_els.push(render_skybox_line_el);
+
+		function setSkyboxLabel() {
+			let label = '';
+			switch (that.vars.render_skybox) {
+				case 0: label = 'No skybox'; break;
+				case 1: label = 'Dawn skybox'; break;
+				case 2: label = 'Mars skybox'; break;
+				case 3: label = 'Black skybox'; break;
+				case 4: label = 'White skybox'; break;
+			}
+			render_skybox_label_value.text(label);
+		}
+		setSkyboxLabel();
+
+		render_skybox_btn_left.click(()=>{
+			if (that.vars.render_skybox <= 0)
+				that.vars.render_skybox = 4;
+			else
+				that.vars.render_skybox--;
+			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
+			setSkyboxLabel();
+			that.renderDirty();
+		});
+		render_skybox_btn_right.click(()=>{
+			if (that.vars.render_skybox >= 4)
+				that.vars.render_skybox = 0;
+			else
+				that.vars.render_skybox++;
+			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
+			setSkyboxLabel();
+			that.renderDirty();
+		});
+	
+
+
 	}
 
 	onClose() {
@@ -907,48 +896,34 @@ export class DescriptionTFWidget extends EventTarget {
 		this.renderer = null;
 	}
 
-	getUrlHashParts(out_parts) {
-		out_parts.push("f=" + (this.vars.follow_target ? "1" : "0"));
+	storeCameraPosePanelVars() {
 
-		// focus position or model node (in robot space)
+		//	focus position or model node or vector3 (in robot space)
 		let focus_pos_robot_space;
-		if (
-			this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY &&
-			this.vars.follow_target
-		)
-			focus_pos_robot_space = this.ros_space.worldToLocal(
-				this.camera_target_pos.position.clone(),
-			);
+		if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY && this.vars.follow_target)
+			focus_pos_robot_space = this.ros_space.worldToLocal(this.camera_target_pos.position.clone());
 		else
-			focus_pos_robot_space = this.robot.worldToLocal(
-				this.camera_target_pos.position.clone(),
-			);
+			focus_pos_robot_space = this.robot.worldToLocal(this.camera_target_pos.position.clone());
+	
 		let focus_target = this.camera_target_key;
 		if (!focus_target || !this.vars.follow_target) {
 			// focus point in robot space
-			focus_target =
-				focus_pos_robot_space.x.toFixed(3) +
-				"," +
-				focus_pos_robot_space.y.toFixed(3) +
-				"," +
-				focus_pos_robot_space.z.toFixed(3);
+			this.panel.storePanelVarAsVector3('ft', focus_pos_robot_space);
+		} else {
+			this.panel.storePanelVarAsString('ft', focus_target);
 		}
-		this.vars._focus_target = focus_target;
-		out_parts.push("ft=" + focus_target);
-
-		// camera type
-		out_parts.push("ct=" + (this.vars.perspective_camera ? "1" : "0"));
 
 		// camera rotation and distance from focal target (in robot space)
+		if (this.set_camera_target_offset)
+			return; // don't store more until done setting pose
+
 		let cam_pos_robot_space;
-		if (
-			this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY &&
-			this.vars.follow_target
-		)
+		if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY && this.vars.follow_target)
 			cam_pos_robot_space = this.ros_space.worldToLocal(
 				this.camera.position.clone(),
 			);
-		else cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
+		else
+			cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
 		let cam_distance = cam_pos_robot_space.distanceTo(focus_pos_robot_space);
 		let rwq = new THREE.Quaternion();
 		if (focus_target == DescriptionTFWidget.ROS_SPACE_KEY)
@@ -956,122 +931,65 @@ export class DescriptionTFWidget extends EventTarget {
 		else this.robot.getWorldQuaternion(rwq);
 		let cam_rot_robot_space = rwq.invert().multiply(this.camera.quaternion.clone());
 
+		// saving as string[] bcs of the various precisions
 		const quat_precision = 10;
-		let val =
-			cam_rot_robot_space.x.toFixed(quat_precision) +
-			"," +
-			cam_rot_robot_space.y.toFixed(quat_precision) +
-			"," +
-			cam_rot_robot_space.z.toFixed(quat_precision) +
-			"," +
-			cam_rot_robot_space.w.toFixed(quat_precision) +
-			"," +
-			cam_distance.toFixed(3); // distance to target as 5th val
-		if (!this.vars.perspective_camera)
+		let val = [ cam_rot_robot_space.x.toFixed(quat_precision),
+					cam_rot_robot_space.y.toFixed(quat_precision),
+					cam_rot_robot_space.z.toFixed(quat_precision),
+					cam_rot_robot_space.w.toFixed(quat_precision),
+					cam_distance.toFixed(3)];
+	
+		if (!this.vars.perspective_camera) { // add othro zoom
 			// cheaper to pass ortho zoom than to calculate respective offset on every change
-			val += "," + this.camera.zoom.toFixed(3); // 6th val
-		if (this.set_camera_target_offset) val = this.vars._cam_position_offset;
-		this.vars._cam_position_offset = val;
-		out_parts.push("cp=" + val);
-
-		out_parts.push("jnt=" + (this.vars.render_joints ? "1" : "0"));
-		out_parts.push("lnk=" + (this.vars.render_links ? "1" : "0"));
-		out_parts.push("ro=" + (this.vars.render_ros_origin ? "1" : "0"));
-		out_parts.push("lbl=" + (this.vars.render_labels ? "1" : "0"));
-		out_parts.push("vis=" + (this.vars.render_visuals ? "1" : "0"));
-		out_parts.push("col=" + (this.vars.render_collisions ? "1" : "0"));
-		out_parts.push("fix=" + (this.vars.fix_robot_base ? "1" : "0"));
-		out_parts.push("pg=" + (this.vars.render_pose_graph ? "1" : "0"));
-		out_parts.push("grnd=" + (this.vars.render_ground_plane ? "1" : "0"));
-		out_parts.push("s=" + (this.vars.render_stats ? "1" : "0"));
-		this.sources.getUrlHashParts(out_parts);
+			val.push(this.camera.zoom.toFixed(3)); // 6th val
+			this.panel.storePanelVarAsStringArray('cp', val);
+		} else {
+			this.panel.storePanelVarAsStringArray('cp', val);
+		}
 	}
 
-	parseUrlParts(custom_url_vars) {
-		if (!custom_url_vars) return;
-		custom_url_vars.forEach((kvp) => {
-			let arg = kvp[0];
-			let val = kvp[1];
-			// console.warn('DRF got ' + arg +" > "+val);
-			switch (arg) {
-				case "f":
-					this.vars.follow_target = parseInt(val) == 1;
-					break;
-				case "ft":
-					this.vars._focus_target = val;
-					if (val.indexOf(",") > 0) {
-						let coords = val.split(",");
-						let pos = new THREE.Vector3(
-							parseFloat(coords[0]),
-							parseFloat(coords[1]),
-							parseFloat(coords[2]),
-						);
-						this.camera_target_pos.position.copy(
-							this.robot.localToWorld(pos),
-						);
-						this.camera_target_key = null;
-					} else {
-						this.camera_target_key = val; // will be set on description
-					}
-					break;
-				case "ct":
-					this.vars.perspective_camera = parseInt(val) == 1;
-					break;
-				case "cp":
-					this.vars._cam_position_offset = val;
-					if (val.indexOf(",") > 0) {
-						let coords = val.split(",");
-						let cam_rot_robot_space = new THREE.Quaternion(
-							parseFloat(coords[0]),
-							parseFloat(coords[1]),
-							parseFloat(coords[2]),
-							parseFloat(coords[3]),
-						).normalize();
-						let dist_to_target = parseFloat(coords[4]);
-						if (coords.length > 5)
-							this.set_ortho_camera_zoom = parseFloat(coords[5]);
+	loadPanelConfig() {
+	
+		this.vars.follow_target = this.panel.getPanelVarAsBool('f', this.vars.follow_target);
+		this.vars.perspective_camera = this.panel.getPanelVarAsInt('ct', this.vars.perspective_camera ? 1 : 0) == 1;
+		this.vars.render_joints = this.panel.getPanelVarAsBool('jnt', this.vars.render_joints);
+		this.vars.render_links = this.panel.getPanelVarAsBool('lnk', this.vars.render_links);
+		this.vars.render_ros_origin = this.panel.getPanelVarAsBool('ro', this.vars.render_ros_origin);
+		this.vars.render_labels = this.panel.getPanelVarAsBool('lbl', this.vars.render_labels);
+		this.vars.render_visuals = this.panel.getPanelVarAsBool('vis', this.vars.render_visuals);
+		this.vars.render_collisions = this.panel.getPanelVarAsBool('col', this.vars.render_collisions);
+		this.vars.fix_robot_base = this.panel.getPanelVarAsBool('fix', this.vars.fix_robot_base);
+		this.vars.render_pose_graph = this.panel.getPanelVarAsBool('pg', this.vars.render_pose_graph);
+		this.vars.render_ground_plane = this.panel.getPanelVarAsInt('grnd', this.vars.render_ground_plane);
+		this.vars.render_skybox = this.panel.getPanelVarAsInt('sky', this.vars.render_skybox);
+		this.vars.render_stats = this.panel.getPanelVarAsBool('s', this.vars.render_stats);;
 
-						this.set_camera_target_offset = {
-							rotation: cam_rot_robot_space,
-							distance: dist_to_target,
-						};
-						this.camera_distance_initialized = true; // don't autodetect
-						this.camera_pose_initialized = true;
-					}
-					break;
-				case "jnt":
-					this.vars.render_joints = parseInt(val) == 1;
-					break;
-				case "lnk":
-					this.vars.render_links = parseInt(val) == 1;
-					break;
-				case "ro":
-					this.vars.render_ros_origin = parseInt(val) == 1;
-					break;
-				case "lbl":
-					this.vars.render_labels = parseInt(val) == 1;
-					break;
-				case "vis":
-					this.vars.render_visuals = parseInt(val) == 1;
-					break;
-				case "col":
-					this.vars.render_collisions = parseInt(val) == 1;
-					break;
-				case "fix":
-					this.vars.fix_robot_base = parseInt(val) == 1;
-					break;
-				case "pg":
-					this.vars.render_pose_graph = parseInt(val) == 1;
-					break;
-				case "grnd":
-					this.vars.render_ground_plane = parseInt(val) == 1;
-					break;
-				case "s":
-					this.vars.render_stats = parseInt(val) == 1;
-					break;
-			}
-		});
-		this.sources.parseUrlParts(custom_url_vars);
+		let focus_target_pos = this.panel.getPanelVarAsVector3('ft', undefined);
+		if (focus_target_pos) {
+			this.camera_target_pos.position.copy(
+				this.robot.localToWorld(focus_target_pos),
+			);
+			this.camera_target_key = null;
+		} else {
+			this.camera_target_key = this.panel.getPanelVarAsString('ft', null); // camera will be set on description
+		}
+
+		let cam_pos_arr = this.panel.getPanelVarAsFloatArray('cp', undefined);
+		if (cam_pos_arr && cam_pos_arr.length > 4) {
+			let cam_rot_robot_space = new THREE.Quaternion(cam_pos_arr[0], cam_pos_arr[1], cam_pos_arr[2], cam_pos_arr[3]).normalize();
+			let dist_to_target = cam_pos_arr[4];
+			if (cam_pos_arr.length > 5)
+				this.set_ortho_camera_zoom = cam_pos_arr[5];
+
+			this.set_camera_target_offset = {
+				rotation: cam_rot_robot_space,
+				distance: dist_to_target,
+			};
+			this.camera_distance_initialized = true; // don't autodetect
+			this.camera_pose_initialized = true;
+		}
+			
+		this.sources.loadAssignedTopicsFromPanelVars();
 	}
 
 	onDescriptionData(topic, desc) {
@@ -1274,27 +1192,21 @@ export class DescriptionTFWidget extends EventTarget {
 
 		if (!this.vars.follow_target && force_follow) {
 			this.vars.follow_target = true;
+			this.panel.storePanelVarAsInt('f', 1);
 			this.focus_btn.addClass("on");
 		}
-
+		
 		if (force_follow)
-			//only refresh on click
-			this.panel.ui.updateUrlHash();
+			this.storeCameraPosePanelVars();
+		// 	//only refresh on click
+		// 	this.panel.ui.updateUrlHash();
 
 		this.makeRobotMarkers();
 		this.makeROSOriginMarker();
 	}
 
 	setCameraTargetPosition(new_target_pos) {
-		console.log(
-			"Setting cam target positino to: [" +
-				new_target_pos.x.toFixed(2) +
-				";" +
-				new_target_pos.y.toFixed(2) +
-				";" +
-				new_target_pos.z.toFixed(3) +
-				"]",
-		);
+		console.log("Setting cam target positino to: [" + new_target_pos.x.toFixed(2) + ";" + new_target_pos.y.toFixed(2) + ";" + new_target_pos.z.toFixed(3) + "]");
 		this.camera_target_pos.position.copy(new_target_pos);
 		this.camera.lookAt(this.camera_target_pos);
 		this.controls.update();
@@ -1304,8 +1216,9 @@ export class DescriptionTFWidget extends EventTarget {
 
 		if (this.vars.follow_target) {
 			this.vars.follow_target = false;
+			this.panel.storePanelVarAsInt('f', 0);
 			this.focus_btn.removeClass("on");
-			this.panel.ui.updateUrlHash();
+			this.storeCameraPosePanelVars()
 			this.makeRobotMarkers();
 			this.makeROSOriginMarker();
 		}
@@ -1447,8 +1360,7 @@ export class DescriptionTFWidget extends EventTarget {
 			el.title = "Focus camera here";
 			if (is_selected) el.className += " focused";
 			if (!h_center)
-				el.className +=
-					layer_labels == DescriptionTFWidget.L_JOINT_LABELS
+				el.className += layer_labels == DescriptionTFWidget.L_JOINT_LABELS
 						? " joint"
 						: " link";
 			el.textContent = label_text;
@@ -1460,12 +1372,9 @@ export class DescriptionTFWidget extends EventTarget {
 				ev.preventDefault();
 			});
 			target.add(label_el);
-			label_el.center.set(
-				h_center
-					? 0.5
-					: layer_labels == DescriptionTFWidget.L_JOINT_LABELS
-						? 1.0
-						: 0.0, // joints left, links right
+			label_el.center.set(h_center ? 0.5 : layer_labels == DescriptionTFWidget.L_JOINT_LABELS
+									? 1.0
+									: 0.0, // joints left, links right
 				v_center,
 			);
 			label_el.position.set(0, 0, 0);
@@ -1618,11 +1527,7 @@ export class DescriptionTFWidget extends EventTarget {
 					if (!this.missing_transform_error_logged[t_child]) {
 						this.missing_transform_error_logged[t_child] = true;
 						let msg = id_child + " not found in the URDF model";
-						this.panel.ui.showNotification(
-							msg,
-							"error",
-							"<pre>Source: transform</pre>",
-						);
+						this.panel.ui.showNotification(msg, "error", "<pre>Source: transform</pre>");
 						console.error(msg);
 					}
 					continue;
@@ -1702,7 +1607,7 @@ export class DescriptionTFWidget extends EventTarget {
 					) {
 						setTimeout(() => {
 							this.last_camera_url_update = Date.now();
-							that.panel.ui.updateUrlHash();
+							this.storeCameraPosePanelVars();
 						}, 0);
 					}
 
@@ -1758,7 +1663,7 @@ export class DescriptionTFWidget extends EventTarget {
 			}
 		}
 
-		// set camera ros and offset from url (only once)
+		// set camera rot and offset from url (only once)
 		if (this.set_camera_target_offset) {
 			if (this.camera_target && this.vars.follow_target) {
 				this.camera_target.getWorldPosition(this.camera_target_pos.position);
@@ -1824,7 +1729,7 @@ export class DescriptionTFWidget extends EventTarget {
 				this.controls.enableRotate = true;
 				this.controls.enablePan = !this.vars.follow_target;
 				this.controls.update();
-				this.panel.ui.updateUrlHash();
+				this.storeCameraPosePanelVars();
 			}
 		}
 

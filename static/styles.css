@@ -4342,6 +4342,8 @@ BODY.touch-ui .menu_line.rot_ctrl {
 
 .menu_line.zoom_ctrl .minus,
 .menu_line.zoom_ctrl .plus,
+.menu_line.buttons_right .left,
+.menu_line.buttons_right .right,
 .menu_line.plus_minus_ctrl .minus,
 .menu_line.plus_minus_ctrl .plus,
 .menu_line.rot_ctrl .rot-left,
@@ -4360,6 +4362,25 @@ BODY.touch-ui .menu_line.rot_ctrl {
 	-ms-user-select: none; /* IE 10 and IE 11 */
 	user-select: none; /* Standard syntax */
 	top: 2px;
+}
+
+.menu_line.buttons_right .left,
+.menu_line.buttons_right .right {
+	position: relative;
+    float: right;
+    top: -3px;
+    height: 21px;
+    border: 0px;
+    line-height: 10px;
+    margin-left: 4px;
+    background-color: #383838;
+    margin: 0px 0px 0px 5px;
+    padding: 0px;
+}
+
+.menu_line.buttons_right:hover .left,
+.menu_line.buttons_right:hover .right {
+	background-color: #0051ff;
 }
 
 .menu_line.rot_ctrl .rot-left .icon,
@@ -6861,4 +6882,9 @@ BODY.touch-ui #description-dialog .desktop-only {
 #node-params-dialog .json-editor .add,
 #node-params-dialog .json-editor .remove {
 	background-color: #675d5d7a;
+}
+
+
+.video_overlay_cont SVG .detection-res {
+	background-color: #000;
 }

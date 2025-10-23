@@ -27,11 +27,12 @@ export class PanelUI {
 		// '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
 	};
 	type_widgets = {};
-	addTypeWidget(msg_type, widget_class) {
+	addTypeWidget(msg_type, widget_class, conf) {
 		this.type_widgets[msg_type] = {
 			widget: widget_class,
 			w: widget_class.default_width,
 			h: widget_class.default_height,
+			conf: conf
 		};
 	}
 
@@ -1782,11 +1783,12 @@ export class PanelUI {
 		this.widgets[widget_class.name] = {
 			label: widget_class.label,
 			class: widget_class,
+			conf: conf
 		};
-		this.widgetsMenu();
+		this.updateWidgetsMenu();
 	}
 
-	widgetsMenu() {
+	updateWidgetsMenu() {
 		$("#widget_list").empty();
 		this.num_widgets = Object.keys(this.widgets).length;
 
@@ -2348,12 +2350,11 @@ export class PanelUI {
 		h,
 		x = null,
 		y = null,
-		src_visible = false,
 	) {
 		let panel = this.panels[id_source];
 		if (state) {
 			if (!panel) {
-				panel = new Panel(id_source, this, w, h, x, y, src_visible);
+				panel = new Panel(id_source, this, w, h, x, y);
 				panel.init(msg_type);
 
 				if (isTouchDevice()) {
@@ -2376,11 +2377,7 @@ export class PanelUI {
 		h,
 		x = null,
 		y = null,
-		src_visible = false,
-		zoom,
-		rot,
-		fps,
-		custom_url_vars,
+		panel_vars = {},
 	) {
 		if (this.panels[id_source]) return this.panels[id_source];
 
@@ -2388,15 +2385,9 @@ export class PanelUI {
 		let panel = new Panel(
 			id_source,
 			this,
-			w,
-			h,
-			x,
-			y,
-			src_visible,
-			zoom,
-			rot,
-			fps,
-			custom_url_vars,
+			w, h,
+			x, y,
+			panel_vars,
 		);
 		panel.init(null);
 
@@ -2473,6 +2464,7 @@ export class PanelUI {
 		// console.error('Grid nodes:', this.grid.engine.nodes);
 
 		this.grid.engine.nodes.forEach((node) => {
+			
 			let widget = node.el;
 
 			let wl = null;
@@ -2485,63 +2477,29 @@ export class PanelUI {
 			}
 
 			let x, y, w, h;
-			if (wl) {
-				//use layout instead of node vals
-				x = wl.x;
-				y = wl.y;
-				w = wl.w;
-				h = node.h;
+			if (wl) { // prefer layout over node vals
+				x = wl.x; y = wl.y;
+				w = wl.w; h = node.h;
 			} else {
-				x = node.x;
-				y = node.y;
-				w = node.w;
-				h = node.h;
+				x = node.x; y = node.y;
+				w = node.w; h = node.h;
 			}
 
 			let id_source = $(widget).find(".grid_panel").attr("data-source");
 
-			let parts = [id_source, [x, y].join("x"), [w, h].join("x")];
-			if (!that.panels[id_source]) {
-				console.error(
-					"Panel not found ",
-					id_source,
-					$(widget).find(".grid_panel"),
-				);
+			let panel = that.panels[id_source];
+			if (!panel) {
 				return;
 			}
-			if (that.panels[id_source].src_visible) parts.push("src");
-			if (
-				that.panels[id_source].zoom !== undefined &&
-				that.panels[id_source].zoom !== null &&
-				that.panels[id_source].zoom != that.panels[id_source].default_zoom
-			) {
-				let z = Math.round(that.panels[id_source].zoom * 100) / 100;
-				parts.push("z=" + z);
-			}
-			if (
-				that.panels[id_source].rot !== undefined &&
-				that.panels[id_source].rot !== null &&
-				that.panels[id_source].rot != that.panels[id_source].default_rot
-			) {
-				let r = that.panels[id_source].rot.toFixed(0);
-				parts.push("r=" + r);
-			}
-			if (
-				that.panels[id_source].fps_visible !== undefined &&
-				that.panels[id_source].fps_visible
-			) {
-				parts.push("fps=1");
-			}
-			// console.log('updateUrlHash for ' + id_source + ': ', that.panels[id_source].display_widget);
-			if (
-				that.panels[id_source].display_widget &&
-				typeof that.panels[id_source].display_widget.getUrlHashParts !==
-					"undefined"
-			) {
-				that.panels[id_source].display_widget.getUrlHashParts(parts);
-			}
 
-			hash.push(parts.join(":"));
+			let panel_parts = [id_source, [x, y].join("x"), [w, h].join("x")];
+
+			let vars = panel.getPanelVars();
+			Object.keys(vars).forEach((var_name)=>{
+				panel_parts.push(var_name + '=' + vars[var_name]);
+			});
+
+			hash.push(panel_parts.join(":"));
 		});
 
 		const max_safe_url_length = 2048; // chrome
@@ -2573,62 +2531,60 @@ export class PanelUI {
 		}
 
 		hash = hash.substr(1);
-		let hashArr = hash.split(";");
+		let hash_attrs = hash.split(";");
 		let panels_to_make_sorted = [];
 		let max_panel_x = 0;
 		let max_panel_y = 0;
-		for (let i = 0; i < hashArr.length; i++) {
-			let src_vars = hashArr[i].trim();
-			if (!src_vars) continue;
-			src_vars = src_vars.split(":");
-			let id_source = src_vars[0];
-			let x = null;
-			let y = null;
-			let panelPos = src_vars[1];
+		for (let i = 0; i < hash_attrs.length; i++) {
+			let hash_attr = hash_attrs[i].trim();
+			if (!hash_attr) continue;
+			let panel_attrs = hash_attr.split(":"); //#id_panel1:LxT:W:H:Var1=val1:Var2=val2;id_panel2:...
+
+			let id_panel = panel_attrs[0];
+
+			let x = null; let y = null;
+			let panelPos = panel_attrs[1];
 			if (panelPos) {
 				panelPos = panelPos.split("x");
-				x = panelPos[0];
-				y = panelPos[1];
-			}
-			let panelSize = src_vars[2];
-			let w = 2;
-			let h = 2;
-			if (panelSize) {
-				panelSize = panelSize.split("x");
-				w = panelSize[0];
-				h = panelSize[1];
+				x = parseInt(panelPos[0]);
+				y = parseInt(panelPos[1]);
 			}
 
-			//opional vars follow
-			let src_on = false;
-			let zoom = null;
-			let rot = null;
-			let fps = null;
-			let custom_vars = [];
-			for (let j = 3; j < src_vars.length; j++) {
-				if (src_vars[j] == "src") {
-					src_on = true;
-				} else if (src_vars[j].indexOf("z=") === 0) {
-					zoom = parseFloat(src_vars[j].substr(2));
-					console.log(
-						"Found zoom for " + id_source + ": " + src_vars[j] + " => ",
-						zoom,
-					);
-				} else if (src_vars[j].indexOf("r=") === 0) {
-					rot = parseFloat(src_vars[j].substr(2));
-					console.log(
-						"Found rot for " + id_source + ": " + src_vars[j] + " => ",
-						rot,
-					);
-				} else if (src_vars[j].indexOf("fps=") === 0) {
-					fps = parseInt(src_vars[j].substr(4)) == 1;
-					console.log(
-						"Found fps for " + id_source + ": " + src_vars[j] + " => ",
-						fps,
-					);
-				} else {
-					custom_vars.push(src_vars[j].split("="));
-				}
+			let panelSize = panel_attrs[2];
+			let w = 2; let h = 2;
+			if (panelSize) {
+				panelSize = panelSize.split("x");
+				w = parseInt(panelSize[0]);
+				h = parseInt(panelSize[1]);
+			}
+
+			let panel_vars = {};
+			for (let j = 3; j < panel_attrs.length; j++) {
+				// if (src_vars[j] == "src") {
+				// 	src_on = true;
+				// } else if (src_vars[j].indexOf("z=") === 0) {
+				// 	zoom = parseFloat(src_vars[j].substr(2));
+				// 	console.log(
+				// 		"Found zoom for " + id_source + ": " + src_vars[j] + " => ",
+				// 		zoom,
+				// 	);
+				// } else if (src_vars[j].indexOf("r=") === 0) {
+				// 	rot = parseFloat(src_vars[j].substr(2));
+				// 	console.log(
+				// 		"Found rot for " + id_source + ": " + src_vars[j] + " => ",
+				// 		rot,
+				// 	);
+				// } else if (src_vars[j].indexOf("fps=") === 0) {
+				// 	fps = parseInt(src_vars[j].substr(4)) == 1;
+				// 	console.log(
+				// 		"Found fps for " + id_source + ": " + src_vars[j] + " => ",
+				// 		fps,
+				// 	);
+				// } else {
+					
+				// }
+				let parts = panel_attrs[j].split("=");
+				panel_vars[parts[0]] = parts[1]; // var value as string
 			}
 
 			//let msg_type = null; //unknown atm
@@ -2636,16 +2592,10 @@ export class PanelUI {
 			max_panel_x = Math.max(max_panel_x, x);
 			max_panel_y = Math.max(max_panel_y, y);
 			panels_to_make_sorted.push({
-				id_source: id_source,
-				w: w,
-				h: h,
-				x: x,
-				y: y,
-				src_on: src_on,
-				zoom: zoom,
-				fps: fps,
-				rot: rot,
-				custom_vars: custom_vars,
+				id_panel: id_panel,
+				w: w, h: h,
+				x: x, y: y,
+				panel_vars: panel_vars,
 			});
 		}
 
@@ -2655,19 +2605,13 @@ export class PanelUI {
 					let p = panels_to_make_sorted[j];
 					if (p.x == x && p.y == y) {
 						this.makePanelFromConfig(
-							p.id_source,
-							p.w,
-							p.h,
-							p.x,
-							p.y,
-							p.src_on,
-							p.zoom,
-							p.rot,
-							p.fps,
-							p.custom_vars,
+							p.id_panel,
+							p.w, p.h,
+							p.x, p.y,
+							p.panel_vars,
 						);
-						if (this.widgets[p.id_source]) {
-							this.panels[p.id_source].init(p.id_source, true);
+						if (this.widgets[p.id_panel]) {
+							this.panels[p.id_panel].init(p.id_panel, true);
 						} // else if (this.widgets[id_source]) {
 						//     this.panels[id_source].init(id_source);
 						// }
@@ -2680,7 +2624,7 @@ export class PanelUI {
 
 		this.grid.engine.sortNodes();
 
-		this.widgetsMenu();
+		this.updateWidgetsMenu();
 		return this.panels;
 	}
 

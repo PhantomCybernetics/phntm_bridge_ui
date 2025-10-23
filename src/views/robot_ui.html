@@ -198,22 +198,32 @@
 
 <script type="module">
 	import { BatteryStateWidget } from "/static/widgets/battery.js";
-	import { OccupancyGrid } from "/static/widgets/occupacy-grid.js";
-	import { VideoWidget } from "/static/widgets/video.js";
+	
 	import { RangeWidget } from "/static/widgets/range.js";
 	import { LaserScanWidget } from "/static/widgets/laser-scan.js";
 	import { ImuWidget } from "/static/widgets/imu.js";
 	import { LogWidget } from "/static/widgets/log.js";
 	import { SystemLoadWidget } from "/static/widgets/system-load.js";
-	import { PointCloudWidget } from "/static/widgets/pointcloud.js";
+	
 
 	import { PhntmBridgeClient } from "/static/browser-client.js";
 	import { InputManager } from "/static/input/input-manager.js";
 	import { PanelUI } from "/static/panel-ui.js";
-	import { LaserOdometryWidget } from "/static/widgets/laser-odo.js";
-	import { DescriptionTFWidget } from "/static/widgets/description-tf.js";
-	import { NavigationWidget } from "/static/widgets/navigation.js";
-	import { SceneView3DWidget } from "/static/widgets/scene-view-3d.js";
+
+	// import { LaserOdometryWidget } from "/static/widgets/experimental/laser-odo.js";
+	// import { DescriptionTFWidget } from "/static/widgets/inc/description-tf.js";
+	// import { NavigationWidget } from "/static/widgets/experimental/navigation.js";
+	// import { OccupancyGrid } from "/static/widgets/experimental/occupacy-grid.js";
+	// import { PointCloudWidget } from "/static/widgets/experimental/pointcloud.js";
+
+	import { VideoWidget } from "/static/widgets/video/base.js";
+	import { VideoWidget_Detections2D } from '/static/widgets/video/detections2d.js'
+
+	import { WorldModel3DWidget } from "/static/widgets/world-model-3d/base.js";
+	import { WorldModel3DWidget_Laser } from "/static/widgets/world-model-3d/laser.js";
+	import { WorldModel3DWidget_Range } from "/static/widgets/world-model-3d/range.js";
+	import { WorldModel3DWidget_CameraInfo } from "/static/widgets/world-model-3d/camera-info.js";
+	import { WorldModel3DWidget_Detections3D } from "/static/widgets/world-model-3d/detections3d.js";
 
 	import { JoyInputDriver } from "/static/input/joy-driver.js";
 	import { TwistInputDriver } from "/static/input/twist-driver.js";
@@ -247,20 +257,23 @@
 			panel_ui.addTypeWidget("sensor_msgs/msg/Imu", ImuWidget);
 			panel_ui.addTypeWidget("rcl_interfaces/msg/Log", LogWidget);
 
-			panel_ui.addTypeWidget("video", VideoWidget);
-			panel_ui.addTypeWidget("sensor_msgs/msg/Image", VideoWidget);
-			panel_ui.addTypeWidget("sensor_msgs/msg/CompressedImage", VideoWidget);
-			panel_ui.addTypeWidget(
-				"ffmpeg_image_transport_msgs/msg/FFMPEGPacket",
-				VideoWidget,
-			);
+			let video_plugins = [ VideoWidget_Detections2D ];
+			panel_ui.addTypeWidget("video", VideoWidget, video_plugins);
+			panel_ui.addTypeWidget("sensor_msgs/msg/Image", VideoWidget, video_plugins);
+			panel_ui.addTypeWidget("sensor_msgs/msg/CompressedImage", VideoWidget, video_plugins);
+			panel_ui.addTypeWidget("ffmpeg_image_transport_msgs/msg/FFMPEGPacket", VideoWidget, video_plugins);
 
 			// TODO:
 			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
 			// panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
 			panel_ui.addTypeWidget("phntm_interfaces/msg/SystemInfo", SystemLoadWidget);
 
-			panel_ui.addCustomWidget(SceneView3DWidget);
+			panel_ui.addCustomWidget(WorldModel3DWidget, [
+				WorldModel3DWidget_Laser, // pass plugin classes
+				WorldModel3DWidget_Range,
+				WorldModel3DWidget_CameraInfo,
+				WorldModel3DWidget_Detections3D
+			]);
 			// panel_ui.addCustomWidget(NavigationWidget);
 			// panel_ui.addCustomWidget(DescriptionTFWidget);
 			// panel_ui.addCustomWidget(LaserOdometryWidget);

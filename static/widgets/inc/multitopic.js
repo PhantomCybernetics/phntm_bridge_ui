@@ -20,7 +20,7 @@ export class MultiTopicSource extends EventTarget {
 		this.menu_open = false;
 	}
 
-	add(msg_type, label, default_topic, num, cb, clear_cb) {
+	add(msg_type, label, default_topic, num, cb, clear_cb, config_cb) {
 		let new_src = {
 			msg_type: msg_type,
 			label: label,
@@ -118,34 +118,29 @@ export class MultiTopicSource extends EventTarget {
 		return false;
 	}
 
-	getUrlHashParts(out_parts) {
+	storeAssignedTopicsPanelVars() {
 		for (let i = 0; i < this.sources.length; i++) {
-			let src = this.sources[i];
 			let topics = [];
-			src.topic_slots.forEach((slot) => {
-				if (slot.selected_topic) topics.push(slot.selected_topic);
+			this.sources[i].topic_slots.forEach((slot) => {
+				if (slot.selected_topic && slot.selected_topic != this.sources[i].default_topic) //don't store defaults
+					topics.push(slot.selected_topic);
 			});
-			if (topics.length) out_parts.push("in" + i + "=" + topics.join(","));
+			this.panel.storePanelVarAsStringArray("in"+i, topics);
 		}
 	}
 
-	parseUrlParts(custom_url_vars) {
-		if (this.widget.log_dirty_stack) {
-			console.error("Dead multitopic got parseUrlParts");
-			return;
-		}
-		// console.warn('multitopic got parseUrlParts', custom_url_vars);
-		if (!custom_url_vars) return;
-		custom_url_vars.forEach((kvp) => {
-			let arg = kvp[0];
-			if (arg.indexOf("in") !== 0) return; // not multitopic, skip
-			let i = parseInt(arg.substring(2));
-			let src = this.sources[i];
+	loadAssignedTopicsFromPanelVars() {
+		let that = this;
+		Object.keys(this.panel.panel_vars).forEach((var_name)=>{
+			if (var_name.indexOf("in") !== 0) return; // not a multitopic var, skip
+
+			let i = parseInt(var_name.substring(2));
+			let src = that.sources[i];
 			if (!src) return;
-			if (src.args_parsed) return; //only once
-			let vals = kvp[1].split(",");
-			// console.warn('Multitopic got in_'+i+" > "+vals.join(', '));
-			for (let j = 0; j < vals.length; j++) {
+			if (src.panel_config_loaded) return; //only once
+			
+			let topics = that.panel.getPanelVarAsStringArray(var_name, []);
+			for (let j = 0; j < topics.length; j++) {
 				let slot = src.topic_slots[j];
 				if (!slot) {
 					slot = {
@@ -158,14 +153,16 @@ export class MultiTopicSource extends EventTarget {
 					};
 					src.topic_slots.push(slot);
 				}
-				if (slot.selected_topic != vals[j]) {
-					slot.selected_topic = vals[j];
-					this.assignSlotTopic(slot); //try assign
+				if (slot.selected_topic != topics[j]) {
+					slot.selected_topic = topics[j];
+					that.assignSlotTopic(slot); //try assign
 				}
 			}
-			src.args_parsed = true;
-			this.updateSlots(src);
+			src.panel_config_loaded = true;
+
+			that.updateSlots(src);
 		});
+
 		this.updateMenuContent();
 	}
 
@@ -438,12 +435,12 @@ export class MultiTopicSource extends EventTarget {
 
 		rem_btn.on("click", (ev) => {
 			that.clearSlot(slot);
+			that.storeAssignedTopicsPanelVars();
 			if (isTouchDevice()) {
 				btn.removeClass("warn");
 				that.panel.ui.menu_blocking_element = null;
 				that.panel.menu_content_underlay.removeClass("open").unbind();
 			}
-			that.panel.ui.updateUrlHash();
 			if (ev) {
 				ev.preventDefault();
 				ev.stopPropagation();
@@ -478,7 +475,7 @@ export class MultiTopicSource extends EventTarget {
 					that.assignSlotTopic(slot);
 					that.updateSlots(slot.src);
 					that.updateMenuContent();
-					that.panel.ui.updateUrlHash();
+					that.storeAssignedTopicsPanelVars();
 					that.emit("change", that.getSources());
 				},
 				() => {

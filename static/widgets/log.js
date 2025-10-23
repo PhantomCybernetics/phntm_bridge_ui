@@ -31,24 +31,14 @@ export class LogWidget {
 	onClose() {}
 
 	onData = (decoded) => {
-		let line =
-			'<div class="log_line">[<span class="name">' +
-			decoded.name +
-			"</span>] " +
-			'<span class="time">' +
-			decoded.stamp.sec +
-			"." +
-			decoded.stamp.nanosec +
-			"</span>: " +
-			decoded.msg +
-			"</div>";
-
+		let line = '<div class="log_line">[<span class="name">' + decoded.name + "</span>] " +
+				   		'<span class="time">' + decoded.stamp.sec + "." + decoded.stamp.nanosec + "</span>: " +
+						decoded.msg +
+					"</div>";
 		$("#panel_widget_" + this.panel.n).append(line);
 
-		if (
-			$("#panel_widget_" + this.panel.n + ".autoscroll .log_line").length >
-			this.max_trace_length
-		) {
+		// trim lines
+		if ($("#panel_widget_" + this.panel.n + ".autoscroll .log_line").length > this.max_trace_length) {
 			$("#panel_widget_" + this.panel.n + ".autoscroll .log_line")
 				.first()
 				.remove();
