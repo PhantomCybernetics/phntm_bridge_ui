@@ -1804,24 +1804,10 @@ export class PanelUI {
 		let i = 0;
 		// let subscribe_cameras = [];
 		Object.keys(this.widgets).forEach((widget_class) => {
-			let w = that.widgets[widget_class];
+			let widget = that.widgets[widget_class];
 
-			let row_el = $(
-				'<label for="cb_widget_' +
-					i +
-					'" class="prevent-select widget">' +
-					w.label +
-					"</label>",
-			);
-
-			let w_cb = $(
-				'<input type="checkbox" class="enabled" id="cb_widget_' +
-					i +
-					'"' +
-					(that.panels[widget_class] ? " checked" : "") +
-					"/>",
-			);
-
+			let row_el = $('<label for="cb_widget_' + i + '" class="prevent-select widget">' + widget.label + "</label>");
+			let w_cb = $('<input type="checkbox" class="enabled" id="cb_widget_' + i + '"' + (that.panels[widget_class] ? " checked" : "") + "/>");
 			w_cb.change((ev) => {
 				let state = $(ev.target).prop("checked");
 
@@ -2342,15 +2328,7 @@ export class PanelUI {
 		}
 	}
 
-	togglePanel(
-		id_source,
-		msg_type,
-		state,
-		w,
-		h,
-		x = null,
-		y = null,
-	) {
+	togglePanel(id_source, msg_type, state, w, h, x = null, y = null) {
 		let panel = this.panels[id_source];
 		if (state) {
 			if (!panel) {
@@ -2629,7 +2607,16 @@ export class PanelUI {
 	}
 
 	setDefaultPanels() {
-		$("#widget_list > label:first-child").click();
+		Object.keys(this.widgets).forEach((widget_class) => {
+			let widget = this.widgets[widget_class];
+			console.log('setDefaultPanels grid cell height, rows x colums ',
+				this.grid.getCellHeight(), this.grid.getRow(), this.grid.getColumn());
+			let w = Math.round(this.grid.getColumn() * 0.7); // auto 70% with 
+			let h = Math.round((window.innerHeight / this.grid.getCellHeight()) * 0.8); // auto 80% height 
+			this.togglePanel(widget_class, widget_class, true, w, h);
+			return;
+		});
+		this.updateWidgetsMenu();
 	}
 
 	updateWebrtcStatus() {
