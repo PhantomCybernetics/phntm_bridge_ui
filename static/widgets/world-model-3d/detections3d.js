@@ -31,7 +31,7 @@ export class WorldModel3DWidget_Detections3D {
 		this.detection_materials_by_color = {};
 
         this.clear_timeout_ms = 300; // clear if no new data received in this long
-		this.display_labels = world_model.panel.getPanelVarAsBool('dl', false);
+		this.display_labels = world_model.panel.getPanelVarAsBool('dl', true);
 
 		this.setDisplayLabels(this.display_labels);
     }
