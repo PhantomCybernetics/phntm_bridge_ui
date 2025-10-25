@@ -490,9 +490,9 @@ export class DescriptionTFWidget extends EventTarget {
 				(frustumSize * aspect) / 2.0,
 				frustumSize / 2.0,
 				frustumSize / -2.0,
-				-1000,
+				-1000, // negative near to prvent clipping while keeping the zoom functionality
 				1000,
-			); // negative near to prvent clipping while keeping the zoom functionality
+			);
 			if (this.set_ortho_camera_zoom > 0) {
 				//set zoom from url
 				this.camera.zoom = this.set_ortho_camera_zoom;
@@ -1281,7 +1281,7 @@ export class DescriptionTFWidget extends EventTarget {
 		}
 
 		let wp = new Vector3();
-		let farthest_pt_dist = 0;
+		let pt_distances = [];
 		let joints_avg = new Vector3(0, 0, 0);
 		let joints_num = 0;
 		let focus_joint = null;
@@ -1292,7 +1292,7 @@ export class DescriptionTFWidget extends EventTarget {
 		Object.keys(robot.joints).forEach((key) => {
 			robot.joints[key].getWorldPosition(wp);
 			let wp_magnitude = wp.length();
-			if (wp_magnitude > farthest_pt_dist) farthest_pt_dist = wp_magnitude;
+			pt_distances.push(wp_magnitude);
 			joints_avg.add(wp);
 			joints_num++;
 		});
@@ -1312,21 +1312,25 @@ export class DescriptionTFWidget extends EventTarget {
 		Object.keys(robot.links).forEach((key) => {
 			robot.links[key].getWorldPosition(wp);
 			let wp_magnitude = wp.length();
-			if (wp_magnitude > farthest_pt_dist) farthest_pt_dist = wp_magnitude;
+			pt_distances.push(wp_magnitude);
 		});
 		Object.keys(robot.frames).forEach((key) => {
 			robot.frames[key].getWorldPosition(wp);
 			let wp_magnitude = wp.length();
-			if (wp_magnitude > farthest_pt_dist) farthest_pt_dist = wp_magnitude;
+			pt_distances.push(wp_magnitude);
 		});
+		pt_distances.sort((a, b) => a - b);
+		let num_distances = pt_distances.length;
+		let model_size_approx = num_distances ? pt_distances[Math.round(num_distances*0.9)] : 2.0; // use ~90th percentile to avoid outliers
 
+		console.log('Model size estimated at '+model_size_approx+"; mum pt_distances="+num_distances);
 		if (focus_joint && focus_joint_key)
 			this.setCameraTarget(focus_joint, focus_joint_key, false);
 
 		// set initial distance proportional to model size
 		if (this.vars.follow_target && !this.camera_distance_initialized) {
 			this.camera_distance_initialized = true;
-			let initial_dist = farthest_pt_dist * 3.0;
+			let initial_dist = model_size_approx * 2.0;
 			this.camera_pos.normalize().multiplyScalar(initial_dist);
 			this.camera.position.copy(this.camera_pos);
 		}
