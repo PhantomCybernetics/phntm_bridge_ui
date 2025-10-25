@@ -25,6 +25,38 @@ export class DescriptionTFWidget extends EventTarget {
 
 	static ROS_SPACE_KEY = "ROS_SPACE";
 
+	static GROUND_PLANES = [
+		{ label: 'No ground plane' },
+		{ label: 'Black ground plane', color: 'black' },
+		{ label: 'White ground plane', color: 'white' },
+		{ label: 'Gray ground plane', color: 'gray' },
+		{ label: 'Gray ground tiles', url: '/static/grounds/tiles1.png' }, 
+		{ label: 'Black ground tiles', url: '/static/grounds/tiles2.png' },
+		{ label: 'White ground marks', url: '/static/grounds/marks1.png' },
+		{ label: 'Black ground marks', url: '/static/grounds/marks2.png' },
+		{ label: 'Blue ground marks', url: '/static/grounds/marks3.png' }, // default
+		{ label: 'Hotel carpet', url: '/static/grounds/shining.png' },
+		// TODO: custom
+	];
+
+	static SKYBOXES = [
+		{ label: 'Black skybox', color: 'black' },
+		{ label: 'White skybox', color: 'white' },
+		{ label: 'Acid skybox', url: '/static/skyboxes/acid/', light_pos: [ 4, 7, -10] }, // skybox folders must contain cubemap_0.png - cubemap_5.png
+		{ label: 'Dark skybox', url: '/static/skyboxes/dark/', light_pos: [ 4, 7, -10] }, 
+		{ label: 'Mars skybox', url: '/static/skyboxes/mars/', light_pos: [ 5, 7, -10] }, // default
+		{ label: 'Moon skybox', url: '/static/skyboxes/moon/', light_pos: [ 4, 7, -10] },
+		// TODO: custom (e.g. https://skyboxgen.com/)
+	];
+
+	static LIGHTS = [
+		'Spotlight',
+		'Narrow spotlight',
+		'Directional light',
+		'Flashlight',
+		'Ambient light (no shadows)'
+	];
+
 	constructor(panel, widget_conf, start_rendering_loop=true) {
 		super();
 
@@ -42,9 +74,9 @@ export class DescriptionTFWidget extends EventTarget {
 			perspective_camera: true,
 			fix_robot_base: false, // robot will be fixed in place
 			render_pose_graph: false,
-			render_ground_plane: 1, // basic plane 1
-			render_skybox: 1, // basic skybox
-			render_stats: false,
+			render_ground_plane: 8, // blue marks
+			render_skybox: 4, // mars skybox
+			render_light: 1 // wide spot light
 		};
 
 		this.panel.fps_el.addClass("rendering_stats");
@@ -137,8 +169,8 @@ export class DescriptionTFWidget extends EventTarget {
 			that.renderDirty();
 		};
 		this.loading_manager.onError = (url) => {
-			console.error("Error loading mesh for: " + url);
-			that.panel.ui.showNotification("Error loading mesh", "error", url);
+			console.error("Error loading resource for: " + url);
+			that.panel.ui.showNotification("Error loading resource", "error", url);
 			that.renderDirty();
 		};
 
@@ -236,25 +268,10 @@ export class DescriptionTFWidget extends EventTarget {
 		this.ros_space.quaternion.copy(this.ros_space_default_rotation);
 		this.ros_space_offset_set = false; // will be set on 1st base tf data
 
-		this.skybox_name = "acid";
 		this.skybox_textures = {};
 		this.cube_loader = new THREE.CubeTextureLoader();
 
-		const light = new THREE.SpotLight(0xffffff, 30.0, 0, Math.PI / 10);
-		light.castShadow = true; // default false
-		this.scene.add(light);
-		light.position.set(0, 5, 0); // will stay 5m above the model
-		light.shadow.mapSize.width = 5 * 1024; // default
-		light.shadow.mapSize.height = 5 * 1024; // default
-		light.shadow.camera.near = 0.5; // default
-		light.shadow.camera.far = 10; // default
-
-		// light.shadow.bias= -0.002;
 		this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // options are THREE.BasicShadowMap | THREE.PCFShadowMap | THREE.PCFSoftShadowMap
-		this.light = light;
-
-		const ambience = new THREE.AmbientLight(0x606060); // soft white light
-		this.scene.add(ambience);
 
 		// this.makeMark(this.scene, 'SCENE ORIGIN', 0, 0, 2.0, true, 1.0);
 
@@ -314,7 +331,7 @@ export class DescriptionTFWidget extends EventTarget {
 
 		this.loadPanelConfig();
 
-		// - url vars parsed here - //
+		// - panel vars loaded here - //
 
 		this.last_camera_url_update = Number.NEGATIVE_INFINITY;
 
@@ -411,30 +428,12 @@ export class DescriptionTFWidget extends EventTarget {
 			this.controls.update();
 		}
 
-		light.lookAt(this.camera_target_pos);
+		this.setLight(this.vars.render_light);
+		if (this.light)
+			this.light.lookAt(this.camera_target_pos);
 
-		const plane_geometry = new THREE.PlaneGeometry(100, 100);
-
-		// make ground plane
-		this.tex_loader.load("/static/graph/tiles.png", (plane_tex) => {
-			const plane_material = new THREE.MeshPhongMaterial({
-				color: 0xffffff,
-				side: THREE.BackSide,
-			});
-			plane_tex.wrapS = THREE.RepeatWrapping;
-			plane_tex.wrapT = THREE.RepeatWrapping;
-			plane_tex.repeat.set(100, 100);
-			plane_material.map = plane_tex;
-
-			that.ground_plane = new THREE.Mesh(plane_geometry, plane_material);
-			that.ground_plane.rotation.setFromVector3(
-				new THREE.Vector3(Math.PI / 2, 0, 0),
-			);
-			that.ground_plane.position.set(0, 0, 0);
-			that.ground_plane.receiveShadow = true;
-			that.ground_plane.visible = that.vars.render_ground_plane != 0;
-			that.scene.add(that.ground_plane);
-		});
+		this.ground_plane_geometry = new THREE.PlaneGeometry(100, 100);
+		this.setGroundPlane(this.vars.render_ground_plane);
 
 		this.makeROSOriginMarker();
 		// this.makeMark(this.robot, 'ROBOT_ORIGIN', 0, 0, 1.0, true, 1.0);
@@ -504,18 +503,7 @@ export class DescriptionTFWidget extends EventTarget {
 		this.scene.add(this.camera);
 		if (old_camera) {
 			let old_type = old_camera.isOrthographicCamera ? "ORTHO" : "PERSP";
-			console.log(
-				"Old " +
-					old_type +
-					" camera pos was [" +
-					old_camera.position.x +
-					";" +
-					old_camera.position.y +
-					";" +
-					old_camera.position.z +
-					"]; zoom " +
-					old_camera.zoom,
-			);
+			console.log("Old " + old_type + " camera pos was [" + old_camera.position.x + ";" + old_camera.position.y + ";" + old_camera.position.z + "]; zoom " + old_camera.zoom);
 
 			this.camera.position.copy(old_camera.position);
 			this.camera.quaternion.copy(old_camera.quaternion);
@@ -560,7 +548,7 @@ export class DescriptionTFWidget extends EventTarget {
 			this.controls.update();
 		}
 
-		this.setSkybox();
+		this.setSkybox(this.vars.render_skybox);
 	}
 
 	updateOrthoCameraAspect() {
@@ -573,26 +561,6 @@ export class DescriptionTFWidget extends EventTarget {
 			this.camera.bottom = frustumSize / -2.0;
 			this.camera.updateProjectionMatrix();
 			this.renderDirty();
-		}
-	}
-
-	setSkybox(skybox_name) {
-		if (this.vars.perspective_camera && this.skybox_name) {
-			if (!this.skybox_textures[this.skybox_name]) {
-				this.skybox_textures[this.skybox_name] = this.cube_loader.load([
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_0.png",
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_1.png",
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_2.png",
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_3.png",
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_4.png",
-					"/static/skyboxes/" + this.skybox_name + "/cubemap_5.png",
-				]);
-			}
-			this.scene.background = this.skybox_textures[this.skybox_name];
-		} else {
-			//skybox doesn't work with otrho cameras
-
-			this.scene.background = new THREE.Color(0x000000); // Red color
 		}
 	}
 
@@ -806,35 +774,28 @@ export class DescriptionTFWidget extends EventTarget {
 		render_grnd_label.append([ render_grnd_label_value, render_grnd_btn_right, render_grnd_btn_left ]).appendTo(render_grnd_line_el);
 		menu_els.push(render_grnd_line_el);
 
-		function setGroundLabel() {
-			let label = '';
-			switch (that.vars.render_ground_plane) {
-				case 0: label = 'No ground plane'; break;
-				case 1: label = 'Ground plane 1'; break;
-				case 2: label = 'Ground plane 2'; break;
-				case 3: label = 'Black ground plane'; break;
-				case 4: label = 'White ground plane'; break;
-			}
+		function setGroundMenuLabel() {
+			let label = DescriptionTFWidget.GROUND_PLANES[that.vars.render_ground_plane].label;
 			render_grnd_label_value.text(label);
 		}
-		setGroundLabel();
+		setGroundMenuLabel();
 
 		render_grnd_btn_left.click(()=>{
-			if (that.vars.render_ground_plane <= 0)
-				that.vars.render_ground_plane = 4;
-			else
-				that.vars.render_ground_plane--;
+			if (that.vars.render_ground_plane <= 0) that.vars.render_ground_plane = DescriptionTFWidget.GROUND_PLANES.length-1;
+			else that.vars.render_ground_plane--;
+
 			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
-			setGroundLabel();
+			setGroundMenuLabel();
+			that.setGroundPlane(that.vars.render_ground_plane);
 			that.renderDirty();
 		});
 		render_grnd_btn_right.click(()=>{
-			if (that.vars.render_ground_plane >= 4)
-				that.vars.render_ground_plane = 0;
-			else
-				that.vars.render_ground_plane++;
+			if (that.vars.render_ground_plane >= DescriptionTFWidget.GROUND_PLANES.length-1) that.vars.render_ground_plane = 0;
+			else that.vars.render_ground_plane++;
+
 			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
-			setGroundLabel();
+			setGroundMenuLabel();
+			that.setGroundPlane(that.vars.render_ground_plane);
 			that.renderDirty();
 		});
 		
@@ -848,39 +809,225 @@ export class DescriptionTFWidget extends EventTarget {
 		render_skybox_label.append([ render_skybox_label_value, render_skybox_btn_right, render_skybox_btn_left ]).appendTo(render_skybox_line_el);
 		menu_els.push(render_skybox_line_el);
 
-		function setSkyboxLabel() {
-			let label = '';
-			switch (that.vars.render_skybox) {
-				case 0: label = 'No skybox'; break;
-				case 1: label = 'Dawn skybox'; break;
-				case 2: label = 'Mars skybox'; break;
-				case 3: label = 'Black skybox'; break;
-				case 4: label = 'White skybox'; break;
-			}
+		function setSkyboxMenuLabel() {
+			let label =  DescriptionTFWidget.SKYBOXES[that.vars.render_skybox].label;
 			render_skybox_label_value.text(label);
 		}
-		setSkyboxLabel();
+		setSkyboxMenuLabel();
 
 		render_skybox_btn_left.click(()=>{
-			if (that.vars.render_skybox <= 0)
-				that.vars.render_skybox = 4;
-			else
-				that.vars.render_skybox--;
+			if (that.vars.render_skybox <= 0) that.vars.render_skybox = DescriptionTFWidget.SKYBOXES.length-1;
+			else that.vars.render_skybox--;
+
 			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
-			setSkyboxLabel();
+			setSkyboxMenuLabel();
+			that.setSkybox(that.vars.render_skybox);
 			that.renderDirty();
 		});
 		render_skybox_btn_right.click(()=>{
-			if (that.vars.render_skybox >= 4)
-				that.vars.render_skybox = 0;
-			else
-				that.vars.render_skybox++;
+			if (that.vars.render_skybox >= DescriptionTFWidget.SKYBOXES.length-1) that.vars.render_skybox = 0;
+			else that.vars.render_skybox++;
+
 			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
-			setSkyboxLabel();
+			setSkyboxMenuLabel();
+			that.setSkybox(that.vars.render_skybox);
 			that.renderDirty();
 		});
-	
 
+
+		// light type
+		let render_light_line_el = $('<div class="menu_line buttons_right"></div>');
+		let render_light_label = $('<label for="render_sky_' + this.panel.n + '""></label>');
+		let render_light_label_value = $('<span></span>');
+		let render_light_btn_left = $('<button class="left">&laquo;</button>');
+		let render_light_btn_right = $('<button class="right">&raquo;</button>');
+		render_light_label.append([ render_light_label_value, render_light_btn_right, render_light_btn_left ]).appendTo(render_light_line_el);
+		menu_els.push(render_light_line_el);
+
+		function setLightMenuLabel() {
+			let label = DescriptionTFWidget.LIGHTS[that.vars.render_light];
+			render_light_label_value.text(label);
+		}
+		setLightMenuLabel();
+
+		render_light_btn_left.click(()=>{
+			if (that.vars.render_light <= 0) that.vars.render_light = DescriptionTFWidget.LIGHTS.length-1;
+			else that.vars.render_light--;
+
+			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
+			setLightMenuLabel();
+			that.setLight(that.vars.render_light);
+			that.renderDirty();
+		});
+		render_light_btn_right.click(()=>{
+			if (that.vars.render_light >= DescriptionTFWidget.LIGHTS.length-1) that.vars.render_light = 0;
+			else that.vars.render_light++;
+
+			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
+			setLightMenuLabel();
+			that.setLight(that.vars.render_light);
+			that.renderDirty();
+		});
+	}
+
+	setGroundPlane(type_no) {
+		// make ground plane
+		let tex_url = DescriptionTFWidget.GROUND_PLANES[type_no].url;
+		let color = DescriptionTFWidget.GROUND_PLANES[type_no].color ? new THREE.Color(DescriptionTFWidget.GROUND_PLANES[type_no].color) : null;
+
+		if (this.ground_plane) {
+			this.ground_plane.removeFromParent();
+			this.ground_plane = null;
+		}
+
+		let that = this;
+		function makeNewPlane(plane_material) {
+			that.ground_plane = new THREE.Mesh(that.ground_plane_geometry, plane_material);
+			that.ground_plane.rotation.setFromVector3(
+				new THREE.Vector3(Math.PI / 2, 0, 0),
+			);
+			that.ground_plane.position.set(0, 0, 0);
+			that.ground_plane.receiveShadow = true;
+			that.ground_plane.visible = true;
+			that.scene.add(that.ground_plane);
+		}
+
+		if (tex_url) {
+			this.tex_loader.load(tex_url, (plane_tex) => {
+				const plane_material = new THREE.MeshPhongMaterial({
+					color: 0xffffff,
+					side: THREE.BackSide,
+				});
+				plane_tex.wrapS = THREE.RepeatWrapping;
+				plane_tex.wrapT = THREE.RepeatWrapping;
+				plane_tex.repeat.set(100, 100);
+				plane_material.map = plane_tex;
+
+				makeNewPlane(plane_material);
+			});
+		} else if (color) {
+			const plane_material = new THREE.MeshPhongMaterial({
+				color: color,
+				side: THREE.BackSide,
+			});
+			makeNewPlane(plane_material);
+		}
+	}
+
+	setSkybox(type_no) {
+		let url_base = DescriptionTFWidget.SKYBOXES[type_no].url;
+		let color = DescriptionTFWidget.SKYBOXES[type_no].color ? new THREE.Color(DescriptionTFWidget.SKYBOXES[type_no].color) : new THREE.Color('black');
+
+		if (this.vars.perspective_camera && url_base) { //skybox doesn't work with otrho cameras
+			if (!this.skybox_textures[type_no]) {
+				this.skybox_textures[type_no] = this.cube_loader.load([
+					url_base + "/cubemap_0.png",
+					url_base + "/cubemap_1.png",
+					url_base + "/cubemap_2.png",
+					url_base + "/cubemap_3.png",
+					url_base + "/cubemap_4.png",
+					url_base + "/cubemap_5.png",
+				]);
+			}
+			this.scene.background = this.skybox_textures[type_no];
+		} else {
+			this.scene.background = color;
+		}
+		this.setLight(this.vars.render_light);
+	}
+
+	setLight(type_no) {
+		if (this.light) {
+			this.light.removeFromParent();
+			this.light = null;
+		}
+		if (this.ambience) {
+			this.ambience.removeFromParent();
+			this.ambience = null;
+		}
+
+		// if (this.lught_pos_tester) {
+		// 	this.lught_pos_tester.removeFromParent();
+		// 	this.lught_pos_tester = null;
+		// }
+		let light_pos = DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos ? new THREE.Vector3(DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[0], DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[1], DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[2]) : null;
+		if (light_pos) {
+			// let mat = new THREE.MeshBasicMaterial({
+			// 	color: new THREE.Color('red'),
+			// 	transparent: false,
+			// 	opacity: 1
+			// });
+			// let primitive = new THREE.Mesh(new THREE.SphereGeometry(.5,32), mat);
+			// primitive.castShadow = false;
+			// primitive.receiveShadow = false;
+
+			// if (type_no == 1)
+			// 	light_pos.multiplyScalar(.5);
+			if (this.robot) {
+				console.log('Adding light robot_pos = ', this.robot.position, 'light_pos=', light_pos);
+				let rwp = new THREE.Vector3();
+				this.robot.getWorldPosition(rwp);
+				light_pos.add(rwp);
+				//console.log('Adding light_pos= ', light_pos);
+			}
+				
+			// primitive.position.copy(light_pos);
+			// this.scene.add(primitive);
+			// this.lught_pos_tester = primitive;
+		}
+
+		if (type_no == 0 || type_no == 1) { // spot & wide spot light
+
+			this.light = new THREE.SpotLight(0xffffff, 250, 0, type_no == 0 ? Math.PI / 10 : Math.PI / 35);
+			this.scene.add(this.light);
+			if (light_pos)
+				this.light.position.copy(light_pos);
+			else
+				this.light.position.set(10, type_no == 0 ? 5 : 15, 0); // will stay 5m above the model
+
+			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
+			this.scene.add(this.ambience);
+
+		} else if (type_no == 2) { // directioinal
+
+			this.light = new THREE.DirectionalLight(0xffffff, 1.0, 0, Math.PI / 10);
+			
+			this.scene.add(this.light);
+			if (light_pos)
+				this.light.position.copy(light_pos);
+			else
+				this.light.position.set(10, 15, 0); // will stay 5m above the model
+
+			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
+			this.scene.add(this.ambience);
+
+		} else if (type_no == 3) { // flashlight
+
+			this.light = new THREE.SpotLight(0xffffff, 2, 0, Math.PI / 4, 0, 0.5);
+			
+			this.camera.add(this.light);
+			this.light.position.set(0.001, .001, .01);
+			//let cp = new THREE.Vector3();
+			//this.camera.getWorldPosition(cp);
+			this.light.target = this.camera;
+
+			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
+			this.scene.add(this.ambience);
+			
+		} else if (type_no == 4) { // only ambinece, no shadows
+
+			this.ambience = new THREE.AmbientLight(0xffffff, 1.0); // stronger white light
+			this.scene.add(this.ambience);
+
+		}
+
+		if (this.light) {
+			this.light.castShadow = true; // default false
+			this.light.shadow.mapSize.width = 5 * 1024; // default
+			this.light.shadow.mapSize.height = 5 * 1024; // default
+			this.light.shadow.camera.near = 0.5; // default
+			this.light.shadow.camera.far = 20; // default
+		}
 
 	}
 
@@ -962,7 +1109,7 @@ export class DescriptionTFWidget extends EventTarget {
 		this.vars.render_pose_graph = this.panel.getPanelVarAsBool('pg', this.vars.render_pose_graph);
 		this.vars.render_ground_plane = this.panel.getPanelVarAsInt('grnd', this.vars.render_ground_plane);
 		this.vars.render_skybox = this.panel.getPanelVarAsInt('sky', this.vars.render_skybox);
-		this.vars.render_stats = this.panel.getPanelVarAsBool('s', this.vars.render_stats);;
+		this.vars.render_light = this.panel.getPanelVarAsInt('lght', this.vars.render_light);
 
 		let focus_target_pos = this.panel.getPanelVarAsVector3('ft', undefined);
 		if (focus_target_pos) {
@@ -1565,7 +1712,8 @@ export class DescriptionTFWidget extends EventTarget {
 
 						if (move_camera) {
 							this.camera_pos.add(d_pos); // move camera by d
-							this.light.position.add(d_pos);
+							if (this.light && this.vars.render_light != 3)
+								this.light.position.add(d_pos);
 						}
 					} else {
 						// keeping robot fixes in place
@@ -1612,7 +1760,8 @@ export class DescriptionTFWidget extends EventTarget {
 					}
 
 					this.robot_pose_initialized = true;
-					this.light.target = this.robot;
+					if (this.light && this.vars.render_light != 3)
+						this.light.target = this.robot;
 
 					this.renderDirty();
 				} else if (t_child && t_parent) {
@@ -1786,6 +1935,11 @@ export class DescriptionTFWidget extends EventTarget {
 				}
 			}
 		}
+
+		// if (this.light && this.vars.render_light == 3 && this.camera) {
+		// 	let cp = this.camera.localToWorld(new THREE.Vector3(1,0,-1));
+		// 	this.light.lookAt(cp);
+		// }
 
 		requestAnimationFrame((t) => this.renderingLoop());
 	}

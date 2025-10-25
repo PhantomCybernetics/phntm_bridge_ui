@@ -143,6 +143,8 @@ export class WorldModel3DWidget_Detections3D {
             let primitive = new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1,32), mat);
             primitive.position.set(0,0,-0.5);
             primitive.rotation.set(Math.PI/2, 0, 0);
+			primitive.castShadow = true;
+            primitive.receiveShadow = true;
             let model = new THREE.Object3D();
             model.scale.copy(scale);
             model.add(primitive);
@@ -150,6 +152,8 @@ export class WorldModel3DWidget_Detections3D {
         } else if (loadPath.toLowerCase() == 'sphere') {
             let mat = force_material ? force_material : that.getMaterialForColor(that.magenta);
             let primitive = new THREE.Mesh(new THREE.SphereGeometry(.5,32), mat);
+			primitive.castShadow = true;
+            primitive.receiveShadow = true;
             let model = new THREE.Object3D();
             model.scale.copy(scale);
             model.add(primitive);
@@ -285,6 +289,8 @@ export class WorldModel3DWidget_Detections3D {
 				if (!this.detection_markers[topic][d.class_id][i_class]) {
 					const geometry = new THREE.BoxGeometry(1, 1, 1);
 					const cube = new THREE.Mesh(geometry, this.getMaterialForColor(d.color));
+					cube.castShadow = true;
+					cube.receiveShadow = true;
 					f.add(cube);
 					this.detection_markers[topic][d.class_id][i_class] = cube;
 				}
@@ -389,7 +395,11 @@ export class WorldModel3DWidget_Detections3D {
     getMaterialForColor(color) {
         let id = color.getHexString();
         if (!this.detection_materials_by_color[id]) {
-            this.detection_materials_by_color[id] = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.5});
+            this.detection_materials_by_color[id] = new THREE.MeshBasicMaterial({
+				color: color,
+				transparent: true,
+				opacity: 0.5
+			});
         }
         return this.detection_materials_by_color[id];
     }
