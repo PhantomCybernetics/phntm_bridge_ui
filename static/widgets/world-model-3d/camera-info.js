@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { LineSegments2 } from "line-segments2";
 import { LineMaterial } from "line-material2";
 import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
+import { rad2deg } from "../../inc/lib.js";
 
 export class WorldModel3DWidget_CameraInfo {
     static source_topic_type = 'sensor_msgs/msg/CameraInfo';
@@ -15,6 +16,7 @@ export class WorldModel3DWidget_CameraInfo {
 		this.dirty_camera_frustums = {};
 		this.camera_frustum_visuals = {};
 		this.camera_frustum_geometry = {};
+		this.lastTopicRendered = {}
     }
 
     onTopicData(topic, msg) {
@@ -22,6 +24,11 @@ export class WorldModel3DWidget_CameraInfo {
 
 		if (!this.world_model.overlays[topic] || !this.world_model.overlays[topic].config) return; // always wait for config
 
+		// only update topic frustum once per sec
+		if (!this.lastTopicRendered[topic] || Date.now() - this.lastTopicRendered[topic] > 1000)
+			this.lastTopicRendered[topic] = Date.now();
+		else return;
+		
 		let frame_id = msg.header.frame_id;
 		if (this.world_model.overlays[topic].config["force_frame_id"])
 			frame_id = this.world_model.overlays[topic].config["force_frame_id"];
@@ -30,9 +37,7 @@ export class WorldModel3DWidget_CameraInfo {
 			if (!this.camera_info_error_logged) this.camera_info_error_logged = {};
 			if (!this.camera_info_error_logged[topic]) {
 				this.camera_info_error_logged[topic] = true; //only log once
-				let msg = !frame_id
-					? "Missing frame_id in " + topic
-					: 'Frame "' + frame_id + '" not found in camera info of ' + topic;
+				let msg = !frame_id ? "Missing frame_id in " + topic : 'Frame "' + frame_id + '" not found in camera info of ' + topic;
 				this.panel.ui.showNotification(msg, "error");
 				console.error(msg);
 			}
@@ -57,37 +62,66 @@ export class WorldModel3DWidget_CameraInfo {
 
 		let frustum = this.calculatePinholeFrustum(msg, near, far);
 
+		let v_angle = frustum.farBottomRight.angleTo(frustum.farTopRight);
+		let h_angle = frustum.farTopRight.angleTo(frustum.farTopLeft);
+		if (!this.angle_logged) this.angle_logged = {};
+		if (!this.angle_logged[topic]) {
+			console.log(frame_id + ' side_angle = '+rad2deg(v_angle)+' deg; top_angle = ' + rad2deg(h_angle)+' deg');
+			this.angle_logged[topic] = true;
+		}
+
+		let r_axis = new THREE.Vector3().crossVectors(frustum.farTopRight, frustum.farBottomRight).normalize();
+		let l_axis = new THREE.Vector3().crossVectors(frustum.farTopLeft, frustum.farBottomLeft).normalize();
+		let t_axis = new THREE.Vector3().crossVectors(frustum.farTopLeft, frustum.farTopRight).normalize();
+		let b_axis = new THREE.Vector3().crossVectors(frustum.farBottomLeft, frustum.farBottomRight).normalize();
+		const steps = 10;
+		let v_angle_step = v_angle / steps;
+		let h_angle_step = h_angle / steps;
+		let r = []; let l = []; let t = []; let b = [];
+		for (let j = 1; j < steps; j++) {
+			r[j] = frustum.farTopRight.clone().applyAxisAngle(r_axis, v_angle_step * j);
+			l[j] = frustum.farTopLeft.clone().applyAxisAngle(l_axis, v_angle_step * j);
+			t[j] = frustum.farTopLeft.clone().applyAxisAngle(t_axis, h_angle_step * j);
+			b[j] = frustum.farBottomLeft.clone().applyAxisAngle(b_axis, h_angle_step * j);
+		}
+
 		let frustum_pts = [];
-		[	frustum.nearTopLeft,
-			frustum.nearTopRight,
-			frustum.nearTopRight,
-			frustum.nearBottomRight,
-			frustum.nearBottomRight,
-			frustum.nearBottomLeft,
-			frustum.nearBottomLeft,
-			frustum.nearTopLeft,
+		
+		let frustum_pairs = [ frustum.nearTopLeft, frustum.nearTopRight,
+							  frustum.nearTopRight, frustum.nearBottomRight,
+							  frustum.nearBottomRight, frustum.nearBottomLeft,
+							  frustum.nearBottomLeft, frustum.nearTopLeft,
 
-			frustum.nearTopLeft,
-			frustum.farTopLeft,
-			frustum.nearTopRight,
-			frustum.farTopRight,
-			frustum.nearBottomLeft,
-			frustum.farBottomLeft,
-			frustum.nearBottomRight,
-			frustum.farBottomRight,
+							  frustum.nearTopLeft, frustum.farTopLeft,
+							  frustum.nearTopRight, frustum.farTopRight,
+							  frustum.nearBottomLeft, frustum.farBottomLeft,
+							  frustum.nearBottomRight, frustum.farBottomRight,
 
-			frustum.farTopLeft,
-			frustum.farTopRight,
-			frustum.farTopRight,
-			frustum.farBottomRight,
-			frustum.farBottomRight,
-			frustum.farBottomLeft,
-			frustum.farBottomLeft,
-			frustum.farTopLeft ].forEach((v3)=>{
-				frustum_pts.push(v3.x, v3.y, v3.z);
+							  frustum.farTopRight, r[1],
+							  frustum.farTopLeft, l[1],
+							  frustum.farTopLeft, t[1],
+							  frustum.farBottomLeft, b[1]
+							 ];
+		for (let j = 1; j < steps-1; j++) {
+			frustum_pairs.push(
+				r[j], r[j+1],
+				l[j], l[j+1],
+				t[j], t[j+1],
+				b[j], b[j+1]
+			);
+		}
+		frustum_pairs.push(
+			r[steps-1], frustum.farBottomRight,
+			l[steps-1], frustum.farBottomLeft,
+			t[steps-1], frustum.farTopRight,
+			b[steps-1], frustum.farBottomRight
+		);
+		
+		frustum_pairs.forEach((v3)=>{
+			frustum_pts.push(v3.x, v3.y, v3.z);
 		});
 		
-
+		
 		this.dirty_camera_frustums[topic] = frustum_pts;
 		this.world_model.renderDirty();
     }
@@ -116,6 +150,7 @@ export class WorldModel3DWidget_CameraInfo {
 			nearTopRight: new THREE.Vector3(nearWidth / 2, nearHeight / 2, near),
 			nearBottomLeft: new THREE.Vector3(-nearWidth / 2, -nearHeight / 2, near),
 			nearBottomRight: new THREE.Vector3(nearWidth / 2, -nearHeight / 2, near),
+
 			farTopLeft: new THREE.Vector3(-farWidth / 2, farHeight / 2, far),
 			farTopRight: new THREE.Vector3(farWidth / 2, farHeight / 2, far),
 			farBottomLeft: new THREE.Vector3(-farWidth / 2, -farHeight / 2, far),

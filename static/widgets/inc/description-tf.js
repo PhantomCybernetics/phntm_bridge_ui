@@ -40,8 +40,8 @@ export class DescriptionTFWidget extends EventTarget {
 	];
 
 	static SKYBOXES = [
-		{ label: 'Black skybox', color: 'black' },
-		{ label: 'White skybox', color: 'white' },
+		{ label: 'Black skybox', color: 'black', light_pos: [ 6, 6, -10] },
+		{ label: 'White skybox', color: 'white', light_pos: [ 6, 6, -10] },
 		{ label: 'Acid skybox', url: '/static/skyboxes/acid/', light_pos: [ 4, 7, -10] }, // skybox folders must contain cubemap_0.png - cubemap_5.png
 		{ label: 'Dark skybox', url: '/static/skyboxes/dark/', light_pos: [ 4, 7, -10] }, 
 		{ label: 'Mars skybox', url: '/static/skyboxes/mars/', light_pos: [ 5, 7, -10] }, // default
