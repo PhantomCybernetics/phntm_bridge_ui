@@ -805,14 +805,15 @@ export class Panel {
 
 		// auto scale THREE renderer & set camera aspect
 		if (this.display_widget) {
-			if (this.display_widget.renderer) {
-				this.display_widget.camera.aspect =
-					parseFloat(this.widget_width) / parseFloat(this.widget_height);
-				this.display_widget.camera.updateProjectionMatrix();
-				this.display_widget.renderer.setSize(
-					this.widget_width,
-					this.widget_height,
-				);
+			if (!this.display_widget.disable_autoresize) {
+				if (this.display_widget.renderer) {
+					this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
+					this.display_widget.camera.updateProjectionMatrix();
+					this.display_widget.renderer.setSize(
+						this.widget_width,
+						this.widget_height,
+					);
+				}
 			}
 
 			if (this.display_widget.onResize) {

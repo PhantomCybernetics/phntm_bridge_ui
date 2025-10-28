@@ -58,7 +58,7 @@ body::after {
 		url("/static/graph/icon-view.svg")
 		url("/static/graph/icon-external-link.svg")
 		url("/static/graph/phantom-cybernetics-logo-white.svg")
-		/* url("/static/grounds/tiles.png") */
+		url("/static/grounds/tiles.png")
 		;
 }
 
@@ -3194,9 +3194,10 @@ BODY.touch-ui .editing .grid-stack-item-content {
 	position: relative;
 }
 
-.canvasjs-chart-credit {
-	display: none !important; /* TODO OpenSource license? */
-}
+/* TODO OpenSource license? */
+/* .canvasjs-chart-credit {
+	display: none !important; 
+} */
 
 .panel_widget.battery {
 	height: 100%;
