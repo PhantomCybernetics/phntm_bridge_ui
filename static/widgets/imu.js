@@ -26,12 +26,27 @@ export class ImuWidget {
 	// static ACC_SCALE = -0.1;
 
 	constructor(panel, topic) {
-		this.panel = panel;
+		this.panel = panel; 
 		this.topic = topic;
 		
 		this.enable_rot = this.panel.getPanelVarAsBool('rot', true);
 		this.enable_acc = this.panel.getPanelVarAsBool('acc', false);
 		this.disable_autoresize = true; //handling our own renderer resize here
+
+		this.max_acc_m_s = 0.0; // override these
+		this.min_acc_m_s = 0.0; // from topic config
+		this.acc_trace_length = 200;
+
+		let that = this;
+
+		this.onTopicConfigUpdate = (config) => {
+			if (config) {
+				that.min_acc_m_s = config.min_acceleration;
+				that.max_acc_m_s = config.max_acceleration;
+				that.makeAccChart();
+			}
+		};
+		this.panel.ui.client.onTopicConfig(topic, this.onTopicConfigUpdate); //', (t, c) => that.onTopicConfigUpdate(t, c))
 
 		this.fw_axis = this.panel.getPanelVarAsInt('fw', 0); // +X default
 		this.up_axis = this.panel.getPanelVarAsInt('up', 2); // +Z default
@@ -86,12 +101,19 @@ export class ImuWidget {
 		this.setCameraTarget();
 
 		// make accelration chart
-		this.max_acc_m_s = 11.0;
-		this.min_acc_m_s = -11.0;
-		this.acc_trace_length = 200;
 		this.data_trace_x = [];
 		this.data_trace_y = [];
 		this.data_trace_z = [];
+		
+		this.render();
+	}
+
+	makeAccChart() {
+		if (this.chart) {
+			console.log("clearing old acc chart");
+			this.chart.destroy();
+			$("#imu_acc_" + this.panel.n).empty();
+		}
 		this.chart = new CanvasJS.Chart("imu_acc_" + this.panel.n, {
 			//Chart Options - Check https://canvasjs.com/docs/charts/chart-options/
 			// title:{
@@ -120,9 +142,9 @@ export class ImuWidget {
 				gridColor: "#222222",
 				labelFontSize: 12,
 				lineThickness: 0,
-				// labelFormatter: function (e) {
-				// 	return e.value.toFixed(0) + " m/s²";
-				// },
+				labelFormatter: function (e) {
+					return e.value.toFixed(0) + " m/s²";
+				},
 				tickLength: 2,
 			},
 			data: [
@@ -143,8 +165,6 @@ export class ImuWidget {
 				}
 			],
 		});
-
-		this.render();
 	}
 
 	onData(msg) {
@@ -191,9 +211,9 @@ export class ImuWidget {
 	}
 
 	render() {
-		if (this.enable_rot)
+		if (this.enable_rot && this.renderer)
 			this.renderer.render(this.scene, this.camera);
-		if (this.enable_acc)
+		if (this.enable_acc && this.chart)
 			this.chart.render();
 	}
 

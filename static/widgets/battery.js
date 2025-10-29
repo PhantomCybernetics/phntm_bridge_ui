@@ -10,18 +10,17 @@ export class BatteryStateWidget {
 		this.panel = panel;
 		this.topic = topic;
 
-		this.minVoltage = 0; // override these
-		this.maxVoltage = 0; // in topic config
+		this.min_voltage = 0; // override these
+		this.max_voltage = 0; // from topic config
 
 		$("#panel_widget_" + panel.n).addClass("enabled battery");
 
 		let that = this;
 
 		this.onTopicConfigUpdate = (config) => {
-			// console.warn("battery onTopicConfigUpdate", config, this);
 			if (config) {
-				this.minVoltage = config.min_voltage;
-				this.maxVoltage = config.max_voltage;
+				this.min_voltage = config.min_voltage;
+				this.max_voltage = config.max_voltage;
 				this.makeChart();
 			}
 		};
@@ -61,8 +60,8 @@ export class BatteryStateWidget {
 				tickThickness: 0,
 			},
 			axisY: {
-				minimum: this.minVoltage - 1.0,
-				maximum: this.maxVoltage + 1.0,
+				minimum: this.min_voltage - 1.0,
+				maximum: this.max_voltage + 1.0,
 				// lineColor: "red",
 				gridColor: "#dddddd",
 				labelFontSize: 12,
@@ -73,7 +72,7 @@ export class BatteryStateWidget {
 				// tickLength: 2,
 				stripLines: [
 					{
-						value: this.maxVoltage,
+						value: this.max_voltage,
 						color: "#77AE23",
 						label: "Full",
 						labelFontColor: "white",
@@ -84,7 +83,7 @@ export class BatteryStateWidget {
 					},
 					{
 						// startValue: this.minVoltage-1.0,
-						value: this.minVoltage,
+						value: this.min_voltage,
 						color: "#cc0000",
 						label: "\ Empty",
 						labelFontColor: "white",
@@ -108,7 +107,8 @@ export class BatteryStateWidget {
 	}
 
 	onResize() {
-		if (this.chart) this.chart.render();
+		if (this.chart)
+			this.chart.render();
 	}
 
 	onClose() {
@@ -118,28 +118,28 @@ export class BatteryStateWidget {
 		);
 	}
 
-	onData = (decoded) => {
+	onData(msg) {
 		if (!this.chart) return;
 
 		let c = "#2696FB";
-		let range2 = (this.maxVoltage - this.minVoltage) / 2.0;
+		let range2 = (this.max_voltage - this.min_voltage) / 2.0;
 
-		if (decoded.voltage < this.minVoltage) c = "#ff0000";
-		else if (decoded.voltage > this.maxVoltage) c = "#00ff00";
-		else if (decoded.voltage > this.minVoltage + range2) {
-			let amount = (decoded.voltage - this.minVoltage - range2) / range2;
+		if (msg.voltage < this.min_voltage) c = "#ff0000";
+		else if (msg.voltage > this.max_voltage) c = "#00ff00";
+		else if (msg.voltage > this.min_voltage + range2) {
+			let amount = (msg.voltage - this.min_voltage - range2) / range2;
 			c = lerpColor("#2696FB", "#00ff00", amount);
 		} else {
-			let amount = (decoded.voltage - this.minVoltage) / range2;
+			let amount = (msg.voltage - this.min_voltage) / range2;
 			c = lerpColor("#ff0000", "#2696FB", amount);
 		}
 		// if (decoded.voltage < (this.minVoltage+()/2.0))
 		//     c = '';
 
 		this.data_trace.push({
-			x: decoded.header.stamp.nanosec / 1e9 + decoded.header.stamp.sec,
-			y: decoded.voltage,
-			label: decoded.voltage.toFixed(2) + "V",
+			x: msg.header.stamp.nanosec / 1e9 + msg.header.stamp.sec,
+			y: msg.voltage,
+			label: msg.voltage.toFixed(2) + "V",
 			markerColor: c,
 			lineColor: c,
 			markerSize: 0,

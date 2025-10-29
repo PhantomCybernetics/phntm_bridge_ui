@@ -179,8 +179,21 @@ export class VideoWidget_Detections2D {
 			
 			if (this.display_labels) {
 				for (let j = 0; j < labels.length; j++) {
+
+					svg.append("rect")
+						.attr('id', 'bg-'+i+'-'+j)
+						.attr("class", "detection-res-bg")
+						.attr("x", bbleft-5)
+						.attr("y", bbtop-5)
+						.attr("width", 0)
+						.attr("height", 0)
+						//.style("stroke", c)
+						.style("fill", "#000000ad")
+						//.style("stroke-width", 3);
+
 					svg.append("text") // class label(s)
 						.attr("class", "detection-res")
+						.attr('id', 'label-'+i+'-'+j)
 						.attr("x", bbleft + 5.0)
 						.attr("y", bbtop + 5.0 + 15.0)
 						.style("stroke", "white")
@@ -189,20 +202,30 @@ export class VideoWidget_Detections2D {
 						.attr("dy", j * 2 + "em")
 						.text(labels[j]);
 						
-					if (distances[j] > 0.0) { // z-distance, if present and non-zero
-						svg.append("text")
-							.attr("class", "detection-res")
-							.attr("x", bbleft + 5.0)
-							.attr("y", bbtop + 5.0 + 15.0)
-							.style("stroke", "yellow")
-							.style("fill", "white")
-							.style("font-size", 20)
-							.attr("dy", j * 2 + 1 + "em")
-							.text(distances[j]);
-					}
+					// if (distances[j] > 0.0) { // z-distance, if present and non-zero
+					// 	svg.append("text")
+					// 		.attr("class", "detection-res")
+					// 		.attr("x", bbleft + 5.0)
+					// 		.attr("y", bbtop + 5.0 + 15.0)
+					// 		.style("stroke", "yellow")
+					// 		.style("fill", "white")
+					// 		.style("font-size", 20)
+					// 		.attr("dy", j * 2 + 1 + "em")
+					// 		.text(distances[j]);
+					// }
 				}
 			}
 		}
+
+		svg.selectAll("text").each(function(d) {
+			//d.bbox = this.getBBox();
+			let bbox = this.getBBox();
+			let id = this.id;
+			//console.log(id, bbox.width, bbox.height);
+			svg.select('#'+id.replace('label', 'bg'))
+				.attr("width", bbox.width+20)
+            	.attr("height", bbox.height+10)
+		});
 
 		this.eraseOverlayOnTimeout(topic);
     }
@@ -215,7 +238,7 @@ export class VideoWidget_Detections2D {
 		this.clear_overlays_timeout[topic] = setTimeout(() => {
 			if (that.video.panel.paused) {
 				//don't clear while paused
-				that.clearOverlayOnTimeout(topic);
+				that.eraseOverlayOnTimeout(topic);
 				return;
 			}
 
