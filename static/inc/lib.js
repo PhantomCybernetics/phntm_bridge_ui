@@ -246,3 +246,13 @@ export function detectHWKeyboard() {
 
 	return true;
 }
+
+export function isSubclassOf(Child, Parent) {
+  if (typeof Child !== 'function' || typeof Parent !== 'function') return false;
+  let proto = Object.getPrototypeOf(Child.prototype);
+  while (proto) {
+    if (proto === Parent.prototype) return true;
+    proto = Object.getPrototypeOf(proto);
+  }
+  return false;
+}

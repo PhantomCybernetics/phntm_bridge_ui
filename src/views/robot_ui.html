@@ -2,23 +2,17 @@
 
 <div id="page_message"></div>
 
-<div id="notifications"></div>
-<!-- z-index: 220 -->
+<div id="notifications"></div> <!-- z-index: 220 -->
 
 <div id="mapping-confirmation"></div>
 <!-- <div id="msg_type-dialog"></div> -->
 
-<div id="service-input-dialog"></div>
-<!-- z-index: 200 -->
-<div id="node-params-dialog"></div>
-<!-- z-index: 200 -->
-<div id="description-dialog"></div>
-<!-- z-index: 2000 -->
-<div id="dialog-modal-confirm"></div>
-<!-- z-index: 200 -->
+<div id="service-input-dialog"></div> <!-- z-index: 200 -->
+<div id="node-params-dialog"></div> <!-- z-index: 200 -->
+<div id="description-dialog"></div> <!-- z-index: 2000 -->
+<div id="dialog-modal-confirm"></div> <!-- z-index: 200 -->
 
-<div id="dialog-modal-confirm-underlay" class="prevent-select"></div>
-<!-- z-index: 199 -->
+<div id="dialog-modal-confirm-underlay" class="prevent-select"></div> <!-- z-index: 199 -->
 
 <!-- z-index: 100 -->
 <!-- <div id="touch-ui-dialog">
@@ -35,29 +29,21 @@
 
 <div id="topic-selector-dialog"></div>
 
-<div id="msg-type-dialog">
-	<!-- z-index: 100 -->
+<div id="msg-type-dialog"> <!-- z-index: 100 -->
 	<div class="title"></div>
 	<div class="content"></div>
 	<button id="close-msg-type-dialog" class="close">Close</button>
 </div>
-<div id="msg-type-dialog-underlay" class="prevent-select"></div>
-<!-- z-index: 91 -->
+<div id="msg-type-dialog-underlay" class="prevent-select"></div> <!-- z-index: 91 -->
 
-<div id="touch-gamepad-left"></div>
-<!-- z-index: 15 -->
-<div id="touch-gamepad-right"></div>
-<!-- z-index: 15 -->
-<ul id="touch-ui-bottom-buttons" class="touch_buttons"></ul>
-<!-- z-index: 17 -->
+<div id="touch-gamepad-left"></div> <!-- z-index: 15 -->
+<div id="touch-gamepad-right"></div> <!-- z-index: 15 -->
+<ul id="touch-ui-bottom-buttons" class="touch_buttons"></ul> <!-- z-index: 17 -->
 
 <div id="fixed-header">
-	<div id="modal-underlay" class="prevent-select"></div>
-	<!-- z-index: 80 -->
-	<div id="menu-underlay" class="prevent-select"></div>
-	<!-- z-index: 82 -->
-	<div id="input-underlay" class="prevent-select"></div>
-	<!-- z-index: 2 -->
+	<div id="modal-underlay" class="prevent-select"></div> <!-- z-index: 80 -->
+	<div id="menu-underlay" class="prevent-select"></div> <!-- z-index: 82 -->
+	<div id="input-underlay" class="prevent-select"></div> <!-- z-index: 2 -->
 
 	<div id="fixed-left">
 		<h1 id="robot_name">
@@ -194,8 +180,6 @@
 
 <div id="grid-stack-container"><div class="grid-stack" id="grid-stack"></div></div>
 
-<!-- <div id="monitors" style="display:none"></div> -->
-
 <script type="module">
 	import { BatteryStateWidget } from "/static/widgets/battery.js";
 	
@@ -225,13 +209,19 @@
 	import { WorldModel3DWidget_CameraInfo } from "/static/widgets/world-model-3d/camera-info.js";
 	import { WorldModel3DWidget_Detections3D } from "/static/widgets/world-model-3d/detections3d.js";
 
+	import { InputDriver } from "/static/input/base-driver.js";
 	import { JoyInputDriver } from "/static/input/joy-driver.js";
 	import { TwistInputDriver } from "/static/input/twist-driver.js";
 
-	import {
-		ServiceInput_Empty,
-		ServiceInput_Bool,
-	} from "/static/input/service-widgets.js";
+	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
+	import { CustomServiceInput } from '/static/input/custom-service-input.js'
+
+	import { isSubclassOf } from '/static/inc/lib.js';
+	let custom_modules = []; // used for accessing custom extension classes
+	<% for (let i = 0; i < custom_js.length; i++) { %>
+	import * as CustomModule_<%=i %> from '<%= custom_js[i] %>';
+	custom_modules.push(CustomModule_<%=i %>);
+	<% }; %>
 
 	$(document).ready(function () {
 		try {
@@ -246,8 +236,15 @@
 			});
 
 			let input_manager = new InputManager(robot);
-			input_manager.registerDriver("Joy", JoyInputDriver);
-			input_manager.registerDriver("Twist", TwistInputDriver);
+			input_manager.registerDriver(JoyInputDriver);
+			input_manager.registerDriver(TwistInputDriver);
+			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriver)
+				for (const key in module) {
+					if (isSubclassOf(module[key], InputDriver)) {
+						input_manager.registerDriver(module[key]);
+					}
+				}
+			});
 
 			let panel_ui = new PanelUI(robot, 32, input_manager);
 
@@ -263,9 +260,6 @@
 			panel_ui.addTypeWidget("sensor_msgs/msg/CompressedImage", VideoWidget, video_plugins);
 			panel_ui.addTypeWidget("ffmpeg_image_transport_msgs/msg/FFMPEGPacket", VideoWidget, video_plugins);
 
-			// TODO:
-			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
-			// panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
 			panel_ui.addTypeWidget("phntm_interfaces/msg/SystemInfo", SystemLoadWidget);
 
 			panel_ui.addCustomWidget(WorldModel3DWidget, [
@@ -274,6 +268,10 @@
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
 			]);
+
+			// TODO:
+			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
+			// panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
 			// panel_ui.addCustomWidget(NavigationWidget);
 			// panel_ui.addCustomWidget(DescriptionTFWidget);
 			// panel_ui.addCustomWidget(LaserOdometryWidget);
@@ -281,9 +279,15 @@
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
+			custom_modules.forEach((module) => { // loads custom service widgets (must be a subclass of CustomServiceInput)
+				for (const key in module) {
+					if (isSubclassOf(module[key], CustomServiceInput)) {
+						panel_ui.addCustomServiceWidget(key, module[key]);
+					}
+				}
+			});
 
-			// init panel setup from url
-			// also subscribes to topics and cameras required by panel widgets
+			// init panel setup from url, also subscribes to topics and cameras required by panel widgets
 			panel_ui.panelsFromURLHash(window.location.hash);
 
 			robot.on("error", (err, msg) => {

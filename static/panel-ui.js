@@ -47,31 +47,17 @@ export class PanelUI {
 	addCustomServiceWidget(widget_class_name, widget_class) {
 		if (this.custom_service_widgets[widget_class_name]) return; //only once per session
 
+		console.log('Registering custom service widget with class name '+widget_class_name);
 		this.custom_service_widgets[widget_class_name] = {
 			class: widget_class,
 		};
-
-		let cusom_css = widget_class.GetStyles();
-		if (cusom_css) {
-			let style = document.createElement("style");
-			style.textContent = cusom_css;
-			this.custom_service_widgets[widget_class_name]["css"] = style;
-			document.head.appendChild(style);
-		}
 
 		this.servicesMenuFromNodes();
 	}
 
 	service_widget_map = {};
 	addServiceWidgetMapping(id_service, widget_class_name, extra_data) {
-		console.log(
-			"Adding service widget mapping for " +
-				id_service +
-				": " +
-				widget_class_name +
-				", data=",
-			extra_data,
-		);
+		console.log("Adding service widget mapping for " + id_service + ": " + widget_class_name + ", data=", extra_data);
 
 		this.service_widget_map[id_service] = {
 			class_name: widget_class_name,
@@ -220,15 +206,11 @@ export class PanelUI {
 			that.updateWebrtcStatus();
 			that.updateLayout(); // robot name length affects layout
 
-			let client_version_info = client.client_version
-				? client.client_version
-				: "N/A";
+			let client_version_info = client.client_version ? client.client_version : "N/A";
 			if (client.ros_distro)
-				client_version_info +=
-					" @ " +
-					client.ros_distro.charAt(0).toUpperCase() +
-					client.ros_distro.slice(1);
-			if (client_version_info) client_version_info += " ";
+				client_version_info += " @ " + client.ros_distro.charAt(0).toUpperCase() + client.ros_distro.slice(1);
+			if (client_version_info)
+				client_version_info += " ";
 
 			if (client.client_version && client.ros_distro) {
 				$("#bridge-version-info").html(client_version_info);
@@ -337,10 +319,7 @@ export class PanelUI {
 		// triggered after input_config
 		client.on("ui_config", (robot_ui_config) => {
 			// battery optional
-			if (
-				that.battery_topic &&
-				that.battery_topic != robot_ui_config["battery_topic"]
-			) {
+			if (that.battery_topic && that.battery_topic != robot_ui_config["battery_topic"]) {
 				client.off(that.battery_topic, batteryStatusWrapper);
 				that.battery_topic = null;
 			}
@@ -357,29 +336,24 @@ export class PanelUI {
 			that.saveLastRobotBatteryShown(that.battery_shown);
 
             // description dialog
-             if (robot_ui_config['description'] || robot_ui_config['description_header']) {
-                that.makeDescriptionDialog(robot_ui_config['description_header'], robot_ui_config['description']);
-             }
+            if (robot_ui_config['description'] || robot_ui_config['description_header']) {
+				that.makeDescriptionDialog(robot_ui_config['description_header'], robot_ui_config['description']);
+            }
 
 			// introspection control
 			if (robot_ui_config["introspection_control"] !== undefined) {
-				that.introspection_control_shown =
-					robot_ui_config["introspection_control"];
+				that.introspection_control_shown = robot_ui_config["introspection_control"];
 				if (that.introspection_control_shown) {
 					$("#introspection_state").css("display", "block");
 				} else {
 					$("#introspection_state").css("display", "none");
 				}
-				that.saveLastRobotIntrospectionControlShown(
-					robot_ui_config["introspection_control"],
-				);
+				that.saveLastRobotIntrospectionControlShown(robot_ui_config["introspection_control"]);
 			} else {
 				// python bridge doens't send introspection_control
 				that.introspection_control_shown = true;
 				$("#introspection_state").css("display", "block");
-				that.saveLastRobotIntrospectionControlShown(
-					that.introspection_control_shown,
-				);
+				that.saveLastRobotIntrospectionControlShown(that.introspection_control_shown);
 			}
 
 			// docker control optional
@@ -394,19 +368,13 @@ export class PanelUI {
 			} else if (that.docker_control_shown) {
 				that.docker_control_shown = false;
 				if (that.subscribed_docker_monitor_topic) {
-					client.off(
-						that.subscribed_docker_monitor_topic,
-						dockerMonitorWrapper,
-					);
+					client.off(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
 				}
 				that.subscribed_docker_monitor_topic = null;
 			}
 
 			if (old_docker_control_shown != that.docker_control_shown) {
-				$("#docker_controls").css(
-					"display",
-					that.docker_control_shown ? "" : "none",
-				);
+				$("#docker_controls").css("display", that.docker_control_shown ? "" : "none");
 				that.updateLayout();
 			}
 
@@ -443,8 +411,7 @@ export class PanelUI {
 			}
 
 			if (robot_ui_config["collapse_unhandled_services"])
-				this.collapse_unhandled_services =
-					robot_ui_config["collapse_unhandled_services"];
+				this.collapse_unhandled_services = robot_ui_config["collapse_unhandled_services"];
 
 			that.input_manager.onUIConfig();
 		});
@@ -1374,6 +1341,7 @@ export class PanelUI {
 				node_docker_srv,
 				{ id_container: id_container, set_state: state },
 				true,
+				that.client.default_service_timeout_sec,
 				(reply) => {
 					$(btn).removeClass("working");
 					that.serviceReplyNotification(null, node_docker_srv, true, reply);
@@ -1833,6 +1801,8 @@ export class PanelUI {
 	loadServiceBtns(nodes) {
 		let that = this;
 
+		console.log('Loading service btns...');
+
 		this.service_btns = {};
 		Object.values(nodes).forEach((node) => {
 			Object.keys(node.services).forEach((service) => {
@@ -1894,70 +1864,34 @@ export class PanelUI {
 		let prefered_services = [];
 		let collapsed_services = [];
 		let service_ids = Object.keys(node.services);
-		// let num_services = 0;
 
 		for (let i = 0; i < service_ids.length; i++) {
 			let id_service = service_ids[i];
 			let service = node.services[id_service];
 			let msg_type = node.services[id_service].msg_type;
-			// num_services++; // activates menu
 
 			let msg_class = this.client.findMessageType(service.msg_type + "_Request");
-			// let service_name_parts = service.service.split('/');
-			let service_short = service.service.replace("/" + node.node, ""); //service_name_parts[service_name_parts.length-1];
+			let service_short = service.service.replace("/" + node.node, "");
 
-			let service_content = $(
-				'<div class="service ' +
-					(msg_class ? "handled" : "nonhandled") +
-					'" data-service="' +
-					service.service +
-					'" data-msg_type="' +
-					service.msg_type +
-					'">' +
-					"<div " +
-					'class="service_heading" ' +
-					'title="' +
-					service.service +
-					'"' +
-					">" +
-					service_short +
-					"</div>" +
-					"</div>",
-			);
+			let service_content = $('<div class="service ' + (msg_class ? "handled" : "nonhandled") + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type +'">' +
+										'<div class="service_heading" title="' + service.service + '">' + service_short + '</div>' +
+									"</div>");
 
-			let msg_type_link = $(
-				'<div class="service_input_type" id="service_input_type_' +
-					i +
-					'" title="' +
-					(msg_class ? msg_type : msg_type + " unsupported message type") +
-					'">' +
-					msg_type +
-					"</div>",
-			);
+			let msg_type_link = $('<div class="service_input_type" id="service_input_type_' + i + '" title="' + (msg_class ? msg_type : msg_type + " unsupported message type") + '">' + msg_type + "</div>");
 			msg_type_link.click(() => {
 				that.messageTypeDialog(msg_type);
 			});
 			msg_type_link.appendTo(service_content);
-			// node_content.append(service_content);
 
-			let service_input_el = $(
-				'<div class="service_input" id="service_input_' + i + '"></div>',
-			);
+			let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
 			this.service_btn_els[service.service] = service_input_el;
 
 			this.renderServiceMenuControls(service, msg_class, node, node_cont_el);
 
 			service_content.append(service_input_el);
 
-			let has_user_defs =
-				this.service_btns[service.service] &&
-				this.service_btns[service.service].length;
-			if (
-				!has_user_defs &&
-				((!msg_class && this.collapse_unhandled_services) ||
-					this.collapse_services.indexOf(msg_type) > -1 ||
-					this.collapse_services.indexOf(id_service) > -1)
-			)
+			let has_user_defs = this.service_btns[service.service] && this.service_btns[service.service].length;
+			if (!has_user_defs && ((!msg_class && this.collapse_unhandled_services) || this.collapse_services.indexOf(msg_type) > -1 || this.collapse_services.indexOf(id_service) > -1))
 				collapsed_services.push(service_content);
 			else prefered_services.push(service_content);
 		}
@@ -1978,9 +1912,7 @@ export class PanelUI {
 					collapsed_cont.append(collapsed_services[i]);
 				let more_label = prefered_services.length ? "Show more" : "Show services";
 				let cls = !prefered_services.length ? "only-collapsed" : "";
-				let handle = $(
-					'<div class="collapse-handle ' + cls + '">' + more_label + "</div>",
-				);
+				let handle = $('<div class="collapse-handle ' + cls + '">' + more_label + "</div>");
 
 				handle.click(() => {
 					if (!handle.hasClass("open")) {
@@ -2002,17 +1934,11 @@ export class PanelUI {
 				if (node_cont_el.hasClass("uncollapsed")) {
 					handle.trigger("click");
 				}
-				node_cont_el.append([
-					collapsed_cont,
-					handle,
-					$('<span class="cleaner"></span>'),
-				]);
+				node_cont_el.append([ collapsed_cont, handle, $('<span class="cleaner"></span>') ]);
 
 				if (!prefered_services.length) {
 					node_label_el.addClass("only-collapsed");
-					let compact_handle_el = $(
-						'<span class="collapse-compact-handle">Show services</span>',
-					);
+					let compact_handle_el = $('<span class="collapse-compact-handle">Show services</span>');
 					node_label_el.append(compact_handle_el);
 					compact_handle_el.click(() => {
 						handle.trigger("click");
@@ -2035,50 +1961,62 @@ export class PanelUI {
 		if (!service_input_controls_el) return;
 
 		service_input_controls_el.empty();
-
+		let that = this;
 		if (this.service_widget_map[id_service]) {
 			if (!this.service_widget_map[id_service].widget) {
 				let widget_class_name = this.service_widget_map[id_service]["class_name"];
 				if (this.custom_service_widgets[widget_class_name]) {
-					let widget_class =
-						this.custom_service_widgets[widget_class_name]["class"];
+					let widget_class = this.custom_service_widgets[widget_class_name]["class"];
 					this.service_widget_map[id_service].widget = new widget_class(
 						id_service,
-						this.service_widget_map[id_service].data,
 						this.client,
+						this.service_widget_map[id_service].data
+					);
+					
+					this.service_widget_map[id_service].widget.makeElements(service_input_controls_el);
+					this.service_widget_map[id_service].widget.getCurrentValue(
+						(val) => { // on success
+							if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
+								that.service_widget_map[id_service].widget.updateDisplay(val);
+						},
+						(err) => { // on err
+							console.error(err);
+							if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
+								that.service_widget_map[id_service].widget.updateDisplay(null, true);
+						}
 					);
 				}
-			}
-
-			if (this.service_widget_map[id_service].widget) {
-				this.service_widget_map[id_service].widget.target_el =
-					service_input_controls_el;
-				this.service_widget_map[id_service].widget.makeMenuControls();
+			} else {
+				this.service_widget_map[id_service].widget.makeElements(service_input_controls_el); // render first
+				this.service_widget_map[id_service].widget.getCurrentValue(
+					(val) => { // on success
+						if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
+							that.service_widget_map[id_service].widget.updateDisplay(val);
+					},
+					(err) => { // on err
+						console.error(err);
+						if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
+							that.service_widget_map[id_service].widget.updateDisplay(null, true);
+					}
+				);
 			}
 			return; //handled by custom widget
 		}
 
-		let msg_type = msg_class.name.endsWith("_Request")
-			? msg_class.name.replace("_Request", "")
-			: msg_class.name;
-
-		if (
-			msg_class.definitions &&
-			msg_class.definitions.length == 1 &&
-			msg_class.definitions[0].name == "structure_needs_at_least_one_member"
-		) {
+		let msg_type = msg_class.name.endsWith("_Request") ? msg_class.name.replace("_Request", "") : msg_class.name;
+		if (msg_class.definitions && msg_class.definitions.length == 1 && msg_class.definitions[0].name == "structure_needs_at_least_one_member") {
 			// ignore https://github.com/ros2/rosidl_python/pull/73
 			ServiceInput_Empty.MakeMenuControls(
 				service_input_controls_el,
 				service,
-				this.client,
+				this.client
 			);
 		} else if (this.service_widgets[msg_type] != undefined) {
 			// btn by known service type
 			this.service_widgets[msg_type].MakeMenuControls(
 				service_input_controls_el,
 				service,
-				this.client,
+				this.client
 			);
 		} else {
 			// custom user-defined btns
@@ -2087,7 +2025,7 @@ export class PanelUI {
 				service,
 				this.client,
 				node,
-				node_cont,
+				node_cont
 			);
 		}
 	}
@@ -2108,14 +2046,14 @@ export class PanelUI {
 		if (!Object.keys(nodes).length) return;
 
 		if (this.collapse_services === null)
-			// empty loaded is []
+			// empty, [] when loaded
 			return;
 
 		if (this.default_service_btns === null)
-			// empty loaded is {}
+			// empty, [] when loaded
 			return;
 
-		this.loadServiceBtns(nodes); // reloads all, keeping edit untouched
+		this.loadServiceBtns(nodes); // reloads all, keeping edits untouched
 
 		$("#service_list").empty();
 		this.num_services = 0;
@@ -2207,6 +2145,7 @@ export class PanelUI {
 			this.wifi_scan_service,
 			{ attempt_roam: attempt_roam },
 			true,
+			this.client.default_service_timeout_sec,
 			(reply) => {
 				if (reply !== undefined)
 					// undefined means service call was cancelled here (by a callback)
@@ -3346,7 +3285,7 @@ export class PanelUI {
 		if (btn_el) btn_el.addClass("working");
 		let show_request = btn.show_request;
 		let show_reply = btn.show_reply;
-		this.client.serviceCall(service, btn.value, !show_request, (service_reply) => {
+		this.client.serviceCall(service, btn.value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
 			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
 		});
 	}
@@ -3356,7 +3295,7 @@ export class PanelUI {
 		if (btn_el) btn_el.addClass("working");
 		let show_request = false;
 		let show_reply = null; // auto = if err or reply data
-		this.client.serviceCall(service, value, !show_request, (service_reply) => {
+		this.client.serviceCall(service, value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
 			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
 		});
 	}

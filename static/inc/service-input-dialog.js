@@ -365,6 +365,7 @@ export class ServiceInputDialog {
 				that.service.service,
 				msg_ref ? msg_ref : undefined,
 				false,
+				that.client.default_service_timeout_sec,
 				(test_reply) => {
 					that.client.ui.serviceReplyNotification(
 						btn_call,

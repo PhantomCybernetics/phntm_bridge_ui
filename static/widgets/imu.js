@@ -110,18 +110,11 @@ export class ImuWidget {
 
 	makeAccChart() {
 		if (this.chart) {
-			console.log("clearing old acc chart");
+			console.log("Clearing old acc chart");
 			this.chart.destroy();
 			$("#imu_acc_" + this.panel.n).empty();
 		}
 		this.chart = new CanvasJS.Chart("imu_acc_" + this.panel.n, {
-			//Chart Options - Check https://canvasjs.com/docs/charts/chart-options/
-			// title:{
-			//   text: "Basic Column Chart in JavaScript"
-			// },
-			// width: panel.widget_width,
-			// height: panel.widget_height,
-			creditText: '',
 			backgroundColor: '#000000',
 			toolTip: {
 				contentFormatter: function (e) {

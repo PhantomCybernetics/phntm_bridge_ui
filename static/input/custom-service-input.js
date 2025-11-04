@@ -1,25 +1,31 @@
 export class CustomServiceInput {
 	id_service = null;
-	data = null; // passed initial data
-	target_el = null; // parent element of the input
-	client = null; // browser client ref
+	bridge_client= null; // browser client ref
+	config_data = null; // passed initial data
 
-	constructor(id_service, custom_data, client) {
+	constructor(id_service, bridge_client, config_data) {
 		this.id_service = id_service;
-		this.data = custom_data;
-		this.client = client;
+		this.bridge_client = bridge_client;
+		this.config_data = config_data;
 	}
 
-	makeMenuControls() {
-		// override this to make your UI
+	makeElements(target_el) {
+		// crete your controls and add to 
+		// the target el
+	}
+
+	updateDisplay(value, is_error=false) {
+		// update created elements with value
+	}
+
+	getCurrentValue(done_cb, err_cb) {
+		// handle loading of the current value
+		// i.e. via a getter service call
+		// called on init and when nodes are updated
 	}
 
 	onValueChanged(msg) {
 		// trigerred when another peer updates the input
 		// override to update the UI
-	}
-
-	static GetStyles() {
-		return ""; // override this to insert custom CSS for this input class
 	}
 }

@@ -2,6 +2,8 @@ import { InputDriver } from "./base-driver.js";
 
 export class JoyInputDriver extends InputDriver {
 	msg_type = "sensor_msgs/msg/Joy";
+	id_driver = "Joy";
+	
 	num_axes = 10;
 	num_buttons = 10;
 

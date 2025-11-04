@@ -129,6 +129,7 @@ export class PhntmBridgeClient extends EventTarget {
 
 	service_request_callbacks = {};
 	service_reply_callbacks = {};
+	default_service_timeout_sec = 10.0; // overwritten by ui config
 
 	input_manager = null;
 	extrernal_scripts = {};
@@ -1142,130 +1143,13 @@ export class PhntmBridgeClient extends EventTarget {
 			return;
 		}
 
-		// load custom input drivers
-		let loading_num_custom_drivers = 0;
-		let input_drivers = null;
-		let input_profile_defaults = null;
-		let input_service_defaults = null;
-		if (
-			robot_data["custom_input_drivers"] &&
-			robot_data["custom_input_drivers"].length
-		) {
-			robot_data["custom_input_drivers"].forEach((custom_driver) => {
-				if (!custom_driver.class || !custom_driver.url) {
-					console.error(
-						"Invalid custom_input_driver definition received:",
-						custom_driver,
-					);
-					return;
-				}
-				loading_num_custom_drivers++;
-				this._loadExternalScript(custom_driver.url, custom_driver.class)
-					.then((loaded_class) => {
-						that.input_manager.registerDriver(
-							custom_driver.class,
-							loaded_class,
-						);
-						loading_num_custom_drivers--;
-						if (loading_num_custom_drivers == 0)
-							// all done?
-							that.emit(
-								"input_config",
-								input_drivers,
-								input_profile_defaults,
-								input_service_defaults,
-							);
-					})
-					.catch((error) => {
-						console.error(
-							"External input driver loading error for " +
-								custom_driver.url,
-							error,
-						);
-						that.ui.showNotification(
-							"Error loading external input driver " + custom_driver.class,
-							"error",
-							'<pre>Source: <a href="' +
-								custom_driver.url +
-								'">' +
-								custom_driver.url +
-								"</a>\n" +
-								error +
-								"</pre>",
-						);
-						loading_num_custom_drivers--;
-						if (loading_num_custom_drivers == 0)
-							// all done?
-							that.emit(
-								"input_config",
-								input_drivers,
-								input_profile_defaults,
-								input_service_defaults,
-							);
-					});
-			});
-		}
-
-		if (
-			robot_data["input_drivers"] ||
-			robot_data["input_defaults"] ||
-			robot_data["service_defaults"]
-		) {
-			input_drivers = robot_data["input_drivers"];
-			input_profile_defaults = robot_data["input_defaults"]
-				? robot_data["input_defaults"]
-				: {};
-			input_service_defaults = robot_data["service_defaults"]
-				? robot_data["service_defaults"]
-				: {};
-			if (loading_num_custom_drivers == 0)
-				// wait for all custom input drivers to load
-				this.emit(
-					"input_config",
-					input_drivers,
-					input_profile_defaults,
-					input_service_defaults,
-				); // service_buttons must trigger before ui
-		}
-
-		// load custom service widgets
-		if (
-			robot_data["custom_service_widgets"] &&
-			robot_data["custom_service_widgets"].length
-		) {
-			robot_data["custom_service_widgets"].forEach((custom_widget) => {
-				if (!custom_widget.class || !custom_widget.url) {
-					console.error(
-						"Invalid custom_service_widgets definition received:",
-						custom_widget,
-					);
-					return;
-				}
-				// loading_num_custom_drivers++;
-				this._loadExternalScript(custom_widget.url, custom_widget.class)
-					.then((loaded_class) => {
-						that.ui.addCustomServiceWidget(custom_widget.class, loaded_class);
-					})
-					.catch((error) => {
-						console.error(
-							"External service widget loading error for " +
-								custom_widget.url,
-							error,
-						);
-						that.ui.showNotification(
-							"Error loading external service widget " +
-								custom_widget.class,
-							"error",
-							'<pre>Source: <a href="' +
-								custom_widget.url +
-								'">' +
-								custom_widget.url +
-								"</a>\n" +
-								error +
-								"</pre>",
-						);
-					});
-			});
+		if (robot_data["input_drivers"] || robot_data["input_defaults"] || robot_data["service_defaults"]) {
+			this.emit(
+				"input_config",
+				robot_data["input_drivers"],
+				robot_data["input_defaults"] ? robot_data["input_defaults"] : {},
+				robot_data["service_defaults"] ? robot_data["service_defaults"] : {},
+			); // service_buttons must trigger before ui
 		}
 
 		if (robot_data["service_widgets"] && robot_data["service_widgets"].length) {
@@ -1424,6 +1308,10 @@ export class PhntmBridgeClient extends EventTarget {
 
 		if (robot_data["ui"]) {
 			console.log("UI got config: ", robot_data["ui"]);
+			if (robot_data["ui"]['default_service_timeout_sec'] !== undefined) {
+				this.default_service_timeout_sec = robot_data["ui"]['default_service_timeout_sec'];
+				console.log("Setting default service timeout [sec] to: ", this.default_service_timeout_sec);
+			}
 			this.emit("ui_config", robot_data["ui"]); // must trigger after service_buttons
 		}
 
@@ -1516,16 +1404,7 @@ export class PhntmBridgeClient extends EventTarget {
 
 		let dc = null;
 		try {
-			console.log(
-				"Creating read DC#" +
-					dc_id +
-					" for " +
-					topic +
-					"; reliable=" +
-					reliable +
-					"; pc=",
-				this.pc,
-			);
+			console.log("Creating read DC#" + dc_id + " for " + topic + "; reliable=" + reliable + "; pc=", this.pc);
 			dc = this.pc.createDataChannel(topic, {
 				negotiated: true, // negotiated by the app, not webrtc layer
 				ordered: reliable ? true : false,
@@ -1917,7 +1796,7 @@ export class PhntmBridgeClient extends EventTarget {
 			this.service_reply_callbacks[id_service].push(cb);
 	}
 
-	serviceCall(service, data, silent_req, cb) {
+	serviceCall(service, data, silent_req, timeout_sec, cb) {
 		let that = this;
 		if (
 			this.service_request_callbacks[service] &&
@@ -1935,7 +1814,7 @@ export class PhntmBridgeClient extends EventTarget {
 					num_completed++;
 					if (num_completed == this.service_request_callbacks[service].length) {
 						if (!abort) {
-							that._doServiceCall(service, data, silent_req, cb);
+							that._doServiceCall(service, data, silent_req, timeout_sec, cb);
 						} else {
 							if (cb) cb();
 						}
@@ -1943,15 +1822,16 @@ export class PhntmBridgeClient extends EventTarget {
 				});
 			}
 		} else {
-			this._doServiceCall(service, data, silent_req, cb);
+			this._doServiceCall(service, data, silent_req, timeout_sec, cb);
 		}
 	}
 
-	_doServiceCall(service, data, silent_req, cb) {
+	_doServiceCall(service, data, silent_req, timeout_sec, cb) {
 		let req = {
 			id_robot: this.id_robot,
 			service: service,
-			msg: data, // data undefined => no msg
+			timeout_sec: timeout_sec,
+			msg: data, // payload; if data == undefined => no msg
 		};
 		if (this.ui && !silent_req) {
 			//let data_hr = (data !== null && data !== undefined);
@@ -1962,7 +1842,7 @@ export class PhntmBridgeClient extends EventTarget {
 			);
 		}
 		let that = this;
-		console.log("Service call request", req);
+		console.log("Service call request (timeout="+timeout_sec.toFixed(2)+")", req);
 		this.socket.emit("service", req, (reply) => {
 			console.log("Service call reply", reply);
 

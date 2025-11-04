@@ -84,6 +84,7 @@ export class DescriptionTFWidget extends EventTarget {
 
 		this.pose_graph = [];
 		this.pose_graph_size = 500; // keeps this many nodes in pg (TODO: to robot's config?)
+		this.tf_static_to_apply = {}; //topic => msg
 
 		// this.latest_tf_stamps = {};
 		// this.transforms_queue = [];
@@ -1166,6 +1167,7 @@ export class DescriptionTFWidget extends EventTarget {
 		this.robot_model.quaternion.set(0, 0, 0, 1);
 		console.log("Robot desc received, model: ", this.robot_model);
 
+		this.applyStoredTFStatic();
 		this.getAutofocusTarget();
 		this.renderDirty();
 	}
@@ -1538,16 +1540,26 @@ export class DescriptionTFWidget extends EventTarget {
 	}
 
 	onTFData(topic, tf) {
-		if (this.panel.paused || !this.robot_model)
-			//wait for the model
-			return;
+		if (this.panel.paused || !this.robot_model) {
+			if (topic == '/tf_static') {
+				console.log('Got /tf_static before model (or when paused):', tf);
+				this.tf_static_to_apply[topic] = tf;
+			}
+			return; //wait for the model
+		}
+
+		if (topic == '/tf_static') {
+			console.log('Got /tf_static:', tf);
+		}
 
 		for (let i = 0; i < tf.transforms.length; i++) {
-			let ns_stamp =
-				tf.transforms[i].header.stamp.sec * 1000000000 +
-				tf.transforms[i].header.stamp.nanosec;
+			let ns_stamp = tf.transforms[i].header.stamp.sec * 1000000000 + tf.transforms[i].header.stamp.nanosec;
 			let id_child = tf.transforms[i].child_frame_id;
 			let t = tf.transforms[i].transform;
+
+			// let filter = [ 'camera_link_top', 'camera_joint_top' ];
+			// if (filter.indexOf(tf.transforms[i].header.frame_id) > -1 || filter.indexOf(id_child) > -1)
+			// 	console.log('TF: "' + tf.transforms[i].header.frame_id + ' > ' + id_child + '" ('+topic+'):', tf);
 
 			// if (this.smooth_transforms_queue[id_child] !== undefined && this.smooth_transforms_queue[id_child].stamp > ns_stamp)
 			//     continue; //throw out older transforms
@@ -1586,9 +1598,7 @@ export class DescriptionTFWidget extends EventTarget {
 					}
 
 					this.ros_space.quaternion.copy(
-						this.ros_space_default_rotation
-							.clone()
-							.multiply(t.rotation.clone().invert()),
+						this.ros_space_default_rotation.clone().multiply(t.rotation.clone().invert()),
 					); // robot aligned with scene
 					let t_pos = t.translation
 						.clone()
@@ -1641,6 +1651,24 @@ export class DescriptionTFWidget extends EventTarget {
 			}
 		}
 	}
+
+	onPaused() {
+
+	}
+
+	onUnpaused() {
+		this.applyStoredTFStatic();
+	}
+
+	applyStoredTFStatic() {
+		let topics = Object.keys(this.tf_static_to_apply);
+		topics.forEach((t)=>{
+			let tf = this.tf_static_to_apply[t];
+			delete this.tf_static_to_apply[t]
+			this.onTFData(t, tf);
+		});
+	}
+	
 
 	controlsChanged() {
 		this.controls_dirty = true;

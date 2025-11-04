@@ -2,6 +2,7 @@ import { InputDriver } from "./base-driver.js";
 
 export class TwistInputDriver extends InputDriver {
 	msg_type = "geometry_msgs/msg/Twist";
+	id_driver = "Twist";
 
 	static axes = {
 		"linear.x": "Twist: Linear X",

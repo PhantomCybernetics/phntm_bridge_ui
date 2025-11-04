@@ -389,6 +389,8 @@ export class Panel {
 			if (this.paused) {
 				this.pauseEl.addClass("paused");
 				this.pauseEl.attr("title", "Unpause");
+				if (this.display_widget && this.display_widget.onPaused)
+					this.display_widget.onPaused();
 			} else {
 				this.pauseEl.removeClass("paused");
 				this.pauseEl.attr("title", "Pause");
@@ -553,13 +555,17 @@ export class Panel {
 		if (this.paused) {
 			this.pauseEl.addClass("paused");
 			this.pauseEl.attr("title", "Unpause");
+			if (this.display_widget && this.display_widget.onUnpaused)
+				this.display_widget.onUnpaused();
 		} else {
 			this.pauseEl.removeClass("paused");
 			this.pauseEl.attr("title", "Pause");
+			if (this.display_widget && this.display_widget.onPaused)
+				this.display_widget.onPaused();
 		}
-		if (this.display_widget && this.display_widget.is_video) {
-			this.display_widget.el.trigger(this.paused ? "pause" : "play");
-		}
+		// if (this.display_widget && this.display_widget.is_video) {
+		// 	this.display_widget.el.trigger(this.paused ? "pause" : "play");
+		// }
 	}
 
 	updateFps(count_frame = true) {

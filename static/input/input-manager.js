@@ -791,9 +791,7 @@ export class InputManager {
 			}
 
 			//init driver
-			c_profile.driver_instances[c_profile.driver] = new this.registered_drivers[
-				c_profile.driver
-			](this);
+			c_profile.driver_instances[c_profile.driver] = new this.registered_drivers[c_profile.driver](this);
 			if (
 				c_profile.default_driver_config &&
 				c_profile.default_driver_config[c_profile.driver]
@@ -1833,9 +1831,16 @@ export class InputManager {
 		this.ui.showNotification("Config JSON copied", null, "<pre>" + val + "</pre>");
 	}
 
-	registerDriver(id_driver, driver_class) {
-		if (this.registered_drivers[id_driver]) return;
+	registerDriver(driver_class) {
+		let id_driver = new driver_class(this).id_driver;
+		if (!id_driver) {
+			console.log("id_driver not found in driver class:", driver_class);
+			return;
+		}
+		if (this.registered_drivers[id_driver])
+			return;
 
+		console.log('Registering input driver with id '+id_driver);
 		this.registered_drivers[id_driver] = driver_class;
 	}
 
@@ -3839,6 +3844,7 @@ export class InputManager {
 					btn.ros_srv_id,
 					btn.ros_srv_val ? btn.ros_srv_val : undefined,
 					btn.ros_srv_silent_req,
+					this.client.default_service_timeout_sec,
 					(reply) => {
 						btn.service_blocked = false;
 						if (reply !== undefined)

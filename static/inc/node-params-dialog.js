@@ -279,6 +279,7 @@ export class NodeParamsDialog {
 			node["_srvListParameters"],
 			list_msg,
 			true,
+			this.client.default_service_timeout_sec,
 			(list_reply) => {
 				if (list_reply.err) {
 					if (that.node == node) {
@@ -300,6 +301,7 @@ export class NodeParamsDialog {
 					node["_srvDescribeParameters"],
 					{ names: list_reply.result.names },
 					true,
+					this.client.default_service_timeout_sec,
 					(descriptions_reply) => {
 						if (descriptions_reply.err) {
 							if (that.node == node) {
@@ -320,6 +322,7 @@ export class NodeParamsDialog {
 							node["_srvGetParameters"],
 							{ names: list_reply.result.names },
 							true,
+							this.client.default_service_timeout_sec,
 							(vals_reply) => {
 								if (vals_reply.err) {
 									if (that.node == node) {
@@ -384,6 +387,7 @@ export class NodeParamsDialog {
 				node["_srvGetParameters"],
 				{ names: [that.selected_param_name] },
 				true,
+				this.client.default_service_timeout_sec,
 				(value_reply) => {
 					that.client.ui.serviceReplyNotification(
 						btn_reload,
@@ -539,6 +543,7 @@ export class NodeParamsDialog {
 				node["_srvSetParameters"],
 				{ parameters: [param_val] },
 				true,
+				this.client.default_service_timeout_sec,
 				(set_reply) => {
 					that.client.ui.serviceReplyNotification(
 						btn_set,
