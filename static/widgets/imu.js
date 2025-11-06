@@ -4,11 +4,14 @@ import { Line2 } from 'line2';
 import { LineMaterial } from "line-material2";
 import { LineGeometry } from 'line-geometry2';
 import "/static/canvasjs-charts/canvasjs.min.js";
+import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 
-//IMU VISUALIZATION
-export class ImuWidget {
+// Imu rotation visualization with linear acceleration graph
+
+export class ImuWidget extends SingleTypePanelWidgetBase {
 	static default_width = 4;
 	static default_height = 14;
+	static handled_msg_types = [ 'sensor_msgs/msg/Imu' ];
 
 	static RED = '#ff2c0cff';
 	static GREEN = '#00ff00';
@@ -22,39 +25,23 @@ export class ImuWidget {
 		{ label: '-Y', c: ImuWidget.GREEN, v: new THREE.Vector3(0, -1, 0) },
 		{ label: '-Z', c: ImuWidget.BLUE, v: new THREE.Vector3(0, 0, -1) },
 	];
-	// static GRAVITY = 9.8;
-	// static ACC_SCALE = -0.1;
 
 	constructor(panel, topic) {
-		this.panel = panel; 
-		this.topic = topic;
+		super(panel, topic, 'imu');
 		
 		this.enable_rot = this.panel.getPanelVarAsBool('rot', true);
 		this.enable_acc = this.panel.getPanelVarAsBool('acc', false);
-		this.disable_autoresize = true; //handling our own renderer resize here
+		this.autoresize_renderer = false; // handling our own renderer resize here
 
 		this.max_acc_m_s = 0.0; // override these
 		this.min_acc_m_s = 0.0; // from topic config
 		this.acc_trace_length = 200;
-
-		let that = this;
-
-		this.onTopicConfigUpdate = (config) => {
-			if (config) {
-				that.min_acc_m_s = config.min_acceleration;
-				that.max_acc_m_s = config.max_acceleration;
-				that.makeAccChart();
-			}
-		};
-		this.panel.ui.client.onTopicConfig(topic, this.onTopicConfigUpdate); //', (t, c) => that.onTopicConfigUpdate(t, c))
 
 		this.fw_axis = this.panel.getPanelVarAsInt('fw', 0); // +X default
 		this.up_axis = this.panel.getPanelVarAsInt('up', 2); // +Z default
 		this.up_axis_rot_fix = new THREE.Quaternion();
 		this.fw_axis_camera_fix = new THREE.Quaternion();
 
-		this.widget_el = $("#panel_widget_" + panel.n);
-		this.widget_el.addClass("enabled imu");
 		this.rotation_el = $('<div class="rotation" id="imu_rotation_'+panel.n+'"></div>');
 		this.acc_el = $('<div class="acceleration" id="imu_acc_'+panel.n+'"></div>');
 		this.widget_el.append([this.rotation_el, this.acc_el]);
@@ -106,6 +93,14 @@ export class ImuWidget {
 		this.data_trace_z = [];
 		
 		this.render();
+	}
+
+	onTopicConfig(config) {
+		if (config) {
+			this.min_acc_m_s = config.min_acceleration;
+			this.max_acc_m_s = config.max_acceleration;
+			this.makeAccChart();
+		}
 	}
 
 	makeAccChart() {
@@ -369,8 +364,5 @@ export class ImuWidget {
 	onResize() {
 		this.updateDisplay();
 		this.render();
-	}
-
-	onClose() {
 	}
 }

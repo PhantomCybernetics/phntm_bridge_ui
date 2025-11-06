@@ -616,7 +616,8 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	onTopicConfig(topic, cb) {
-		if (!this.topic_config_calbacks[topic]) this.topic_config_calbacks[topic] = [];
+		if (!this.topic_config_calbacks[topic])
+			this.topic_config_calbacks[topic] = [];
 
 		this.topic_config_calbacks[topic].push(cb);
 

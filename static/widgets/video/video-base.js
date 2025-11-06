@@ -1,29 +1,26 @@
 import { MultiTopicSource } from "../inc/multitopic.js";
+import { SingleTypePanelWidgetBase } from "../inc/single-type-widget-base.js";
 
-export class VideoWidget {
-	is_video = true;
+// Video panel with possible overlays
+
+export class VideoWidget extends SingleTypePanelWidgetBase {
+	
 	static default_width = 5;
 	static default_height = 12;
+	static handled_msg_types = [ 'video',
+								 'sensor_msgs/msg/Image',
+								 'sensor_msgs/msg/CompressedImage',
+								 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'
+								];
 
 	constructor(panel, topic, widget_conf) {
-		this.panel = panel;
+		super(panel, topic, 'video');
 
-		$("#panel_widget_" + panel.n)
-			.addClass("enabled video")
-			.html(
-				'<video id="panel_video_' +
-					panel.n +
-					'" autoplay="true" playsinline="true" muted="true" preload="metadata"></video>' + //muted allows video autoplay in chrome before user interactions
-					'<span id="video_stats_' +
-					panel.n +
-					'" class="video_stats"></span>' +
-					// + '<span id="video_fps_'+panel.n+'" class="video_fps"></span>'
-					'<div id="video_overlay_' +
-					panel.n +
-					'" class="video_overlay"></div>',
-			); //muted allows video autoplay in chrome before user interactions
+		this.widget_el.html('<video id="panel_video_' + panel.n + '" autoplay="true" playsinline="true" muted="true" preload="metadata"></video>' + //muted allows video autoplay in chrome before user interactions
+				  			'<span id="video_stats_' + panel.n + '" class="video_stats"></span>' +
+				  			'<div id="video_overlay_' + panel.n + '" class="video_overlay"></div>'
+				 			); // the muted flag allows video autoplay in chrome before any user interactions
 
-		this.el = $("#panel_video_" + panel.n);
 		this.overlay_el = $("#video_overlay_" + panel.n);
 		this.last_video_stats_string = "";
 		this.last_video_packets_lost = 0;
@@ -38,16 +35,6 @@ export class VideoWidget {
 		this.videoHeight = -1;
 
 		let that = this;
-		// this.el.on('loadedmetadata', function(ev) {
-		//     if (!this.videoWidth || !this.videoHeight) {
-		//         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
-		//         return;
-		//     }
-		//     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
-		//     that.videoWidth = this.videoWidth;
-		//     that.videoHeight = this.videoHeight;
-		//     that.updateAllOverlays();
-		// });
 
 		let video_el = document.getElementById("panel_video_" + panel.n);
 
@@ -60,68 +47,28 @@ export class VideoWidget {
 			if (that.videoWidth != -1 || that.videoHeight != -1) return;
 
 			if (!video_el.videoWidth || !video_el.videoHeight) {
-				console.log(
-					"Invalid video metadata loaded, ignoring; w, h = ",
-					video_el.videoWidth,
-					video_el.videoHeight,
-				);
+				console.log("Invalid video metadata loaded, ignoring; w, h = ", video_el.videoWidth, video_el.videoHeight);
 				return;
 			}
 
 			console.log("Video meta loaded:", video_el.videoWidth, video_el.videoHeight);
-			// console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
 			that.videoWidth = video_el.videoWidth;
 			that.videoHeight = video_el.videoHeight;
 
 			Object.values(this.plugins).forEach((p)=>{
 				if (p.onResize)
 					p.onResize();
-				});
 			});
-
-		// video_el.addEventListener('click', () => {
-		//     console.log('Click > play');
-		//     video_el.play();
-		// });
-
-		// this.el.on('resize', () => {
-		//     let w = that.el
-
-		//     if (!this.videoWidth || !this.videoHeight) {
-		//         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
-		//         return;
-		//     }
-		//     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
-		//     that.videoWidth = this.videoWidth;
-		//     that.videoHeight = this.videoHeight;
-		//     that.updateAllOverlays();
-		// });
-
-		// this.el.on('loadedmetadata', function(ev) {
-		//     if (!this.videoWidth || !this.videoHeight) {
-		//         console.error('Invalid video metadata loaded; w, h, ev = ', this.videoWidth, this.videoHeight, ev);
-		//         return;
-		//     }
-		//     console.log('Video meta loaded: ', [this.videoWidth, this.videoHeight]);
-		//     that.videoWidth = this.videoWidth;
-		//     that.videoHeight = this.videoHeight;
-		//     that.updateAllOverlays();
-		// });
+		});
 
 		document.getElementById("panel_video_" + panel.n).addEventListener("error", (ev) => {
 			console.log("(Assigned) Stream error", ev);
 		});
 
-		// document.getElementById('panel_video_'+panel.n).addEventListener('error', (ev)=>{
-		//     console.log('(Assigned) Stream error', ev);
-		// });
-
 		this.panel.setMediaStream();
 
 		this.overlays = {};
 		this.next_overlay_id = 0;
-
-		// this.overlay_crop_display_control_menu_el = null;
 
 		this.sources = new MultiTopicSource(this);
 		this.sources.on("change", (topics) => that.onSourcesChange(topics));
@@ -162,7 +109,7 @@ export class VideoWidget {
 			if (!that.overlays[topic]) { // add topic config listener
 				that.overlays[topic] = {};
 				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("onTopicConfigUpdate", topic, config);
+					console.warn("Src Topic Config Update", topic, config);
 					that.overlays[topic].config = config;
 					Object.values(that.plugins).forEach((p) => {
 						if (p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
@@ -181,6 +128,7 @@ export class VideoWidget {
 	}
 
 	onClose() {
+		super.onClose();
 		let that = this;
 		let overlay_topics = Object.keys(this.overlays);
 		overlay_topics.forEach((topic) => {

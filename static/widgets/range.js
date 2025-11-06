@@ -1,44 +1,42 @@
 import { lerpColor } from "../inc/lib.js";
+import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 
-// RANGE VISUALIZATION
-export class RangeWidget {
+// Range visualization
+
+export class RangeWidget extends SingleTypePanelWidgetBase {
 	static default_width = 1;
 	static default_height = 5;
+	static handled_msg_types = [ 'sensor_msgs/msg/Range' ];
 
 	constructor(panel, topic) {
-		this.panel = panel;
-		this.topic = topic;
+		super(panel, topic, 'range');
 
 		this.max_range = 0.0;
 		this.val = 0.0;
 
-		this.el = $("#panel_widget_" + panel.n);
-		this.el.addClass("enabled range");
-		this.elLabel = $('<div class="label"></div>');
-		this.el.append(this.elLabel);
+		this.label_el = $('<div class="label"></div>');
+		this.widget_el.append(this.label_el);
 	}
 
-	onData(decoded) {
-		let range = decoded.range ? decoded.range : decoded.max_range;
+	onData(msg) {
+		let range = msg.range ? msg.range : msg.max_range;
 
-		this.max_range = decoded.max_range;
+		this.max_range = msg.max_range;
 
 		//display gage pos
 		this.val = range;
 
-		let gageVal =
-			100.0 -
-			(Math.min(Math.max(range, 0), decoded.max_range) * 100.0) / decoded.max_range;
-		gageVal = gageVal / 100.0;
+		let gage_val = 100.0 - (Math.min(Math.max(range, 0), msg.max_range) * 100.0) / msg.max_range;
+		gage_val = gage_val / 100.0;
 		let color = "";
-		if (gageVal < 0.5) color = lerpColor("#ffffff", "#2696FB", gageVal * 2.0);
-		else color = lerpColor("#2696FB", "#ff0000", (gageVal - 0.5) * 2.0);
+		if (gage_val < 0.5) color = lerpColor("#ffffff", "#2696FB", gage_val * 2.0);
+		else color = lerpColor("#2696FB", "#ff0000", (gage_val - 0.5) * 2.0);
 
-		if (this.val > decoded.max_range - 0.001)
-			this.elLabel.html("> " + this.max_range.toFixed(1) + " m");
-		else this.elLabel.html(this.val.toFixed(3) + " m"); //<br><span style=\"font-size:10px;\">("+gageVal.toFixed(1)+")</span>");
+		if (this.val > msg.max_range - 0.001)
+			this.label_el.html("> " + this.max_range.toFixed(1) + " m");
+		else this.label_el.html(this.val.toFixed(3) + " m"); //<br><span style=\"font-size:10px;\">("+gageVal.toFixed(1)+")</span>");
 
-		this.el.css("background-color", color);
-		this.elLabel.css("color", gageVal < 0.2 ? "black" : "white");
+		this.widget_el.css("background-color", color);
+		this.label_el.css("color", gage_val < 0.2 ? "black" : "white");
 	}
 }

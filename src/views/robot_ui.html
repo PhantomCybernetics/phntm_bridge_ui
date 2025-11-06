@@ -200,10 +200,10 @@
 	// import { OccupancyGrid } from "/static/widgets/experimental/occupacy-grid.js";
 	// import { PointCloudWidget } from "/static/widgets/experimental/pointcloud.js";
 
-	import { VideoWidget } from "/static/widgets/video/base.js";
+	import { VideoWidget } from "/static/widgets/video/video-base.js";
 	import { VideoWidget_Detections2D } from '/static/widgets/video/detections2d.js'
 
-	import { WorldModel3DWidget } from "/static/widgets/world-model-3d/base.js";
+	import { WorldModel3DWidget } from "/static/widgets/world-model-3d/world-model-base.js";
 	import { WorldModel3DWidget_Laser } from "/static/widgets/world-model-3d/laser.js";
 	import { WorldModel3DWidget_Range } from "/static/widgets/world-model-3d/range.js";
 	import { WorldModel3DWidget_CameraInfo } from "/static/widgets/world-model-3d/camera-info.js";
@@ -215,13 +215,25 @@
 
 	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
 	import { CustomServiceInput } from '/static/input/custom-service-input.js'
+	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
 
 	import { isSubclassOf } from '/static/inc/lib.js';
 	let custom_modules = []; // used for accessing custom extension classes
 	<% for (let i = 0; i < custom_js.length; i++) { %>
-	import * as CustomModule_<%=i %> from '<%= custom_js[i] %>';
-	custom_modules.push(CustomModule_<%=i %>);
+		import * as CustomModule_<%=i %> from '<%= custom_js[i] %>';
+		custom_modules.push(CustomModule_<%=i %>);
 	<% }; %>
+	let custom_css_urls = [];
+	<% for (let i = 0; i < custom_css.length; i++) { %>
+   		custom_css_urls.push('<%= custom_css[i] %>');
+    <% }; %>
+	// add an element into the DOM with known ID that custom CSS can refer to as an image preloader 
+	custom_css_urls.forEach((css_url)=>{
+		const fileNameWithExt = css_url.split('/').pop().split('\\').pop();
+		const lastDotIndex = fileNameWithExt.lastIndexOf('.');
+		const fname = lastDotIndex === -1 ? fileNameWithExt : fileNameWithExt.substring(0, lastDotIndex);
+		$('<span id="preloader-'+fname+'"/>').appendTo('BODY');
+	});
 
 	$(document).ready(function () {
 		try {
@@ -248,26 +260,44 @@
 
 			let panel_ui = new PanelUI(robot, 32, input_manager);
 
-			panel_ui.addTypeWidget("sensor_msgs/msg/BatteryState", BatteryStateWidget);
-			(panel_ui.addTypeWidget("sensor_msgs/msg/Range", RangeWidget),
-				panel_ui.addTypeWidget("sensor_msgs/msg/LaserScan", LaserScanWidget));
-			panel_ui.addTypeWidget("sensor_msgs/msg/Imu", ImuWidget);
-			panel_ui.addTypeWidget("rcl_interfaces/msg/Log", LogWidget);
-
+			// add core single type panel widgets
+			let single_type_panel_classes = [ BatteryStateWidget,
+											  RangeWidget,
+											  LaserScanWidget,
+											  ImuWidget,
+											  LogWidget,
+											  SystemLoadWidget
+											];
+			// find custom single type panel widgets
+			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriver)
+				for (const key in module) {
+					if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
+						single_type_panel_classes.push(module[key]);
+					}
+				}
+			});
+			single_type_panel_classes.forEach((widget_class)=>{
+				widget_class.handled_msg_types.forEach((msg_type) => {
+					panel_ui.addTypeWidget(msg_type, widget_class);
+				});
+			});
+			
+			// add video widget with overlay plugins
 			let video_plugins = [ VideoWidget_Detections2D ];
-			panel_ui.addTypeWidget("video", VideoWidget, video_plugins);
-			panel_ui.addTypeWidget("sensor_msgs/msg/Image", VideoWidget, video_plugins);
-			panel_ui.addTypeWidget("sensor_msgs/msg/CompressedImage", VideoWidget, video_plugins);
-			panel_ui.addTypeWidget("ffmpeg_image_transport_msgs/msg/FFMPEGPacket", VideoWidget, video_plugins);
+			// TODO load custom video overlays
+			VideoWidget.handled_msg_types.forEach((msg_type) => {
+				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugins);
+			});
 
-			panel_ui.addTypeWidget("phntm_interfaces/msg/SystemInfo", SystemLoadWidget);
-
-			panel_ui.addCustomWidget(WorldModel3DWidget, [
-				WorldModel3DWidget_Laser, // pass plugin classes
+			// add world model 3d with overlat plugins
+			let world_model_3d_plugins = [
+				WorldModel3DWidget_Laser,
 				WorldModel3DWidget_Range,
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
-			]);
+			];
+			// TODO load custom world model 3d overlays
+			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugins);
 
 			// TODO:
 			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);

@@ -38,7 +38,7 @@ export class Panel {
 
 	initiated = false;
 	init_data = null;
-	resizeEventHandler = null;
+	// resizeEventHandler = null;
 	src_visible = false;
 	fps_visible = false;
 	show_fps_menu_label = "Show FPS";
@@ -52,15 +52,7 @@ export class Panel {
 	editing = false;
 	//const event = new Event("build");
 
-	constructor(
-		id_source,
-		ui,
-		w,
-		h,
-		x = null,
-		y = null,
-		panel_vars = {},
-	) {
+	constructor(id_source, ui, w, h, x = null, y = null, panel_vars = {}) {
 		this.ui = ui;
 		let panels = ui.panels;
 		let grid = ui.grid;
@@ -563,9 +555,6 @@ export class Panel {
 			if (this.display_widget && this.display_widget.onPaused)
 				this.display_widget.onPaused();
 		}
-		// if (this.display_widget && this.display_widget.is_video) {
-		// 	this.display_widget.el.trigger(this.paused ? "pause" : "play");
-		// }
 	}
 
 	updateFps(count_frame = true) {
@@ -576,9 +565,9 @@ export class Panel {
 		let that = this;
 
         if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
-            if (this.display_widget && this.display_widget.updateFps) {
-                this.fps_string = this.display_widget.updateFps(); // widget sets string
-                // this.fps_val = 
+			let fps_string = this.display_widget && this.display_widget.updateFps ? this.display_widget.updateFps() : null;
+            if (fps_string) {
+                this.fps_string = fps_string; // widget sets string
             } else {
                 let dt = this.last_fps_updated ? Date.now() - this.last_fps_updated : 0;
                 let r = dt ? 1000 / dt : 0;
@@ -811,7 +800,7 @@ export class Panel {
 
 		// auto scale THREE renderer & set camera aspect
 		if (this.display_widget) {
-			if (!this.display_widget.disable_autoresize) {
+			if (!this.display_widget.autoresize_renderer) {
 				if (this.display_widget.renderer) {
 					this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
 					this.display_widget.camera.updateProjectionMatrix();
@@ -827,7 +816,7 @@ export class Panel {
 			}
 		}
 
-		if (this.resizeEventHandler != null) this.resizeEventHandler();
+		// if (this.resizeEventHandler != null) this.resizeEventHandler();
 	}
 
 	maximize(state = true) {

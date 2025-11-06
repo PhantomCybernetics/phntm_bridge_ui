@@ -7,8 +7,9 @@ import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
 import { MultiTopicSource } from "./multitopic.js";
 import { Vector3, Quaternion, LoadingManager } from "three";
+import { CompositePanelWidgetBase } from './composite-widget-base.js'
 
-export class DescriptionTFWidget extends EventTarget {
+export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static label = "Robot description (URFD) + Transforms";
 	static default_width = 5;
 	static default_height = 16;
@@ -58,9 +59,7 @@ export class DescriptionTFWidget extends EventTarget {
 	];
 
 	constructor(panel, widget_conf, start_rendering_loop=true) {
-		super();
-
-		this.panel = panel;
+		super(panel);
 
 		// defaults overwritten by url params
 		this.vars = {
@@ -276,17 +275,6 @@ export class DescriptionTFWidget extends EventTarget {
 
 		// this.makeMark(this.scene, 'SCENE ORIGIN', 0, 0, 2.0, true, 1.0);
 
-		panel.resizeEventHandler = () => {
-			that.labelRenderer.setSize(panel.widget_width, panel.widget_height);
-			if (panel.widget_width < 250) {
-				$(panel.grid_widget).addClass("buttons-hidden");
-			} else {
-				$(panel.grid_widget).removeClass("buttons-hidden");
-			}
-			that.updateOrthoCameraAspect();
-			that.renderDirty();
-		};
-
 		this.sources = new MultiTopicSource(this);
 		this.sources.add(
 			"tf2_msgs/msg/TFMessage",
@@ -475,6 +463,17 @@ export class DescriptionTFWidget extends EventTarget {
 			this.renderDirty();
 			requestAnimationFrame((t) => this.renderingLoop());
 		}
+	}
+
+	onResize() {
+		this.labelRenderer.setSize(this.panel.widget_width, this.panel.widget_height);
+		if (this.panel.widget_width < 250) {
+			$(this.panel.grid_widget).addClass("buttons-hidden");
+		} else {
+			$(this.panel.grid_widget).removeClass("buttons-hidden");
+		}
+		this.updateOrthoCameraAspect();
+		this.renderDirty();
 	}
 
 	makeCamera() {
@@ -1033,6 +1032,7 @@ export class DescriptionTFWidget extends EventTarget {
 	}
 
 	onClose() {
+		super.onClose();
 		this.rendering = false; //kills the loop
 		this.sources.close();
 

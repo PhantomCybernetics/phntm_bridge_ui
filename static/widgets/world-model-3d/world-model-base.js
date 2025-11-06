@@ -58,7 +58,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 			if (!that.overlays[topic]) { // add topic config listener
 				that.overlays[topic] = {};
 				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("onTopicConfigUpdate", topic, config);
+					console.warn("Src Topic Config Update", topic, config);
 					that.overlays[topic].config = config;
 					Object.values(that.plugins).forEach((p) => {
 						if (client.discovered_topics[topic] && p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {

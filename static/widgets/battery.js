@@ -1,44 +1,36 @@
 import { lerpColor } from "./../inc/lib.js";
+import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 import "/static/canvasjs-charts/canvasjs.min.js";
 
-// BATTERY VISUALIZATION
-export class BatteryStateWidget {
+// Battery visualisation
+
+export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 	static default_width = 5;
 	static default_height = 8;
+	static handled_msg_types = [ 'sensor_msgs/msg/BatteryState' ];
 
 	constructor(panel, topic) {
-		this.panel = panel;
-		this.topic = topic;
+		super(panel, topic, 'battery');
 
 		this.min_voltage = 0; // override these
 		this.max_voltage = 0; // from topic config
-
-		$("#panel_widget_" + panel.n).addClass("enabled battery");
-
-		let that = this;
-
-		this.onTopicConfigUpdate = (config) => {
-			if (config) {
-				this.min_voltage = config.min_voltage;
-				this.max_voltage = config.max_voltage;
-				this.makeChart();
-			}
-		};
-
-		// make chart when we have topic config
-		this.panel.ui.client.onTopicConfig(topic, this.onTopicConfigUpdate); //', (t, c) => that.onTopicConfigUpdate(t, c))
-
-		panel.resizeEventHandler = () => {
-			that.onResize();
-		}; //no need here
 	}
+
+	// make chart when we have topic config
+	onTopicConfig(config) {
+		if (config) {
+			this.min_voltage = config.min_voltage;
+			this.max_voltage = config.max_voltage;
+			this.makeChart();
+		}
+	};
 
 	makeChart() {
 		this.data_trace = [];
 		if (this.chart) {
 			console.log("clearing old battery chart");
 			this.chart.destroy();
-			$("#panel_widget_" + this.panel.n).empty();
+			this.widget_el.empty();
 		}
 		this.chart = new CanvasJS.Chart("panel_widget_" + this.panel.n, {
 			//Chart Options - Check https://canvasjs.com/docs/charts/chart-options/
@@ -111,13 +103,6 @@ export class BatteryStateWidget {
 			this.chart.render();
 	}
 
-	onClose() {
-		this.panel.ui.client.removeTopicConfigHandler(
-			this.topic,
-			this.onTopicConfigUpdate,
-		);
-	}
-
 	onData(msg) {
 		if (!this.chart) return;
 
@@ -133,8 +118,6 @@ export class BatteryStateWidget {
 			let amount = (msg.voltage - this.min_voltage) / range2;
 			c = lerpColor("#ff0000", "#2696FB", amount);
 		}
-		// if (decoded.voltage < (this.minVoltage+()/2.0))
-		//     c = '';
 
 		this.data_trace.push({
 			x: msg.header.stamp.nanosec / 1e9 + msg.header.stamp.sec,

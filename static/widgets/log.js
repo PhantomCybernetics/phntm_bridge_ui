@@ -1,41 +1,39 @@
-export class LogWidget {
+import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
+
+// Log console for /rosout, etc
+
+export class LogWidget extends SingleTypePanelWidgetBase {
 	static default_width = 10;
 	static default_height = 8;
+	static handled_msg_types = [ 'rcl_interfaces/msg/Log' ];
 
 	constructor(panel, topic) {
-		this.panel = panel;
-		this.topic = topic;
+		super(panel, topic, 'log');
+
 		this.max_trace_length = 100;
 		this.animation = null;
 
-		$("#panel_widget_" + panel.n).addClass("enabled log");
+		this.widget_el.addClass("autoscroll");
 
-		$("#panel_widget_" + panel.n).addClass("autoscroll");
-		// console.log('AUTOSCROLL START')
-		$("#panel_widget_" + panel.n)
-			.mouseenter(function () {
-				$("#panel_widget_" + panel.n).removeClass("autoscroll");
-				// console.log('AUTOSCROLL STOP')
-				if (this.animation != null) {
-					//console.log('cancel animation ', panel.animation)
-					$("#panel_widget_" + panel.n + "").stop();
-					this.animation = null;
-				}
-			})
-			.mouseleave(function () {
-				$("#panel_widget_" + panel.n).addClass("autoscroll");
-				// console.log('AUTOSCROLL START')
-			});
+		let that = this;
+		this.widget_el.mouseenter(function () {
+			that.widget_el.removeClass("autoscroll");
+			if (that.animation != null) {
+				that.widget_el.stop();
+				that.animation = null;
+			}
+		});
+		this.widget_el.mouseleave(function () {
+			that.widget_el.addClass("autoscroll");
+		});
 	}
 
-	onClose() {}
-
-	onData = (decoded) => {
-		let line = '<div class="log_line">[<span class="name">' + decoded.name + "</span>] " +
-				   		'<span class="time">' + decoded.stamp.sec + "." + decoded.stamp.nanosec + "</span>: " +
-						decoded.msg +
+	onData (msg) {
+		let line = '<div class="log_line">[<span class="name">' + msg.name + "</span>] " +
+				   		'<span class="time">' + msg.stamp.sec + "." + msg.stamp.nanosec + "</span>: " +
+						msg.msg +
 					"</div>";
-		$("#panel_widget_" + this.panel.n).append(line);
+		this.widget_el.append(line);
 
 		// trim lines
 		if ($("#panel_widget_" + this.panel.n + ".autoscroll .log_line").length > this.max_trace_length) {
@@ -46,20 +44,15 @@ export class LogWidget {
 
 		if (this.animation != null) {
 			//console.log('cancel animation ', panel.animation)
-			$("#panel_widget_" + this.panel.n + "").stop();
+			this.widget_el.stop();
 			this.animation = null;
 		}
 
 		let that = this;
-		this.animation = $("#panel_widget_" + this.panel.n + ".autoscroll").animate(
-			{
-				scrollTop: $("#panel_widget_" + this.panel.n).prop("scrollHeight"),
-			},
-			300,
-			"linear",
-			() => {
-				that.animation = null;
-			},
-		);
+		this.animation = $("#panel_widget_" + this.panel.n + ".autoscroll").animate({
+			scrollTop: that.widget_el.prop("scrollHeight"),
+		}, 300, "linear", () => {
+			that.animation = null;
+		});
 	};
 }

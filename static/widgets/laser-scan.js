@@ -1,14 +1,15 @@
 import { deg2rad } from "../inc/lib.js";
+import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 
-//laser scan visualization
-//TODO turn into class
-export class LaserScanWidget {
+// Laser scan visualization
+
+export class LaserScanWidget extends SingleTypePanelWidgetBase {
 	static default_width = 5;
 	static default_height = 13;
+	static handled_msg_types = [ 'sensor_msgs/msg/LaserScan' ];
 
 	constructor(panel, topic) {
-		this.panel = panel;
-		this.topic = topic;
+		super(panel, topic, 'laser-scan');
 
 		this.data_trace = [];
 		this.max_trace_length = 1;
@@ -17,16 +18,14 @@ export class LaserScanWidget {
 		this.zoom = this.panel.getPanelVarAsFloat('z', this.default_zoom);
 		this.rot = this.panel.getPanelVarAsInt('r', this.default_rot);
 
-		$("#panel_widget_" + panel.n).addClass("enabled laser_scan");
-
-		this.canvas = $("#panel_widget_" + panel.n)
+		this.canvas = this.widget_el
 			.html('<canvas id="panel_canvas_' + panel.n + '" width="' + panel.widget_width + '" height="' + panel.widget_height +'"></canvas>')
 			.find("canvas")[0];
 		this.ctx = this.canvas.getContext("2d");
 
 		let that = this;
 
-		$("#panel_widget_" + panel.n).on("mousewheel", (ev) => {
+		this.widget_el.on("mousewheel", (ev) => {
 			ev.preventDefault();
 			let d = ev.originalEvent.deltaY;
 			that.setZoom(that.zoom - d * 0.005);
@@ -141,9 +140,7 @@ export class LaserScanWidget {
 		let that = this;
 
 		// zoom control
-		let zoom_ctrl_line_el = $(
-			'<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + this.panel.n + '"></div>',
-		);
+		let zoom_ctrl_line_el = $('<div class="menu_line zoom_ctrl" id="zoom_ctrl_' + this.panel.n + '"></div>');
 		let zoom_minus_btn = $('<span class="minus">-</span>');
 		this.zoom_val_btn = $('<button class="val" title="Reset zoom">Zoom: ' + this.zoom.toFixed(1) + "x</button>",);
 		let zoom_plus_btn = $('<span class="plus">+</span>');
@@ -160,9 +157,7 @@ export class LaserScanWidget {
 		menu_els.push(zoom_ctrl_line_el);
 
 		// rotation control
-		let rot_ctrl_line_el = $(
-			'<div class="menu_line rot_ctrl" id="rot_ctrl_' + this.panel.n + '"></div>',
-		);
+		let rot_ctrl_line_el = $('<div class="menu_line rot_ctrl" id="rot_ctrl_' + this.panel.n + '"></div>');
 		let rot_left_btn = $('<span class="rot-left"><span class="icon"></span></span>');
 		this.rot_val_btn = $('<button class="val" title="Reset rotation">Rotate: ' + this.rot.toFixed(0) + "°</button>");
 		let rot_rigt_btn = $('<span class="rot-right"><span class="icon"></span></span>');
@@ -212,6 +207,7 @@ export class LaserScanWidget {
 	}
 
 	onClose() {
+		super.onClose();
 		this.rendering = false; //kills the loop
 	}
 
