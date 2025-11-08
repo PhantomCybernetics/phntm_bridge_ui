@@ -215,22 +215,17 @@ export class LaserScanWidget extends SingleTypePanelWidgetBase {
 		this.renderDirty();
 	}
 
-	async onData(decoded) {
-		this.scale = (this.panel.widget_height / 2.0 - 20.0) / decoded.range_max;
+	async onData(msg) {
+		this.scale = (this.panel.widget_height / 2.0 - 20.0) / msg.range_max;
 
 		let newScanPts = [];
-		for (let i = 0; i < decoded.ranges.length; i++) {
-			if (
-				decoded.ranges[i] == null ||
-				decoded.ranges[i] > decoded.range_max ||
-				decoded.ranges[i] < decoded.range_min
-			)
+		for (let i = 0; i < msg.ranges.length; i++) {
+			if (msg.ranges[i] == null || msg.ranges[i] > msg.range_max || msg.ranges[i] < msg.range_min)
 				continue;
 
-			let pos = [0, decoded.ranges[i] * this.scale];
+			let pos = [0, msg.ranges[i] * this.scale];
 
-			let arad =
-				decoded.angle_min + i * decoded.angle_increment - deg2rad(this.rot);
+			let arad = msg.angle_min + i * msg.angle_increment - deg2rad(this.rot);
 			let p = [
 				Math.cos(arad) * pos[0] - Math.sin(arad) * pos[1],
 				Math.sin(arad) * pos[0] + Math.cos(arad) * pos[1],
@@ -245,7 +240,7 @@ export class LaserScanWidget extends SingleTypePanelWidgetBase {
 			this.data_trace.shift();
 		}
 
-		this.range_max = decoded.range_max; //save for later
+		this.range_max = msg.range_max; //save for later
 
 		this.renderDirty();
 	}

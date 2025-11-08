@@ -65,13 +65,10 @@ export class Panel {
 		this.panel_vars_defaults = {};
 		this.panelVarsUpdateTimer = null;
 
-		// parse common panel vars
+		// get common panel vars
 		this.src_visible = this.getPanelVarAsBool('src', false);
-		// this.zoom = this.getPanelVarAsFloat('z', 1.0);
-		// this.rot = this.getPanelVarAsFloat('r', 0.0);
 		this.fps_visible = this.getPanelVarAsBool('fps', false);
 		
-
 		console.log("Panel created for " + this.id_source + " src_visible=" + this.src_visible + "; panel_vars=", this.panel_vars);
 
 		this.floating_menu_top = null;
@@ -91,7 +88,7 @@ export class Panel {
 					   '<div class="panel_fps" id="panel_fps_' + this.n + '"></div>' +
 					   '<div class="cleaner"></div>' +
 					   //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
-					'</div>';
+				   '</div>';
 
 		let widget_opts = {
 			w: w, h: h,
@@ -117,9 +114,9 @@ export class Panel {
 			widget_opts.y = y;
 		}
 
-		if (panels[id_source]) {
-			console.error("PANEL ALREADY EXITED FOR " + id_source);
-		}
+		// if (panels[id_source]) {
+		// 	console.error("PANEL ALREADY EXITED FOR " + id_source);
+		// }
 
 		panels[id_source] = this;
 
@@ -129,17 +126,17 @@ export class Panel {
 		this.ui.client.on(id_source, this.onDataContextWrapper);
 		this.ui.client.onTopicConfig(id_source, this.onTopicConfig);
 
-		setTimeout(() => {
-			panels[id_source].onResize();
-		}, 300); // resize at the end of the animation
+		// setTimeout(() => {
+		// 	panels[id_source].onResize();
+		// }, 300); // resize at the end of the animation
 
-		this.panel_btns = $("#panel_btns_" + this.n);
+		this.panel_btns_el = $("#panel_btns_" + this.n);
 		this.fps_el = $("#panel_fps_" + this.n);
 
 		if (!this.editBtn) {
 			// pause panel updates
 			this.editBtn = $('<span id="edit_panel_' + this.n + '" class="edit-panel-button" title="Edit panel"></span>');
-			this.editBtn.appendTo(this.panel_btns);
+			this.editBtn.appendTo(this.panel_btns_el);
 		}
 
 		let that = this;
@@ -164,70 +161,49 @@ export class Panel {
 
 		this.edit_timeout = null;
 		let title_el = document.getElementById("panel_title_" + this.n);
-		title_el.addEventListener(
-			"touchstart",
-			(ev) => {
-				if (that.editing) return;
-				console.log("Touch start " + id_source);
-				that.edit_timeout = window.setTimeout(() => {
-					if (!that.editing) {
-						let w = $(that.grid_widget);
-						that.editing = true;
-						w.addClass("editing");
-						that.ui.grid.resizable(that.grid_widget, true);
-						that.ui.grid.movable(that.grid_widget, true);
-					}
-				}, 2000); // hold panel label for 2s to edit
-			},
-			{ passive: true },
-		);
-
-		title_el.addEventListener(
-			"touchend",
-			() => {
-				if (that.editing) return;
-				if (that.edit_timeout) {
-					window.clearTimeout(that.edit_timeout);
-					that.edit_timeout = null;
+		this.title_el = $(title_el);
+		title_el.addEventListener("touchstart", (ev) => {
+			if (that.editing) return;
+			console.log("Touch start " + id_source);
+			that.edit_timeout = window.setTimeout(() => {
+				if (!that.editing) {
+					let w = $(that.grid_widget);
+					that.editing = true;
+					w.addClass("editing");
+					that.ui.grid.resizable(that.grid_widget, true);
+					that.ui.grid.movable(that.grid_widget, true);
 				}
-				console.log("Touch end " + id_source);
-			},
-			{ passive: true },
-		);
+			}, 2000); // hold panel label for 2s to edit
+		}, { passive: true });
+
+		title_el.addEventListener("touchend", () => {
+			if (that.editing) return;
+			if (that.edit_timeout) {
+				window.clearTimeout(that.edit_timeout);
+				that.edit_timeout = null;
+			}
+			console.log("Touch end " + id_source);
+		}, { passive: true });
 
 		this.last_content_space_click = null;
 		this.maximized = false;
 
-		$("#panel_content_space_" + this.n)[0].addEventListener(
-			"touchstart",
-			(ev) => {
-				if (that.editing) return;
+		$("#panel_content_space_" + this.n)[0].addEventListener("touchstart", (ev) => {
+			if (that.editing) return;
 
-				if (ev.touches.length != 1) {
-					that.last_content_space_click = null;
-					return;
-				}
+			if (ev.touches.length != 1) {
+				that.last_content_space_click = null;
+				return;
+			}
 
-				// if (that.edit_timeout) {
-				//     window.clearTimeout(that.edit_timeout);
-				//     that.edit_timeout = null;
-				// }
+			if (that.last_content_space_click && Date.now() - that.last_content_space_click < 250) {
+				that.last_content_space_click = null;
+				that.maximize(!that.maximized);
+				return;
+			}
 
-				if (
-					that.last_content_space_click &&
-					Date.now() - that.last_content_space_click < 250
-				) {
-					// console.log('Duble Clicked '+id_source);
-					that.last_content_space_click = null;
-					that.maximize(!that.maximized);
-					return;
-				}
-
-				// console.log('Clicked '+id_source);
-				that.last_content_space_click = Date.now();
-			},
-			{ passive: true },
-		);
+			that.last_content_space_click = Date.now();
+		}, { passive: true });
 
 		let menu_content_el = document.getElementById("monitor_menu_" + this.n);
 		this.menu_el = $(menu_content_el);
@@ -243,17 +219,13 @@ export class Panel {
 			});
 		}
 
-		menu_content_el.addEventListener(
-			"touchstart",
-			(ev) => {
-				// console.log('menu touchstart', ev);
-				// ev.preventDefault();
-				that.ui.menu_locked_scroll = true;
+		menu_content_el.addEventListener("touchstart", (ev) => {
+			// console.log('menu touchstart', ev);
+			// ev.preventDefault();
+			that.ui.menu_locked_scroll = true;
 
-				// ev.stopPropagation();
-			},
-			{ passive: true },
-		);
+			// ev.stopPropagation();
+		}, { passive: true });
 
 		// this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
 		//     console.log('menu touchmove', ev);
@@ -263,16 +235,12 @@ export class Panel {
 		//     ev.stopPropagation();
 		// });
 
-		menu_content_el.addEventListener(
-			"touchend",
-			(ev) => {
-				// console.log('menu touchend', ev);
-				// ev.preventDefault();
-				that.ui.menu_locked_scroll = null;
-				// ev.stopPropagation();
-			},
-			{ passive: true },
-		);
+		menu_content_el.addEventListener("touchend", (ev) => {
+			// console.log('menu touchend', ev);
+			// ev.preventDefault();
+			that.ui.menu_locked_scroll = null;
+			// ev.stopPropagation();
+		}, { passive: true });
 	}
 
 	// init with message type when it's known
@@ -289,14 +257,19 @@ export class Panel {
 		if (msg_type && !this.initiated) {
 			console.log("Initiating panel " + this.id_source + " for " + msg_type);
 
-			// custom (compound) widget like thw World Model
+			// set w/h before widget constructors
+			[this.widget_width, this.widget_height] = this.getAvailableWidgetSize();
+
+			// composite widget (like World Model)
 			if (this.ui.widgets[msg_type]) {
 
 				if (!this.display_widget) { // only once
 					this.display_widget = new this.ui.widgets[this.id_source].class(this, this.ui.widgets[this.id_source].conf); //no data yet
+					this.title_el.text(this.ui.widgets[this.id_source].class.label);
 					fallback_show_src = false;
 				}
-
+			
+			// type widgets
 			} else {
 
 				// widget by topic type
@@ -757,7 +730,7 @@ export class Panel {
 		let w = $(ref).innerWidth();
 		let h = parseInt($(ref).css("height"));
 
-		// console.log('Max h', h);
+		console.warn('Panel w x h, grid_widget', w, h, ref);
 
 		if (!this.maximized) {
 			w -= 20;
@@ -789,26 +762,20 @@ export class Panel {
 
 		// auto scale canvas
 		let canvas = document.getElementById("panel_canvas_" + this.n);
-		if (
-			canvas &&
-			!$(canvas).hasClass("big_canvas") &&
-			!$(canvas).hasClass("canvas_tile")
-		) {
+		if (canvas && !$(canvas).hasClass("big_canvas") && !$(canvas).hasClass("canvas_tile")) {
 			canvas.width = this.widget_width;
 			canvas.height = this.widget_height;
 		}
 
 		// auto scale THREE renderer & set camera aspect
 		if (this.display_widget) {
-			if (!this.display_widget.autoresize_renderer) {
-				if (this.display_widget.renderer) {
-					this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
-					this.display_widget.camera.updateProjectionMatrix();
-					this.display_widget.renderer.setSize(
-						this.widget_width,
-						this.widget_height,
-					);
-				}
+			if (this.display_widget.renderer && this.display_widget.autoresize_renderer) {
+				this.display_widget.camera.aspect = parseFloat(this.widget_width) / parseFloat(this.widget_height);
+				this.display_widget.camera.updateProjectionMatrix();
+				this.display_widget.renderer.setSize(
+					this.widget_width,
+					this.widget_height,
+				);
 			}
 
 			if (this.display_widget.onResize) {

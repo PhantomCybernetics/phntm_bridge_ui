@@ -189,7 +189,6 @@
 	import { LogWidget } from "/static/widgets/log.js";
 	import { SystemLoadWidget } from "/static/widgets/system-load.js";
 	
-
 	import { PhntmBridgeClient } from "/static/browser-client.js";
 	import { InputManager } from "/static/input/input-manager.js";
 	import { PanelUI } from "/static/panel-ui.js";
@@ -216,6 +215,7 @@
 	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
 	import { CustomServiceInput } from '/static/input/custom-service-input.js'
 	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
+	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
 
 	import { isSubclassOf } from '/static/inc/lib.js';
 	let custom_modules = []; // used for accessing custom extension classes
@@ -284,7 +284,7 @@
 			
 			// add video widget with overlay plugins
 			let video_plugins = [ VideoWidget_Detections2D ];
-			// TODO load custom video overlays
+			// TODO: load custom video overlays here
 			VideoWidget.handled_msg_types.forEach((msg_type) => {
 				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugins);
 			});
@@ -296,20 +296,23 @@
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
 			];
-			// TODO load custom world model 3d overlays
+			// TODO: load custom world model 3d overlays here
 			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugins);
 
-			// TODO:
-			// panel_ui.addTypeWidget('sensor_msgs/msg/PointCloud2', PointCloudWidget);
-			// panel_ui.addTypeWidget('nav_msgs/msg/OccupancyGrid', OccupancyGrid);
-			// panel_ui.addCustomWidget(NavigationWidget);
-			// panel_ui.addCustomWidget(DescriptionTFWidget);
-			// panel_ui.addCustomWidget(LaserOdometryWidget);
+			// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
+			custom_modules.forEach((module) => { 
+				for (const key in module) {
+					if (isSubclassOf(module[key], CompositePanelWidgetBase)) {
+						panel_ui.addCustomWidget(module[key]);
+					}
+				}
+			});
 
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
-			custom_modules.forEach((module) => { // loads custom service widgets (must be a subclass of CustomServiceInput)
+			 // load custom service widgets (must be a subclass of CustomServiceInput)
+			custom_modules.forEach((module) => {
 				for (const key in module) {
 					if (isSubclassOf(module[key], CustomServiceInput)) {
 						panel_ui.addCustomServiceWidget(key, module[key]);

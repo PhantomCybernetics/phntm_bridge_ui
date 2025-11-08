@@ -78,11 +78,12 @@ export class PanelUI {
 		this.reconnection_delay = 1000; // ms
 		this.background_disconnect_delay = 1000 * 60 * 2; // 2 min
 		// document.querySelector("body").requestFullscreen();
+		this.grid_cell_height = grid_cell_height;
 
 		let GridStack = window.exports.GridStack;
 		this.grid = GridStack.init({
 			float: false,
-			animate: true,
+			animate: false,
 			cellHeight: grid_cell_height,
 			handle: ".panel-title",
 			columnOpts: {
@@ -559,11 +560,11 @@ export class PanelUI {
 					let id_src = $(item.el).find(".grid_panel").attr("data-source");
 					if (that.panels[id_src]) {
 						that.panels[id_src].autoMenuPosition();
-						that.panels[id_src].onResize();
-						window.setTimeout(() => {
-							// console.warn('Delayed resize '+id_src);
-							if (that.panels[id_src]) that.panels[id_src].onResize();
-						}, 300); // animaiton duration
+						// that.panels[id_src].onResize();
+						// window.setTimeout(() => {
+						// 	// console.warn('Delayed resize '+id_src);
+						// 	if (that.panels[id_src]) that.panels[id_src].onResize();
+						// }, 300); // animaiton duration
 					}
 				});
 			}
@@ -2546,15 +2547,13 @@ export class PanelUI {
 	}
 
 	setDefaultPanels() {
-		Object.keys(this.widgets).forEach((widget_class) => {
-			let widget = this.widgets[widget_class];
-			console.log('setDefaultPanels grid cell height, rows x colums ',
-				this.grid.getCellHeight(), this.grid.getRow(), this.grid.getColumn());
+		let widget_classes = Object.keys(this.widgets);
+		for (let i = 0; i < 1; i++) {
+			let widget_class = widget_classes[i];
 			let w = Math.round(this.grid.getColumn() * 0.7); // auto 70% with 
 			let h = Math.round((window.innerHeight / this.grid.getCellHeight()) * 0.8); // auto 80% height 
 			this.togglePanel(widget_class, widget_class, true, w, h);
-			return;
-		});
+		};
 		this.updateWidgetsMenu();
 	}
 

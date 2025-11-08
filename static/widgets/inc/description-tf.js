@@ -59,7 +59,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	];
 
 	constructor(panel, widget_conf, start_rendering_loop=true) {
-		super(panel);
+		super(panel, 'description-tf');
 
 		// defaults overwritten by url params
 		this.vars = {
@@ -85,8 +85,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.pose_graph_size = 500; // keeps this many nodes in pg (TODO: to robot's config?)
 		this.tf_static_to_apply = {}; //topic => msg
 
-		// this.latest_tf_stamps = {};
-		// this.transforms_queue = [];
 		this.smooth_transforms_queue = {};
 		this.camera_pose_initialized = false; // first hard set pose, then smooth lerp
 		this.camera_distance_initialized = false; // determine distance to target if false; only once (if target autodetected)
@@ -94,7 +92,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.camera_target_pose_initialized = false; // 1st cam to target will not lerp
 		this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
 		this.set_camera_view = null; // animate to position if set
-		// this.last_tf_stamps = {};
 
 		this.stats_model_tris = 0;
 		this.stats_model_verts = 0;
@@ -103,20 +100,15 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		function LoadingManagerURLMofifier(url) {
 
-			console.log("Loader requesting " + url);
-
-			// if (url.indexOf(panel.ui.client.getBridgeFileUrlPrefix()) === 0) {
-			// 	url = url.replace(panel.ui.client.getBridgeFileUrlPrefix(), '');
-			// 	console.warn("Loader actually requesting " + url);
-			// }
-
-			if (url.indexOf("http:/") === 0 || url.indexOf("https:/") === 0) return url;
+			if (url.indexOf("http:/") === 0 || url.indexOf("https:/") === 0)
+				return url;
 
 			if (url.indexOf("package:/") !== 0 && url.indexOf("file:/") !== 0)
 				return url;
 
 			let url_fw = panel.ui.client.getBridgeFileUrl(url);
-			console.log(">> URDF Loader requesting " + url + " > " + url_fw);
+			console.log(">> Loader requesting " + url + " > " + url_fw);
+
 			return url_fw;
 		}
 
@@ -159,9 +151,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					done_cb(clean_model);
 				});
 			} else {
-				console.error(
-					`Could not load model at ${path}.\nNo loader available`,
-				);
+				console.error(`Could not load model at ${path}.\nNo loader available`);
 			}
 		};
 		this.loading_manager.onLoad = () => {
@@ -174,19 +164,14 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			that.renderDirty();
 		};
 
-		$("#panel_widget_" + panel.n).addClass("enabled imu");
-		$("#panel_widget_" + panel.n).data("gs-no-move", "yes");
+		this.widget_el.data("gs-no-move", "yes");
 
 		// camera controls
-		this.perspective_btn = $(
-			'<span class="panel-btn perspective-btn" title="Perspective"></span>',
-		);
-		this.panel.panel_btns.append(this.perspective_btn);
+		this.perspective_btn = $('<span class="panel-btn perspective-btn" title="Perspective"></span>');
+		this.panel.panel_btns_el.append(this.perspective_btn);
 
-		this.focus_btn = $(
-			'<span class="panel-btn focus-btn" title="Camera follows selection"></span>',
-		);
-		this.panel.panel_btns.append(this.focus_btn);
+		this.focus_btn = $('<span class="panel-btn focus-btn" title="Camera follows selection"></span>');
+		this.panel.panel_btns_el.append(this.focus_btn);
 
 		let view_select = $('<span class="panel-select view-select" title="Set camera position"></span>');
 		let view_select_content = $('<span class="panel-select-content"></span>');
@@ -211,12 +196,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			});
 		});
 		view_select.append(view_select_content);
-		this.panel.panel_btns.append(view_select);
+		this.panel.panel_btns_el.append(view_select);
 
-		this.labels_btn = $(
-			'<span class="panel-btn labels-btn" title="Display model labels"></span>',
-		);
-		this.panel.panel_btns.append(this.labels_btn);
+		this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>');
+		this.panel.panel_btns_el.append(this.labels_btn);
 
 		[panel.widget_width, panel.widget_height] = panel.getAvailableWidgetSize();
 
@@ -231,25 +214,13 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.renderer.shadowMap.enabled = true;
 		this.renderer.setSize(panel.widget_width, panel.widget_height);
 		this.renderer.setPixelRatio(window.devicePixelRatio);
-		document
-			.getElementById("panel_widget_" + panel.n)
-			.appendChild(this.renderer.domElement);
+		document.getElementById("panel_widget_" + panel.n).appendChild(this.renderer.domElement);
 
 		this.labelRenderer = new CSS2DRenderer();
 		this.labelRenderer.setSize(panel.widget_width, panel.widget_height);
 		this.labelRenderer.domElement.style.position = "absolute";
 		this.labelRenderer.domElement.style.top = "0px";
-		document
-			.getElementById("panel_widget_" + panel.n)
-			.appendChild(this.labelRenderer.domElement);
-
-		// this.rendering_stats_el = $('<span id="rendering_stats_'+panel.n+'" class="rendering_stats"></span>');
-		// $('#panel_widget_'+panel.n).append(this.rendering_stats_el);
-		// this.stats_fps = 0;
-		// this.stats_model_verts = 0;
-		// this.stats_model_tris = 0;
-		// this.stats_model_tris_rendered = 0;
-		// this.stats_model_lines_rendered = 0;
+		document.getElementById("panel_widget_" + panel.n).appendChild(this.labelRenderer.domElement);
 
 		this.camera_pos = new THREE.Vector3(1, 0.5, 1);
 		this.camera_target = null;
@@ -261,9 +232,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.ros_space.add(this.robot);
 		this.robot.position.set(0, 0, 0);
 		this.robot.quaternion.set(0, 0, 0, 1);
-		this.ros_space_default_rotation = new THREE.Quaternion().setFromEuler(
-			new THREE.Euler(-Math.PI / 2.0, 0.0, 0.0),
-		); // ROS uses +z up
+		this.ros_space_default_rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2.0, 0.0, 0.0)); // ROS uses +z up
 		this.scene.add(this.ros_space);
 		this.ros_space.quaternion.copy(this.ros_space_default_rotation);
 		this.ros_space_offset_set = false; // will be set on 1st base tf data
@@ -275,7 +244,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		// this.makeMark(this.scene, 'SCENE ORIGIN', 0, 0, 2.0, true, 1.0);
 
-		this.sources = new MultiTopicSource(this);
 		this.sources.add(
 			"tf2_msgs/msg/TFMessage",
 			"Static transforms source",
@@ -304,8 +272,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			},
 		);
 
-		// this.set_camera_target_pos_on_description = null;
-		// this.set_camera_target_offset_on_description = null;
 		const camera_target_pos_geometry = new THREE.SphereGeometry(0.01, 32, 16);
 		const camera_target_pos_material = new THREE.MeshBasicMaterial({
 			color: 0xff00ff,
@@ -366,8 +332,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				that.camera.layers.disable(DescriptionTFWidget.L_LINK_LABELS);
 				that.camera.layers.disable(DescriptionTFWidget.L_ROS_ORIGIN_LABEL);
 			}
-			// that.makeRobotMarkers();
-			
 			that.renderDirty();
 		});
 
@@ -399,7 +363,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 
 		this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
-		// this.controls = new TrackballControls(this.camera, this.labelRenderer.domElement);
 		this.controls.enablePan = !this.vars.follow_target;
 		this.renderer.domElement.addEventListener("pointerdown", (ev) => {
 			ev.preventDefault(); // stop from moving the panel
@@ -635,9 +598,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	}
 
 	setupMenu(menu_els) {
-		if (this.sources) {
-			this.sources.setupMenu(menu_els);
-		}
+		super.setupMenu(menu_els);
 
 		let that = this;
 
@@ -1033,9 +994,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 	onClose() {
 		super.onClose();
-		this.rendering = false; //kills the loop
-		this.sources.close();
 
+		this.rendering = false; //kills the loop
 		this.controls.dispose();
 		this.controls = null;
 		this.scene.clear();
@@ -1652,10 +1612,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 	}
 
-	onPaused() {
-
-	}
-
 	onUnpaused() {
 		this.applyStoredTFStatic();
 	}
@@ -1668,7 +1624,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.onTFData(t, tf);
 		});
 	}
-	
 
 	controlsChanged() {
 		this.controls_dirty = true;
@@ -1975,11 +1930,4 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		requestAnimationFrame((t) => this.renderingLoop());
 	}
-
-	// get_latest_pg_ns_stamp() {
-	//     if (!this.pose_graph || !this.pose_graph.length)
-	//         return NaN;
-
-	//     return this.pose_graph[this.pose_graph.length-1].ns_stamp;
-	// }
 }

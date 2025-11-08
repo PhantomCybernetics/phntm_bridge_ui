@@ -21,9 +21,8 @@ export class SingleTypePanelWidgetBase extends EventTarget {
         this.widget_el = $("#panel_widget_" + this.panel.n);
 
         this.widget_el.addClass("enabled");
-        if (widget_css_class) {
+        if (widget_css_class)
             this.widget_el.addClass(widget_css_class);
-        }
     }
 
     onTopicConfig(config) {

@@ -11,7 +11,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 
 		let that = this;
 
-		$("#panel_title_" + panel.n).text(WorldModel3DWidget.label);
+		//$("#panel_title_" + panel.n).text(WorldModel3DWidget.label);
 
 		this.overlays = {};
 		this.sources.on("change", (topics) => this.onSourcesChange(topics));

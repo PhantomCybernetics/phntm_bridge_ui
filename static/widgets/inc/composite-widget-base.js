@@ -1,17 +1,42 @@
+import { MultiTopicSource } from "./multitopic.js";
+
 export class CompositePanelWidgetBase extends EventTarget {
+
+    static label = "Widget name";
 
     // default grid size when created
     static default_width = 5;
 	static default_height = 5;
 
-    constructor(panel) {
+    constructor(panel, widget_css_class) {
         super();
 
         this.panel = panel;
+        this.autoresize_renderer = true; // if renderer exists, it will be resized before onResize is called
+
+        this.widget_el = $("#panel_widget_" + this.panel.n);
+        this.widget_el.addClass("enabled");
+
+        if (widget_css_class)
+            this.widget_el.addClass(widget_css_class);
+
+        this.sources = new MultiTopicSource(this);
     }
 
-    setupMenu(menu_els) {
+    setupMenu(menu_els) {      
+        this.sources.setupMenu(menu_els);
+    }
 
+    onPaused() {
+
+    }
+
+    onUnpaused() {
+
+    }
+
+    updateFps() {
+        return ''; // return string to be displayed in the FPS label
     }
 
     onResize() {
@@ -19,6 +44,6 @@ export class CompositePanelWidgetBase extends EventTarget {
     }
 
     onClose() {
-        
+        this.sources.close();
     }
 }

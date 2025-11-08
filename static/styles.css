@@ -3031,13 +3031,13 @@ BODY.touch-ui .editing .grid-stack-item-content {
 	margin-left: 5px;
 }
 
-.panel_widget.laser-scan {
+.panel_widget.laser-scan, .panel_widget.zoomable-2d-tiles {
 	background-color: #072038;
 	position: relative;
 	height: 100%;
 }
 
-.panel_widget.laser-scan .arrow {
+.panel_widget.laser-scan .arrow, .panel_widget.zoomable-2d-tiles .arrow {
 	position: absolute;
 	z-index: 3;
 	display: none; /* show on 1st render */
@@ -3237,10 +3237,11 @@ BODY.touch-ui .editing .grid-stack-item-content {
 }
 
 .panel_widget.laser-scan,
+.panel_widget.zoomable-2d-tiles,
 .panel_widget.imu {
 	height: -webkit-fill-available;
 }
-*/ .panel_widget canvas {
+.panel_widget canvas {
 	border-radius: 5px;
 }
 
