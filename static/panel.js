@@ -538,7 +538,7 @@ export class Panel {
 		let that = this;
 
         if (!this.last_fps_updated || Date.now() - this.last_fps_updated > 1000) {
-			let fps_string = this.display_widget && this.display_widget.updateFps ? this.display_widget.updateFps() : null;
+			let fps_string = this.display_widget && this.display_widget.getFpsString ? this.display_widget.getFpsString() : null;
             if (fps_string) {
                 this.fps_string = fps_string; // widget sets string
             } else {
@@ -563,6 +563,8 @@ export class Panel {
             } else {
                 this.fps_el.removeClass('error');
             }
+
+			// clear 2s after updates stop
             this.fps_clear_timeout = setTimeout(() => {
                 that.updateFps(false);
                 this.fps_el.removeClass('error');
@@ -730,7 +732,7 @@ export class Panel {
 		let w = $(ref).innerWidth();
 		let h = parseInt($(ref).css("height"));
 
-		console.warn('Panel w x h, grid_widget', w, h, ref);
+		//console.warn('Panel w x h, grid_widget', w, h, ref);
 
 		if (!this.maximized) {
 			w -= 20;

@@ -527,7 +527,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 	}
 
-	updateFps() {
+	getFpsString() {
 		let dt = this.panel.last_fps_updated ? Date.now() - this.panel.last_fps_updated : 0;
 		let r = dt ? 1000 / dt : 0;
 		this.panel.fps = this.last_frame_count ? this.renderer.info.render.frame - this.last_frame_count : 0;

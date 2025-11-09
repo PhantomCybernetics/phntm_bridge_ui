@@ -173,7 +173,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 		});
 	}
 
-	updateFps() {
+	getFpsString() {
 		if (this.video_stats_el && this.video_stats_el.hasClass("enabled"))
 			this.video_stats_el.html(this.last_video_stats_string);
 

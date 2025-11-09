@@ -35,7 +35,7 @@ export class CompositePanelWidgetBase extends EventTarget {
 
     }
 
-    updateFps() {
+    getFpsString() {
         return ''; // return string to be displayed in the FPS label
     }
 

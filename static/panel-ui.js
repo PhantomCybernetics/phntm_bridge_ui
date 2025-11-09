@@ -2323,16 +2323,14 @@ export class PanelUI {
 		let that = this;
 
 		results.forEach((res) => {
-			if (res.type != "inbound-rtp" || !res.trackIdentifier) return; //continue
-
-			// console.log(res);
+			if (res.type != "inbound-rtp" || !res.trackIdentifier) return; // continue
 
 			panel_ids.forEach((id_panel) => {
 				let panel = that.panels[id_panel];
 
 				if (id_panel == res.trackIdentifier) {
-					let statsString = "";
-					statsString += `${res.timestamp}<br>`;
+					let stats_string = "";
+					stats_string += `${res.timestamp}<br>`;
 					let fps = 0;
 					Object.keys(res).forEach((k) => {
 						if (k == "framesPerSecond") {
@@ -2353,17 +2351,16 @@ export class PanelUI {
 						}
 						if (k !== "timestamp" && k !== "type" && k !== "id") {
 							if (typeof res[k] === "object") {
-								statsString += `${k}: ${JSON.stringify(res[k])}<br>`;
+								stats_string += `${k}: ${JSON.stringify(res[k])}<br>`;
 							} else {
-								if (mark_change)
-									statsString += `${k}: <span class="change">${res[k]}</span><br>`;
-								else statsString += `${k}: ${res[k]}<br>`;
+								if (mark_change) stats_string += `${k}: <span class="change">${res[k]}</span><br>`;
+								else stats_string += `${k}: ${res[k]}<br>`;
 							}
 						}
 					});
 
 					if (panel.display_widget) {
-						panel.display_widget.last_video_stats_string = statsString;
+						panel.display_widget.last_video_stats_string = stats_string;
 					}
 
 					panel.fps = fps;
