@@ -20,7 +20,6 @@ body::after {
 	z-index: -1;
 	content:
 		url("/static/graph/icon-menu.png")
-		url("/static/graph/arrow.png")
 		url("/static/graph/battery.png")
 		url("/static/graph/discovery_stopped.svg")
 		url("/static/graph/discovery.svg")
@@ -4381,12 +4380,37 @@ BODY.touch-ui .menu_line.rot_ctrl {
 	cursor: pointer;
 	font-weight: bold;
 	font-size: 20px;
-	background-color: #0051ff;
 	border-radius: 5px;
 	-webkit-user-select: none; /* Safari */
 	-ms-user-select: none; /* IE 10 and IE 11 */
 	user-select: none; /* Standard syntax */
 	top: 2px;
+}
+
+.menu_line.zoom_ctrl .minus,
+.menu_line.zoom_ctrl .plus,
+.menu_line.buttons_right .left,
+.menu_line.buttons_right .right,
+.menu_line.plus_minus_ctrl .minus,
+.menu_line.plus_minus_ctrl .plus,
+.menu_line.rot_ctrl .rot-left,
+.menu_line.rot_ctrl .rot-right,
+.menu_line.buttons_right .left,
+.menu_line.buttons_right .right {
+	background-color: #383838;
+}
+
+.menu_line.zoom_ctrl .minus:hover,
+.menu_line.zoom_ctrl .plus:hover,
+.menu_line.buttons_right .left:hover,
+.menu_line.buttons_right .right:hover,
+.menu_line.plus_minus_ctrl .minus:hover,
+.menu_line.plus_minus_ctrl .plus:hover,
+.menu_line.rot_ctrl .rot-left:hover,
+.menu_line.rot_ctrl .rot-right:hover,
+.menu_line.buttons_right .left:hover,
+.menu_line.buttons_right .right:hover {
+	background-color: #0051ff;
 }
 
 .menu_line.buttons_right .left,
@@ -4398,14 +4422,8 @@ BODY.touch-ui .menu_line.rot_ctrl {
     border: 0px;
     line-height: 10px;
     margin-left: 4px;
-    background-color: #383838;
     margin: 0px 0px 0px 5px;
     padding: 0px;
-}
-
-.menu_line.buttons_right:hover .left,
-.menu_line.buttons_right:hover .right {
-	background-color: #0051ff;
 }
 
 .menu_line.rot_ctrl .rot-left .icon,

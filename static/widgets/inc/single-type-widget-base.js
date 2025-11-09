@@ -29,6 +29,10 @@ export class SingleTypePanelWidgetBase extends EventTarget {
 
     }
 
+    onUIConfig(config) {
+        
+    }
+
     onData(msg) {
 
     }

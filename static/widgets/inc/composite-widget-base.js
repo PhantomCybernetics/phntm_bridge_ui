@@ -23,6 +23,10 @@ export class CompositePanelWidgetBase extends EventTarget {
         this.sources = new MultiTopicSource(this);
     }
 
+    onUIConfig(config) {
+        
+    }
+
     setupMenu(menu_els) {      
         this.sources.setupMenu(menu_els);
     }

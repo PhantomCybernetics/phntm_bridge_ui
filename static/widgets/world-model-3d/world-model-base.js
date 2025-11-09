@@ -99,7 +99,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 	}
 
 	setupMenu(menu_els) {
-		super.setupMenu(menu_els); // calls this.ources.setupMenu();
+		super.setupMenu(menu_els); // calls this.sources.setupMenu();
 
 		Object.values(this.plugins).forEach((p)=>{
 			if (p.setupMenu)
