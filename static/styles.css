@@ -116,7 +116,7 @@ h1 .label {
 	/* min-width: 200px; */
 }
 
-h1 .label.opens-description {
+h1 .label.opens-about-dialog {
 	cursor: help;
 }
 
@@ -1137,6 +1137,10 @@ BODY.hamburger #docker_list .docker_cont {
 	max-width: 40%;
 }
 
+#docker_controls.control-disabled #docker_list.narrow .docker_cont_name {
+	max-width: 60%;
+}
+
 #docker_list .docker_cont_vars {
 	position: absolute;
 	height: 30px;
@@ -1146,6 +1150,23 @@ BODY.hamburger #docker_list .docker_cont {
 
 BODY.hamburger #docker_list .docker_cont_vars {
 	right: 150px;
+}
+
+#docker_controls.control-disabled .docker_btns {
+	display: none;
+}
+
+#docker_controls.control-disabled #docker_list .docker_cont_name {
+	max-width: calc(60% - 150px);
+}
+
+#docker_controls.control-disabled #docker_list .docker_cont_vars {
+	left: 60%;
+	right: 0px;
+}
+
+BODY.hamburger #docker_controls.control-disabled #docker_list .docker_cont_vars {
+	right: 20px;
 }
 
 #docker_list .docker_cpu,
@@ -5537,7 +5558,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
 	outline: none;
 }
 
-#description-dialog {
+#about-dialog {
     display: none;
     position: fixed;
     background-color: #021d61de;
@@ -5558,11 +5579,11 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
     overflow: hidden;
 }
 
-#description-dialog #descriptoin-dialog-header {
+#about-dialog #about-dialog-header {
     margin-bottom: 10px;
 }
 
-#description-dialog #descriptoin-dialog-content {
+#about-dialog #about-dialog-content {
     overflow: scroll;
     background-color: #031139;
     margin-bottom: 40px;
@@ -5572,34 +5593,26 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
     text-align: center;
 }
 
-#description-dialog-buttons {
+#about-dialog-buttons {
     position: absolute;
     bottom: 10px;
     width: 100%;
     text-align: center;
 }
 
-BODY.desktop-ui #description-dialog .touch-only {
-	display: none;
-}
-
-BODY.touch-ui #description-dialog .desktop-only {
-	display: none;
-}
-
-#description-dialog H2 {
+#about-dialog H2 {
 	font-size: 30px;
 	padding: 9px 0px 0px 0px;
 	display: block;
 	margin: 0px;
 }
 
-#description-dialog-buttons {
+#about-dialog-buttons {
     margin-top: 20px;
     text-align: center;
 }
 
-#description-dialog-buttons BUTTON {
+#about-dialog-buttons BUTTON {
 	display: block;
 	background: black;
 	color: white;
@@ -5612,64 +5625,16 @@ BODY.touch-ui #description-dialog .desktop-only {
 	font-weight: bold;
 }
 
-#description-dialog .num-peers,
-#description-dialog .key-mapping {
-	background-color: rgb(255 255 0);
-	color: black;
-	border-radius: 3px;
-	padding: 2px 4px;
-	white-space: nowrap;
-	font-weight: bold;
-	font-size: 14px;
-}
-
-#description-dialog .num-peers {
-    background-color: rgb(255 255 255);
-}
-
-#description-dialog A {
+#about-dialog A {
 	color: #fff;
 }
 
-#description-dialog A.external {
+#about-dialog A.external {
 	padding-right: 17px;
 	background-image: url("/static/graph/icon-external-link.svg");
 	background-position: right;
 	background-size: 15px;
 	background-repeat: no-repeat;
-}
-
-#description-dialog INPUT#map-consent {
-	margin-right: 5px;
-}
-
-#description-dialog #phntm-cybernetics-logo IMG {
-	width: 300px;
-	float: right;
-	margin-right: 20px;
-}
-
-#description-dialog H2.with-phntm-cybernetics-logo {
-    float: left;
-    margin-top: 22px;
-    margin-left: 20px;
-    text-align: center;
-}
-
-/* If viewport is less than this*/
-@media (max-width: 695px) {
-  #description-dialog #phntm-cybernetics-logo IMG {
-    width: calc(100% - 40px);
-    max-height: 100px;
-    margin-bottom: 10px;
-  }
-  #description-dialog H2.with-phntm-cybernetics-logo {
-    float: none;
-    margin-top: 22px;
-    margin-left: 0px;
-    margin-bottom: 10px;
-    display: block;
-  }
 }
 
 .marker_label,

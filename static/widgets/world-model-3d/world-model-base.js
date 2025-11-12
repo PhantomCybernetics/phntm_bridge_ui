@@ -6,20 +6,20 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 	static default_width = 5;
 	static default_height = 18;
 
-	constructor(panel, widget_conf) {
-		super(panel, null, false); // don't start rendering loop yet
+	constructor(panel, unused_widget_css_class, plugin_classes) {
+		super(panel, 'description-tf', false); // don't start rendering loop yet
 
 		let that = this;
 
 		//$("#panel_title_" + panel.n).text(WorldModel3DWidget.label);
 
-		this.overlays = {};
+		this.overlay_topics = {};
 		this.sources.on("change", (topics) => this.onSourcesChange(topics));
 
 		// load plugins that add topic sources to multitopic
 		this.plugins = {};
-		if (Array.isArray(widget_conf)) { 
-			widget_conf.forEach((pluginClass)=>{
+		if (Array.isArray(plugin_classes)) { 
+			plugin_classes.forEach((pluginClass)=>{
 				console.log('World Model loading plugin:', pluginClass.name);
 				that.plugins[pluginClass.name] = new pluginClass(that);
 				that.sources.add(
@@ -27,13 +27,12 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 					pluginClass.source_description,
 					pluginClass.source_default_topic,
 					pluginClass.source_max_num,
+					// onData
 					(topic, msg) => that.plugins[pluginClass.name].onTopicData(topic, msg),
+					// onSourceRemoved
 					(topic) => {
 						that.plugins[pluginClass.name].clearTopic(topic);
-						if (that.overlays[topic].configUpdateCb) {
-							that.panel.ui.client.removeTopicConfigHandler(topic, that.overlays[topic].configUpdateCb);
-						}
-						delete that.overlays[topic];
+						delete that.overlay_topics[topic];
 					},
 				);
 			});
@@ -51,26 +50,21 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 	}
 
 	onSourcesChange(source_topics) {
+		console.log('WorldModel sources changed: ', source_topics);
 		let that = this;
 		let client = this.panel.ui.client;
 
 		source_topics.forEach((topic) => {
-			if (!that.overlays[topic]) { // add topic config listener
-				that.overlays[topic] = {};
-				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("Src Topic Config Update", topic, config);
-					that.overlays[topic].config = config;
-					Object.values(that.plugins).forEach((p) => {
-						if (client.discovered_topics[topic] && p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
-							if (p.onTopicConfig)
-								p.onTopicConfig(topic, config);
-						}
-					});
-					that.panel.setMenu();
-				};
-				client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
-			}
-			that.panel.setMenu();
+			if (that.overlay_topics[topic])
+				return;
+			
+			Object.values(that.plugins).forEach((p) => {
+				if (client.discovered_topics[topic] && p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
+					if (p.addTopic)
+						p.addTopic(topic);
+					that.overlay_topics[topic] = {};
+				}
+			});
 		});	
 
 		this.panel.setMenu();
@@ -104,6 +98,15 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 		Object.values(this.plugins).forEach((p)=>{
 			if (p.setupMenu)
 				p.setupMenu(menu_els);
+		});
+	}
+
+	onClose() {
+		super.onClose();
+		this.overlay_topics = {};
+		Object.values(this.plugins).forEach((p)=>{
+			if (p.clearAllTopics)
+				p.clearAllTopics();
 		});
 	}
 }

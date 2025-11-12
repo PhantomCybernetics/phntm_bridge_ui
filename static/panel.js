@@ -124,7 +124,6 @@ export class Panel {
 		this.grid_widget = grid.addWidget(widget_opts);
 
 		this.ui.client.on(id_source, this.onDataContextWrapper);
-		this.ui.client.onTopicConfig(id_source, this.onTopicConfig);
 
 		// setTimeout(() => {
 		// 	panels[id_source].onResize();
@@ -264,7 +263,11 @@ export class Panel {
 			if (this.ui.widgets[msg_type]) {
 
 				if (!this.display_widget) { // only once
-					this.display_widget = new this.ui.widgets[this.id_source].class(this, this.ui.widgets[this.id_source].conf); //no data yet
+					this.display_widget = new this.ui.widgets[this.id_source].class(
+						this,
+						null, // widget_css_class passed only to super 
+						this.ui.widgets[this.id_source].plugin_classes // world model plugins
+					); //no data yet
 					this.title_el.text(this.ui.widgets[this.id_source].class.label);
 					fallback_show_src = false;
 				}
@@ -305,24 +308,35 @@ export class Panel {
 						this.ui.client.on("defs_updated", updateOnMessageTypesChanged); // redraw on defs received
 					}
 				}
-			}
 
-			if (!this.display_widget) { 
+				if (!this.display_widget) { 
 			
-				// make widget by topic name
-				if (this.ui.topic_widgets[this.id_source] != undefined) {
-					console.log("Initiating display topic widget " + this.id_source, this.display_widget);
-					// $('#display_panel_source_link_'+this.n).css('display', 'block');
-					this.display_widget = new this.ui.topic_widgets[this.id_source].widget(this, this.id_source); //no data yet
-					fallback_show_src = false;
-				
-				// make widget by topic type
-				} else if (this.ui.type_widgets[this.msg_type] != undefined) {
-					console.log("Initiating display type widget " + this.id_source + " w " + this.msg_type, this.display_widget);
-					// $('#display_panel_source_link_'+this.n).css('display', 'block');
-					this.display_widget = new this.ui.type_widgets[this.msg_type].widget(this, this.id_source, this.ui.type_widgets[this.msg_type].conf); //no data yet
-					fallback_show_src = false;
+					// make widget by topic name
+					if (this.ui.topic_widgets[this.id_source] != undefined) {
+						console.log("Initiating display topic widget " + this.id_source, this.display_widget);
+						// $('#display_panel_source_link_'+this.n).css('display', 'block');
+						this.display_widget = new this.ui.topic_widgets[this.id_source].widget(
+							this, // panel
+							this.id_source, // topic
+							null, // widget_css_class passed only to super 
+							this.ui.type_widgets[this.msg_type].plugin_classes // video plugins
+						); //no data yet
+						fallback_show_src = false;
+					
+					// make widget by topic type
+					} else if (this.ui.type_widgets[this.msg_type] != undefined) {
+						console.log("Initiating display type widget " + this.id_source + " w " + this.msg_type, this.display_widget);
+						// $('#display_panel_source_link_'+this.n).css('display', 'block');
+						this.display_widget = new this.ui.type_widgets[this.msg_type].widget(
+							this, // panel
+							this.id_source, // topic
+							null, // widget_css_class passed only to super 
+							this.ui.type_widgets[this.msg_type].plugin_classes // video plugins
+						); //no data yet
+						fallback_show_src = false;
+					}
 				}
+
 			}
 
 			if (fallback_show_src) {
@@ -571,13 +585,6 @@ export class Panel {
             }, 2000);
         }
     }
-
-	onTopicConfig = (config) => {
-		console.log("Panel for " + this.id_source+" got topic config: ", config);
-		if (config['low_fps'] !== undefined) {
-			this.low_fps = config['low_fps'];
-		}
-	}
 
 	onDataContextWrapper = (msg, ev) => {
 		if (!this.initiated) {
@@ -1059,7 +1066,6 @@ export class Panel {
 		}
 
 		this.ui.client.off(this.id_source, this.onDataContextWrapper);
-		this.ui.client.removeTopicConfigHandler(this.id_source, this.onTopicConfig);
 
 		if (this.display_widget && this.display_widget.onClose) {
 			this.display_widget.onClose();

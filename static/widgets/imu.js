@@ -33,8 +33,11 @@ export class ImuWidget extends SingleTypePanelWidgetBase {
 		this.enable_acc = this.panel.getPanelVarAsBool('acc', false);
 		this.autoresize_renderer = false; // handling our own renderer resize here
 
-		this.max_acc_m_s = 0.0; // override these
-		this.min_acc_m_s = 0.0; // from topic config
+		let config = this.client.getTopicConfig(topic);
+
+		this.min_acc_m_s = config && config.min_acceleration !== undefined ? config.min_acceleration : 0;
+		this.max_acc_m_s = config && config.max_acceleration !== undefined ? config.max_acceleration : 0;
+
 		this.acc_trace_length = 200;
 
 		this.fw_axis = this.panel.getPanelVarAsInt('fw', 0); // +X default
@@ -93,14 +96,7 @@ export class ImuWidget extends SingleTypePanelWidgetBase {
 		this.data_trace_z = [];
 		
 		this.render();
-	}
-
-	onTopicConfig(config) {
-		if (config) {
-			this.min_acc_m_s = config.min_acceleration;
-			this.max_acc_m_s = config.max_acceleration;
-			this.makeAccChart();
-		}
+		this.makeAccChart();
 	}
 
 	makeAccChart() {

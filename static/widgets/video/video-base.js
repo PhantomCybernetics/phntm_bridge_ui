@@ -13,7 +13,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 								 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'
 								];
 
-	constructor(panel, topic, widget_conf) {
+	constructor(panel, topic, unused_widget_css_class, plugin_classes) {
 		super(panel, topic, 'video');
 
 		this.widget_el.html('<video id="panel_video_' + panel.n + '" autoplay="true" playsinline="true" muted="true" preload="metadata"></video>' + //muted allows video autoplay in chrome before user interactions
@@ -67,15 +67,15 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 
 		this.panel.setMediaStream();
 
-		this.overlays = {};
+		this.overlay_topics = {};
 		this.next_overlay_id = 0;
 
 		this.sources = new MultiTopicSource(this);
 		this.sources.on("change", (topics) => that.onSourcesChange(topics));
 
 		this.plugins = {};
-		if (Array.isArray(widget_conf)) { 
-			widget_conf.forEach((pluginClass)=>{
+		if (Array.isArray(plugin_classes)) { 
+			plugin_classes.forEach((pluginClass)=>{
 				console.log('Video loading plugin:', pluginClass.name);
 				that.plugins[pluginClass.name] = new pluginClass(that);
 				that.sources.add(
@@ -83,13 +83,12 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 					pluginClass.source_description,
 					pluginClass.source_default_topic,
 					pluginClass.source_max_num,
+					// onData
 					(topic, msg) => that.plugins[pluginClass.name].onTopicData(topic, msg),
+					// onSourceRemoved
 					(topic) => {
 						that.plugins[pluginClass.name].clearTopic(topic);
-						if (that.overlays[topic].configUpdateCb) {
-							that.panel.ui.client.removeTopicConfigHandler(topic, that.overlays[topic].configUpdateCb);
-						}
-						delete that.overlays[topic];
+						delete that.overlay_topics[topic];
 					},
 				);
 			});
@@ -101,46 +100,24 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 	}
 
 	onSourcesChange(source_topics) {
-		console.log('Video sources changes: ', source_topics);
+		console.log('Video sources changed: ', source_topics);
 		let that = this;
 		let client = this.panel.ui.client;
 
 		source_topics.forEach((topic) => {
-			if (!that.overlays[topic]) { // add topic config listener
-				that.overlays[topic] = {};
-				that.overlays[topic].configUpdateCb = (config) => {
-					console.warn("Src Topic Config Update", topic, config);
-					that.overlays[topic].config = config;
-					Object.values(that.plugins).forEach((p) => {
-						if (p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
-							if (p.onTopicConfig)
-								p.onTopicConfig(topic, config);
-						}
-					});
-					that.panel.setMenu();
-				};
-				client.onTopicConfig(topic, that.overlays[topic].configUpdateCb);
-			}
-			that.panel.setMenu();
+			if (that.overlay_topics[topic])
+				return;
+			
+			Object.values(that.plugins).forEach((p) => {
+				if (p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
+					if (p.addTopic)
+						p.addTopic(topic);
+					that.overlay_topics[topic] = true;
+				}
+			});
 		});	
 
 		this.panel.setMenu();
-	}
-
-	onClose() {
-		super.onClose();
-		let that = this;
-		let overlay_topics = Object.keys(this.overlays);
-		overlay_topics.forEach((topic) => {
-			if (that.overlays[topic].configUpdateCb) {
-				that.panel.ui.client.removeTopicConfigHandler(topic, that.overlays[topic].configUpdateCb);
-			}
-		});
-		this.overlays = {};
-		Object.values(this.plugins).forEach((p)=>{
-			if (p.clearAllTopics)
-				p.clearAllTopics();
-		});
 	}
 
 	setupMenu(menu_els) {
@@ -178,5 +155,14 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			this.video_stats_el.html(this.last_video_stats_string);
 
 		return this.panel.fps.toFixed(0) + " FPS"; // set in ui.updateAllVideoStats
+	}
+
+	onClose() {
+		super.onClose();
+		this.overlay_topics = {};
+		Object.values(this.plugins).forEach((p)=>{
+			if (p.clearAllTopics)
+				p.clearAllTopics();
+		});
 	}
 }

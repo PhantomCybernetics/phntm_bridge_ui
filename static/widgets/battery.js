@@ -12,18 +12,13 @@ export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 	constructor(panel, topic) {
 		super(panel, topic, 'battery');
 
-		this.min_voltage = 0; // override these
-		this.max_voltage = 0; // from topic config
-	}
+		let config = this.client.getTopicConfig(topic);
 
-	// make chart when we have topic config
-	onTopicConfig(config) {
-		if (config) {
-			this.min_voltage = config.min_voltage;
-			this.max_voltage = config.max_voltage;
-			this.makeChart();
-		}
-	};
+		this.min_voltage = config && config.min_voltage !== undefined ? config.min_voltage : 0;
+		this.max_voltage = config && config.max_voltage !== undefined ? config.max_voltage : 0;
+		
+		this.makeChart();
+	}
 
 	makeChart() {
 		this.data_trace = [];

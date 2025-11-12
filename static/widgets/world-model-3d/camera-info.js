@@ -16,22 +16,33 @@ export class WorldModel3DWidget_CameraInfo {
 		this.dirty_camera_frustums = {};
 		this.camera_frustum_visuals = {};
 		this.camera_frustum_geometry = {};
-		this.lastTopicRendered = {}
+
+		this.overlays = {}; // topic => conf from yaml
     }
+
+	addTopic(topic) {
+		console.warn('World Model CameraInfo adding topic ', topic);
+		let config = this.world_model.client.getTopicConfig(topic);
+		if (!this.overlays[topic])
+			this.overlays[topic] = {};
+		this.overlays[topic].config = config;
+	}
 
     onTopicData(topic, msg) {
         if (!this.world_model.robot_model || this.world_model.panel.paused) return;
 
-		if (!this.world_model.overlays[topic] || !this.world_model.overlays[topic].config) return; // always wait for config
+		if (!this.world_model.overlay_topics[topic] || !this.overlays[topic]) return; // always wait for config
 
 		// only update topic frustum once per sec
-		if (!this.lastTopicRendered[topic] || Date.now() - this.lastTopicRendered[topic] > 1000)
-			this.lastTopicRendered[topic] = Date.now();
+		if (!this.overlays[topic].last_rendered || Date.now() - this.overlays[topic].last_rendered > 1000)
+			this.overlays[topic].last_rendered = Date.now();
 		else return;
 		
+		let config = this.overlays[topic].config ? this.overlays[topic].config : {};
+
 		let frame_id = msg.header.frame_id;
-		if (this.world_model.overlays[topic].config["force_frame_id"])
-			frame_id = this.world_model.overlays[topic].config["force_frame_id"];
+		if (config["force_frame_id"])
+			frame_id = config["force_frame_id"];
 		let f = frame_id ? this.world_model.robot_model.getFrame(frame_id) : null;
 		if (!frame_id || !f) {
 			if (!this.camera_info_error_logged) this.camera_info_error_logged = {};
@@ -51,14 +62,8 @@ export class WorldModel3DWidget_CameraInfo {
 
 		this.camera_frames[topic] = f;
 
-		let near =
-			this.world_model.overlays[topic].config && this.world_model.overlays[topic].config["frustum_near"]
-				? this.world_model.overlays[topic].config["frustum_near"]
-				: 0.01;
-		let far =
-			this.world_model.overlays[topic].config && this.world_model.overlays[topic].config["frustum_far"]
-				? this.world_model.overlays[topic].config["frustum_far"]
-				: 2.0;
+		let near = config["frustum_near"] ? this.overlays[topic].config["frustum_near"] : 0.01;
+		let far = config["frustum_far"] ? config["frustum_far"] : 2.0;
 
 		let frustum = this.calculatePinholeFrustum(msg, near, far);
 
@@ -169,16 +174,12 @@ export class WorldModel3DWidget_CameraInfo {
 
             if (!that.world_model.sources.topicSubscribed(topic)) return;
 
+			let config = this.overlays[topic].config ? this.overlays[topic].config : {};
+
             if (!that.camera_frustum_visuals[topic]) {
-                let color = new THREE.Color(
-                    that.world_model.overlays[topic] &&
-                    that.world_model.overlays[topic].config &&
-                    that.world_model.overlays[topic].config["frustum_color"]
-                        ? that.world_model.overlays[topic].config["frustum_color"]
-                        : 0x00ffff,
-                );
+                let color = new THREE.Color(config["frustum_color"] ? config["frustum_color"] : 0x00ffff);
                 const material = new LineMaterial({
-                    color: color,
+            		color: color,
                     linewidth: 2,
                     transparent: true,
                     opacity: 0.85,
@@ -207,6 +208,7 @@ export class WorldModel3DWidget_CameraInfo {
 			this.camera_frustum_visuals[topic].removeFromParent();
 			delete this.camera_frustum_visuals[topic];
 		}
+		delete this.overlays[topic];
     }
 
     // clear all camera frustums

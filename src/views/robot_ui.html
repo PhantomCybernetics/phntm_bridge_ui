@@ -9,7 +9,7 @@
 
 <div id="service-input-dialog"></div> <!-- z-index: 200 -->
 <div id="node-params-dialog"></div> <!-- z-index: 200 -->
-<div id="description-dialog"></div> <!-- z-index: 2000 -->
+<div id="about-dialog"></div> <!-- z-index: 2000 -->
 <div id="dialog-modal-confirm"></div> <!-- z-index: 200 -->
 
 <div id="dialog-modal-confirm-underlay" class="prevent-select"></div> <!-- z-index: 199 -->
@@ -283,21 +283,21 @@
 			});
 			
 			// add video widget with overlay plugins
-			let video_plugins = [ VideoWidget_Detections2D ];
+			let video_plugin_classes = [ VideoWidget_Detections2D ];
 			// TODO: load custom video overlays here
 			VideoWidget.handled_msg_types.forEach((msg_type) => {
-				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugins);
+				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
 			});
 
 			// add world model 3d with overlat plugins
-			let world_model_3d_plugins = [
+			let world_model_3d_plugin_classes = [
 				WorldModel3DWidget_Laser,
 				WorldModel3DWidget_Range,
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
 			];
 			// TODO: load custom world model 3d overlays here
-			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugins);
+			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
 
 			// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
 			custom_modules.forEach((module) => { 

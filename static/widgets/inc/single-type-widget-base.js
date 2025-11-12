@@ -6,31 +6,18 @@ export class SingleTypePanelWidgetBase extends EventTarget {
     static handled_msg_types = []; // add message types to be handled here
 
     constructor(panel, topic, widget_css_class) {
-        super();
+        super(); // EventTarget
 
 		this.panel = panel; 
+        this.client = panel.ui.client;
 		this.topic = topic;
         this.autoresize_renderer = true; // if renderer exists, it will be resized before onResize is called
-
-        let that = this;
-        this._onTopicConfigWrapper = (config) => {
-            that.onTopicConfig(config);
-        }
-        this.panel.ui.client.onTopicConfig(topic, this._onTopicConfigWrapper);
-
+        
         this.widget_el = $("#panel_widget_" + this.panel.n);
 
         this.widget_el.addClass("enabled");
         if (widget_css_class)
             this.widget_el.addClass(widget_css_class);
-    }
-
-    onTopicConfig(config) {
-
-    }
-
-    onUIConfig(config) {
-        
     }
 
     onData(msg) {
@@ -58,9 +45,5 @@ export class SingleTypePanelWidgetBase extends EventTarget {
     }
 
     onClose() {
-        this.panel.ui.client.removeTopicConfigHandler(
-			this.topic,
-			this._onTopicConfigWrapper,
-		);
     }
 }

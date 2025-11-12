@@ -9,9 +9,10 @@ export class CompositePanelWidgetBase extends EventTarget {
 	static default_height = 5;
 
     constructor(panel, widget_css_class) {
-        super();
+        super(); // EventTarget
 
         this.panel = panel;
+        this.client = panel.ui.client;
         this.autoresize_renderer = true; // if renderer exists, it will be resized before onResize is called
 
         this.widget_el = $("#panel_widget_" + this.panel.n);
@@ -21,10 +22,6 @@ export class CompositePanelWidgetBase extends EventTarget {
             this.widget_el.addClass(widget_css_class);
 
         this.sources = new MultiTopicSource(this);
-    }
-
-    onUIConfig(config) {
-        
     }
 
     setupMenu(menu_els) {      

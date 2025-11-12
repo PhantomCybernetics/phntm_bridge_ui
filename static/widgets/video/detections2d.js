@@ -16,12 +16,16 @@ export class VideoWidget_Detections2D {
 		this.magenta = new THREE.Color(0xff00ff);
     }
 
-	onTopicConfig(topic, config) {
-
+	addTopic(topic) {
 		this.detection_class_colors[topic] = [];
-		if (config && config["color_map"] !== undefined) {
-			for (let class_id = 0; class_id < config["color_map"].length; class_id++) {
-				let c = config["color_map"][class_id];
+		let config = this.video.client.getTopicConfig(topic);
+
+		if (!config)
+			console.error('Detections2D got empty config for '+ topic);
+
+		if (config && config.color_map !== undefined) {
+			for (let class_id = 0; class_id < config.color_map.length; class_id++) {
+				let c = config.color_map[class_id];
 				if (!c || ['null', 'none', 'no', '', 'model'].indexOf(c.toLowerCase().trim()) != -1)
 					c = this.magenta;
 				else
@@ -124,11 +128,7 @@ export class VideoWidget_Detections2D {
 				if (class_id < 0)
 					class_id = c;
 				let l = "Class " + c;
-				if (
-					this.overlays[topic].config &&
-					this.overlays[topic].config["label_map"] &&
-					this.overlays[topic].config["label_map"][c]
-				)
+				if (this.overlays[topic].config && this.overlays[topic].config["label_map"] && this.overlays[topic].config["label_map"][c])
 					l = this.overlays[topic].config["label_map"][c];
 				l += " (" + d.results[j].hypothesis.score.toFixed(2) + ")";
 

@@ -1,12 +1,10 @@
 export class CustomServiceInput {
 	id_service = null;
-	bridge_client= null; // browser client ref
-	config_data = null; // passed initial data
+	client= null; // browser client ref
 
-	constructor(id_service, bridge_client, config_data) {
+	constructor(id_service, client) {
 		this.id_service = id_service;
-		this.bridge_client = bridge_client;
-		this.config_data = config_data;
+		this.client = client;
 	}
 
 	makeElements(target_el) {

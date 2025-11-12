@@ -27,12 +27,12 @@ export class PanelUI {
 		// '/robot_description' : { widget: URDFWidget, w:5, h:4 } ,
 	};
 	type_widgets = {};
-	addTypeWidget(msg_type, widget_class, conf) {
+	addTypeWidget(msg_type, widget_class, plugin_classes) {
 		this.type_widgets[msg_type] = {
 			widget: widget_class,
 			w: widget_class.default_width,
 			h: widget_class.default_height,
-			conf: conf
+			plugin_classes: plugin_classes
 		};
 	}
 
@@ -56,13 +56,12 @@ export class PanelUI {
 	}
 
 	service_widget_map = {};
-	addServiceWidgetMapping(id_service, widget_class_name, extra_data) {
-		console.log("Adding service widget mapping for " + id_service + ": " + widget_class_name + ", data=", extra_data);
+	addServiceWidgetMapping(id_service, widget_class_name) {
+		console.log("Adding service widget mapping for " + id_service + ": " + widget_class_name);
 
 		this.service_widget_map[id_service] = {
 			class_name: widget_class_name,
-			widget: null,
-			data: extra_data,
+			widget: null
 		};
 	}
 
@@ -290,8 +289,10 @@ export class PanelUI {
 			that.dockerMenuFromMonitorMessage(msg);
 		};
 
+		this.robot_ui_config = {};
 		this.battery_topic = null;
 		this.docker_monitor_topic = null;
+		this.docker_control_enabled = false;
 		this.subscribed_docker_monitor_topic = null;
 		this.iw_topic = null;
 		this.battery_shown = this.loadLastRobotBatteryShown();
@@ -305,8 +306,8 @@ export class PanelUI {
 			$("#network-details").css("display", "");
 		}
 
-		this.docker_control_shown = this.loadLastRobotDockerControlShown();
-		$("#docker_controls").css("display", this.docker_control_shown ? "" : "none");
+		this.docker_monitor_shown = this.loadLastRobotDockerMonitorShown();
+		$("#docker_controls").css("display", this.docker_monitor_shown ? "" : "none");
 
 		this.updateLayout();
 
@@ -319,6 +320,9 @@ export class PanelUI {
 
 		// triggered after input_config
 		client.on("ui_config", (robot_ui_config) => {
+
+			that.robot_ui_config = robot_ui_config;
+
 			// battery optional
 			if (that.battery_topic && that.battery_topic != robot_ui_config["battery_topic"]) {
 				client.off(that.battery_topic, batteryStatusWrapper);
@@ -336,9 +340,9 @@ export class PanelUI {
 			}
 			that.saveLastRobotBatteryShown(that.battery_shown);
 
-            // description dialog
-            if (robot_ui_config['description'] || robot_ui_config['description_header']) {
-				that.makeDescriptionDialog(robot_ui_config['description_header'], robot_ui_config['description']);
+            // about popup dialog
+            if (robot_ui_config['about_dialog'] || robot_ui_config['about_dialog_header']) {
+				that.makeAboutPopupDialog(robot_ui_config['about_dialog_header'], robot_ui_config['about_dialog']);
             }
 
 			// introspection control
@@ -361,22 +365,24 @@ export class PanelUI {
 			if (robot_ui_config["docker_monitor_topic"]) {
 				that.docker_monitor_topic = robot_ui_config["docker_monitor_topic"];
 			}
-			let old_docker_control_shown = that.docker_control_shown;
-			if (robot_ui_config["docker_control"] && that.docker_monitor_topic) {
-				that.docker_control_shown = true;
+			that.docker_control_enabled = robot_ui_config["enable_docker_control"] ? true : false; 
+			let old_docker_monitor_shown = that.docker_monitor_shown;
+			if (that.docker_monitor_topic) {
+				that.docker_monitor_shown = true;
 				that.subscribed_docker_monitor_topic = that.docker_monitor_topic;
 				client.on(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
-			} else if (that.docker_control_shown) {
-				that.docker_control_shown = false;
+			} else if (that.docker_monitor_shown) {
+				that.docker_monitor_shown = false;
 				if (that.subscribed_docker_monitor_topic) {
 					client.off(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
 				}
 				that.subscribed_docker_monitor_topic = null;
 			}
 
-			if (old_docker_control_shown != that.docker_control_shown) {
-				$("#docker_controls").css("display", that.docker_control_shown ? "" : "none");
+			if (old_docker_monitor_shown != that.docker_monitor_shown) {
+				$("#docker_controls").css("display", that.docker_monitor_shown ? "" : "none");
 				that.updateLayout();
+				that.saveLastRobotDockerMonitorShown(that.docker_monitor_shown);
 			}
 
 			// wifi status
@@ -504,10 +510,7 @@ export class PanelUI {
 			let msg = data.msg;
 			console.log("Got peer service call data", id_service, msg);
 
-			if (
-				that.service_widget_map[id_service] &&
-				that.service_widget_map[id_service].widget
-			) {
+			if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget) {
 				that.service_widget_map[id_service].widget.onValueChanged(msg);
 			}
 		});
@@ -1329,7 +1332,7 @@ export class PanelUI {
 		this.num_docker_containers = 0;
 		$("#docker_list").empty();
 
-		if (!this.docker_control_shown) {
+		if (!this.docker_monitor_shown) {
 			return;
 		}
 
@@ -1419,7 +1422,7 @@ export class PanelUI {
 				cont_vars_el.append([cont_cpu_el, cont_io_el, cont_pids_el]);
 
 				cont_el.append([cont_name_el, cont_status_el, cont_vars_el]);
-
+				
 				let btns_el = $('<div class="docker_btns"></div>');
 				let btn_run = $('<button class="docker_run" title="Start"></button>');
 				let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
@@ -1439,6 +1442,7 @@ export class PanelUI {
 				});
 
 				btns_el.appendTo(cont_el);
+				
 				cont_el.appendTo(grp_containers_el);
 
 				container_els[cont.id] = {
@@ -1461,15 +1465,13 @@ export class PanelUI {
 			this.dockerMenuFromMonitorMessage(msg_by_host[host]); // update vals
 		});
 
-		if (this.num_docker_containers > 0) {
-			$("#docker_controls").addClass("active");
-		} else {
-			$("#docker_controls").removeClass("active");
-		}
+		if (this.num_docker_containers > 0) $("#docker_controls").addClass("active");
+		else $("#docker_controls").removeClass("active");
 
-		$("#docker_heading .full-w").html(
-			this.num_docker_containers == 1 ? "Container" : "Containers",
-		);
+		if (!that.docker_control_enabled) $("#docker_controls").addClass("control-disabled");
+		else $("#docker_controls").removeClass("control-disabled");
+
+		$("#docker_heading .full-w").html(this.num_docker_containers == 1 ? "Container" : "Containers");
 		$("#docker_heading B").html(this.num_docker_containers);
 	}
 
@@ -1748,11 +1750,11 @@ export class PanelUI {
 			});
 	}
 
-	addCustomWidget(widget_class, conf) {
+	addCustomWidget(widget_class, plugin_classes) {
 		this.widgets[widget_class.name] = {
 			label: widget_class.label,
 			class: widget_class,
-			conf: conf
+			plugin_classes: plugin_classes
 		};
 		this.updateWidgetsMenu();
 	}
@@ -1968,11 +1970,7 @@ export class PanelUI {
 				let widget_class_name = this.service_widget_map[id_service]["class_name"];
 				if (this.custom_service_widgets[widget_class_name]) {
 					let widget_class = this.custom_service_widgets[widget_class_name]["class"];
-					this.service_widget_map[id_service].widget = new widget_class(
-						id_service,
-						this.client,
-						this.service_widget_map[id_service].data
-					);
+					this.service_widget_map[id_service].widget = new widget_class(id_service, this.client);
 					
 					this.service_widget_map[id_service].widget.makeElements(service_input_controls_el);
 					this.service_widget_map[id_service].widget.getCurrentValue(
@@ -2161,19 +2159,11 @@ export class PanelUI {
 	}
 
 	onWifiScanRequest(req_data, cb) {
-		let dropdown_btn = req_data.attempt_roam
-			? $("#trigger_wifi_roam")
-			: $("#trigger_wifi_scan");
+		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
 		let signal_monitor = $("#signal-monitor");
-		let enabled = req_data.attempt_roam
-			? this.wifi_roam_enabled
-			: this.wifi_scan_enabled;
+		let enabled = req_data.attempt_roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
 		let what = req_data.attempt_roam ? "roaming" : "scanning";
-		if (
-			!enabled ||
-			dropdown_btn.hasClass("working") ||
-			signal_monitor.hasClass("working")
-		) {
+		if (!enabled || dropdown_btn.hasClass("working") || signal_monitor.hasClass("working")) {
 			if (!enabled) {
 				this.showNotification("Wifi " + what + " disabled by robot", "error");
 				console.warn("Wi-fi " + what + " disabled by the robot");
@@ -2221,9 +2211,7 @@ export class PanelUI {
 	}
 
 	onWifiScanReply(req_data, reply_data) {
-		let dropdown_btn = req_data.attempt_roam
-			? $("#trigger_wifi_roam")
-			: $("#trigger_wifi_scan");
+		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
 		let signal_monitor = $("#signal-monitor");
 
 		dropdown_btn.removeClass("working");
@@ -2234,16 +2222,14 @@ export class PanelUI {
 
 		if (reply_data.err) {
 			reply_data._notification = {
-				label: "Error (" + reply.err + "): " + reply.msg,
-				style: "error",
+				label: "Error (" + reply_data.err + "): " + reply_data.msg, style: "error"
 			};
 		} else if (!req_data.attempt_roam) {
 			if (reply_data.scan_results && reply_data.scan_results.length) {
 				let val = JSON.stringify(reply_data.scan_results, null, 4);
 				let num = reply_data.scan_results.length;
 				reply_data._notification = {
-					label:
-						"Wi-Fi scan returned " + num + " result" + (num != 1 ? "s" : ""),
+					label: "Wi-Fi scan returned " + num + " result" + (num != 1 ? "s" : ""),
 					detail: "<pre>" + val + "</pre>",
 				};
 			} else {
@@ -2764,17 +2750,17 @@ export class PanelUI {
 		return val;
 	}
 
-	saveLastRobotDockerControlShown(val) {
+	saveLastRobotDockerMonitorShown(val) {
 		localStorage.setItem(
-			"last-robot-docker-control-shown:" + this.client.id_robot,
+			"last-robot-docker-monitor-shown:" + this.client.id_robot,
 			val,
 		);
 	}
 
-	loadLastRobotDockerControlShown() {
+	loadLastRobotDockerMonitorShown() {
 		let val =
 			localStorage.getItem(
-				"last-robot-docker-control-shown:" + this.client.id_robot,
+				"last-robot-docker-monitor-shown:" + this.client.id_robot,
 			) == "true";
 		return val;
 	}
@@ -2790,14 +2776,18 @@ export class PanelUI {
 		return val;
 	}
 
-    makeDescriptionDialog(description_header, description) {
+    makeAboutPopupDialog(header, body) {
         
         let that = this;
 
-        let header = $('<div id="descriptoin-dialog-header"></div>');
-        if (description_header) {
-            header.html(description_header + '<div class="cleaner"/>');
-            header.find('A').each(function(index, anchor) {
+        let header_el = $('<div id="about-dialog-header"></div>');
+        if (header) {
+			let is_html = header.indexOf('<') !== -1 && header.indexOf('>') !== -1;
+			if (!is_html)
+            	header_el.html('<h2>' + header + '</h2><div class="cleaner"/>');
+			else
+				header_el.html(header + '<div class="cleaner"/>');
+            header_el.find('A').each(function(index, anchor) {
                 $(anchor).on('click', (ev) => {
                     ev.preventDefault();
                     window.open($(this).attr('href'), '_blank');
@@ -2805,70 +2795,62 @@ export class PanelUI {
             });
         }
 
-        let html_str = nl2br(description);
-        let content = $('<div id="descriptoin-dialog-content">').html(html_str);
-        content.find('A').each(function(index, anchor) {
+        let html_str = nl2br(body);
+        let content_el = $('<div id="about-dialog-content">').html(html_str);
+        content_el.find('A').each(function(index, anchor) {
             $(anchor).on('click', (ev) => {
                 ev.preventDefault();
                 window.open($(this).attr('href'), '_blank');
             });
         });
 
-		let btns = $('<div id="description-dialog-buttons"></div>');
+		let btns_el = $('<div id="about-dialog-buttons"></div>');
 		let btn_close = $("<button>Close</button>");
 		btn_close.click((ev) => {
-			that.closeDescriptionDialog(true); // don't show again
+			that.closeAboutDialog(true); // don't show again
 		});
-		btn_close.appendTo(btns);
+		btn_close.appendTo(btns_el);
 
-        $('#description-dialog').empty();
-        if (description_header) {
-            $('#description-dialog').append(header);
-            $('#description-dialog').append($('<div class="cleaner"/>'));
+        $('#about-dialog').empty();
+        if (header) {
+            $('#about-dialog').append(header_el);
+            $('#about-dialog').append($('<div class="cleaner"/>'));
         }
-            
-        $('#description-dialog').append(content)
-                                .append(btns);
+        $('#about-dialog').append([ content_el, btns_el ]);
 
 		if (html_str) {
 			$("#robot_name .label")
-				.addClass("opens-description")
+				.addClass("opens-about-dialog")
 				.unbind()
 				.click((ev) => {
-					that.showDescriptionDialog();
+					that.showAboutDialog();
 					ev.stopPropagation();
 				});
-			let show_description_dialog =
-				localStorage.getItem(
-					"description-dialog-closed:" + this.client.id_robot,
-				) != "true";
-			if (show_description_dialog) {
-				this.showDescriptionDialog();
+			if (localStorage.getItem("about-dialog-closed:" + this.client.id_robot) != "true") {
+				this.showAboutDialog();
 			}
 		} else {
 			$("#robot_name .label").addClass("opens-description").unbind();
 		}
 	}
 
-	showDescriptionDialog() {
+	showAboutDialog() {
 		let that = this;
 		$("BODY").addClass("no-scroll");
-		$("#description-dialog").css("display", "block");
+		$("#about-dialog").css("display", "block");
 		$("#dialog-modal-confirm-underlay")
 			.css("display", "block")
 			.click((ev) => {
-				that.closeDescriptionDialog(false);
+				that.closeAboutDialog(false);
 				ev.stopPropagation();
 			});
 	}
 
-	closeDescriptionDialog(save) {
-		if (save)
-			localStorage.setItem(
-				"description-dialog-closed:" + this.client.id_robot,
-				"true",
-			);
-		$("#description-dialog").css("display", "none");
+	closeAboutDialog(save) {
+		if (save) {
+			localStorage.setItem("about-dialog-closed:" + this.client.id_robot, "true");
+		}
+		$("#about-dialog").css("display", "none");
 		$("#dialog-modal-confirm-underlay").css("display", "none").unbind();
 		$("BODY").removeClass("no-scroll");
 	}
@@ -3077,7 +3059,7 @@ export class PanelUI {
 			let keys = Object.keys(menu_item_widths[what]);
 			let res = 0;
 			keys.forEach((key) => {
-				if (key == "docker_controls" && !that.docker_control_shown) return;
+				if (key == "docker_controls" && !that.docker_monitor_shown) return;
 				res += menu_item_widths[what][key] + h_extra;
 			});
 			return res;
@@ -3481,10 +3463,13 @@ export class PanelUI {
 
 	updateBatteryStatus(msg) {
 		let topic = this.battery_topic;
-		if (!topic || !this.client.topic_configs[topic]) return;
+		if (!topic) return;
+	
+		let topic_config = this.client.getTopicConfig(topic);
+		if (!topic_config) return;
 
-		let voltage_min = this.client.topic_configs[topic].min_voltage;
-		let voltage_max = this.client.topic_configs[topic].max_voltage;
+		let voltage_min = topic_config.min_voltage;
+		let voltage_max = topic_config.max_voltage;
 
 		if (!this.battery_samples) this.battery_samples = [];
 		this.battery_samples.push(msg.voltage);
@@ -3537,9 +3522,6 @@ export class PanelUI {
 	}
 
 	updateWifiStatus(msg) {
-		// /iw_status in
-		// console.warn('UpdateIWStatus', msg)
-
 		let qPercent = (msg.quality / msg.quality_max) * 100.0;
 		this.updateWifiSignal(qPercent);
 
@@ -3555,48 +3537,20 @@ export class PanelUI {
 			essidclass = "new";
 		}
 
-		let html =
-			'<div class="section-label">Connected to Wi-Fi</div>' +
-			'<span class="label space">SSID:</span> ' +
-			msg.essid +
-			"<br>" +
-			'<span class="label">Access Point:</span> ' +
-			msg.access_point +
-			"<br>" +
-			'<span class="label">Frequency:</span> ' +
-			(msg.frequency ? msg.frequency.toFixed(3) : null) +
-			" GHz<br>" +
-			'<span class="label">BitRate:</span> ' +
-			(msg.bit_rate ? msg.bit_rate.toFixed(1) : null) +
-			" Mb/s<br> " +
-			'<span class="label" title="' +
-			msg.quality +
-			"/" +
-			msg.quality_max +
-			'" style="cursor:help;">Quality:</span> ' +
-			qPercent.toFixed(0) +
-			"%<br> " +
-			'<span class="label">Level:</span> ' +
-			msg.level +
-			"<br> " +
-			'<span class="label">Noise:</span> ' +
-			msg.noise +
-			" ";
-		$("#trigger_wifi_scan").css(
-			"display",
-			msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none",
-		);
-		$("#trigger_wifi_roam").css(
-			"display",
-			msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none",
-		);
-		// $('#robot_wifi_info').removeClass('offline');
+		let html = '<div class="section-label">Connected to Wi-Fi</div>' +
+				   '<span class="label space">SSID:</span> ' + msg.essid + "<br>" +
+				   '<span class="label">Access Point:</span> ' + msg.access_point + "<br>" +
+				   '<span class="label">Frequency:</span> ' + (msg.frequency ? msg.frequency.toFixed(3) : null) + " GHz<br>" +
+				   '<span class="label">BitRate:</span> ' + (msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + " Mb/s<br> " +
+				   '<span class="label" title="' + msg.quality + "/" + msg.quality_max + '" style="cursor:help;">Quality:</span> ' + qPercent.toFixed(0) + "%<br> " +
+				   '<span class="label">Level:</span> ' + msg.level + "<br> " +
+				   '<span class="label">Noise:</span> ' + msg.noise + " ";
+		$("#trigger_wifi_scan").css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
+		$("#trigger_wifi_roam").css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
 
 		if (msg.supports_scanning) {
 			if (!this.wifi_scan_service) {
-				let iw_node = msg.header.frame_id
-					? "phntm_agent_" + msg.header.frame_id
-					: "phntm_agent";
+				let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
 				this.wifi_scan_service = "/" + iw_node + "/iw_scan";
 
 				this.client.registerServiceRequestCallback(
@@ -3613,8 +3567,6 @@ export class PanelUI {
 				);
 			}
 		}
-		// let selected_pair = this.client.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
-		// console.log('Selected pair', selected_pair);
 
 		this.updateRTT();
 

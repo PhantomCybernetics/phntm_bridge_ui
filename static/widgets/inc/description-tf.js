@@ -58,8 +58,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		'Ambient light (no shadows)'
 	];
 
-	constructor(panel, widget_conf, start_rendering_loop=true) {
-		super(panel, 'description-tf');
+	constructor(panel, widget_css_class, start_rendering_loop=true) {
+		super(panel, widget_css_class);
 
 		// defaults overwritten by url params
 		this.vars = {

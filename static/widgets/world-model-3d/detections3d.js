@@ -33,13 +33,19 @@ export class WorldModel3DWidget_Detections3D {
         this.clear_timeout_ms = 300; // clear if no new data received in this long
 		this.display_labels = world_model.panel.getPanelVarAsBool('dl', true);
 
+		this.overlays = {}; // topic => conf from yaml
+
 		this.setDisplayLabels(this.display_labels);
     }
 
-    onTopicConfig(topic, config) {
-        console.log('Got TOPIC CONF in detections!', topic, config);
-
+    addTopic(topic) {
+		console.warn('World Model Detections3D adding topic ', topic);
 		this.detection_class_colors[topic] = [];
+		let config = this.world_model.client.getTopicConfig(topic);
+		if (!this.overlays[topic])
+			this.overlays[topic] = {};
+		this.overlays[topic].config = config;
+
 		if (config && config["color_map"] !== undefined) {
 			for (let class_id = 0; class_id < config["color_map"].length; class_id++) {
 				let c = config["color_map"][class_id];
@@ -169,7 +175,7 @@ export class WorldModel3DWidget_Detections3D {
     onTopicData(topic, msg) {
         if (!this.world_model.robot_model || this.world_model.panel.paused) return;
 
-		if (!this.world_model.overlays[topic] || !this.world_model.overlays[topic].config) return; // wait for config
+		if (!this.world_model.overlay_topics[topic] || !this.overlays[topic].config) return; // wait for config
 
 		let frame_id = msg.header.frame_id;
 		let f = this.world_model.robot_model.getFrame(frame_id);
@@ -241,8 +247,8 @@ export class WorldModel3DWidget_Detections3D {
 			let i_class = num_detections_per_class[d.class_id] - 1;
 
 			let l = "Class " + d.class_id;
-			if (this.world_model.overlays[topic].config["label_map"] && this.world_model.overlays[topic].config["label_map"][d.class_id])
-				l = this.world_model.overlays[topic].config["label_map"][d.class_id];
+			if (this.overlays[topic].config["label_map"] && this.overlays[topic].config["label_map"][d.class_id])
+				l = this.overlays[topic].config["label_map"][d.class_id];
 			l += " (" + d.score.toFixed(2) + ")\n";
 			//+"[" + box_center.x.toFixed(2) + ";" + box_center.y.toFixed(2) + ";" + box_center.z.toFixed(2) + "]";
 
@@ -273,9 +279,9 @@ export class WorldModel3DWidget_Detections3D {
 			let marker_el = null;
 			if (!this.detection_markers[topic][d.class_id][i_class]) {
 				
-				if (this.world_model.overlays[topic].config["model_map"] && this.world_model.overlays[topic].config["model_map"][d.class_id]) {
+				if (this.overlays[topic].config["model_map"] && this.overlays[topic].config["model_map"][d.class_id]) {
 				
-					let model_path = this.world_model.overlays[topic].config["model_map"][d.class_id];
+					let model_path = this.overlays[topic].config["model_map"][d.class_id];
 					if (this.loaded_models[model_path] instanceof THREE.Object3D) {
 						let model = new THREE.Object3D();
 						model.copy(this.loaded_models[model_path]);
