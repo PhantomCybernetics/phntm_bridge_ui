@@ -3078,7 +3078,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
 .panel_widget.log {
 	background: black;
 	color: #fff;
-	font-size: 12px;
+	font-size: 14px;
 	height: 100%;
 	overflow: scroll;
 	scrollbar-width: none;
@@ -3093,11 +3093,19 @@ BODY.touch-ui .editing .grid-stack-item-content {
 }
 
 .panel_widget.log .log_line .name {
-	color: #006dff;
+	color: #fece00;
 }
 
 .panel_widget.log .log_line .time {
-	color: #8c0361;
+	color: #ffffff85;
+}
+
+.panel_widget.log .log_line .debug {
+	color: #6bcd08;
+}
+
+.panel_widget.log .log_line .error {
+	color: #ff3f3f;
 }
 
 .panel_widget.video {
