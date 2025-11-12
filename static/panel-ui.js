@@ -313,7 +313,7 @@ export class PanelUI {
 
 		// triggered before ui_config
 		client.on("input_config", (drivers, default_profiles, robot_service_buttons) => {
-			console.log("got robot service buttons", robot_service_buttons);
+			console.log("Got robot service buttons", robot_service_buttons);
 			that.default_service_btns = robot_service_buttons; // {} if undefined on robot
 			that.servicesMenuFromNodes();
 		});

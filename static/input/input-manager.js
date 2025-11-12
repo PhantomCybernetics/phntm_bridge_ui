@@ -291,11 +291,11 @@ export class InputManager {
 		this.makeUI(); // ui config may arrive later, render again with current vals (like wifi_scan_enabled)
 	}
 
-	setConfig(enabled_drivers, robot_defaults) {
+	setConfig(enabled_driver_classes, robot_defaults) {
 		if (!this.profiles) {
 			// only once
 
-			if (!enabled_drivers || !enabled_drivers.length) {
+			if (!enabled_driver_classes || !enabled_driver_classes.length) {
 				// no drivers allowed => no input
 				console.log("Input is disabled by the robot");
 				// hide monkey and touch icon from UI
@@ -315,12 +315,9 @@ export class InputManager {
 
 			this.profiles = {};
 
-			console.info(
-				`Input manager got robot config; enabled_drivers=[${enabled_drivers.join(", ")}]:`,
-				robot_defaults,
-			);
+			console.info(`Input manager got robot config; enabled_driver_classes=[${enabled_driver_classes.join(", ")}]:`, robot_defaults);
 
-			this.enabled_drivers = enabled_drivers; // input_drivers array from the robot's config
+			this.enabled_drivers = enabled_driver_classes; // input_drivers array from the robot's config
 
 			this.robot_defaults = robot_defaults; // json from the 'input_defaults' file on the robot
 
@@ -462,15 +459,7 @@ export class InputManager {
 				let driver = profile_default_cfg.driver;
 				if (!driver || this.enabled_drivers.indexOf(driver) < 0) {
 					driver = this.enabled_drivers[0];
-					console.warn(
-						"Controller profile " +
-							id_profile +
-							" for " +
-							c.type +
-							" missing driver " +
-							"; falling back to" +
-							driver,
-					);
+					console.warn("Controller profile " + id_profile + " for " + c.type + " missing driver " + "; falling back to" + driver);
 				}
 
 				let c_profile = {
@@ -1086,27 +1075,16 @@ export class InputManager {
 					case "ros-srv":
 						new_btn.action = default_config.action;
 						new_btn.ros_srv_id = default_config.ros_srv_id;
-						new_btn.ros_srv_silent_req = default_config.ros_srv_silent_req
-							? true
-							: false;
-						new_btn.ros_srv_silent_res = default_config.ros_srv_silent_res
-							? true
-							: false;
+						new_btn.ros_srv_silent_req = default_config.ros_srv_silent_req ? true : false;
+						new_btn.ros_srv_silent_res = default_config.ros_srv_silent_res ? true : false;
 						new_btn.assigned = true;
 
 						new_btn.ros_srv_msg_type = null;
 						if (this.client.discovered_services[new_btn.ros_srv_id]) {
-							new_btn.ros_srv_msg_type =
-								this.client.discovered_services[
-									new_btn.ros_srv_id
-								].msg_type;
+							new_btn.ros_srv_msg_type = this.client.discovered_services[new_btn.ros_srv_id].msg_type;
 						} else {
 							// otherwise checked on services update
-							console.log(
-								"ros-srv btn action missing message type, service " +
-									new_btn.ros_srv_id +
-									" not discovered yet?",
-							);
+							console.log("ros-srv btn action missing message type, service " + new_btn.ros_srv_id + " not discovered yet?");
 							// this.client.runIntrospection();
 						}
 
@@ -1183,25 +1161,13 @@ export class InputManager {
 					d.buttons.forEach((btn) => {
 						if (btn.action == "ros-srv") {
 							// update missing message type
-							if (
-								btn.ros_srv_id &&
-								!btn.ros_srv_msg_type &&
-								discovered_services[btn.ros_srv_id]
-							) {
-								btn.ros_srv_msg_type =
-									discovered_services[btn.ros_srv_id].msg_type;
-								console.log(
-									"Message type discovered for " + btn.ros_srv_id,
-								) +
-									": " +
-									btn.ros_srv_msg_type;
+							if (btn.ros_srv_id && !btn.ros_srv_msg_type && discovered_services[btn.ros_srv_id]) {
+								btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+								console.log("Message type discovered for " + btn.ros_srv_id + ": " + btn.ros_srv_msg_type);
 							}
 
 							// update ros-srv btn config ui
-							if (
-								that.edited_controller == c &&
-								that.current_profile == id_profile
-							) {
+							if (that.edited_controller == c && that.current_profile == id_profile) {
 								// console.log('Updating btn config ui (services changed)', btn);
 								that.renderBtnConfig(d, btn);
 							}
@@ -1832,15 +1798,10 @@ export class InputManager {
 	}
 
 	registerDriver(driver_class) {
-		let id_driver = new driver_class(this).id_driver;
-		if (!id_driver) {
-			console.log("id_driver not found in driver class:", driver_class);
-			return;
-		}
+		let id_driver = driver_class.name;
 		if (this.registered_drivers[id_driver])
 			return;
-
-		console.log('Registering input driver with id '+id_driver);
+		console.log('Registering input driver class ' + id_driver);
 		this.registered_drivers[id_driver] = driver_class;
 	}
 
@@ -1936,9 +1897,7 @@ export class InputManager {
 
 		setTimeout(() => {
 			if (!this.edited_controller || !this.enabled_drivers) {
-				$("#gamepad-settings-panel").html(
-					'<div class="line"><span class="label">Input source:</span><span class="static_val">N/A</span></div>',
-				);
+				$("#gamepad-settings-panel").html('<div class="line"><span class="label">Input source:</span><span class="static_val">N/A</span></div>');
 				// $('#gamepad-settings-panel').removeClass('has-buttons');
 			} else {
 				let lines = [];
@@ -1948,50 +1907,27 @@ export class InputManager {
 					label = "Virtual Gamepad (Touch UI)";
 				if (this.edited_controller.type == "keyboard") label = "Keyboard";
 
-				let line_source = $(
-					'<div class="line"><span class="label">Input source:</span><span class="static_val" title="' +
-						label +
-						'">' +
-						label +
-						"</span></div>",
-				);
+				let line_source = $('<div class="line"><span class="label">Input source:</span><span class="static_val" title="' + label + '">' + label + "</span></div>");
 				lines.push(line_source);
 
 				if (this.current_profile) {
 					let c_profile = this.edited_controller.profiles[this.current_profile];
 
 					//driver
-					let line_driver = $(
-						'<div class="line"><span class="label">Output driver:</span></div>',
-					);
+					let line_driver = $('<div class="line"><span class="label">Output driver:</span></div>');
 					let driver_opts = [];
 
 					if (!this.enabled_drivers || !this.enabled_drivers.length) {
-						console.error(
-							"No enabled drivers for " +
-								this.edited_controller.id +
-								" (yet?)",
-						);
+						console.error("No enabled drivers for " + this.edited_controller.id + " (yet?)");
 						return;
 					}
 
 					for (let i = 0; i < this.enabled_drivers.length; i++) {
 						let id_driver = this.enabled_drivers[i];
-						driver_opts.push(
-							'<option value="' +
-								id_driver +
-								'"' +
-								(c_profile.driver == id_driver ? " selected" : "") +
-								">" +
-								id_driver +
-								"</option>",
-						);
+						let label = this.registered_drivers[id_driver].label;
+						driver_opts.push('<option value="' + id_driver + '"' + (c_profile.driver == id_driver ? " selected" : "") + ">" + label + "</option>");
 					}
-					let inp_driver = $(
-						'<select id="gamepad-profile-driver-select">' +
-							driver_opts.join("") +
-							"</select>",
-					);
+					let inp_driver = $('<select id="gamepad-profile-driver-select">' + driver_opts.join("") + "</select>");
 
 					inp_driver.appendTo(line_driver);
 					inp_driver.change((ev) => {
@@ -2608,17 +2544,7 @@ export class InputManager {
 				// if (that.ui.ignored_service_types.includes(msg_type))
 				//     return; // not rendering ignored
 
-				node_opts.push(
-					'<option value="' +
-						id_srv +
-						":" +
-						msg_type +
-						'"' +
-						(btn.ros_srv_id == id_srv ? " selected" : "") +
-						">" +
-						id_srv +
-						"</option>",
-				);
+				node_opts.push('<option value="' + id_srv + ":" + msg_type + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
 			});
 
 			if (node_opts.length) {
@@ -2635,19 +2561,14 @@ export class InputManager {
 		let render_srv_details = () => {
 			srv_details_el.empty();
 			if (btn.ros_srv_msg_type) {
-				let srv_val_btn = $(
-					'<button class="srv-val" title="Set service call data">{}</button>',
-				);
+				let srv_val_btn = $('<button class="srv-val" title="Set service call data">{}</button>');
 				srv_val_btn.click(() => {
 					that.ui.service_input_dialog.showInputManagerDialog(
 						btn.ros_srv_id,
 						btn.ros_srv_msg_type,
 						btn.ros_srv_val,
 						(srv_payload) => {
-							console.warn(
-								"Setting srv payload for " + btn.ros_srv_id + ":",
-								srv_payload,
-							);
+							console.warn("Setting srv payload for " + btn.ros_srv_id + ":", srv_payload);
 							btn.ros_srv_val = srv_payload;
 							that.checkControllerProfileSaved(
 								that.edited_controller,
@@ -2657,18 +2578,8 @@ export class InputManager {
 					);
 				});
 
-				let silent_req_el = $(
-					'<div class="config-row"><label for="' +
-						btn.i +
-						'_silent_req_cb" class="small-settings-cb-label">Silent request</label></div>',
-				);
-				let silent_req_inp = $(
-					'<input type="checkbox" ' +
-						(btn.ros_srv_silent_req ? " checked" : "") +
-						' id="' +
-						btn.i +
-						'_silent_req_cb" class="small-settings-cb"/>',
-				);
+				let silent_req_el = $('<div class="config-row"><label for="' + btn.i + '_silent_req_cb" class="small-settings-cb-label">Silent request</label></div>');
+				let silent_req_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_req ? " checked" : "") + ' id="' + btn.i + '_silent_req_cb" class="small-settings-cb"/>');
 				silent_req_inp.prependTo(silent_req_el);
 				silent_req_inp.change((ev) => {
 					let val = $(ev.target).prop("checked") ? true : false;
@@ -2679,18 +2590,8 @@ export class InputManager {
 					);
 				});
 
-				let silent_res_el = $(
-					'<div class="config-row"><label for="' +
-						btn.i +
-						'_silent_res_cb" class="small-settings-cb-label">Silent response</label></div>',
-				);
-				let silent_res_inp = $(
-					'<input type="checkbox" ' +
-						(btn.ros_srv_silent_res ? " checked" : "") +
-						' id="' +
-						btn.i +
-						'_silent_res_cb" class="small-settings-cb"/>',
-				);
+				let silent_res_el = $('<div class="config-row"><label for="' + btn.i + '_silent_res_cb" class="small-settings-cb-label">Silent response</label></div>');
+				let silent_res_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_res ? " checked" : "") + ' id="' + btn.i + '_silent_res_cb" class="small-settings-cb"/>');
 				silent_res_inp.prependTo(silent_res_el);
 				silent_res_inp.change((ev) => {
 					let val = $(ev.target).prop("checked") ? true : false;
@@ -2721,12 +2622,7 @@ export class InputManager {
 				btn.ros_srv_msg_type = null;
 			}
 			btn.ros_srv_val = null; // remove val
-			console.log(
-				"btn set to ros srv " +
-					btn.ros_srv_id +
-					" msg type=" +
-					btn.ros_srv_msg_type,
-			);
+			console.log("btn set to ros srv " + btn.ros_srv_id + " msg type=" + btn.ros_srv_msg_type);
 			render_srv_details();
 			that.checkControllerProfileSaved(
 				that.edited_controller,
@@ -3805,25 +3701,11 @@ export class InputManager {
 					local_error = true;
 				} else if (!btn.ros_srv_msg_type) {
 					console.error("Service msg_type not set");
-					this.ui.showNotification(
-						"Service " +
-							btn.ros_srv_id +
-							" not yet discovered, missing message type",
-						"error",
-					);
+					this.ui.showNotification("Service " + btn.ros_srv_id + " not yet discovered, missing message type", "error");
 					local_error = true;
 				} else if (btn.service_blocked) {
-					this.ui.showNotification(
-						"Skipping service " +
-							btn.ros_srv_id +
-							" call (previous call unfinished)",
-						"error",
-					);
-					console.warn(
-						"Skipping service " +
-							btn.ros_srv_id +
-							" call (previous call unfinished)",
-					);
+					this.ui.showNotification("Skipping service " + btn.ros_srv_id + " call (previous call unfinished)", "error");
+					console.warn("Skipping service " + btn.ros_srv_id + " call (previous call unfinished)");
 					local_error = true;
 				}
 				if (local_error) {

@@ -1,4 +1,11 @@
 export class InputDriver {
+
+	static label = "InputDriver"; // override these
+	
+	msg_type = ""; 
+	num_axes = 10;
+	num_buttons = 10;
+
 	constructor(input_manager) {
 		// this.id = id;
 		// this.label = label;
