@@ -109,7 +109,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 				return;
 			
 			Object.values(that.plugins).forEach((p) => {
-				if (p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
+				if (client.discovered_topics[topic] && p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
 					if (p.addTopic)
 						p.addTopic(topic);
 					that.overlay_topics[topic] = true;
