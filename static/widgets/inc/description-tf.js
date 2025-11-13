@@ -728,7 +728,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		// ground plane type
 		let render_grnd_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_grnd_label = $('<label for="render_grnd_' + this.panel.n + '""></label>');
+		let render_grnd_label = $('<label></label>');
 		let render_grnd_label_value = $('<span></span>');
 		let render_grnd_btn_left = $('<button class="left">&laquo;</button>');
 		let render_grnd_btn_right = $('<button class="right">&raquo;</button>');
@@ -763,7 +763,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		
 		// ground plane type
 		let render_skybox_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_skybox_label = $('<label for="render_sky_' + this.panel.n + '""></label>');
+		let render_skybox_label = $('<label></label>');
 		let render_skybox_label_value = $('<span></span>');
 		let render_skybox_btn_left = $('<button class="left">&laquo;</button>');
 		let render_skybox_btn_right = $('<button class="right">&raquo;</button>');
@@ -798,7 +798,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		// light type
 		let render_light_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_light_label = $('<label for="render_sky_' + this.panel.n + '""></label>');
+		let render_light_label = $('<label></label>');
 		let render_light_label_value = $('<span></span>');
 		let render_light_btn_left = $('<button class="left">&laquo;</button>');
 		let render_light_btn_right = $('<button class="right">&raquo;</button>');

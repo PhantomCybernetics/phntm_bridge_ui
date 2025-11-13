@@ -203,7 +203,7 @@ export class MultiTopicSource extends EventTarget {
 
 		Object.values(this.widget.panel.ui.client.discovered_topics).forEach((topic) => {
 			if (this.subscribed_topics[topic.id]) {
-				console.log(`topic ${topic.id} already subscriber; ignoring`);
+				console.log(`topic ${topic.id} already subscribed; ignoring`);
 				return; // topic already used, igore
 			}
 

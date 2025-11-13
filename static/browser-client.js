@@ -1081,6 +1081,7 @@ export class PhntmBridgeClient extends EventTarget {
 		if (robot_data["prefixed_configs"]) {
 			console.log("UI got prefixed_configs: ", robot_data["prefixed_configs"]);
 			this.prefixed_configs = robot_data["prefixed_configs"]; 
+			this.emit("prefixed_configs", this.prefixed_configs);
 		}
 
 		// global ui config

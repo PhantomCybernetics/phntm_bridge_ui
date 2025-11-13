@@ -427,8 +427,18 @@ export class PanelUI {
 		// so this subscribes every time
 		// client.on('/iw_status', iwStatusWrapper);
 
+		this.topics_received = null;
+		this.config_received = false;
 		client.on("topics", (topics) => {
-			that.initPanels(topics);
+			that.topics_received = topics;
+			if (that.config_received)
+				that.initPanels(topics);
+		});
+
+		client.on("ui_config", (ui_config) => { // prefixed configs trigger before this, so at this point we should have all the configs
+			that.config_received = true;
+			if (that.topics_received)
+				that.initPanels(that.topics_received);
 		});
 
 		client.on("nodes", (nodes) => {
