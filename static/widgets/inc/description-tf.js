@@ -24,6 +24,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static L_ROS_ORIGIN_MARKER = 8;
 	static L_ROS_ORIGIN_LABEL = 9;
 
+	static INITIAL_CAMERA_DISTANCE_MULTIPLIER = 3.0; // camera will start this times the detected model size away
+
 	static ROS_SPACE_KEY = "ROS_SPACE";
 
 	static GROUND_PLANES = [
@@ -1292,7 +1294,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// set initial distance proportional to model size
 		if (this.vars.follow_target && !this.camera_distance_initialized) {
 			this.camera_distance_initialized = true;
-			let initial_dist = model_size_approx * 2.0;
+			let initial_dist = model_size_approx * DescriptionTFWidget.INITIAL_CAMERA_DISTANCE_MULTIPLIER;
 			this.camera_pos.normalize().multiplyScalar(initial_dist);
 			this.camera.position.copy(this.camera_pos);
 		}

@@ -432,14 +432,12 @@ export class PanelUI {
 		this.config_received = false;
 		client.on("topics", (topics) => {
 			that.topics_received = topics;
-			if (that.config_received)
-				that.initPanels(topics);
+			that.initPanels();
 		});
 
 		client.on("ui_config", (ui_config) => { // prefixed configs trigger before this, so at this point we should have all the configs
 			that.config_received = true;
-			if (that.topics_received)
-				that.initPanels(that.topics_received);
+			that.initPanels();
 		});
 
 		client.on("nodes", (nodes) => {
@@ -1218,15 +1216,25 @@ export class PanelUI {
 		// return content_width;
 	}
 
-	initPanels(topics) {
+	initPanels() {
+		if (!this.topics_received || !this.config_received)
+			return;
 		let that = this;
-		let topic_ids = Object.keys(topics);
-		// console.warn("Initializing panels for topics", topics);
+		let topic_ids = Object.keys(this.topics_received);
+		console.log('Initializing panels...');
 		topic_ids.forEach((id_topic) => {
 			if (!that.panels[id_topic] || that.panels[id_topic].initiated) return;
-			let msg_type = topics[id_topic].msg_type;
+			let msg_type = this.topics_received[id_topic].msg_type;
 			that.panels[id_topic].init(msg_type); //init w message type
 		});
+		let widget_ids = Object.keys(this.widgets);
+		widget_ids.forEach((id_source)=>{
+			if (topic_ids.indexOf(id_source) != -1)
+				return; // topic already done
+			if (!this.panels[id_source])
+				return;
+			this.panels[id_source].init(id_source, true);
+		})
 	}
 
 	camerasMenuFromNodesAndDevices() {
@@ -1318,9 +1326,9 @@ export class PanelUI {
 			row_el.append(cam_cb);
 			$("#cameras_list").append(row_el);
 
-			if (this.panels[camera.src_id]) {
-				this.panels[camera.src_id].init(camera.msg_type);
-			}
+			// if (this.panels[camera.src_id]) {
+			// 	this.panels[camera.src_id].init(camera.msg_type);
+			// }
 		}
 	}
 

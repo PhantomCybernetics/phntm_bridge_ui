@@ -247,13 +247,13 @@ export class Panel {
 	init(msg_type = null, from_url_hash = false) {
 		let fallback_show_src = true;
 
-		if (!this.pauseEl) {
+		if (!this.pause_el) {
 			// pause panel updates
-			this.pauseEl = $('<span id="pause_panel_' + this.n + '" class="pause-panel-button paused" title="Waiting for data..."></span>');
-			this.pauseEl.insertBefore("#monitor_menu_" + this.n);
+			this.pause_el = $('<span id="pause_panel_' + this.n + '" class="pause-panel-button paused" title="Waiting for data..."></span>');
+			this.pause_el.insertBefore("#monitor_menu_" + this.n);
 		}
 
-		if (msg_type && !this.initiated) {
+		if (msg_type && !this.initiated && this.ui.config_received) {
 			console.log("Initiating panel " + this.id_source + " for " + msg_type);
 
 			// set w/h before widget constructors
@@ -366,16 +366,16 @@ export class Panel {
 			this.setMenu();
 
 			if (this.paused) {
-				this.pauseEl.addClass("paused");
-				this.pauseEl.attr("title", "Unpause");
+				this.pause_el.addClass("paused");
+				this.pause_el.attr("title", "Unpause");
 				if (this.display_widget && this.display_widget.onPaused)
 					this.display_widget.onPaused();
 			} else {
-				this.pauseEl.removeClass("paused");
-				this.pauseEl.attr("title", "Pause");
+				this.pause_el.removeClass("paused");
+				this.pause_el.attr("title", "Pause");
 			}
 			let that = this;
-			this.pauseEl.click(function (e) {
+			this.pause_el.click(function (e) {
 				that.pauseToggle();
 				e.cancelBubble = true;
 				return false;
@@ -532,13 +532,13 @@ export class Panel {
 		this.paused = !this.paused;
 		console.log("Panel updates paused " + this.paused);
 		if (this.paused) {
-			this.pauseEl.addClass("paused");
-			this.pauseEl.attr("title", "Unpause");
+			this.pause_el.addClass("paused");
+			this.pause_el.attr("title", "Unpause");
 			if (this.display_widget && this.display_widget.onUnpaused)
 				this.display_widget.onUnpaused();
 		} else {
-			this.pauseEl.removeClass("paused");
-			this.pauseEl.attr("title", "Pause");
+			this.pause_el.removeClass("paused");
+			this.pause_el.attr("title", "Pause");
 			if (this.display_widget && this.display_widget.onPaused)
 				this.display_widget.onPaused();
 		}
