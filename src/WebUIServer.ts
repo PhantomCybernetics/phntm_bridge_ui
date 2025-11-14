@@ -52,6 +52,8 @@ export function createWebUIServerExpressApp(
 		webExpressApp.use("/static/canvasjs-charts/", express.static("node_modules/@canvasjs/charts"));
 
 	webExpressApp.use("/static/touch-gamepad/", express.static("node_modules/@rbuljan/gamepad/"));
+	webExpressApp.use("/static/qr-code-styling/", express.static("node_modules/qr-code-styling/lib/"));
+	
 	webExpressApp.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 		res.redirect("/static/favicons/favicon-yellow-16x16.png");
 	});

@@ -1,6 +1,7 @@
 import { GraphMenu } from "/static/graph-menu.js";
 import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "/static/browser-client.js";
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
+// import { QRCodeStyling } from '/static/qr-code-styling/qr-code-styling.common.js';
 
 import { Panel } from "./panel.js";
 import {
@@ -2787,7 +2788,7 @@ export class PanelUI {
 	}
 
     makeAboutPopupDialog(header, body) {
-        
+    
         let that = this;
 
         let header_el = $('<div id="about-dialog-header"></div>');
@@ -2805,7 +2806,7 @@ export class PanelUI {
             });
         }
 
-        let html_str = nl2br(body);
+        let html_str = body;
         let content_el = $('<div id="about-dialog-content">').html(html_str);
         content_el.find('A').each(function(index, anchor) {
             $(anchor).on('click', (ev) => {
@@ -2815,11 +2816,15 @@ export class PanelUI {
         });
 
 		let btns_el = $('<div id="about-dialog-buttons"></div>');
+		let remember_cb = $('<input type="checkbox" id="about-dialog-remember-close"/>');
+		remember_cb.prop('checked', localStorage.getItem("about-dialog-closed:" + this.client.id_robot) == "true");
+		let remember_label = $('<label for="about-dialog-remember-close" class="remember-close"><span class="long">Don\'t show this again</span><span class="short">Remember</span></label>');
+		remember_label.append(remember_cb);
 		let btn_close = $("<button>Close</button>");
 		btn_close.click((ev) => {
-			that.closeAboutDialog(true); // don't show again
+			that.closeAboutDialog(remember_cb.prop('checked'));
 		});
-		btn_close.appendTo(btns_el);
+		btns_el.append([remember_label, btn_close]);
 
         $('#about-dialog').empty();
         if (header) {
@@ -2837,16 +2842,18 @@ export class PanelUI {
 					ev.stopPropagation();
 				});
 			if (localStorage.getItem("about-dialog-closed:" + this.client.id_robot) != "true") {
-				this.showAboutDialog();
+				this.showAboutDialog(true);
 			}
 		} else {
 			$("#robot_name .label").addClass("opens-description").unbind();
 		}
 	}
 
-	showAboutDialog() {
+	showAboutDialog(show_remember_checkbox=false) {
+
 		let that = this;
 		$("BODY").addClass("no-scroll");
+		$('#about-dialog .remember-close').css('display', show_remember_checkbox ? 'block' : 'none');
 		$("#about-dialog").css("display", "block");
 		$("#dialog-modal-confirm-underlay")
 			.css("display", "block")

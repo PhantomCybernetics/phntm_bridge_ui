@@ -5574,7 +5574,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
     /* min-width: 520px; */
     padding: 20px;
     min-width: min(970px, calc(100% - 100px));
-    max-width: calc(100% - 100px);
+    max-width: min(500px, calc(100% - 100px));
     /* max-height: calc(100% - 100px); */
     font-size: 17px;
     color: #fff;
@@ -5598,7 +5598,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
     max-height: calc(100vh - 300px);
     padding: 10px;
     border-radius: 10px;
-    text-align: center;
+    text-align: left;
 }
 
 #about-dialog-buttons {
@@ -5631,6 +5631,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
 	margin: 0px auto;
 	border-radius: 5px;
 	font-weight: bold;
+	position: relative;
 }
 
 #about-dialog A {
