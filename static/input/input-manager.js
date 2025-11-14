@@ -295,23 +295,17 @@ export class InputManager {
 		if (!this.profiles) {
 			// only once
 
-			if (!enabled_driver_classes || !enabled_driver_classes.length) {
-				// no drivers allowed => no input
-				console.log("Input is disabled by the robot");
+			if (!enabled_driver_classes || !enabled_driver_classes.length) { // no drivers allowed => no input
+				console.warn("Input is disabled by the robot");
 				// hide monkey and touch icon from UI
 				this.enabled = false;
-				localStorage.removeItem(
-					"last-robot-input-defaults:" + this.client.id_robot,
-				);
+				localStorage.removeItem("last-robot-input-defaults:" + this.client.id_robot);
 				this.ui.updateInputButtons();
 				return;
 			}
 
 			this.enabled = true;
-			localStorage.setItem(
-				"last-robot-input-defaults:" + this.client.id_robot,
-				JSON.stringify(robot_defaults),
-			); // show icons & buttons right away next time to make the UI feel (more) solid
+			localStorage.setItem("last-robot-input-defaults:" + this.client.id_robot, JSON.stringify(robot_defaults)); // show icons & buttons right away next time to make the UI feel (more) solid
 
 			this.profiles = {};
 
@@ -323,15 +317,13 @@ export class InputManager {
 
 			this.user_defaults = {};
 
-			//let user_defaults = {};
-			//this.user_defaults = user_defaults ? JSON.parse(user_defaults) : {};
-
-			// console.log('Loaded user input defaults: ', this.user_defaults);
-
 			// robot defined profiles
-			Object.keys(this.robot_defaults).forEach((id_profile) => {
-				if (this.current_profile === null) this.current_profile = id_profile; // 1st is default
+			Object.keys(this.robot_defaults).forEach((id_profile) => {	
 				if (!this.profiles[id_profile]) {
+					if (this.current_profile === null && robot_defaults[id_profile].default) { // we need to mark the default profile bcs json attributes are not kept ordered
+						this.current_profile = id_profile;
+						console.log('Default input profile: '+id_profile);
+					}
 					let label = robot_defaults[id_profile].label
 						? robot_defaults[id_profile].label
 						: id_profile;
@@ -384,7 +376,7 @@ export class InputManager {
 			}
 
 			let last_user_profile = this.loadLastUserProfile();
-			console.log("Loaded last input profile :", last_user_profile);
+			console.log("Loaded last user input profile: ", last_user_profile);
 
 			if (last_user_profile && this.profiles[last_user_profile]) {
 				this.current_profile = last_user_profile;
@@ -1739,22 +1731,14 @@ export class InputManager {
 		let all_controller_ids = this.getAllControllerIdsForProfile(id_profile_saved);
 		all_controller_ids.forEach((c_id) => {
 			// pass on robot defaults
-			if (
-				this.robot_defaults &&
-				this.robot_defaults[id_profile_saved] &&
-				this.robot_defaults[id_profile_saved][c_id]
-			) {
+			if (this.robot_defaults && this.robot_defaults[id_profile_saved] && this.robot_defaults[id_profile_saved][c_id]) {
 				profile_data[c_id] = Object.assign(
 					{},
 					this.robot_defaults[id_profile_saved][c_id],
 				);
 			}
 			// overwrite with saved user config
-			if (
-				this.saved_user_profiles &&
-				this.saved_user_profiles[id_profile_saved] &&
-				this.saved_user_profiles[id_profile_saved][c_id]
-			) {
+			if (this.saved_user_profiles && this.saved_user_profiles[id_profile_saved] && this.saved_user_profiles[id_profile_saved][c_id]) {
 				profile_data[c_id] = Object.assign(
 					{},
 					this.saved_user_profiles[id_profile_saved][c_id],
@@ -1788,6 +1772,8 @@ export class InputManager {
 		let that = this;
 		Object.keys(this.profiles).forEach((id_profile) => {
 			config_data[id_profile] = this.getProfileJsonData(id_profile);
+			if (id_profile == that.current_profile) config_data[id_profile].default = true; // mark current profile as default
+			else delete config_data[id_profile].default; // may have been saved
 		});
 
 		let val = JSON.stringify(config_data, null, 4);
