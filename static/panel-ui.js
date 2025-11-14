@@ -2174,12 +2174,13 @@ export class PanelUI {
 	}
 
 	onWifiScanRequest(req_data, cb) {
+		if (!req_data) req_data = {};
 		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
-		let signal_monitor = $("#signal-monitor");
-		let enabled = req_data.attempt_roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
+		let action_enabled = req_data.attempt_roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
 		let what = req_data.attempt_roam ? "roaming" : "scanning";
-		if (!enabled || dropdown_btn.hasClass("working") || signal_monitor.hasClass("working")) {
-			if (!enabled) {
+		let signal_monitor = $("#signal-monitor");
+		if (!action_enabled || dropdown_btn.hasClass("working") || signal_monitor.hasClass("working")) {
+			if (!action_enabled) {
 				this.showNotification("Wifi " + what + " disabled by robot", "error");
 				console.warn("Wi-fi " + what + " disabled by the robot");
 			}
@@ -2226,6 +2227,7 @@ export class PanelUI {
 	}
 
 	onWifiScanReply(req_data, reply_data) {
+		if (!req_data) req_data = {};
 		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
 		let signal_monitor = $("#signal-monitor");
 

@@ -2508,9 +2508,7 @@ export class InputManager {
 
 		btn.config_details_el.append(this.makeBtnTriggerSel(btn, true)); //+repeat
 
-		let srv_el = $(
-			'<div class="config-row"><span class="label">Service:</span></div>',
-		);
+		let srv_el = $('<div class="config-row"><span class="label">Service:</span></div>');
 		let srv_opts = ['<option value="">Select service...</option>'];
 
 		let nodes = this.client.discovered_nodes;
@@ -2529,7 +2527,6 @@ export class InputManager {
 				let msg_type = node.services[id_srv].msg_type;
 				// if (that.ui.ignored_service_types.includes(msg_type))
 				//     return; // not rendering ignored
-
 				node_opts.push('<option value="' + id_srv + ":" + msg_type + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
 			});
 
@@ -3710,7 +3707,7 @@ export class InputManager {
 				btn.service_blocked = true;
 				this.client.serviceCall(
 					btn.ros_srv_id,
-					btn.ros_srv_val ? btn.ros_srv_val : undefined,
+					btn.ros_srv_val ? btn.ros_srv_val : {},
 					btn.ros_srv_silent_req,
 					this.client.default_service_timeout_sec,
 					(reply) => {
