@@ -1225,7 +1225,7 @@ export class PanelUI {
 		topic_ids.forEach((id_topic) => {
 			if (!that.panels[id_topic] || that.panels[id_topic].initiated) return;
 			let msg_type = this.topics_received[id_topic].msg_type;
-			that.panels[id_topic].init(msg_type); //init w message type
+			that.panels[id_topic].init(msg_type, false); //init w message type
 		});
 		let widget_ids = Object.keys(this.widgets);
 		widget_ids.forEach((id_source)=>{
@@ -1233,7 +1233,7 @@ export class PanelUI {
 				return; // topic already done
 			if (!this.panels[id_source])
 				return;
-			this.panels[id_source].init(id_source, true);
+			this.panels[id_source].init(id_source, false);
 		})
 	}
 
@@ -1325,10 +1325,6 @@ export class PanelUI {
 
 			row_el.append(cam_cb);
 			$("#cameras_list").append(row_el);
-
-			// if (this.panels[camera.src_id]) {
-			// 	this.panels[camera.src_id].init(camera.msg_type);
-			// }
 		}
 	}
 
@@ -2278,7 +2274,7 @@ export class PanelUI {
 		if (state) {
 			if (!panel) {
 				panel = new Panel(id_source, this, w, h, x, y);
-				panel.init(msg_type);
+				panel.init(msg_type, true);
 
 				if (isTouchDevice()) {
 					// place new in editing state
@@ -2312,7 +2308,7 @@ export class PanelUI {
 			x, y,
 			panel_vars,
 		);
-		panel.init(null);
+		panel.init(null, false);
 
 		if (isTouchDevice()) {
 			this.grid.resizable(panel.grid_widget, false);
@@ -2531,11 +2527,8 @@ export class PanelUI {
 							p.panel_vars,
 						);
 						if (this.widgets[p.id_panel]) {
-							this.panels[p.id_panel].init(p.id_panel, true);
-						} // else if (this.widgets[id_source]) {
-						//     this.panels[id_source].init(id_source);
-						// }
-
+							this.panels[p.id_panel].init(p.id_panel, false);
+						}
 						break;
 					}
 				}

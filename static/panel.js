@@ -244,7 +244,7 @@ export class Panel {
 
 	// init with message type when it's known
 	// might get called with null gefore we receive the message type
-	init(msg_type = null, from_url_hash = false) {
+	init(msg_type = null, update_panel_vars) {
 		let fallback_show_src = true;
 
 		if (!this.pause_el) {
@@ -360,9 +360,10 @@ export class Panel {
 				this.onDataContextWrapper(this.init_data[0], this.init_data[1]);
 				this.init_data = null;
 			}
-			//use latest msg
+			
+			if (update_panel_vars)
+				this.ui.updateUrlHash();
 
-			if (!from_url_hash) this.ui.updateUrlHash();
 			this.setMenu();
 
 			if (this.paused) {
