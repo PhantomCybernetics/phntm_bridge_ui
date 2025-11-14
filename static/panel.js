@@ -76,24 +76,27 @@ export class Panel {
 		this.n = Panel.PANEL_NO++;
 
 		let html = '<div class="grid_panel" data-source="' + id_source + '">' +
-				   '<h3 class="panel-title" id="panel_title_' + this.n + '" title="' + id_source + '">' + id_source + "</h3>" +
-				   '<span class="notes"></span>' +
-				   '<span class="panel_btns"><span class="panel-btns-gradient"></span><spam class="panel-btns-content" id="panel_btns_' +this.n + '"></span></span>' +
-				   '<div class="monitor_menu prevent-select" id="monitor_menu_' + this.n + '">' +
-					   '<div class="monitor_menu_content" id="monitor_menu_content_' + this.n + '"></div>' +
-				   '</div>' +
-				   '<div class="panel_content_space" id="panel_content_space_' + this.n + '">' +
+				       '<h3 class="panel-title" id="panel_title_' + this.n + '" title="' + id_source + '">' + id_source + "</h3>" +
+				   	   '<span class="notes"></span>' +
+				   	   '<span class="panel_btns">' +
+					       '<span class="panel-btns-gradient"></span>' +
+						   '<spam class="panel-btns-content" id="panel_btns_' +this.n + '"></span>' +
+					   '</span>' +
+				   	   '<div class="monitor_menu prevent-select" id="monitor_menu_' + this.n + '">' +
+					       '<div class="monitor_menu_content" id="monitor_menu_content_' + this.n + '"></div>' +
+				   	   '</div>' +
+				   	   '<div class="panel_content_space" id="panel_content_space_' + this.n + '">' +
 					   '<div class="panel_widget' + (this.src_visible ? " source_visible" : "") + '" id="panel_widget_' + this.n + '"></div>' +
 					   '<div class="panel_source' + (this.src_visible ? " enabled" : "") + '" id="panel_source_' + this.n + '">Waiting for data...</div>' +
 					   '<div class="panel_fps" id="panel_fps_' + this.n + '"></div>' +
 					   '<div class="cleaner"></div>' +
-					   //'<div class="panel_msg_type" id="panel_msg_type_'+this.n+'"></div>' +
 				   '</div>';
 
 		let widget_opts = {
 			w: w, h: h,
 			minW: 1, minH: 4,
 			content: html,
+			lazyLoad: false
 		};
 		if (x != null && x != undefined) widget_opts.x = x;
 		if (y != null && y != undefined) widget_opts.y = y;
@@ -122,6 +125,7 @@ export class Panel {
 
 		console.log("Adding widget " + id_source + ": ", widget_opts);
 		this.grid_widget = grid.addWidget(widget_opts);
+		console.warn('Added widher', this.grid_widget);
 
 		this.ui.client.on(id_source, this.onDataContextWrapper);
 

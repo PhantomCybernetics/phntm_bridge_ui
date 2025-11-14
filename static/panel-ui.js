@@ -81,6 +81,9 @@ export class PanelUI {
 		this.grid_cell_height = grid_cell_height;
 
 		let GridStack = window.exports.GridStack;
+		GridStack.renderCB = (el, w) => {
+  			el.innerHTML = w.content;
+		};
 		this.grid = GridStack.init({
 			float: false,
 			animate: false,

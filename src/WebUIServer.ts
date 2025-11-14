@@ -53,12 +53,10 @@ export function createWebUIServerExpressApp(
 
 	webExpressApp.use("/static/touch-gamepad/", express.static("node_modules/@rbuljan/gamepad/"));
 	webExpressApp.use("/static/qr-code-styling/", express.static("node_modules/qr-code-styling/lib/"));
-	
+
 	webExpressApp.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 		res.redirect("/static/favicons/favicon-yellow-16x16.png");
 	});
-
-	// temporarily forked bcs of this: https://github.com/gridstack/gridstack.js/issues/2491
 
 	webExpressApp.get("/", async function (req: express.Request, res: express.Response) {
 		// let ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
