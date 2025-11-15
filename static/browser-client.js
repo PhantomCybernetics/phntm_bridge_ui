@@ -131,6 +131,7 @@ export class PhntmBridgeClient extends EventTarget {
 	service_reply_callbacks = {};
 	default_service_timeout_sec = 10.0; // overwritten by ui config
 
+	ui_config = {};
 	prefixed_configs = {};
 	input_manager = null;
 	extrernal_scripts = {};
@@ -608,6 +609,10 @@ export class PhntmBridgeClient extends EventTarget {
 			return this.prefixed_configs[srv];
 
 		return null; // no config
+	}
+
+	getConfigParam(key) {
+		return this.ui_config[key];
 	}
 
 	createSubscriber(id_source) {
@@ -1091,6 +1096,7 @@ export class PhntmBridgeClient extends EventTarget {
 				this.default_service_timeout_sec = robot_data["ui"]['default_service_timeout_sec'];
 				console.log("Setting default service timeout [sec] to: ", this.default_service_timeout_sec);
 			}
+			this.ui_config = robot_data["ui"]; 
 			this.emit("ui_config", robot_data["ui"]); // must trigger after service_buttons
 		}
 

@@ -125,8 +125,7 @@ export class Panel {
 
 		console.log("Adding widget " + id_source + ": ", widget_opts);
 		this.grid_widget = grid.addWidget(widget_opts);
-		console.warn('Added widher', this.grid_widget);
-
+	
 		this.ui.client.on(id_source, this.onDataContextWrapper);
 
 		// setTimeout(() => {
