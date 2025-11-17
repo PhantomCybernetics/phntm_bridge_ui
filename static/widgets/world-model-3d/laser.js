@@ -2,77 +2,69 @@ import * as THREE from "three";
 import { LineSegments2 } from "line-segments2";
 import { LineMaterial } from "line-material2";
 import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
+import { WorldModel3DPuginBase } from "./world-model-plugin-base.js";
 
-export class WorldModel3DWidget_Laser {
+export class WorldModel3DWidget_Laser extends WorldModel3DPuginBase {
 
     static laser_delay = 0; //150; // ms
 
-    static source_topic_type = 'sensor_msgs/msg/LaserScan';
-    static source_description = 'Lidar source';
-    static source_default_topic = null;
-    static source_max_num = -1;
+    static SOURCE_TOPIC_TYPE = 'sensor_msgs/msg/LaserScan';
+    static SOURCE_DESCRIPTION = 'Lidar source';
+    static SOURCE_DEFAULT_TOPIC = null;
+    static SOURCE_MAX_NUM = -1;
+    static CLEAR_TIMEOUT_MS = 300; // clear if no new data received in this long
 
     constructor(world_model) {
-        this.world_model = world_model;
-        this.laser_frames = {};
-        this.latest_scan_data_stamps = {}; // topic => latest processed stamp
-		this.scan_older_stamp_drops = {}; // topic => num
-		this.dirty_laser_points = {}; // topic => vector3[]
-		this.dirty_laser_colors = {}; // topic => vector3[]
-		this.clear_laser_timeout = {}; // timer refs
-        this.laser_visuals = {}; // topic => visual
-		this.laser_geometry = {}; //topic => geometry
-        this.laser_frames_error_logged = {};
+        super(world_model);
+        
         this.laser_delay_ms = this.world_model.panel.getPanelVarAsInt('lasd', 0); // experimental delay, didn't do much
-        this.clear_timeout_ms = 300; // clear if no new data received in this long
         this.menu_line_el = null;
     }
 
     // on laser data
     onTopicData(topic, msg) {
-        if (!this.world_model.robot_model || this.world_model.panel.paused) {
+        if (!this.world_model.robot_model || this.world_model.panel.paused)
             return;
-        }
+
+        let overlay = this.overlays[topic];
+        if (!overlay)
+            return;
 
         let scan_ns_stamp = msg.header.stamp.sec * 1000000000 + msg.header.stamp.nanosec;
 
-        if (!this.latest_scan_data_stamps[topic])
-            this.latest_scan_data_stamps[topic] = -1;
+        if (!overlay.latest_scan_data_stamp)
+            overlay.latest_scan_data_stamp = -1;
         
-        if (this.latest_scan_data_stamps[topic] > scan_ns_stamp) {
-            if (!this.scan_older_stamp_drops[topic])
-                this.scan_older_stamp_drops[topic] = 0;
+        if (overlay.latest_scan_data_stamp > scan_ns_stamp) {
+            if (!overlay.scan_older_stamp_drops)
+                overlay.scan_older_stamp_drops = 0;
             
-            if (this.scan_older_stamp_drops[topic] > 10) {
+            if (overlay.scan_older_stamp_drops > 10) {
                 console.log(topic + " latest timestamp reset");
             } else {
                 console.log(topic + " dropped older laser");
-                this.scan_older_stamp_drops[topic]++;
+                overlay.scan_older_stamp_drops++;
                 return;
             }
         }
-        this.latest_scan_data_stamps[topic] = scan_ns_stamp;
-        if (this.scan_older_stamp_drops[topic]) delete this.scan_older_stamp_drops[topic];
+        overlay.latest_scan_data_stamp = scan_ns_stamp;
+        if (overlay.scan_older_stamp_drops) delete overlay.scan_older_stamp_drops;
 
         let frame_id = msg.header.frame_id;
 
-        if (!this.laser_frames[topic])
-            this.laser_frames[topic] = this.world_model.robot_model.getFrame(frame_id);
+        if (!overlay.laser_frame)
+            overlay.laser_frame = this.world_model.robot_model.getFrame(frame_id);
 
-        if (!this.laser_frames[topic]) {
-            if (!this.laser_frames_error_logged[topic]) {
-                this.laser_frames_error_logged[topic] = true; //only log once
-                let err =
-                    'Frame "' +
-                    frame_id +
-                    '" not found in robot model for laser data from ' +
-                    topic;
+        if (!overlay.laser_frame) {
+            if (!overlay.error_logged) {
+                overlay.error_logged = true; //only log once
+                let err = 'Frame "' + frame_id + '" not found in robot model for laser data from ' + topic;
                 this.world_model.panel.ui.showNotification(err, "error");
                 console.error(err);
             }
             return;
-        } else if (this.laser_frames_error_logged && this.laser_frames_error_logged[topic]) {
-            delete this.laser_frames_error_logged[topic];
+        } else if (overlay.error_logged) {
+            delete overlay.error_logged;
         }
 
         let laser_points = [];
@@ -103,8 +95,8 @@ export class WorldModel3DWidget_Laser {
 
         let that = this;
         setTimeout(() => {
-            that.dirty_laser_points[topic] = laser_points;
-            that.dirty_laser_colors[topic] = laser_point_colors;
+            overlay.dirty_laser_points = laser_points;
+            overlay.dirty_laser_colors = laser_point_colors;
             that.world_model.renderDirty();
             that.clearLaserOnTimeout(topic);
         }, this.laser_delay_ms);
@@ -113,70 +105,48 @@ export class WorldModel3DWidget_Laser {
     // render lasers
     onRender() {
         let that = this;
-        let dirty_laser_topics = Object.keys(this.dirty_laser_points);
-        dirty_laser_topics.forEach((topic) => {
-            let laser_points = that.dirty_laser_points[topic];
-            let laser_point_colors = that.dirty_laser_colors[topic];
-            if (!laser_points || !laser_point_colors) return;
-            delete that.dirty_laser_points[topic];
-            delete that.dirty_laser_colors[topic];
+        let topics = Object.keys(this.overlays);
+        topics.forEach((topic) => {
+            let overlay = that.overlays[topic];
 
-            if (!that.world_model.sources.topicSubscribed(topic)) return;
+            let laser_points = overlay.dirty_laser_points;
+            let laser_point_colors = overlay.dirty_laser_colors;
+            if (!laser_points || !laser_point_colors) return;
+            delete overlay.dirty_laser_points;
+            delete overlay.dirty_laser_colors;
 
             // if number of verts in mesh too small, rebuild
-            if (that.laser_visuals[topic] && that.laser_visuals[topic].geometry
-                && that.laser_visuals[topic].geometry.lastNumPositions < laser_points.length) {
-                that.laser_visuals[topic].removeFromParent();
-                delete that.laser_visuals[topic]
-                that.laser_geometry[topic].dispose();
-                delete that.laser_geometry[topic];
+            if (overlay.laser_visual && overlay.laser_visual.geometry
+                && overlay.laser_visual.geometry.lastNumPositions < laser_points.length) {
+                overlay.laser_visual.removeFromParent();
+                delete overlay.laser_visual;
+                overlay.laser_geometry.dispose();
+                delete overlay.laser_geometry;
             }
 
-            if (!that.laser_visuals[topic]) {
+            if (!overlay.laser_visual) {
                 let color = new THREE.Color(0x00ffff);
                 const material = new LineMaterial({
-                    // color: color,
                     transparent: true,
-                    // opacity: .85,
                     linewidth: 2,
                     vertexColors: true,
                 });
 
-                that.laser_geometry[topic] = new LineSegmentsGeometry2()
+                overlay.laser_geometry = new LineSegmentsGeometry2()
                     .setPositions(laser_points)
                     .setColors(laser_point_colors);
-                // let colors_buf = new Float32Array(laser_point_colors);
-                // that.laser_geometry[topic].setAttribute(
-                // 	"color",
-                // 	new THREE.BufferAttribute(colors_buf, 4),
-                // );
-                that.laser_visuals[topic] = new LineSegments2(
-                    that.laser_geometry[topic],
-                    material,
-                );
-                that.laser_visuals[topic].castShadow = false;
-                that.laser_visuals[topic].receiveShadow = false;
-                that.laser_visuals[topic].renderOrder = 1;
-                if (that.laser_frames[topic]) {
-                    that.laser_frames[topic].add(that.laser_visuals[topic]);
+                
+                overlay.laser_visual = new LineSegments2(overlay.laser_geometry, material);
+                overlay.laser_visual.castShadow = false;
+                overlay.laser_visual.receiveShadow = false;
+                overlay.laser_visual.renderOrder = 1;
+                if (overlay.laser_frame) {
+                    overlay.laser_frame.add(overlay.laser_visual);
                 }
             } else {
-                // that.laser_geometry[topic].dispose();
-                that.laser_geometry[topic]
+                overlay.laser_geometry
                     .setPositions(laser_points)
                     .setColors(laser_point_colors);
-
-                // const colorAttribute = that.laser_geometry[topic].getAttribute("color");
-                // if (colorAttribute.count != laser_point_colors.length / 4) {
-                // 	let colors_buf = new Float32Array(laser_point_colors);
-                // 	that.laser_geometry[topic].setAttribute(
-                // 		"color",
-                // 		new THREE.BufferAttribute(colors_buf, 4),
-                // 	);
-                // } else {
-                // 	colorAttribute.copyArray(laser_point_colors);
-                // }
-                // colorAttribute.needsUpdate = true;
             }
         });
     }
@@ -184,7 +154,7 @@ export class WorldModel3DWidget_Laser {
     setupMenu(menu_els) {
 
         // uncomment for delay controls
-        // if (!this.world_model.sources.hasType(WorldModel3DWidget_Laser.source_topic_type)) 
+        // if (!this.world_model.sources.hasType(WorldModel3DWidget_Laser.SOURCE_TOPIC_TYPE)) 
 		// 	return; // only show when topics are subscribed to
 
         // let line_el = $('<div class="menu_line plus_minus_ctrl" id="laser_delay_ctrl_'+this.world_model.panel.n+'"></div>');
@@ -223,44 +193,30 @@ export class WorldModel3DWidget_Laser {
 	}
 
     clearLaserOnTimeout(topic) {
-		if (this.clear_laser_timeout[topic])
-			clearTimeout(this.clear_laser_timeout[topic]);
+		if (this.overlays[topic] && this.overlays[topic].clear_timeout)
+			clearTimeout(this.overlays[topic].clear_timeout);
 
 		let that = this;
-		this.clear_laser_timeout[topic] = setTimeout(() => {
+		this.overlays[topic].clear_timeout = setTimeout(() => {
 			if (that.world_model.panel.paused) {
 				//don't clear while paused
 				that.clearLaserOnTimeout(topic);
 				return;
 			}
 
-			that.dirty_laser_points[topic] = [];
-			that.dirty_laser_colors[topic] = [];
+			this.overlays[topic].dirty_laser_points = [];
+			this.overlays[topic].dirty_laser_colors = [];
 			that.world_model.renderDirty();
-		}, this.clear_timeout_ms);
+		}, WorldModel3DWidget_Laser.CLEAR_TIMEOUT_MS);
 	}
 
-    // clear laser for topic
-    clearTopic(topic) {
-        if (this.laser_visuals[topic]) {
-			this.laser_visuals[topic].removeFromParent();
-			delete this.laser_visuals[topic];
+    clearVisuals(topic) {
+        if (this.overlays[topic].laser_visual) {
+			this.overlays[topic].laser_visual.removeFromParent();
+			delete this.overlays[topic].laser_visual;
 		}
-		if (this.laser_frames[topic]) {
-			delete this.laser_frames[topic];
+		if (this.overlays[topic].laser_frame) {
+			delete this.overlays[topic].laser_frame;
 		}
-    }
-
-    // clear all lasers
-    clearAllTopics() {
-        let laser_topics = this.laser_visuals ? Object.keys(this.laser_visuals) : [];
-		if (this.laser_frames)
-			laser_topics = laser_topics.concat(Object.keys(this.laser_frames));
-        
-		console.log("Clearing all laser topics", laser_topics);
-        let that = this;
-		laser_topics.forEach((topic) => {
-			that.clearTopic(topic);
-		});
     }
 }

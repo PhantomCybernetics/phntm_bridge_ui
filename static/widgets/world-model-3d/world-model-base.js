@@ -23,12 +23,16 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 				console.log('World Model loading plugin:', pluginClass.name);
 				that.plugins[pluginClass.name] = new pluginClass(that);
 				that.sources.add(
-					pluginClass.source_topic_type,
-					pluginClass.source_description,
-					pluginClass.source_default_topic,
-					pluginClass.source_max_num,
+					pluginClass.SOURCE_TOPIC_TYPE,
+					pluginClass.SOURCE_DESCRIPTION,
+					pluginClass.SOURCE_DEFAULT_TOPIC,
+					pluginClass.SOURCE_MAX_NUM,
 					// onData
-					(topic, msg) => that.plugins[pluginClass.name].onTopicData(topic, msg),
+					(topic, msg) => {
+						if (!that.overlay_topics[topic])
+							return;
+						that.plugins[pluginClass.name].onTopicData(topic, msg)
+					},
 					// onSourceRemoved
 					(topic) => {
 						that.plugins[pluginClass.name].clearTopic(topic);
@@ -59,7 +63,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 				return;
 			
 			Object.values(that.plugins).forEach((p) => {
-				if (client.discovered_topics[topic] && p.constructor.source_topic_type == client.discovered_topics[topic].msg_type) {
+				if (client.discovered_topics[topic] && p.constructor.SOURCE_TOPIC_TYPE == client.discovered_topics[topic].msg_type) {
 					if (p.addTopic)
 						p.addTopic(topic);
 					that.overlay_topics[topic] = {};
@@ -88,7 +92,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 		this.base_link_frame = null;
 
 		Object.values(this.plugins).forEach((p)=>{
-			p.clearAllTopics();
+			p.onModelRemoved();
 		});
 	}
 

@@ -142,14 +142,14 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 						depthWrite: true,
 					});
 					let clean_model = new THREE.Mesh(geom, stl_base_mat);
-					that.cleanURDFModel(clean_model, true);
+					that.cleanModel(clean_model, true);
 					done_cb(clean_model);
 				});
 			} else if (/\.dae$/i.test(path)) {
 				const loader = new ColladaLoader(manager);
 				loader.load(path, (dae) => {
 					let clean_model = dae.scene;
-					that.cleanURDFModel(clean_model, true);
+					that.cleanModel(clean_model, true);
 					done_cb(clean_model);
 				});
 			} else {
@@ -1123,7 +1123,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.stats_model_verts = 0;
 		this.robot_model = this.urdf_loader.parse(desc.data);
 		// this.robot_model.visible = false; // show when all loading is done and model cleaned
-		this.cleanURDFModel(this.robot_model);
+		this.cleanModel(this.robot_model);
 		this.robot.add(this.robot_model);
 		this.robot_model.position.set(0, 0, 0); //reset pose, transform move with this.robot
 		this.robot_model.quaternion.set(0, 0, 0, 1);
@@ -1134,7 +1134,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.renderDirty();
 	}
 
-	cleanURDFModel(obj, in_visual = false, in_collider = false, force_material = null) {
+	cleanModel(obj, in_visual = false, in_collider = false, force_material = null) {
 		if (obj.isLight || obj.isScene || obj.isCamera) {
 			return false;
 		}
@@ -1190,7 +1190,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		if (obj.children && obj.children.length) {
 			for (let i = 0; i < obj.children.length; i++) {
 				let ch = obj.children[i];
-				let res = this.cleanURDFModel(ch, in_visual, in_collider, force_material); // recursion
+				let res = this.cleanModel(ch, in_visual, in_collider, force_material); // recursion
 				if (!res) {
 					obj.remove(ch);
 					i--;

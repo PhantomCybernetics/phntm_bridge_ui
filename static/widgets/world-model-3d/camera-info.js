@@ -3,78 +3,74 @@ import { LineSegments2 } from "line-segments2";
 import { LineMaterial } from "line-material2";
 import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
 import { rad2deg } from "../../inc/lib.js";
+import { WorldModel3DPuginBase } from "./world-model-plugin-base.js";
 
-export class WorldModel3DWidget_CameraInfo {
-    static source_topic_type = 'sensor_msgs/msg/CameraInfo';
-    static source_description = 'Camera Info';   
-    static source_default_topic = null;
-    static source_max_num = -1;
+export class WorldModel3DWidget_CameraInfo extends WorldModel3DPuginBase {
+    static SOURCE_TOPIC_TYPE = 'sensor_msgs/msg/CameraInfo';
+    static SOURCE_DESCRIPTION = 'Camera Info';   
+    static SOURCE_DEFAULT_TOPIC = null;
+    static SOURCE_MAX_NUM = -1;
 
     constructor(world_model) {
-        this.world_model = world_model;
-        this.camera_frames = {};
-		this.dirty_camera_frustums = {};
-		this.camera_frustum_visuals = {};
-		this.camera_frustum_geometry = {};
-
-		this.overlays = {}; // topic => conf from yaml
+		super(world_model);
+        
+        // this.camera_frames = {};
+		// this.dirty_camera_frustums = {};
+		// this.camera_frustum_visuals = {};
+		// this.camera_frustum_geometry = {};
     }
 
 	addTopic(topic) {
+		super.addTopic(topic);
 		console.warn('World Model CameraInfo adding topic ', topic);
-		let config = this.world_model.client.getTopicConfig(topic);
-		if (!this.overlays[topic])
-			this.overlays[topic] = {};
+		let config = this.client.getTopicConfig(topic);
 		this.overlays[topic].config = config;
+
+		 this.overlays[topic].config_change_cb = (new_config) => { // we need a wrapper for config change
+            this.overlays[topic].config = new_config;
+			this.clearVisuals(topic); //force re-render
+        }
+        this.client.onTopicConfig(topic, this.overlays[topic].config_change_cb); // rebuild from new config when the bridge node restarts (urdf model may not change)
 	}
 
     onTopicData(topic, msg) {
         if (!this.world_model.robot_model || this.world_model.panel.paused) return;
 
-		if (!this.world_model.overlay_topics[topic] || !this.overlays[topic]) return; // always wait for config
+		let overlay = this.overlays[topic];
+        if (!overlay)
+            return;
 
 		// only update topic frustum once per sec
-		if (!this.overlays[topic].last_rendered || Date.now() - this.overlays[topic].last_rendered > 1000)
-			this.overlays[topic].last_rendered = Date.now();
+		if (!overlay.last_rendered || Date.now() - overlay.last_rendered > 1000)
+			overlay.last_rendered = Date.now();
 		else return;
 		
-		let config = this.overlays[topic].config ? this.overlays[topic].config : {};
+		let config = overlay.config ? overlay.config : {};
 
-		let frame_id = msg.header.frame_id;
-		if (config["force_frame_id"])
-			frame_id = config["force_frame_id"];
-		let f = frame_id ? this.world_model.robot_model.getFrame(frame_id) : null;
-		if (!frame_id || !f) {
-			if (!this.camera_info_error_logged) this.camera_info_error_logged = {};
-			if (!this.camera_info_error_logged[topic]) {
-				this.camera_info_error_logged[topic] = true; //only log once
-				let msg = !frame_id ? "Missing frame_id in " + topic : 'Frame "' + frame_id + '" not found in camera info of ' + topic;
-				this.panel.ui.showNotification(msg, "error");
-				console.error(msg);
+		if (!overlay.camera_frame ) {
+			let frame_id = config["force_frame_id"] ? config["force_frame_id"] : msg.header.frame_id;
+			let f = frame_id ? this.world_model.robot_model.getFrame(frame_id) : null;
+			if (!frame_id || !f) {
+				if (!overlay.error_logged) {
+					overlay.error_logged = true; //only log once
+					let msg = !frame_id ? "Missing frame_id in " + topic : 'Frame "' + frame_id + '" not found in camera info of ' + topic;
+					this.panel.ui.showNotification(msg, "error");
+					console.error(msg);
+				}
+				return;
+			} else if (overlay.error_logged) {
+				delete overlay.error_logged;
 			}
-			return;
-		} else if (
-			this.camera_info_error_logged &&
-			this.camera_info_error_logged[topic]
-		) {
-			delete this.camera_info_error_logged[topic];
+
+			overlay.camera_frame = f;
+			overlay.near = config["frustum_near"] ? this.overlays[topic].config["frustum_near"] : 0.01;
+			overlay.far = config["frustum_far"] ? config["frustum_far"] : 2.0;
 		}
-
-		this.camera_frames[topic] = f;
-
-		let near = config["frustum_near"] ? this.overlays[topic].config["frustum_near"] : 0.01;
-		let far = config["frustum_far"] ? config["frustum_far"] : 2.0;
-
-		let frustum = this.calculatePinholeFrustum(msg, near, far);
+		
+		let frustum = this.calculatePinholeFrustum(msg, overlay.near, overlay.far);
 
 		let v_angle = frustum.farBottomRight.angleTo(frustum.farTopRight);
 		let h_angle = frustum.farTopRight.angleTo(frustum.farTopLeft);
-		if (!this.angle_logged) this.angle_logged = {};
-		if (!this.angle_logged[topic]) {
-			console.log(frame_id + ' side_angle = '+rad2deg(v_angle)+' deg; top_angle = ' + rad2deg(h_angle)+' deg');
-			this.angle_logged[topic] = true;
-		}
-
 		let r_axis = new THREE.Vector3().crossVectors(frustum.farTopRight, frustum.farBottomRight).normalize();
 		let l_axis = new THREE.Vector3().crossVectors(frustum.farTopLeft, frustum.farBottomLeft).normalize();
 		let t_axis = new THREE.Vector3().crossVectors(frustum.farTopLeft, frustum.farTopRight).normalize();
@@ -127,7 +123,7 @@ export class WorldModel3DWidget_CameraInfo {
 		});
 		
 		
-		this.dirty_camera_frustums[topic] = frustum_pts;
+		overlay.dirty_frustum_pts = frustum_pts;
 		this.world_model.renderDirty();
     }
 
@@ -166,17 +162,18 @@ export class WorldModel3DWidget_CameraInfo {
     // render camera frustums
     onRender() {
         let that = this;
-        let dirty_camera_frustum_topics = Object.keys(this.dirty_camera_frustums);
-        dirty_camera_frustum_topics.forEach((topic) => {
-            let frustum_points = that.dirty_camera_frustums[topic];
+        let topics = Object.keys(this.overlays);
+        topics.forEach((topic) => {
+			let overlay = this.overlays[topic];
+            let frustum_points = overlay.dirty_frustum_pts;
             if (!frustum_points) return;
-            delete that.dirty_camera_frustums[topic];
-
-            if (!that.world_model.sources.topicSubscribed(topic)) return;
+            delete overlay.dirty_frustum_pts;
 
 			let config = this.overlays[topic].config ? this.overlays[topic].config : {};
 
-            if (!that.camera_frustum_visuals[topic]) {
+            if (!overlay.frustum_visual) {
+				if (!overlay.camera_frame)
+					return;
                 let color = new THREE.Color(config["frustum_color"] ? config["frustum_color"] : 0x00ffff);
                 const material = new LineMaterial({
             		color: color,
@@ -185,41 +182,28 @@ export class WorldModel3DWidget_CameraInfo {
                     opacity: 0.85,
                 });
 
-                that.camera_frustum_geometry[topic] = new LineSegmentsGeometry2().setPositions(frustum_points);
+                overlay.frustum_geometry = new LineSegmentsGeometry2().setPositions(frustum_points);
 
-                that.camera_frustum_visuals[topic] = new LineSegments2(
-                    that.camera_frustum_geometry[topic],
+                overlay.frustum_visual = new LineSegments2(
+                    overlay.frustum_geometry,
                     material,
                 );
-                that.camera_frustum_visuals[topic].castShadow = false;
-                that.camera_frustum_visuals[topic].receiveShadow = false;
-                if (that.camera_frames[topic]) {
-                    that.camera_frames[topic].add(that.camera_frustum_visuals[topic]);
+                overlay.frustum_visual.castShadow = false;
+                overlay.frustum_visual.receiveShadow = false;
+                if (overlay.camera_frame) {
+                    overlay.camera_frame.add(overlay.frustum_visual);
                 }
             } else {
-                that.camera_frustum_geometry[topic].setPositions(frustum_points); // number never changes
+                overlay.frustum_geometry.setPositions(frustum_points); // number never changes
             }
         });
     }
 
-    // clear frustum for topic
-    clearTopic(topic) {
-        if (this.camera_frustum_visuals[topic]) {
-			this.camera_frustum_visuals[topic].removeFromParent();
-			delete this.camera_frustum_visuals[topic];
+	clearVisuals(topic) {
+		delete this.overlays[topic].camera_frame;
+        if (this.overlays[topic].frustum_visual) {
+			this.overlays[topic].frustum_visual.removeFromParent();
+			delete this.overlays[topic].frustum_visual;
 		}
-		delete this.overlays[topic];
-    }
-
-    // clear all camera frustums
-    clearAllTopics() {
-        let camera_frustum_visuals = this.camera_frustum_visuals
-			? [].concat(Object.keys(this.camera_frustum_visuals))
-			: [];
-		console.log("Clearing all camera frustums", camera_frustum_visuals);
-        let that = this;
-		camera_frustum_visuals.forEach((topic) => {
-			that.clearTopic(topic);
-		});
-    }
+	}
 }

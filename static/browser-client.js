@@ -125,7 +125,10 @@ export class PhntmBridgeClient extends EventTarget {
 
 	socket = null;
 	event_calbacks = {};
-	topic_config_calbacks = {};
+
+	topic_config_callbacks = {};
+	service_config_callbacks = {};
+	ui_config_callbacks = [];
 
 	service_request_callbacks = {};
 	service_reply_callbacks = {};
@@ -604,6 +607,22 @@ export class PhntmBridgeClient extends EventTarget {
 		return null; // no config
 	}
 
+	onTopicConfig(topic, cb) {
+		if (!this.topic_config_callbacks[topic])
+			this.topic_config_callbacks[topic] = [];
+		if (this.topic_config_callbacks[topic].indexOf(cb) == -1)
+			this.topic_config_callbacks[topic].push(cb);
+	}
+
+	offTopicConfig(topic, cb) {
+		if (!this.topic_config_callbacks[topic])
+			return;
+		let index = this.topic_config_callbacks[topic].indexOf(cb);
+		if (index > -1) {
+  			this.topic_config_callbacks[topic].splice(index, 1);
+		}
+	}
+
 	getServiceConfig(srv) {
 		if (this.prefixed_configs[srv])
 			return this.prefixed_configs[srv];
@@ -611,8 +630,53 @@ export class PhntmBridgeClient extends EventTarget {
 		return null; // no config
 	}
 
+	onServiceConfig(service, cb) {
+		if (!this.service_config_callbacks[service])
+			this.service_config_callbacks[service] = [];
+		if (this.service_config_callbacks[service].indexOf(cb) == -1)
+			this.service_config_callbacks[service].push(cb);
+	}
+
+	offServiceConfig(service, cb) {
+		if (!this.service_config_callbacks[service])
+			return;
+		let index = this.service_config_callbacks[service].indexOf(cb);
+		if (index > -1) {
+  			this.service_config_callbacks[service].splice(index, 1);
+		}
+	}
+
+	triggerPrefixedConfigUpdate() {
+		let prefixes = Object.keys(this.prefixed_configs);
+		prefixes.forEach((prefix)=>{
+			if (this.topic_config_callbacks[prefix]) {
+				this.topic_config_callbacks[prefix].forEach((cb) => {
+					cb(this.prefixed_configs[prefix]);
+				});
+			}
+		});
+	}
+
 	getConfigParam(key) {
 		return this.ui_config[key];
+	}
+
+	onUIConfig(cb) {
+		if (this.ui_config_callbacks.indexOf(cb) == -1)
+			this.ui_config_callbacks.push(cb);
+	}
+
+	offUIConfig(cb) {
+		let index = this.ui_config_callbacks.indexOf(cb);
+		if (index > -1) {
+  			this.ui_config_callbacks.splice(index, 1);
+		}
+	}
+
+	triggerUIConfigUpdate() {
+		this.ui_config_callbacks.forEach((cb) => {
+			cb(this.ui_config );
+		});
 	}
 
 	createSubscriber(id_source) {
@@ -1098,6 +1162,13 @@ export class PhntmBridgeClient extends EventTarget {
 			}
 			this.ui_config = robot_data["ui"]; 
 			this.emit("ui_config", robot_data["ui"]); // must trigger after service_buttons
+		}
+
+		if (robot_data["prefixed_configs"]) {
+			this.triggerPrefixedConfigUpdate();
+		}
+		if (robot_data["ui"]) {
+			this.triggerUIConfigUpdate();
 		}
 
 		this.emit("update"); //updates the ui

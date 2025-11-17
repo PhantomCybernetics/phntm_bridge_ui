@@ -100,9 +100,9 @@ export class VideoWidget_Detections2D {
 	}
 
 	onResize() {
-		let overlay_topics = Object.keys(this.overlays);
+		let topics = Object.keys(this.overlays);
 		let that = this;
-		overlay_topics.forEach((topic) => {
+		topics.forEach((topic) => {
 			that.setupOverlay(topic, null);
 		});
 	}

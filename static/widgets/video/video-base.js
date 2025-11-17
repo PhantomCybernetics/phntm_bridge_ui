@@ -84,7 +84,11 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 					pluginClass.source_default_topic,
 					pluginClass.source_max_num,
 					// onData
-					(topic, msg) => that.plugins[pluginClass.name].onTopicData(topic, msg),
+					(topic, msg) => {
+						if (!that.overlay_topics[topic])
+							return;
+						that.plugins[pluginClass.name].onTopicData(topic, msg)
+					},
 					// onSourceRemoved
 					(topic) => {
 						that.plugins[pluginClass.name].clearTopic(topic);

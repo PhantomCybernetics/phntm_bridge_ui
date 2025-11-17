@@ -213,9 +213,11 @@
 	import { TwistInputDriver } from "/static/input/twist-driver.js";
 
 	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
+
 	import { CustomServiceInput } from '/static/input/custom-service-input.js'
 	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
 	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
+	import { WorldModel3DPuginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
 
 	import { isSubclassOf } from '/static/inc/lib.js';
 	let custom_modules = []; // used for accessing custom extension classes
@@ -296,7 +298,13 @@
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
 			];
-			// TODO: load custom world model 3d overlays here
+			custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPuginBase)
+				for (const key in module) {
+					if (isSubclassOf(module[key], WorldModel3DPuginBase)) {
+						world_model_3d_plugin_classes.push(module[key]);
+					}
+				}
+			});
 			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
 
 			// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
