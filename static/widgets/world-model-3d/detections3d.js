@@ -34,7 +34,6 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPuginBase {
 		console.warn('World Model Detections3D adding topic ', topic);
 		let config = this.client.getTopicConfig(topic);
 
-		let overlay = this.overlays[topic];
 		this.setTopicConfig(topic, config);
 
 		this.overlays[topic].config_change_cb = (new_config) => { // we need a wrapper for config change
@@ -170,6 +169,8 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPuginBase {
 			if (overlay.detection_markers && overlay.detection_markers.length) {
 				for (let class_id = 0; class_id < overlay.detection_markers.length; class_id++) {
 					if (!model_map || model_map[class_id] == model_path) {
+						if (!overlay.detection_markers[class_id])
+							continue;
 						overlay.detection_markers[class_id].forEach((marker_el)=>{
 							marker_el.removeFromParent();
 						});
@@ -520,8 +521,8 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPuginBase {
 		}
     }
 
-	 clearTopic(topic) {
-        this.client.offTopicConfig(topic, this.overlays[topic].config_change_cb);
+	clearTopic(topic) {
+    	this.client.offTopicConfig(topic, this.overlays[topic].config_change_cb);
         super.clearTopic(topic);
     }
 }

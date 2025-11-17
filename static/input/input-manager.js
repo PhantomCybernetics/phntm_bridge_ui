@@ -4398,7 +4398,7 @@ export class InputManager {
 					started: Date.now(),
 					driver: driver,
 				};
-				driver.reset_all_output(); //make sure we send all zeroes
+				driver.resetAllOutput(); //make sure we send all zeroes
 			}
 		});
 

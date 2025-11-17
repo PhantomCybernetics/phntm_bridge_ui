@@ -3141,7 +3141,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
 
 .video_overlay_cont {
 	position: absolute;
-	z-index: 2;
+	z-index: 10;
 	left: 0px;
 	top: 0px;
 	/* background: rgba(0, 255, 0, 0.315); */

@@ -113,4 +113,13 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 				p.clearAllTopics();
 		});
 	}
+
+	onResize() {
+		super.onResize();
+
+		Object.values(this.plugins).forEach((p)=>{
+			if (p.onResize)
+				p.onResize();
+		});
+	}
 }

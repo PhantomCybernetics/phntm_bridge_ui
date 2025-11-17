@@ -1,118 +1,191 @@
+import { VideoPuginBase } from "./video-plugin-base.js";
 import * as THREE from "three";
 
-export class VideoWidget_Detections2D {
-    static source_topic_type = 'vision_msgs/msg/Detection2DArray';
-    static source_description = 'Detection 2D Array';   
-    static source_default_topic = null;
-    static source_max_num = -1;
+export class VideoWidget_Detections2D extends VideoPuginBase {
+    static SOURCE_TOPIC_TYPE = 'vision_msgs/msg/Detection2DArray';
+    static SOURCE_DESCRIPTION = 'Detection 2D Array';   
+    static SOURCE_DEFAULT_TOPIC = null;
+    static SOURCE_MAX_NUM = -1;
+
+	static DEFAULT_DETECTION_COLOR = new THREE.Color(0xff00ff);
 
     constructor(video) {
-        this.video = video;
-		this.overlays = {}; // topic => { }
+    	super(video);
+
         this.display_overlay_input_crop = this.video.panel.getPanelVarAsBool('cr', false);
 		this.display_labels = this.video.panel.getPanelVarAsBool('lbl', true);
-		this.clear_overlays_timeout = {};
-		this.detection_class_colors = {}; // topic => [ color, color, ... ]
-		this.magenta = new THREE.Color(0xff00ff);
     }
 
 	addTopic(topic) {
-		this.detection_class_colors[topic] = [];
-		let config = this.video.client.getTopicConfig(topic);
+		super.addTopic(topic);
 
+		let config = this.video.client.getTopicConfig(topic);
+		this.setTopicConfig(topic, config);
+
+		this.overlays[topic].config_change_cb = (new_config) => { // we need a wrapper for config change
+			this.setTopicConfig(topic, new_config);
+        }
+        this.client.onTopicConfig(topic, this.overlays[topic].config_change_cb);
+	}
+
+	setTopicConfig(topic, config) {
 		if (!config)
 			console.error('Detections2D got empty config for '+ topic);
 
-		if (config && config.color_map !== undefined) {
+		let overlay = this.overlays[topic];
+		overlay.config = config;
+
+		overlay.detection_class_colors = [];
+		if (config.color_map !== undefined) {
 			for (let class_id = 0; class_id < config.color_map.length; class_id++) {
 				let c = config.color_map[class_id];
 				if (!c || ['null', 'none', 'no', '', 'model'].indexOf(c.toLowerCase().trim()) != -1)
-					c = this.magenta;
+					c = VideoWidget_Detections2D.DEFAULT_DETECTION_COLOR;
 				else
 					c = new THREE.Color(c);
-				this.detection_class_colors[topic][class_id] = c;
+				overlay.detection_class_colors[class_id] = c;
 			}
 		}
-			
-		this.setupOverlay(topic, config);
+		
+		if (config["input_width"] && config["input_height"]) {
+			overlay.nn_w = config["input_width"];
+			overlay.nn_h = config["input_height"];
+			overlay.aspect_ratio = config["input_width"] / config["input_height"];
+		} else {
+			overlay.aspect_ratio = -1;
+		}
+
+		this.clearVisuals(topic);
+		this.setupOverlay(topic);
 	}
 
-	setupOverlay(topic, config) {
-		if (!this.overlays[topic])
-			this.overlays[topic] = {};
+	setupMenu(menu_els) {
 
-		console.warn('SETUP OVERLAY for ' + topic, config);
+		if (!this.video.sources.hasType(VideoWidget_Detections2D.SOURCE_TOPIC_TYPE)) 
+			return; // only show when topics are subscribed to
+		
+		let that = this;
 
-		if (config) {
-			if (config["input_width"] && config["input_height"]) {
-				this.overlays[topic].nn_w = config["input_width"];
-				this.overlays[topic].nn_h = config["input_height"];
-				this.overlays[topic].overlay_aspect = config["input_width"] / config["input_height"];
-			} else {
-				this.overlays[topic].overlay_aspect = -1;
+		//this.overlay_crop_display_control_menu_el = null; //menu is empty here, force re-create
+
+		let show_nn_crop_control = false;
+		Object.keys(this.overlays).forEach((topic) => {
+			if (this.overlays[topic].nn_w || this.overlays[topic].nn_h) {
+				show_nn_crop_control = true;
+				return;
 			}
-			this.overlays[topic].config = config;
-		} else if (!this.overlays[topic].config) {
-			return;
+		});
+
+		if (show_nn_crop_control) {
+
+			let crop_line_el = $('<div class="menu_line overlay_menu_ctrl"></div>');
+			let crop_label_el = $('<label for="video_overlay_input_crop_cb_' + this.video.panel.n +'">Highlight overlay input area</label>');
+			let crop_inp = $('<input type="checkbox"' + (this.display_overlay_input_crop ? " checked" : "") + ' id="video_overlay_input_crop_cb_' + this.video.panel.n + '" title="Display overlay input cropping">');
+			crop_inp.appendTo(crop_label_el);
+			crop_label_el.appendTo(crop_line_el);
+
+			crop_inp.change((ev) => {
+				that.display_overlay_input_crop = $(ev.target).prop("checked");
+				that.video.panel.storePanelVarAsBool('cr', that.display_overlay_input_crop);
+
+				console.log('that.display_overlay_input_crop '+that.display_overlay_input_crop);
+				Object.keys(that.overlays).forEach((topic) => {
+					if (that.overlays[topic].container_el) {
+						if (that.display_overlay_input_crop)
+							that.overlays[topic].container_el.addClass("display_crop");
+						else
+							that.overlays[topic].container_el.removeClass("display_crop");
+					}
+				});
+			});
+			menu_els.push(crop_line_el);
 		}
+
+		let labels_line_el = $('<div class="menu_line overlay_menu_ctrl"></div>');
+		let labels_label_el = $('<label for="video_overlay_input_labels_cb_' + this.video.panel.n +'">Show detection labels</label>');
+		let labels_inp = $('<input type="checkbox"' + (this.display_labels ? " checked" : "") + ' id="video_overlay_input_labels_cb_' + this.video.panel.n + '" title="Show detection labels">');
+		labels_inp.appendTo(labels_label_el);
+		labels_label_el.appendTo(labels_line_el);
+		
+		labels_inp.change((ev) => {
+			that.display_labels = $(ev.target).prop("checked");
+			that.video.panel.storePanelVarAsBool('lbl', that.display_labels);
+
+			if (!that.display_labels) {
+				Object.keys(that.overlays).forEach((topic) => {
+					that.overlays[topic].svg.selectAll("text").remove();
+				});
+			}
+		});
+		menu_els.push(labels_line_el);
+		
+	}
+
+	setupOverlay(topic) {
+	
+		let overlay = this.overlays[topic];
+		if (!overlay) return;
+		let config = overlay.config;
+		if (!config) return;
 
 		if (this.video.videoWidth < 0 || this.video.videoHeight < 0)
 			return; // wait, video dimenstions still unknown
 
-		if (this.overlays[topic].overlay_aspect > -1) {
-			let w = this.video.videoHeight * this.overlays[topic].overlay_aspect;
+		if (overlay.aspect_ratio > -1) {
+			let w = this.video.videoHeight * overlay.aspect_ratio;
 			if (w <= this.video.videoWidth) {
-				this.overlays[topic].display_w = w;
-				this.overlays[topic].display_h = this.video.videoHeight;
+				overlay.display_w = w;
+				overlay.display_h = this.video.videoHeight;
 			} else {
-				this.overlays[topic].display_w = this.video.videoWidth;
-				this.overlays[topic].display_h =
-					this.video.videoWidth / this.overlays[topic].overlay_aspect;
+				overlay.display_w = this.video.videoWidth;
+				overlay.display_h =
+					this.video.videoWidth / overlay.aspect_ratio;
 			}
 		} else {
-			this.overlays[topic].display_w = this.video.videoWidth;
-			this.overlays[topic].display_h = this.video.videoHeight;
+			overlay.display_w = this.video.videoWidth;
+			overlay.display_h = this.video.videoHeight;
 		}
 
-		this.overlays[topic].xoff = (this.video.videoWidth - this.overlays[topic].display_w) / 2.0;
+		overlay.xoff = (this.video.videoWidth - overlay.display_w) / 2.0;
 
-		if (this.overlays[topic].container_el) {
+		if (overlay.container_el) {
 			// let svg = this.overlays[topic].svg.select(function() { return this.parentNode; })
 			// svg.remove();
-			this.overlays[topic].container_el.remove();
+			overlay.container_el.remove();
 		}
 
 		console.log("Making overlay from " + topic);
 		let cont_id = "video_overlay_" + this.video.panel.n + "_" + this.video.next_overlay_id;
 		this.video.next_overlay_id++;
-		this.overlays[topic].container_el = $('<div class="video_overlay_cont" id="' + cont_id + '"></div>');
-		this.overlays[topic].container_el.css("left", (this.overlays[topic].xoff / this.video.videoWidth) * 100 + "%");
+		overlay.container_el = $('<div class="video_overlay_cont" id="' + cont_id + '"></div>');
+		overlay.container_el.css("left", (overlay.xoff / this.video.videoWidth) * 100 + "%");
 
-		this.overlays[topic].container_el.appendTo(this.video.overlay_el);
+		overlay.container_el.appendTo(this.video.overlay_el);
 
-		this.overlays[topic].svg = d3.select("#" + cont_id).append("svg");
-		this.overlays[topic].svg
-			.attr("width", (this.overlays[topic].display_w / this.video.videoWidth) * 100 + "%")
-			.attr("viewBox", "0 0 " + this.overlays[topic].display_w + " " + this.overlays[topic].display_h)
+		overlay.svg = d3.select("#" + cont_id).append("svg");
+		overlay.svg
+			.attr("width", (overlay.display_w / this.video.videoWidth) * 100 + "%")
+			.attr("viewBox", "0 0 " + overlay.display_w + " " + overlay.display_h)
 			.append("g");
 		if (this.display_overlay_input_crop)
-			this.overlays[topic].container_el.addClass("display_crop");
+			overlay.container_el.addClass("display_crop");
 	}
 
 	onResize() {
 		let topics = Object.keys(this.overlays);
 		let that = this;
 		topics.forEach((topic) => {
-			that.setupOverlay(topic, null);
+			that.setupOverlay(topic);
 		});
 	}
 
     onTopicData(topic, msg) {
         if (this.video.panel.paused) return;
 
-		if (!this.overlays[topic] || !this.overlays[topic].svg) return; //not yet initiated
+		let overlay = this.overlays[topic];
+		if (!overlay|| !overlay.svg) return; //not yet initiated
 
-		let svg = this.overlays[topic].svg;
+		let svg = overlay.svg;
 		svg.selectAll("rect").remove();
 		svg.selectAll("text").remove();
 
@@ -128,8 +201,8 @@ export class VideoWidget_Detections2D {
 				if (class_id < 0)
 					class_id = c;
 				let l = "Class " + c;
-				if (this.overlays[topic].config && this.overlays[topic].config["label_map"] && this.overlays[topic].config["label_map"][c])
-					l = this.overlays[topic].config["label_map"][c];
+				if (overlay.config && overlay.config["label_map"] && overlay.config["label_map"][c])
+					l = overlay.config["label_map"][c];
 				l += " (" + d.results[j].hypothesis.score.toFixed(2) + ")";
 
 				// 3d distance
@@ -140,8 +213,8 @@ export class VideoWidget_Detections2D {
 			}
 			// let label = labels.join("<br/>\n");
 
-			let sx = this.overlays[topic].display_w / this.overlays[topic].nn_w;
-			let sy = this.overlays[topic].display_h / this.overlays[topic].nn_h;
+			let sx = overlay.display_w / overlay.nn_w;
+			let sy = overlay.display_h / overlay.nn_h;
 
 			let bbcx = d.bbox.center.position.x * sx;
 			let bbcy = d.bbox.center.position.y * sy;
@@ -158,7 +231,7 @@ export class VideoWidget_Detections2D {
 
 			// console.log('bb=['++']')
 
-			let c = this.detection_class_colors[topic][class_id] ? '#'+this.detection_class_colors[topic][class_id].getHexString() : 'magenta';
+			let c = '#'+ (overlay.detection_class_colors[class_id] ? overlay.detection_class_colors[class_id].getHexString() : VideoWidget_Detections2D.DEFAULT_DETECTION_COLOR.getHexString());
 
 			// center square
 			svg.append("rect")
@@ -227,107 +300,44 @@ export class VideoWidget_Detections2D {
             	.attr("height", bbox.height+10)
 		});
 
-		this.eraseOverlayOnTimeout(topic);
+		this.clearOverlayOnTimeout(topic);
     }
 
-    eraseOverlayOnTimeout(topic) {
-		if (this.clear_overlays_timeout[topic])
-			clearTimeout(this.clear_overlays_timeout[topic]);
+    clearOverlayOnTimeout(topic) {
+		let overlay = this.overlays[topic];
+		if (!overlay) return;
+		
+		if (overlay.clear_timeout)
+			clearTimeout(overlay.clear_timeout);
 
 		let that = this;
-		this.clear_overlays_timeout[topic] = setTimeout(() => {
+		overlay.clear_timeout = setTimeout(() => {
 			if (that.video.panel.paused) {
 				//don't clear while paused
-				that.eraseOverlayOnTimeout(topic);
+				that.clearOverlayOnTimeout(topic);
 				return;
 			}
 
-			if (that.overlays[topic]) {
-				let svg = this.overlays[topic].svg;
+			if (overlay) {
+				let svg = overlay.svg;
 				svg.selectAll("rect").remove();
 				svg.selectAll("text").remove();
 			}
 		}, 300);
 	}
 
-    clearTopic(topic) {
-		if (this.overlays[topic]) {
-			console.log("Removing overlay", this.overlays[topic]);
-			if (this.overlays[topic].container_el) {
-				this.overlays[topic].container_el.remove();
-			}
-			delete this.overlays[topic];
+	clearVisuals(topic) {
+		if (!this.overlays[topic])
+			return;
+		console.log("Removing overlay", this.overlays[topic]);
+		if (this.overlays[topic].container_el) {
+			this.overlays[topic].container_el.remove();
+			delete this.overlays[topic].container_el;
 		}
 	}
 
-	clearAllTopics() {
-        let detection_topics = Object.keys(this.overlays);
-		console.log("Clearing all detection topics", detection_topics);
-		let that = this;
-		detection_topics.forEach((topic) => {
-			that.clearTopic(topic);
-		});
+	clearTopic(topic) {
+    	this.client.offTopicConfig(topic, this.overlays[topic].config_change_cb);
+        super.clearTopic(topic);
     }
-
-	setupMenu(menu_els) {
-
-		if (!this.video.sources.hasType(VideoWidget_Detections2D.source_topic_type)) 
-			return; // only show when topics are subscribed to
-		
-		let that = this;
-
-		//this.overlay_crop_display_control_menu_el = null; //menu is empty here, force re-create
-
-		let show_nn_crop_control = false;
-		Object.keys(this.overlays).forEach((topic) => {
-			if (this.overlays[topic].nn_w || this.overlays[topic].nn_h) {
-				show_nn_crop_control = true;
-				return;
-			}
-		});
-
-		if (show_nn_crop_control) {
-
-			let crop_line_el = $('<div class="menu_line overlay_menu_ctrl"></div>');
-			let crop_label_el = $('<label for="video_overlay_input_crop_cb_' + this.video.panel.n +'">Highlight overlay input area</label>');
-			let crop_inp = $('<input type="checkbox"' + (this.display_overlay_input_crop ? " checked" : "") + ' id="video_overlay_input_crop_cb_' + this.video.panel.n + '" title="Display overlay input cropping">');
-			crop_inp.appendTo(crop_label_el);
-			crop_label_el.appendTo(crop_line_el);
-
-			crop_inp.change((ev) => {
-				that.display_overlay_input_crop = $(ev.target).prop("checked");
-				that.video.panel.storePanelVarAsBool('cr', that.display_overlay_input_crop);
-
-				console.log('that.display_overlay_input_crop '+that.display_overlay_input_crop);
-				Object.keys(that.overlays).forEach((topic) => {
-					if (that.overlays[topic].container_el) {
-						if (that.display_overlay_input_crop)
-							that.overlays[topic].container_el.addClass("display_crop");
-						else
-							that.overlays[topic].container_el.removeClass("display_crop");
-					}
-				});
-			});
-			menu_els.push(crop_line_el);
-		}
-
-		let labels_line_el = $('<div class="menu_line overlay_menu_ctrl"></div>');
-		let labels_label_el = $('<label for="video_overlay_input_labels_cb_' + this.video.panel.n +'">Show detection labels</label>');
-		let labels_inp = $('<input type="checkbox"' + (this.display_labels ? " checked" : "") + ' id="video_overlay_input_labels_cb_' + this.video.panel.n + '" title="Show detection labels">');
-		labels_inp.appendTo(labels_label_el);
-		labels_label_el.appendTo(labels_line_el);
-		
-		labels_inp.change((ev) => {
-			that.display_labels = $(ev.target).prop("checked");
-			that.video.panel.storePanelVarAsBool('lbl', that.display_labels);
-
-			if (!that.display_labels) {
-				Object.keys(that.overlays).forEach((topic) => {
-					that.overlays[topic].svg.selectAll("text").remove();
-				});
-			}
-		});
-		menu_els.push(labels_line_el);
-		
-	}
 }

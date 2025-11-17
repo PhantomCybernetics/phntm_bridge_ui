@@ -218,6 +218,7 @@
 	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
 	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
 	import { WorldModel3DPuginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
+	import { VideoPuginBase } from '/static/widgets/video/video-plugin-base.js';
 
 	import { isSubclassOf } from '/static/inc/lib.js';
 	let custom_modules = []; // used for accessing custom extension classes
@@ -271,7 +272,7 @@
 											  SystemLoadWidget
 											];
 			// find custom single type panel widgets
-			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriver)
+			custom_modules.forEach((module) => {
 				for (const key in module) {
 					if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
 						single_type_panel_classes.push(module[key]);
@@ -286,7 +287,14 @@
 			
 			// add video widget with overlay plugins
 			let video_plugin_classes = [ VideoWidget_Detections2D ];
-			// TODO: load custom video overlays here
+			// find custom video overlays
+			custom_modules.forEach((module) => {
+				for (const key in module) {
+					if (isSubclassOf(module[key], VideoPuginBase)) {
+						video_plugin_classes.push(module[key]);
+					}
+				}
+			});
 			VideoWidget.handled_msg_types.forEach((msg_type) => {
 				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
 			});
