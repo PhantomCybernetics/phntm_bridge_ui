@@ -206,4 +206,9 @@ export class WorldModel3DWidget_CameraInfo extends WorldModel3DPuginBase {
 			delete this.overlays[topic].frustum_visual;
 		}
 	}
+
+	clearTopic(topic) {
+        this.client.offTopicConfig(topic, this.overlays[topic].config_change_cb);
+        super.clearTopic(topic);
+    }
 }
