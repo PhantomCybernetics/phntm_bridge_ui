@@ -9,9 +9,9 @@ import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 // Imu rotation visualization with linear acceleration graph
 
 export class ImuWidget extends SingleTypePanelWidgetBase {
-	static default_width = 4;
-	static default_height = 14;
-	static handled_msg_types = [ 'sensor_msgs/msg/Imu' ];
+	static DEFAULT_WIDTH = 4;
+	static DEFAULT_HEIGHT = 14;
+	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/Imu' ];
 
 	static RED = '#ff2c0cff';
 	static GREEN = '#00ff00';

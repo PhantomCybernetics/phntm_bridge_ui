@@ -3,8 +3,8 @@ import { OrbitControls } from "orbit-controls";
 
 //IMU VISUALIZATION
 export class PointCloudWidget {
-	static default_width = 4;
-	static default_height = 16;
+	static DEFAULT_WIDTH = 4;
+	static DEFAULT_HEIGHT = 16;
 
 	constructor(panel, topic) {
 		this.panel = panel;

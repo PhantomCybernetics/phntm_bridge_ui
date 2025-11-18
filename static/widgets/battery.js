@@ -5,9 +5,9 @@ import "/static/canvasjs-charts/canvasjs.min.js";
 // Battery visualisation
 
 export class BatteryStateWidget extends SingleTypePanelWidgetBase {
-	static default_width = 5;
-	static default_height = 8;
-	static handled_msg_types = [ 'sensor_msgs/msg/BatteryState' ];
+	static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 8;
+	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/BatteryState' ];
 
 	constructor(panel, topic) {
 		super(panel, topic, 'battery');

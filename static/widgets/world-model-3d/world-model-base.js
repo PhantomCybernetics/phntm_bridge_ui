@@ -2,9 +2,9 @@ import { DescriptionTFWidget } from "../inc/description-tf.js";
 import { MultiTopicSource } from "../inc/multitopic.js";
 
 export class WorldModel3DWidget extends DescriptionTFWidget {
-	static label = "World Model 3D";
-	static default_width = 5;
-	static default_height = 18;
+	static LABEL = "World Model 3D";
+	static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 18;
 
 	constructor(panel, unused_widget_css_class, plugin_classes) {
 		super(panel, 'description-tf', false); // don't start rendering loop yet

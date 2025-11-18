@@ -1,15 +1,17 @@
 export class SingleTypePanelWidgetBase extends EventTarget {
 
      // default grid size when created
-    static default_width = 1;
-	static default_height = 6;
-    static handled_msg_types = []; // add message types to be handled here
+    static DEFAULT_WIDTH = 1;
+	static DEFAULT_HEIGHT = 6;
+    static HANDLED_MSG_TYPES = [ ]; // add message types to be handled here
 
     constructor(panel, topic, widget_css_class) {
         super(); // EventTarget
 
 		this.panel = panel; 
         this.client = panel.ui.client;
+        this.ui = panel.ui; 
+        
 		this.topic = topic;
         this.autoresize_renderer = true; // if renderer exists, it will be resized before onResize is called
         

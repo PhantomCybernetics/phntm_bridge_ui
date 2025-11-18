@@ -1,7 +1,7 @@
-import { InputDriver } from "./base-driver.js";
+import { InputDriverBase } from "./input-driver-base.js";
 
-export class JoyInputDriver extends InputDriver {
-	static label = "Joy";
+export class JoyInputDriver extends InputDriverBase {
+	static LABEL = "Joy";
 	
 	msg_type = "sensor_msgs/msg/Joy";
 	num_axes = 10;
@@ -45,7 +45,6 @@ export class JoyInputDriver extends InputDriver {
 			else msg.buttons[i] = this.buttons_output[id_btn];
 		}
 
-		this.output = msg;
-		return this.output;
+		return msg;
 	}
 }

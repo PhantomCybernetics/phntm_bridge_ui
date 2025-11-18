@@ -31,8 +31,8 @@ export class PanelUI {
 	addTypeWidget(msg_type, widget_class, plugin_classes) {
 		this.type_widgets[msg_type] = {
 			widget: widget_class,
-			w: widget_class.default_width,
-			h: widget_class.default_height,
+			w: widget_class.DEFAULT_WIDTH,
+			h: widget_class.DEFAULT_HEIGHT,
 			plugin_classes: plugin_classes
 		};
 	}
@@ -1800,8 +1800,8 @@ export class PanelUI {
 			w_cb.change((ev) => {
 				let state = $(ev.target).prop("checked");
 
-				let w = that.widgets[widget_class].class.default_width;
-				let h = that.widgets[widget_class].class.default_height;
+				let w = that.widgets[widget_class].class.DEFAULT_WIDTH;
+				let h = that.widgets[widget_class].class.DEFAULT_HEIGHT;
 
 				that.togglePanel(widget_class, widget_class, state, w, h);
 				// client.SetCameraSubscription(id_robot, [ cam ], state);

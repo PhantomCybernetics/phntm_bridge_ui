@@ -2,17 +2,18 @@ import { MultiTopicSource } from "./multitopic.js";
 
 export class CompositePanelWidgetBase extends EventTarget {
 
-    static label = "Widget name";
+    static LABEL = "Widget name";
 
     // default grid size when created
-    static default_width = 5;
-	static default_height = 5;
+    static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 5;
 
     constructor(panel, widget_css_class) {
         super(); // EventTarget
 
         this.panel = panel;
         this.client = panel.ui.client;
+        this.ui = panel.ui;
         this.autoresize_renderer = true; // if renderer exists, it will be resized before onResize is called
 
         this.widget_el = $("#panel_widget_" + this.panel.n);

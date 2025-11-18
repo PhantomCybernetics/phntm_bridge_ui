@@ -3,5 +3,5 @@ import * as THREE from "three";
 import { Zoomable2DTiles } from "./inc/zoomable-2d-tiles.js";
 
 export class NavigationWidget extends Zoomable2DTiles {
-	static label = "Lidar SLAM + Navigation (2D)";
+	static LABEL = "Lidar SLAM + Navigation (2D)";
 }

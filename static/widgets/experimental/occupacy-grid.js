@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { Zoomable2DTiles } from "./inc/zoomable-2d-tiles.js";
 
 export class OccupancyGrid extends Zoomable2DTiles {
-	static default_width = 7;
-	static default_height = 16;
+	static DEFAULT_WIDTH = 7;
+	static DEFAULT_HEIGHT = 16;
 
 	constructor(panel, topic) {
 		super(panel);

@@ -208,13 +208,13 @@
 	import { WorldModel3DWidget_CameraInfo } from "/static/widgets/world-model-3d/camera-info.js";
 	import { WorldModel3DWidget_Detections3D } from "/static/widgets/world-model-3d/detections3d.js";
 
-	import { InputDriver } from "/static/input/base-driver.js";
+	import { InputDriverBase } from "/static/input/input-driver-base.js";
 	import { JoyInputDriver } from "/static/input/joy-driver.js";
 	import { TwistInputDriver } from "/static/input/twist-driver.js";
 
 	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
 
-	import { CustomServiceInput } from '/static/input/custom-service-input.js'
+	import { ServiceInputBase } from '/static/input/service-input-base.js'
 	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
 	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
 	import { WorldModel3DPuginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
@@ -253,9 +253,9 @@
 			let input_manager = new InputManager(robot);
 			input_manager.registerDriver(JoyInputDriver);
 			input_manager.registerDriver(TwistInputDriver);
-			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriver)
+			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriverBase)
 				for (const key in module) {
-					if (isSubclassOf(module[key], InputDriver)) {
+					if (isSubclassOf(module[key], InputDriverBase)) {
 						input_manager.registerDriver(module[key]);
 					}
 				}
@@ -280,7 +280,7 @@
 				}
 			});
 			single_type_panel_classes.forEach((widget_class)=>{
-				widget_class.handled_msg_types.forEach((msg_type) => {
+				widget_class.HANDLED_MSG_TYPES.forEach((msg_type) => {
 					panel_ui.addTypeWidget(msg_type, widget_class);
 				});
 			});
@@ -295,7 +295,7 @@
 					}
 				}
 			});
-			VideoWidget.handled_msg_types.forEach((msg_type) => {
+			VideoWidget.HANDLED_MSG_TYPES.forEach((msg_type) => {
 				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
 			});
 
@@ -327,10 +327,10 @@
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
 			panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
-			 // load custom service widgets (must be a subclass of CustomServiceInput)
+			 // load custom service widgets (must be a subclass of ServiceInputBase)
 			custom_modules.forEach((module) => {
 				for (const key in module) {
-					if (isSubclassOf(module[key], CustomServiceInput)) {
+					if (isSubclassOf(module[key], ServiceInputBase)) {
 						panel_ui.addCustomServiceWidget(key, module[key]);
 					}
 				}

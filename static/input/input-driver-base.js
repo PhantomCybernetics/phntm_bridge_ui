@@ -1,15 +1,12 @@
-export class InputDriver {
+export class InputDriverBase {
 
-	static label = "InputDriver"; // override these
+	static LABEL = "InputDriver"; // override these
 	
 	msg_type = ""; 
 	num_axes = 10;
 	num_buttons = 10;
 
 	constructor(input_manager) {
-		// this.id = id;
-		// this.label = label;
-		// this.config = null;
 		this.input_manager = input_manager;
 
 		this.output_topic = "/user_input"; //override this
@@ -37,8 +34,7 @@ export class InputDriver {
 	// override this to output message
 	generate() {
 		console.warn("You need to override the generate() method!");
-		this.output = null;
-		return this.output;
+		return null;
 	}
 
 	resetAllOutput() {

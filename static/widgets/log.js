@@ -3,9 +3,9 @@ import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 // Log console for /rosout, etc
 
 export class LogWidget extends SingleTypePanelWidgetBase {
-	static default_width = 10;
-	static default_height = 8;
-	static handled_msg_types = [ 'rcl_interfaces/msg/Log' ];
+	static DEFAULT_WIDTH = 10;
+	static DEFAULT_HEIGHT = 8;
+	static HANDLED_MSG_TYPES = [ 'rcl_interfaces/msg/Log' ];
 
 	constructor(panel, topic) {
 		super(panel, topic, 'log');

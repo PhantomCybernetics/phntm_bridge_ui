@@ -1,4 +1,4 @@
-export class CustomServiceInput {
+export class ServiceInputBase {
 	id_service = null;
 	client= null; // browser client ref
 

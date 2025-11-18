@@ -10,9 +10,9 @@ import { Vector3, Quaternion, LoadingManager } from "three";
 import { CompositePanelWidgetBase } from './composite-widget-base.js'
 
 export class DescriptionTFWidget extends CompositePanelWidgetBase {
-	static label = "Robot description (URFD) + Transforms";
-	static default_width = 5;
-	static default_height = 16;
+	static LABEL = "Robot description (URFD) + Transforms";
+	static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 16;
 
 	static L_VISUALS = 1;
 	static L_COLLIDERS = 2;

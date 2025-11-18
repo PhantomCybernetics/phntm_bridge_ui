@@ -5,9 +5,9 @@ import { SingleTypePanelWidgetBase } from "../inc/single-type-widget-base.js";
 
 export class VideoWidget extends SingleTypePanelWidgetBase {
 	
-	static default_width = 5;
-	static default_height = 12;
-	static handled_msg_types = [ 'video',
+	static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 12;
+	static HANDLED_MSG_TYPES = [ 'video',
 								 'sensor_msgs/msg/Image',
 								 'sensor_msgs/msg/CompressedImage',
 								 'ffmpeg_image_transport_msgs/msg/FFMPEGPacket'

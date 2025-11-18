@@ -1,7 +1,7 @@
-import { InputDriver } from "./base-driver.js";
+import { InputDriverBase } from "./input-driver-base.js";
 
-export class TwistInputDriver extends InputDriver {
-	static label = "Twist";
+export class TwistInputDriver extends InputDriverBase {
+	static LABEL = "Twist";
 
 	msg_type = "geometry_msgs/msg/Twist";
 	
@@ -51,15 +51,7 @@ export class TwistInputDriver extends InputDriver {
 		let opts = [];
 		["geometry_msgs/msg/Twist", "geometry_msgs/msg/TwistStamped"].forEach(
 			(one_type) => {
-				opts.push(
-					'<option value="' +
-						one_type +
-						'"' +
-						(this.msg_type == one_type ? " selected" : "") +
-						">" +
-						one_type +
-						"</option>",
-				);
+				opts.push('<option value="' + one_type + '"' + (this.msg_type == one_type ? " selected" : "") + ">" + one_type + "</option>");
 			},
 		);
 		let inp_msg_type = $("<select>" + opts.join() + "</select>");
@@ -84,14 +76,8 @@ export class TwistInputDriver extends InputDriver {
 		lines.push(line_msg_type);
 
 		// one output topic
-		let line_topic = $(
-			'<div class="line"><span class="label">Output topic:</span></div>',
-		);
-		this.inp_topic = $(
-			'<input type="text" inputmode="url" autocomplete="off" value="' +
-				this.output_topic +
-				'"/>',
-		);
+		let line_topic = $('<div class="line"><span class="label">Output topic:</span></div>');
+		this.inp_topic = $('<input type="text" inputmode="url" autocomplete="off" value="' + this.output_topic + '"/>');
 		this.inp_topic.appendTo(line_topic);
 		this.inp_topic.change((ev) => {
 			that.output_topic = $(ev.target).val();
@@ -143,7 +129,6 @@ export class TwistInputDriver extends InputDriver {
 			};
 		}
 
-		this.output = msg;
-		return this.output;
+		return msg;
 	}
 }

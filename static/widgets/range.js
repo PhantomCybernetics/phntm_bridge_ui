@@ -4,9 +4,9 @@ import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 // Range visualization
 
 export class RangeWidget extends SingleTypePanelWidgetBase {
-	static default_width = 1;
-	static default_height = 5;
-	static handled_msg_types = [ 'sensor_msgs/msg/Range' ];
+	static DEFAULT_WIDTH = 1;
+	static DEFAULT_HEIGHT = 5;
+	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/Range' ];
 
 	constructor(panel, topic) {
 		super(panel, topic, 'range');

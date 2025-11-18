@@ -1910,7 +1910,7 @@ export class InputManager {
 
 					for (let i = 0; i < this.enabled_drivers.length; i++) {
 						let id_driver = this.enabled_drivers[i];
-						let label = this.registered_drivers[id_driver].label;
+						let label = this.registered_drivers[id_driver].LABEL;
 						driver_opts.push('<option value="' + id_driver + '"' + (c_profile.driver == id_driver ? " selected" : "") + ">" + label + "</option>");
 					}
 					let inp_driver = $('<select id="gamepad-profile-driver-select">' + driver_opts.join("") + "</select>");
@@ -4347,7 +4347,7 @@ export class InputManager {
 			let transmitting =
 				c.enabled && (axes_alive || buttons_alive || cooldown) && can_transmit;
 
-			driver.generate();
+			driver.output = driver.generate();
 
 			if (this.open && this.edited_controller == c && this.open_panel == "output") {
 				driver.displayOutput(this.debug_output_panel, transmitting);
@@ -4410,7 +4410,7 @@ export class InputManager {
 			if (that.cooldown_drivers[topic].started + 1000 < Date.now()) {
 				delete that.cooldown_drivers[topic];
 			} else {
-				that.cooldown_drivers[topic].driver.generate();
+				that.cooldown_drivers[topic].driver.output = that.cooldown_drivers[topic].driver.generate();
 				that.cooldown_drivers[topic].driver.transmit();
 			}
 		});

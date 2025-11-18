@@ -4,9 +4,9 @@ import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 // Laser scan visualization
 
 export class LaserScanWidget extends SingleTypePanelWidgetBase {
-	static default_width = 5;
-	static default_height = 13;
-	static handled_msg_types = [ 'sensor_msgs/msg/LaserScan' ];
+	static DEFAULT_WIDTH = 5;
+	static DEFAULT_HEIGHT = 13;
+	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/LaserScan' ];
 
 	constructor(panel, topic) {
 		super(panel, topic, 'laser-scan');
