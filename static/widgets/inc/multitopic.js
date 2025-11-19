@@ -20,7 +20,7 @@ export class MultiTopicSource extends EventTarget {
 		this.menu_open = false;
 	}
 
-	add(msg_type, label, default_topic, num, cb, clear_cb, config_cb) {
+	add(msg_type, label, default_topic, num, cb, clear_cb) {
 		let new_src = {
 			msg_type: msg_type,
 			label: label,
