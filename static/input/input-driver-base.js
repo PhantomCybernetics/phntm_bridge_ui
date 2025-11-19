@@ -12,7 +12,7 @@ export class InputDriverBase {
 		this.output_topic = "/user_input"; //override this
 		this.client = input_manager.client;
 		this.output = null;
-		this.topic_writer = null;
+		this.write_topic_open = false;
 
 		this.error_label = null;
 		this.error_message = null;
@@ -79,7 +79,7 @@ export class InputDriverBase {
 			return;
 		}
 		let err = {};
-		this.topic_writer = this.client.getWriter(this.output_topic, this.msg_type, err);
+		this.write_topic_open = this.client.openWriteChannel(this.output_topic, this.msg_type, err);
 		this.error_message = err.message;
 		this.handleErrorMessage();
 		this.input_manager.disableControllersWithConflictingDiver(this);
@@ -165,23 +165,18 @@ export class InputDriverBase {
 	}
 
 	canTransmit() {
-		return (
-			this.topic_writer !== null &&
-			this.topic_writer !== undefined &&
-			this.topic_writer !== false
-		);
+		return this.write_topic_open;
 	}
 
 	transmit() {
 		if (!this.output) return false;
-		if (!this.topic_writer) {
-			// console.log('driver writer not ready for '+this.output_topic)
+		if (!this.write_topic_open) {
 			return false;
 		}
-		if (!this.topic_writer.send(this.output)) {
+		if (!this.client.writeTopicData(this.output_topic, this.output)) {
 			// true when ready and written
 			if (!this.error_logged) {
-				console.warn("Input driver's topic writer failed writing (warming up?)");
+				console.warn("Input driver's topic failed writing (warming up?)");
 				this.error_logged = true;
 			}
 			return false;

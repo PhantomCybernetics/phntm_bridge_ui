@@ -329,12 +329,12 @@ export class PanelUI {
 
 			// battery optional
 			if (that.battery_topic && that.battery_topic != robot_ui_config["battery_topic"]) {
-				client.off(that.battery_topic, batteryStatusWrapper);
+				client.offTopicData(that.battery_topic, batteryStatusWrapper);
 				that.battery_topic = null;
 			}
 			if (robot_ui_config["battery_topic"]) {
 				that.battery_topic = robot_ui_config["battery_topic"];
-				client.on(that.battery_topic, batteryStatusWrapper);
+				client.onTopicData(that.battery_topic, batteryStatusWrapper);
 				console.warn("battery topic is " + that.battery_topic);
 				$("#battery-info").css("display", "block");
 				that.battery_shown = true;
@@ -374,11 +374,11 @@ export class PanelUI {
 			if (that.docker_monitor_topic) {
 				that.docker_monitor_shown = true;
 				that.subscribed_docker_monitor_topic = that.docker_monitor_topic;
-				client.on(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
+				client.onTopicData(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
 			} else if (that.docker_monitor_shown) {
 				that.docker_monitor_shown = false;
 				if (that.subscribed_docker_monitor_topic) {
-					client.off(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
+					client.offTopicData(that.subscribed_docker_monitor_topic, dockerMonitorWrapper);
 				}
 				that.subscribed_docker_monitor_topic = null;
 			}
@@ -392,13 +392,13 @@ export class PanelUI {
 			// wifi status
 			let wifi_shown = false;
 			if (that.iw_topic && that.iw_topic != robot_ui_config["wifi_monitor_topic"]) {
-				client.off(that.iw_topic, iwStatusWrapper);
+				client.offTopicData(that.iw_topic, iwStatusWrapper);
 				that.iw_topic = null;
 				wifi_shown = false;
 			}
 			if (robot_ui_config["wifi_monitor_topic"]) {
 				that.iw_topic = robot_ui_config["wifi_monitor_topic"];
-				client.on(that.iw_topic, iwStatusWrapper);
+				client.onTopicData(that.iw_topic, iwStatusWrapper);
 				$("#signal-monitor").css("display", "block");
 				$("#network-details").css("display", "");
 				wifi_shown = true;
@@ -480,7 +480,7 @@ export class PanelUI {
 			}, 1000);
 		});
 
-		client.on("peer_conection_changed", () => {
+		client.on("peer_connection_changed", () => {
 			that.updateWebrtcStatus();
 			if (
 				that.client.pc &&
@@ -2559,7 +2559,7 @@ export class PanelUI {
 
 	updateWebrtcStatus() {
 		let state = null;
-		const [remote_type, remote_ip] = this.client.getTURNConnectionInfo();
+		const [remote_type, remote_ip] = this.client.getPeerConnectionInfo();
 		let pc = this.client.pc;
 		if (pc) {
 			state =

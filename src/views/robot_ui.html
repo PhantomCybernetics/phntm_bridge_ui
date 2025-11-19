@@ -189,7 +189,7 @@
 	import { LogWidget } from "/static/widgets/log.js";
 	import { SystemLoadWidget } from "/static/widgets/system-load.js";
 	
-	import { PhntmBridgeClient } from "/static/browser-client.js";
+	import { BrowserClient } from "/static/browser-client.js";
 	import { InputManager } from "/static/input/input-manager.js";
 	import { PanelUI } from "/static/panel-ui.js";
 
@@ -240,7 +240,7 @@
 
 	$(document).ready(function () {
 		try {
-			let robot = new PhntmBridgeClient({
+			let robot = new BrowserClient({
 				socket_url: "<%= bridge_socket_url %>",
 				socket_path: "/app/socket.io/",
 				socket_auto_connect: false,

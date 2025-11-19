@@ -126,7 +126,7 @@ export class Panel {
 		console.log("Adding widget " + id_source + ": ", widget_opts);
 		this.grid_widget = grid.addWidget(widget_opts);
 	
-		this.ui.client.on(id_source, this.onDataContextWrapper);
+		this.ui.client.onTopicData(id_source, this.onDataContextWrapper);
 
 		// setTimeout(() => {
 		// 	panels[id_source].onResize();
@@ -1069,7 +1069,7 @@ export class Panel {
 			);
 		}
 
-		this.ui.client.off(this.id_source, this.onDataContextWrapper);
+		this.ui.client.offTopicData(this.id_source, this.onDataContextWrapper);
 
 		if (this.display_widget && this.display_widget.onClose) {
 			this.display_widget.onClose();

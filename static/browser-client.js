@@ -19,7 +19,7 @@ class TopicWriter {
 		}
 
 		if (!this.msg_writer) {
-			this.msg_writer = this.client.getMsgWriter(this.msg_type);
+			this.msg_writer = this.client._getMsgWriter(this.msg_type);
 		}
 
 		//console.log('Writing '+msg_type+' into '+topic, this.dcs[topic])
@@ -45,7 +45,6 @@ class Subscriber {
 		this.client = client;
 		this.id_source = id_source;
 		this.msg_type = null;
-
 		this.latest = null;
 	}
 }
@@ -69,9 +68,7 @@ class TopicReader {
 			client.supported_msg_types,
 		);
 		if (!msg_type_class) {
-			console.warn(
-				"Msg type def " + this.msg_type + " not yet awailable for " + this.topic,
-			);
+			console.warn("Msg type def " + this.msg_type + " not yet awailable for " + this.topic);
 			return false;
 		}
 
@@ -106,26 +103,23 @@ export function IsFastVideoTopic(t) {
 	return t == "ffmpeg_image_transport_msgs/msg/FFMPEGPacket";
 }
 
-export class PhntmBridgeClient extends EventTarget {
+export class BrowserClient extends EventTarget {
 	id_robot = null;
 	session = null;
 	supported_msg_types = []; // served from Bridge Server
 
 	pc = null;
+	socket = null;
 
 	discovered_topics = {}; // str topic => { msg_types: str[], subscribed: bool }
-	discovered_nodes = {}; // str service => { msg_type: str}
+	discovered_nodes = {}; // str node => { msg_type: str}
 	discovered_services = {}; // str service => { msg_type: str}
-	discovered_cameras = {}; // str id => { info: {}}
-	discovered_docker_containers = {}; // str id => { info: {}}
 
-	//topic_configs = {};
 	topic_streams = {}; // topic/cam => id_stream
 	media_streams = {}; // id_stream => MediaStream
 
-	socket = null;
 	event_calbacks = {};
-
+	topic_calbacks = {};
 	topic_config_callbacks = {};
 	service_config_callbacks = {};
 	ui_config_callbacks = [];
@@ -156,10 +150,8 @@ export class PhntmBridgeClient extends EventTarget {
 
 		//defaults to phntm bridge service
 		this.socket_url = opts.socket_url;
-		this.socket_path =
-			opts.socket_path !== undefined ? opts.socket_path : "/app/socket.io/";
-		this.socket_auto_connect =
-			opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
+		this.socket_path = opts.socket_path !== undefined ? opts.socket_path : "/app/socket.io/";
+		this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
 
 		this.bridge_files_url = opts.bridge_files_url;
 		this.bridge_files_secret = null;
@@ -440,27 +432,6 @@ export class PhntmBridgeClient extends EventTarget {
 			}, 0);
 		});
 
-		// this.socket.on('cameras', (cameras_data) => {
-
-		//     if (!cameras_data[this.id_robot])
-		//         return;
-
-		//     setTimeout(()=>{
-		//         this.discovered_cameras = {};
-
-		//         Object.keys(cameras_data[this.id_robot]).forEach((id_camera) => {
-
-		//             this.discovered_cameras[id_camera] = {
-		//                 id: id_camera,
-		//                 info: cameras_data[this.id_robot][id_camera],
-		//             };
-		//         });
-
-		//         console.log('Got Cameras:', this.discovered_cameras);
-		//         this.emit('cameras', this.discovered_cameras);
-		//     }, 0);
-		// });
-
 		this.socket.on("docker", (docker_containers_data) => {
 			if (!docker_containers_data[this.id_robot]) return;
 
@@ -473,10 +444,7 @@ export class PhntmBridgeClient extends EventTarget {
 			let stream_ids = Object.keys(that.media_streams);
 
 			stream_ids.forEach((id_stream) => {
-				console.warn(
-					"Killing stream " + id_stream,
-					that.media_streams[id_stream],
-				);
+				console.warn("Killing stream " + id_stream, that.media_streams[id_stream]);
 				that.media_streams[id_stream].getTracks().forEach((track) => {
 					track.stop();
 				});
@@ -499,13 +467,13 @@ export class PhntmBridgeClient extends EventTarget {
 			that.stopHeartbeat();
 		});
 
-		this.on("peer_conection_changed", () => {
+		this.on("peer_connection_changed", () => {
 			that.reportConectionState(); // update webrtc state on Bridge Server that sends it to the robot
 		});
 		// pc = InitPeerConnection(id_robot);
 	}
 
-	getMsgWriter(msg_type) {
+	_getMsgWriter(msg_type) {
 		if (this.msg_writers[msg_type]) return this.msg_writers[msg_type];
 
 		let Writer = window.Serialization.MessageWriter;
@@ -527,25 +495,24 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	on(event, cb) {
-		if (!this.event_calbacks[event]) this.event_calbacks[event] = [];
+		// TMP
+		if (event.indexOf("/") === 0) {
+			console.error("Use onTopicData to subscribe to topics!");
+			return;
+		}
+
+		if (!this.event_calbacks[event])
+			this.event_calbacks[event] = [];
 
 		let p = this.event_calbacks[event].indexOf(cb);
 		if (p > -1) return;
 
 		this.event_calbacks[event].push(cb);
-
-		if (event.indexOf("/") === 0) {
-			// topic or camera id
-			this.createSubscriber(event);
-
-			if (this.latest[event]) {
-				setTimeout(() => { cb(this.latest[event].msg, this.latest[event].ev); }, 0);
-			}
-		}
 	}
 
 	once(event, cb) {
-		if (!this.event_calbacks[event]) this.event_calbacks[event] = [];
+		if (!this.event_calbacks[event])
+			this.event_calbacks[event] = [];
 
 		let wrapper_cb = (...args) => {
 			this.off(event, wrapper_cb);
@@ -557,7 +524,12 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	off(event, cb) {
-		// console.warn('unsubscribe', cb)
+		// TMP
+		if (event.indexOf("/") === 0) {
+			console.error("Use offTopicData to unsubscribe from topics!");
+			return;
+		}
+
 		if (!this.event_calbacks[event]) {
 			console.warn("Event not registered", event, this.event_calbacks);
 			return;
@@ -566,20 +538,9 @@ export class PhntmBridgeClient extends EventTarget {
 		let p = this.event_calbacks[event].indexOf(cb);
 		if (p !== -1) {
 			this.event_calbacks[event].splice(p, 1);
-			console.log(
-				"Handler removed for " +
-					event +
-					"; " +
-					this.event_calbacks[event].length +
-					" remaing",
-			);
+			console.log("Handler removed for " + event + "; " + this.event_calbacks[event].length + " remaing");
 			if (this.event_calbacks[event].length == 0) {
 				delete this.event_calbacks[event];
-				if (event.indexOf("/") === 0) {
-					// topic or camera id
-					console.log("Unsubscribing from " + event);
-					this.removeSubscriber(event);
-				}
 			}
 		} else {
 			console.error("cb not found in unsubscribe for " + event, cb);
@@ -588,14 +549,64 @@ export class PhntmBridgeClient extends EventTarget {
 
 	emit(event, ...args) {
 		if (!this.event_calbacks[event]) {
-			// console.log('no callbacks for '+event);
 			return;
 		}
 
-		// console.log('calling callbacks for '+event, this.event_calbacks[event]);
 		this.event_calbacks[event].forEach((cb) => {
 			setTimeout(() => {
 				cb(...args);
+			}, 0);
+		});
+	}
+
+	onTopicData(topic, cb) {
+
+		if (!this.topic_calbacks[topic])
+			this.topic_calbacks[topic] = [];
+
+		let p = this.topic_calbacks[topic].indexOf(cb);
+		if (p > -1) return;
+
+		this.topic_calbacks[topic].push(cb);
+
+		this.createSubscriber(topic);
+
+		let that = this;
+		if (this.latest[topic]) {
+			setTimeout(() => {
+				cb(that.latest[topic].msg, that.latest[topic].ev);
+			}, 0);
+		}
+	}
+
+	offTopicData(topic, cb) {
+		if (!this.topic_calbacks[topic]) {
+			console.warn("Topic callback not registered", topic, this.topic_calbacks);
+			return;
+		}
+
+		let p = this.topic_calbacks[topic].indexOf(cb);
+		if (p !== -1) {
+			this.topic_calbacks[topic].splice(p, 1);
+			console.log("Handler removed for " + topic + "; " + this.topic_calbacks[topic].length + " remaing");
+			if (this.topic_calbacks[topic].length == 0) {
+				delete this.topic_calbacks[topic];
+				console.log("Unsubscribing from " + topic);
+				this.removeSubscriber(topic);
+			}
+		} else {
+			console.error("Callback not found in offTopicData for " + topic, cb);
+		}
+	}
+
+	emitTopicData(topic, decoded, msg_evt) {
+		if (!this.topic_calbacks[topic]) {
+			return;
+		}
+
+		this.topic_calbacks[topic].forEach((cb) => {
+			setTimeout(() => {
+				cb(decoded, msg_evt);
 			}, 0);
 		});
 	}
@@ -681,21 +692,11 @@ export class PhntmBridgeClient extends EventTarget {
 
 	createSubscriber(id_source) {
 		if (this.subscribers[id_source]) {
-			console.log(
-				"Reusing subscriber for " +
-					id_source +
-					"; init_complete=" +
-					this.init_complete,
-			);
+			console.log("Reusing subscriber for " + id_source + "; init_complete=" + this.init_complete);
 			return this.subscribers[id_source];
 		}
 
-		console.log(
-			"Creating subscriber for " +
-				id_source +
-				"; init_complete=" +
-				this.init_complete,
-		);
+		console.log("Creating subscriber for " + id_source + "; init_complete=" + this.init_complete);
 
 		this.subscribers[id_source] = new Subscriber(this, id_source);
 
@@ -732,7 +733,6 @@ export class PhntmBridgeClient extends EventTarget {
 
 		if (this.topic_streams[id_source]) {
 			console.log("Clearing media stream for " + id_source);
-
 			// not deleting media streams! same on the bridge node
 			// if (this.media_streams[this.topic_streams[id_source]])
 			//     delete this.media_streams[this.topic_streams[id_source]];
@@ -740,10 +740,6 @@ export class PhntmBridgeClient extends EventTarget {
 			// deleting data topic channel
 			delete this.topic_streams[id_source];
 		}
-
-		// if (topic_dcs) {
-
-		// }
 
 		if (this.init_complete) {
 			//not waiting for initial subs
@@ -816,48 +812,23 @@ export class PhntmBridgeClient extends EventTarget {
 		this.remove_subscribers_timeout = null;
 	}
 
-	getWriter(topic, msg_type, err_out = null) {
+	openWriteChannel(topic, msg_type, err_out = null) {
 		if (this.topic_writers[topic] && this.topic_writers[topic].msg_type == msg_type) {
-			console.log(
-				"Re-using writer for " +
-					topic +
-					" and " +
-					msg_type +
-					"; init_complete=" +
-					this.init_complete,
-			);
-			return this.topic_writers[topic];
+			console.log("Re-using writer for " + topic + " and " + msg_type + "; init_complete=" + this.init_complete);
+			return true;
 		}
 
 		if (this.topic_writers[topic] && this.topic_writers[topic].msg_type != msg_type) {
-			console.error(
-				"Will not write " +
-					msg_type +
-					" into " +
-					topic +
-					" (type mixing: " +
-					this.topic_writers[topic].msg_type +
-					" x " +
-					msg_type +
-					")",
-			);
+			console.error("Will not write " + msg_type + " into " + topic + " (type mixing: " + this.topic_writers[topic].msg_type + " x " + msg_type + ")");
 			if (err_out) {
 				err_out.error = true;
-				err_out.message =
-					"Not writing because mixing message types in one topic breaks ROS. " +
-					"Either change the ouput topic, or save your changes & reload this page to override.";
+				err_out.message = "Not writing because mixing message types in one topic breaks ROS. " +
+								  "Either change the ouput topic, or save your changes & reload this page to override.";
 			}
 			return false;
 		}
 
-		console.warn(
-			"Beginning writing " +
-				msg_type +
-				" to " +
-				topic +
-				"; init_complete=" +
-				this.init_complete,
-		);
+		console.warn("Beginning writing " + msg_type + " to " + topic + "; init_complete=" + this.init_complete);
 
 		this.topic_writers[topic] = new TopicWriter(this, topic, msg_type);
 		let that = this;
@@ -871,10 +842,7 @@ export class PhntmBridgeClient extends EventTarget {
 				},
 				(res_pub) => {
 					if (res_pub && res_pub.err) {
-						console.error(
-							"Error creating a topic writer for " + topic + ":",
-							res_pub.err,
-						);
+						console.error("Error creating a topic writer for " + topic + ":", res_pub.err);
 					} else {
 						console.warn("Res pub: ", res_pub);
 						if (res_pub["write_data_channels"]) {
@@ -893,37 +861,45 @@ export class PhntmBridgeClient extends EventTarget {
 				},
 			);
 		}
-		return this.topic_writers[topic];
+		return true;
 	}
 
-	removeWriter(topic) {
-		if (!this.writers[topic]) {
-			console.log("Writer not found for " + topic + "; not removing");
-			return;
-		}
+	writeTopicData(topic, msg) {
+		if (!this.topic_writers[topic])
+			return false;
 
-		console.log("Removing writer for " + topic);
-		// this.topic_dcs
-
-		if (this.writers[topic].dc) {
-			this.writers[topic].dc.close();
-		}
-		delete this.writers[topic];
-
-		if (this.init_complete) {
-			//not waiting for initial subs
-			this.socket.emit(
-				"unsubscribe:write",
-				{
-					id_robot: this.id_robot,
-					sources: [topic],
-				},
-				(res) => {
-					console.warn("Res unpub", res);
-				},
-			);
-		}
+		return this.topic_writers[topic].send(msg);
 	}
+
+	// not removing writers ever
+	// removeWriter(topic) {
+	// 	if (!this.writers[topic]) {
+	// 		console.log("Writer not found for " + topic + "; not removing");
+	// 		return;
+	// 	}
+
+	// 	console.log("Removing writer for " + topic);
+	// 	// this.topic_dcs
+
+	// 	if (this.writers[topic].dc) {
+	// 		this.writers[topic].dc.close();
+	// 	}
+	// 	delete this.writers[topic];
+
+	// 	if (this.init_complete) {
+	// 		//not waiting for initial subs
+	// 		this.socket.emit(
+	// 			"unsubscribe:write",
+	// 			{
+	// 				id_robot: this.id_robot,
+	// 				sources: [topic],
+	// 			},
+	// 			(res) => {
+	// 				console.warn("Res unpub", res);
+	// 			},
+	// 		);
+	// 	}
+	// }
 
 	connect() {
 		if (this.socket.connected) {
@@ -981,19 +957,21 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	startHeartbeat() {
-		if (this.heartbeat_timer) return;
+		if (this.heartbeat_timer)
+			return;
 
 		this.heartbeat_logged = false;
-		this.heartbeat_writer = this.getWriter("_heartbeat", "std_msgs/msg/Byte");
+		this.heartbeat_write_topic_open = this.openWriteChannel("_heartbeat", "std_msgs/msg/Byte");
 
-		if (!this.heartbeat_writer) console.error("Error setting up heartbeat writer");
-		else {
-			console.log("heartbeat writer ready");
+		if (!this.heartbeat_write_topic_open) {
+			console.error("Error setting up heartbeat writer");
+		} else {
+			console.log("Heartbeat writer ready");
 			let that = this;
-			that.heartbeat_timer = setInterval(() => {
+			this.heartbeat_timer = setInterval(() => {
 				if (!that.pc || that.pc.connectionState != "connected") return;
 
-				if (!that.heartbeat_writer.send({ data: 1 })) {
+				if (!that.writeTopicData("_heartbeat", { data: 1 })) {
 					// true when ready and written
 					console.warn("Failed to send heartbeat");
 					that.heartbeat_logged = false;
@@ -1006,11 +984,11 @@ export class PhntmBridgeClient extends EventTarget {
 	}
 
 	stopHeartbeat() {
-		if (this.heartbeat_timer) {
-			console.log("Heartbeat stopped");
-			clearInterval(this.heartbeat_timer);
-			this.heartbeat_timer = null;
-		}
+		if (!this.heartbeat_timer)
+			return;
+		console.log("Heartbeat stopped");
+		clearInterval(this.heartbeat_timer);
+		this.heartbeat_timer = null;
 	}
 
 	getBridgeFileUrl(url) {
@@ -1018,14 +996,6 @@ export class PhntmBridgeClient extends EventTarget {
 			.replace("%ROBOT_ID%", this.id_robot)
 			.replace("%SECRET%", this.bridge_files_secret)
 			.replace("%URL%", encodeURIComponent(url));
-		return res;
-	}
-
-	getBridgeFileUrlPrefix() {
-		let res = this.bridge_files_url
-			.replace("%ROBOT_ID%", this.id_robot)
-			.replace("%SECRET%", this.bridge_files_secret)
-			.replace("%URL%", '');
 		return res;
 	}
 
@@ -1142,9 +1112,6 @@ export class PhntmBridgeClient extends EventTarget {
 			console.info(`Valid webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}`);
 			// should autoconnect ?!?!
 		}
-
-		if (prev_online != this.robot_socket_online)
-			this.emit("robot-socket-connected", this.robot_socket_online);
 
 		// topic and service extra configs from yaml
 		if (robot_data["prefixed_configs"]) {
@@ -1283,7 +1250,7 @@ export class PhntmBridgeClient extends EventTarget {
 						console.log("Setting stream to " + id_stream + " for " + id_src);
 						that.topic_streams[id_src] = id_stream;
 					} else {
-						console.log("Stream already in use for " + id_src + "; old=" + that.topic_streams[id_src] + " new=" + id_stream);
+						console.log("Stream " + id_stream + " already in use for " + id_src);
 					}
 
 					if (that.media_streams[id_stream]) {
@@ -1550,15 +1517,13 @@ export class PhntmBridgeClient extends EventTarget {
 			raw_type = "ArrayBuffer";
 			let v = new DataView(rawData);
 			decoded = dc.msg_reader.readMessage(v);
-		} else if (rawData instanceof Blob) {
-			// firefox uses Blobs
+		} else if (rawData instanceof Blob) { // firefox uses Blobs
 			raw_len = rawData.size;
 			raw_type = "Blob";
-
 			new Response(rawData).arrayBuffer().then((buff) => {
 				let v = new DataView(buff);
 				decoded = dc.msg_reader.readMessage(v);
-				that.emit(dc.topic, decoded, msg_evt);
+				that.emitTopicData(dc.topic, decoded, msg_evt);
 				that.latest[dc.topic] = {
 					msg: decoded,
 					ev: msg_evt,
@@ -1566,19 +1531,16 @@ export class PhntmBridgeClient extends EventTarget {
 			});
 			return; //async
 		} else {
-			// consider string
+			// consider a string
 			decoded = rawData;
 		}
 
 		if (!dc.logged) {
 			dc.logged = true;
-			console.log(
-				"Incoming data for " + dc.topic + " (" + dc.msg_type + ")",
-				decoded,
-			);
+			console.log("Incoming data for " + dc.topic + " (" + dc.msg_type + ")", decoded);
 		}
 
-		this.emit(dc.topic, decoded, msg_evt);
+		this.emitTopicData(dc.topic, decoded, msg_evt);
 		that.latest[dc.topic] = {
 			msg: decoded,
 			ev: msg_evt,
@@ -1649,7 +1611,7 @@ export class PhntmBridgeClient extends EventTarget {
 
 		// data channels opened by the app, not webrtc
 		pc.addEventListener("datachannel", (evt) => {
-			console.log("New read data channel added " + ch.label);
+			console.log("New read data channel added ", evt);
 		});
 
 		pc.addEventListener("negotiationneeded", (evt) => {
@@ -1676,9 +1638,7 @@ export class PhntmBridgeClient extends EventTarget {
 			} else if (newState == "disconnected" || newState == "failed") {
 				//just disconnected
 
-				console.warn(
-					`Peer disconnected, robot_socket_online=${that.robot_socket_online}`,
-				);
+				console.warn(`Peer disconnected, robot_socket_online=${that.robot_socket_online}`);
 
 				// let was_connected = pc.connected;
 				that.peer_stats_loop_running = false;
@@ -1691,17 +1651,16 @@ export class PhntmBridgeClient extends EventTarget {
 				that._clearConnection();
 			}
 
-			that.emit("peer_conection_changed");
+			that.emit("peer_connection_changed");
 		});
 
-		this.emit("peer_conection_changed"); // updates the ui & sends webrtc state to robot
+		this.emit("peer_connection_changed"); // updates the ui & sends webrtc state to robot
 
 		return pc;
 	}
 
-	getTURNConnectionInfo() {
-		if (
-			this.pc &&
+	getPeerConnectionInfo() {
+		if (this.pc &&
 			this.pc.connectionState == "connected" &&
 			this.pc.sctp &&
 			this.pc.sctp.transport &&
@@ -1728,7 +1687,7 @@ export class PhntmBridgeClient extends EventTarget {
 			state: this.pc ? this.pc.connectionState : "n/a",
 		};
 		if (this.pc && this.pc.connectionState == "connected") {
-			const [remote_type, remote_ip] = this.getTURNConnectionInfo();
+			const [remote_type, remote_ip] = this.getPeerConnectionInfo();
 			con_data["method"] = remote_type;
 			con_data["ip"] = remote_ip;
 		}

@@ -228,7 +228,7 @@ export class MultiTopicSource extends EventTarget {
 			// console.log('multitopic setting slot with '+topic.id, data);
 			return slot.src.cb(topic.id, data);
 		};
-		this.widget.panel.ui.client.on(topic.id, slot.cb_wrapper);
+		this.widget.panel.ui.client.onTopicData(topic.id, slot.cb_wrapper);
 	}
 
 	onTopicsDiscovered(discovered_topics) {
@@ -323,7 +323,7 @@ export class MultiTopicSource extends EventTarget {
 			// console.log('Clearing topic: '+slot.topic);
 
 			delete this.subscribed_topics[slot.topic];
-			this.widget.panel.ui.client.off(slot.topic, slot.cb_wrapper);
+			this.widget.panel.ui.client.offTopicData(slot.topic, slot.cb_wrapper);
 			if (slot.clear_cb) slot.clear_cb(slot.topic);
 
 			slot.topic = null;
@@ -356,7 +356,7 @@ export class MultiTopicSource extends EventTarget {
 			if (slot.clear_cb) slot.clear_cb(slot.topic);
 			console.log(`mutitopic cleared slot for ${topic}`);
 			slot.topic = null;
-			that.widget.panel.ui.client.off(topic, slot.cb_wrapper);
+			that.widget.panel.ui.client.offTopicData(topic, slot.cb_wrapper);
 		});
 		this.subscribed_topics = {};
 	}

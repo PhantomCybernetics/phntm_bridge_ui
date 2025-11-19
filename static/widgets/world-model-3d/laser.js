@@ -198,14 +198,17 @@ export class WorldModel3DWidget_Laser extends WorldModel3DPuginBase {
 
 		let that = this;
 		this.overlays[topic].clear_timeout = setTimeout(() => {
+            if (!that.overlays[topic])
+                return;
+
 			if (that.world_model.panel.paused) {
 				//don't clear while paused
 				that.clearLaserOnTimeout(topic);
 				return;
 			}
 
-			this.overlays[topic].dirty_laser_points = [];
-			this.overlays[topic].dirty_laser_colors = [];
+			that.overlays[topic].dirty_laser_points = [];
+			that.overlays[topic].dirty_laser_colors = [];
 			that.world_model.renderDirty();
 		}, WorldModel3DWidget_Laser.CLEAR_TIMEOUT_MS);
 	}

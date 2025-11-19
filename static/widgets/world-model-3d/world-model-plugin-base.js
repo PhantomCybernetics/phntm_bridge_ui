@@ -39,8 +39,8 @@ export class WorldModel3DPuginBase {
          */
         this.world_model = world_model;
         /**
-         * BridgeClient reference
-         * @type {BridgeClient}
+         * BrowserClient reference
+         * @type {BrowserClient}
          */
         this.client = this.world_model.client;
         /**
