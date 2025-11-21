@@ -46,7 +46,7 @@ export class ServiceInput_Empty extends ServiceInput {
 		let btn = $('<button class="service_button blue">Call</button>');
 
 		btn.click((ev) => {
-			client.ui.serviceMenuAutoBtnCall(service.service, btn, null);
+			client.ui.serviceButtonElementCall(service.service, null, btn);
 		});
 
 		target_el.append(btn);
@@ -60,11 +60,11 @@ export class ServiceInput_Bool extends ServiceInput {
 		let btn_false = $('<button class="service_button red">False</button>');
 
 		btn_true.click((ev) => {
-			client.ui.serviceMenuAutoBtnCall(service.service, btn_true, { data: true });
+			client.ui.serviceButtonElementCall(service.service, { data: true }, btn_true);
 		});
 
 		btn_false.click((ev) => {
-			client.ui.serviceMenuAutoBtnCall(service.service, btn_false, { data: false });
+			client.ui.serviceButtonElementCall(service.service, { data: false }, btn_false);
 		});
 
 		target_el.append(btn_true);

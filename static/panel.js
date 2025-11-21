@@ -1,14 +1,6 @@
 import { IsImageTopic } from "/static/browser-client.js";
 import * as THREE from "three";
-
-import {
-	lerpColor,
-	linkifyURLs,
-	escapeHtml,
-	roughSizeOfObject,
-	isTouchDevice,
-	isSafari,
-} from "./inc/lib.js";
+import { linkifyURLs, escapeHtml, isTouchDevice, isSafari } from "./inc/lib.js";
 
 BigInt.prototype.toJSON = function () {
 	return this.toString();
@@ -28,12 +20,6 @@ export class Panel {
 	max_height = 0;
 
 	display_widget = null;
-	data_trace = [];
-
-	graph_menu = null;
-
-	max_trace_length = 100;
-
 	grid_widget = null;
 
 	initiated = false;
@@ -116,10 +102,6 @@ export class Panel {
 			widget_opts.x = x;
 			widget_opts.y = y;
 		}
-
-		// if (panels[id_source]) {
-		// 	console.error("PANEL ALREADY EXITED FOR " + id_source);
-		// }
 
 		panels[id_source] = this;
 
@@ -367,7 +349,7 @@ export class Panel {
 			if (update_panel_vars)
 				this.ui.updateUrlHash();
 
-			this.setMenu();
+			this.updateMenu();
 
 			if (this.paused) {
 				this.pause_el.addClass("paused");
@@ -386,7 +368,7 @@ export class Panel {
 			});
 
 		} else if (!this.initiated) {
-			this.setMenu(); //draw menu placeholder asap without the type
+			this.updateMenu(); //draw menu placeholder asap without the type
 		}
 
 		this.onResize();
@@ -515,6 +497,16 @@ export class Panel {
 		return ret;
 	}
 
+	storePanelVarAsFloatArray(var_name, value, precision=3) {
+		let s = value.map(x => x.toFixed(precision)).join(',');
+		let change = this.panel_vars[var_name] !== s;
+		if (s !== this.panel_vars_defaults[var_name] && s != '')
+			this.panel_vars[var_name] = s; 
+		else delete this.panel_vars[var_name];  //remove if same as default
+		if (change)
+			this.storePanelVarsAsync();
+	}
+
 	storePanelVarsAsync() {
 		if (this.panelVarsUpdateTimer !== null) {
 			clearTimeout(this.panelVarsUpdateTimer);
@@ -612,7 +604,7 @@ export class Panel {
 		}, 0);
 	};
 
-	setMenu() {
+	updateMenu() {
 		console.log("Setting up panel menu of " + this.id_source + "; msg_type=" + this.msg_type);
 
 		let els = [];
@@ -942,20 +934,11 @@ export class Panel {
 		this.updateFps();
 
 		if (this.src_visible) {
-			$("#panel_source_" + this.n).html(
-				"Received: " +
-					ev.timeStamp +
-					"<br>" + // this is local stamp
-					"&lt;" +
-					raw_type +
-					"&gt; " +
-					raw_len +
-					" " +
-					(raw_type != "String" ? "B" : "chars") +
-					"<br>" +
-					"<br>" +
+			let ts = ev.timeStamp; // showing local stamp
+			$("#panel_source_" + this.n).html("Received: " + ts + "<br>" +
+					"&lt;" + raw_type + "&gt; " + raw_len + " " + (raw_type != "String" ? "B" : "chars") + "<br><br>" +
 					datahr,
-			);
+			); 
 
 			let newh = $("#panel_source_" + this.n).height();
 			//console.log('max_height='+this.max_height+' newh='+newh);

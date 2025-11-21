@@ -8,11 +8,12 @@ export class LaserScanWidget extends SingleTypePanelWidgetBase {
 	static DEFAULT_HEIGHT = 13;
 	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/LaserScan' ];
 
+	static MAX_TRACE_LENGTH = 1
+
 	constructor(panel, topic) {
 		super(panel, topic, 'laser-scan');
 
 		this.data_trace = [];
-		this.max_trace_length = 1;
 		this.default_zoom = 2.0;
 		this.default_rot = 0;
 		this.zoom = this.panel.getPanelVarAsFloat('z', this.default_zoom);
@@ -236,7 +237,7 @@ export class LaserScanWidget extends SingleTypePanelWidgetBase {
 
 		this.data_trace.push(newScanPts);
 
-		if (this.data_trace.length > this.max_trace_length) {
+		if (this.data_trace.length > LaserScanWidget.MAX_TRACE_LENGTH) {
 			this.data_trace.shift();
 		}
 

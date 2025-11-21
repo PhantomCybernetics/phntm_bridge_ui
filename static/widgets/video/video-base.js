@@ -121,7 +121,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			});
 		});	
 
-		this.panel.setMenu();
+		this.panel.updateMenu();
 	}
 
 	setupMenu(menu_els) {

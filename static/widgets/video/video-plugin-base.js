@@ -1,4 +1,4 @@
-export class VideoPuginBase {
+export class VideoPluginBase {
     static SOURCE_TOPIC_TYPE = 'some_msgs/msg/TopicType';
     static SOURCE_DESCRIPTION = 'Describe topic type';  
     static SOURCE_DEFAULT_TOPIC = null; // some default topic, maybe

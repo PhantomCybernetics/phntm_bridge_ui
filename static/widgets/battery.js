@@ -9,6 +9,8 @@ export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 	static DEFAULT_HEIGHT = 8;
 	static HANDLED_MSG_TYPES = [ 'sensor_msgs/msg/BatteryState' ];
 
+	static MAX_TRACE_LENGTH = 100;
+
 	constructor(panel, topic) {
 		super(panel, topic, 'battery');
 
@@ -123,7 +125,7 @@ export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 			markerSize: 0,
 		});
 
-		if (this.data_trace.length > this.panel.max_trace_length) {
+		if (this.data_trace.length > BatteryStateWidget.MAX_TRACE_LENGTH) {
 			this.data_trace.shift();
 		}
 

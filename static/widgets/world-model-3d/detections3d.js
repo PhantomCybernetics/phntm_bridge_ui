@@ -5,9 +5,9 @@ import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geom
 import { STLLoader } from "stl-loader";
 import { ColladaLoader } from "collada-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
-import { WorldModel3DPuginBase } from "./world-model-plugin-base.js";
+import { WorldModel3DPluginBase } from "./world-model-plugin-base.js";
 
-export class WorldModel3DWidget_Detections3D extends WorldModel3DPuginBase {
+export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
     
     static SOURCE_TOPIC_TYPE = 'vision_msgs/msg/Detection3DArray';
     static SOURCE_DESCRIPTION = 'Detection 3D Array';

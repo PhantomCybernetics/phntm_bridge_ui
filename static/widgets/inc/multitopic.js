@@ -20,14 +20,14 @@ export class MultiTopicSource extends EventTarget {
 		this.menu_open = false;
 	}
 
-	add(msg_type, label, default_topic, num, cb, clear_cb) {
+	add(msg_type, label, default_topic, max_num, cb_data, cb_removed) {
 		let new_src = {
 			msg_type: msg_type,
 			label: label,
 			default_topic: default_topic,
-			num: num,
-			cb: cb,
-			clear_cb: clear_cb,
+			num: max_num,
+			cb: cb_data,
+			clear_cb: cb_removed,
 			topic_slots: [],
 			args_parsed: false,
 		};
@@ -466,7 +466,6 @@ export class MultiTopicSource extends EventTarget {
 			}
 
 			that.widget.panel.ui.topicSelectorDialog(
-				slot.label,
 				slot.msg_type, //filter by msg type
 				Object.keys(that.subscribed_topics), //exclude
 				(topic) => {

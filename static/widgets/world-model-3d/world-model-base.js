@@ -71,7 +71,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 			});
 		});	
 
-		this.panel.setMenu();
+		this.panel.updateMenu();
 	}
 
 	renderingLoop() {

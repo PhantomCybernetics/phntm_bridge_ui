@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { lerpColor } from "../../inc/lib.js";
-import { WorldModel3DPuginBase } from "./world-model-plugin-base.js";
+import { WorldModel3DPluginBase } from "./world-model-plugin-base.js";
 
-export class WorldModel3DWidget_Range extends WorldModel3DPuginBase {
+export class WorldModel3DWidget_Range extends WorldModel3DPluginBase {
 
     static SOURCE_TOPIC_TYPE = 'sensor_msgs/msg/Range';
     static SOURCE_DESCRIPTION = 'Range source';

@@ -72,7 +72,7 @@ export class PanelUI {
 
 		this.is_visible = true;
 		this.is_sleeping = false;
-		this.run_in_background = false; //disconnects when backgrounded or computer goes to sleep
+		this.run_in_background = false; // disconnects when backgrounded or computer goes to sleep
 		this.reconnection_timer = null;
 		this.disconnect_timer = null;
 		this.reconnection_delay = 1000; // ms
@@ -298,7 +298,7 @@ export class PanelUI {
 		this.docker_monitor_topic = null;
 		this.docker_control_enabled = false;
 		this.subscribed_docker_monitor_topic = null;
-		this.iw_topic = null;
+		this.wifi_topic = null;
 		this.battery_shown = this.loadLastRobotBatteryShown();
 		this.introspection_control_shown = this.loadLastRobotIntrospectionControlShown();
 		// display ui elements as last time to prevent them moving around too much during init
@@ -391,14 +391,14 @@ export class PanelUI {
 
 			// wifi status
 			let wifi_shown = false;
-			if (that.iw_topic && that.iw_topic != robot_ui_config["wifi_monitor_topic"]) {
-				client.offTopicData(that.iw_topic, iwStatusWrapper);
-				that.iw_topic = null;
+			if (that.wifi_topic && that.wifi_topic != robot_ui_config["wifi_monitor_topic"]) {
+				client.offTopicData(that.wifi_topic, iwStatusWrapper);
+				that.wifi_topic = null;
 				wifi_shown = false;
 			}
 			if (robot_ui_config["wifi_monitor_topic"]) {
-				that.iw_topic = robot_ui_config["wifi_monitor_topic"];
-				client.onTopicData(that.iw_topic, iwStatusWrapper);
+				that.wifi_topic = robot_ui_config["wifi_monitor_topic"];
+				client.onTopicData(that.wifi_topic, iwStatusWrapper);
 				$("#signal-monitor").css("display", "block");
 				$("#network-details").css("display", "");
 				wifi_shown = true;
@@ -856,9 +856,9 @@ export class PanelUI {
 		}
 	}
 
-	showPageError(error, msg) {
+	showPageError(msg_html) {
 		// console.log('Showing error', msg, error);
-		$("#page_message").html(msg).addClass("error");
+		$("#page_message").html(msg_html).addClass("error");
 		$("BODY").addClass("has-page-message");
 		this.showing_page_message = true;
 	}
@@ -1607,22 +1607,7 @@ export class PanelUI {
 			}
 		}
 
-		[
-			"bool",
-			"byte",
-			"char",
-			"float32",
-			"float64",
-			"int8",
-			"uint8",
-			"int16",
-			"uint16",
-			"int32",
-			"uint32",
-			"int64",
-			"uint64",
-			"string",
-		].forEach((t) => {
+		[ "bool", "byte", "char", "float32", "float64", "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64", "string" ].forEach((t) => {
 			content = content.replaceAll(
 				'"' + t + '"',
 				'<span class="type">' + t + "</span>",
@@ -1666,12 +1651,11 @@ export class PanelUI {
 	}
 
 	topicSelectorDialog(
-		label,
 		msg_type,
 		exclude_topics,
-		onselect,
-		onclose = null,
-		align_el = null,
+		on_select_cb,
+		on_cancel_cb = null,
+		align_with_el = null,
 	) {
 		let body_scroll_was_disabled = $("BODY").hasClass("no-scroll");
 		$("BODY").addClass("no-scroll");
@@ -1680,7 +1664,7 @@ export class PanelUI {
 		let d = $("#touch-ui-selector .content");
 		let that = this;
 
-		let offset = align_el.offset();
+		let offset = align_with_el.offset();
 		let w_body = $("body").innerWidth();
 		d.empty();
 
@@ -1705,7 +1689,7 @@ export class PanelUI {
 
 				let l = $('<a href="#" class="topic-option">' + topic + "</a>");
 				l.on("click", (e) => {
-					onselect(topic);
+					on_select_cb(topic);
 					e.cancelBubble = true;
 					$("#touch-ui-dialog-underlay").trigger("click"); //close
 					return false;
@@ -1762,8 +1746,8 @@ export class PanelUI {
 				$("#touch-ui-dialog-underlay").unbind().css("display", "none");
 				// $('#close-touch-ui-dialog').unbind();
 				align_el.removeClass("selecting");
-				if (onclose) {
-					onclose();
+				if (on_cancel_cb) {
+					on_cancel_cb();
 				}
 			});
 	}
@@ -2101,10 +2085,10 @@ export class PanelUI {
 		}
 	}
 
-	confirmDialog(label, style, confirm_label, confirm_cb, cancel_label, cancel_cb) {
+	confirmDialog(label, css_class, confirm_label, confirm_cb, cancel_label, cancel_cb) {
 		function closeDialog() {
 			$("BODY").removeClass("no-scroll");
-			$("#dialog-modal-confirm").css("display", "none").removeClass(style).empty();
+			$("#dialog-modal-confirm").css("display", "none").removeClass(css_class).empty();
 			$("#dialog-modal-confirm-underlay").css("display", "none").unbind();
 		}
 
@@ -2145,7 +2129,7 @@ export class PanelUI {
 		btns.appendTo(dialog);
 		$("#dialog-modal-confirm")
 			.empty()
-			.addClass(style)
+			.addClass(css_class)
 			.append(dialog)
 			.css("display", "block");
 	}
@@ -2728,17 +2712,11 @@ export class PanelUI {
 	}
 
 	saveLastRobotIntrospectionControlShown(val) {
-		localStorage.setItem(
-			"last-robot-introspection-shown:" + this.client.id_robot,
-			val,
-		);
+		localStorage.setItem("last-robot-introspection-shown:" + this.client.id_robot, val);
 	}
 
 	loadLastRobotIntrospectionControlShown() {
-		let val =
-			localStorage.getItem(
-				"last-robot-introspection-shown:" + this.client.id_robot,
-			) == "true";
+		let val = localStorage.getItem("last-robot-introspection-shown:" + this.client.id_robot) == "true";
 		return val;
 	}
 
@@ -2747,38 +2725,25 @@ export class PanelUI {
 	}
 
 	loadLastRobotBatteryShown() {
-		let val =
-			localStorage.getItem("last-robot-battery-shown:" + this.client.id_robot) ==
-			"true";
+		let val = localStorage.getItem("last-robot-battery-shown:" + this.client.id_robot) == "true";
 		return val;
 	}
 
 	saveLastRobotClientVersionInfo(val) {
-		localStorage.setItem(
-			"last-robot-client-version-info:" + this.client.id_robot,
-			val,
-		);
+		localStorage.setItem("last-robot-client-version-info:" + this.client.id_robot, val);
 	}
 
 	loadLastRobotClientVersionInfo() {
-		let val = localStorage.getItem(
-			"last-robot-client-version-info:" + this.client.id_robot,
-		);
+		let val = localStorage.getItem("last-robot-client-version-info:" + this.client.id_robot);
 		return val;
 	}
 
 	saveLastRobotDockerMonitorShown(val) {
-		localStorage.setItem(
-			"last-robot-docker-monitor-shown:" + this.client.id_robot,
-			val,
-		);
+		localStorage.setItem("last-robot-docker-monitor-shown:" + this.client.id_robot, val);
 	}
 
 	loadLastRobotDockerMonitorShown() {
-		let val =
-			localStorage.getItem(
-				"last-robot-docker-monitor-shown:" + this.client.id_robot,
-			) == "true";
+		let val = localStorage.getItem("last-robot-docker-monitor-shown:" + this.client.id_robot) == "true";
 		return val;
 	}
 
@@ -2787,9 +2752,7 @@ export class PanelUI {
 	}
 
 	loadLastRobotWifiSignalShown() {
-		let val =
-			localStorage.getItem("last-robot-wifi-shown:" + this.client.id_robot) ==
-			"true";
+		let val = localStorage.getItem("last-robot-wifi-shown:" + this.client.id_robot) == "true";
 		return val;
 	}
 
@@ -3291,11 +3254,10 @@ export class PanelUI {
 		});
 	}
 
-	serviceMenuAutoBtnCall(service, btn_el, value) {
+	serviceButtonElementCall(service, value, btn_el, show_reply = null) { // show_reply = auto, only if err or reply data
 		let that = this;
 		if (btn_el) btn_el.addClass("working");
 		let show_request = false;
-		let show_reply = null; // auto = if err or reply data
 		this.client.serviceCall(service, value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
 			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
 		});
@@ -3422,14 +3384,10 @@ export class PanelUI {
 		}
 	}
 
-	showNotification(msg, style, detail) {
-		let msg_el = $(
-			'<span class="msg' +
-				(style ? " " + style : "") +
-				'"><span class="icon"></span><span class="title">' +
-				msg +
-				"</span></span>",
-		);
+	showNotification(msg_html, css_class, detail_html = null) {
+		let msg_el = $('<span class="msg' + (css_class ? " " + css_class : "") + '">' +
+					       '<span class="icon"></span><span class="title">' + msg_html + '</span>' +
+					   '</span>');
 
 		$("#notifications").prepend(msg_el);
 
@@ -3478,8 +3436,8 @@ export class PanelUI {
 			});
 			msg_el.append([pinEl, closeEl]);
 
-			if (detail) {
-				msg_el.append($('<span class="detail">' + detail + "</span>"));
+			if (detail_html) {
+				msg_el.append($('<span class="detail">' + detail_html + "</span>"));
 			}
 		});
 	}

@@ -7,10 +7,11 @@ export class LogWidget extends SingleTypePanelWidgetBase {
 	static DEFAULT_HEIGHT = 8;
 	static HANDLED_MSG_TYPES = [ 'rcl_interfaces/msg/Log' ];
 
+	static MAX_TRACE_LENGTH = 100;
+
 	constructor(panel, topic) {
 		super(panel, topic, 'log');
 
-		this.max_trace_length = 100;
 		this.animation = null;
 
 		this.widget_el.addClass("autoscroll");
@@ -88,7 +89,7 @@ export class LogWidget extends SingleTypePanelWidgetBase {
 		this.widget_el.append(line);
 
 		// trim lines
-		if ($("#panel_widget_" + this.panel.n + ".autoscroll .log_line").length > this.max_trace_length) {
+		if ($("#panel_widget_" + this.panel.n + ".autoscroll .log_line").length > LogWidget.MAX_TRACE_LENGTH) {
 			$("#panel_widget_" + this.panel.n + ".autoscroll .log_line")
 				.first()
 				.remove();

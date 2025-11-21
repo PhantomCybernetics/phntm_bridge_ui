@@ -3,9 +3,9 @@ import { LineSegments2 } from "line-segments2";
 import { LineMaterial } from "line-material2";
 import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
 import { rad2deg } from "../../inc/lib.js";
-import { WorldModel3DPuginBase } from "./world-model-plugin-base.js";
+import { WorldModel3DPluginBase } from "./world-model-plugin-base.js";
 
-export class WorldModel3DWidget_CameraInfo extends WorldModel3DPuginBase {
+export class WorldModel3DWidget_CameraInfo extends WorldModel3DPluginBase {
     static SOURCE_TOPIC_TYPE = 'sensor_msgs/msg/CameraInfo';
     static SOURCE_DESCRIPTION = 'Camera Info';   
     static SOURCE_DEFAULT_TOPIC = null;

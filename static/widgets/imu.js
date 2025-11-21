@@ -251,7 +251,7 @@ export class ImuWidget extends SingleTypePanelWidgetBase {
 			that.render();
 			if (!that.enable_acc && !that.enable_rot)
 				enable_acc_cb.click();
-			that.panel.setMenu();
+			that.panel.updateMenu();
 		});
 		enable_acc_cb.change(function (ev) {
 			that.enable_acc = $(this).prop("checked");

@@ -217,8 +217,8 @@
 	import { ServiceInputBase } from '/static/input/service-input-base.js'
 	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
 	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
-	import { WorldModel3DPuginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
-	import { VideoPuginBase } from '/static/widgets/video/video-plugin-base.js';
+	import { WorldModel3DPluginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
+	import { VideoPluginBase } from '/static/widgets/video/video-plugin-base.js';
 
 	import { isSubclassOf } from '/static/inc/lib.js';
 	let custom_modules = []; // used for accessing custom extension classes
@@ -290,7 +290,7 @@
 			// find custom video overlays
 			custom_modules.forEach((module) => {
 				for (const key in module) {
-					if (isSubclassOf(module[key], VideoPuginBase)) {
+					if (isSubclassOf(module[key], VideoPluginBase)) {
 						video_plugin_classes.push(module[key]);
 					}
 				}
@@ -306,9 +306,9 @@
 				WorldModel3DWidget_CameraInfo,
 				WorldModel3DWidget_Detections3D
 			];
-			custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPuginBase)
+			custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPluginBase)
 				for (const key in module) {
-					if (isSubclassOf(module[key], WorldModel3DPuginBase)) {
+					if (isSubclassOf(module[key], WorldModel3DPluginBase)) {
 						world_model_3d_plugin_classes.push(module[key]);
 					}
 				}
@@ -347,10 +347,7 @@
 			robot.connect();
 
 			if (navigator.userAgent.toLowerCase().includes("firefox")) {
-				panel_ui.showPageError(
-					null,
-					'Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>',
-				);
+				panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
 			}
 		} catch (e) {
 			console.error(e);

@@ -1,4 +1,4 @@
-export class WorldModel3DPuginBase {
+export class WorldModel3DPluginBase {
 
     /**
      * Source topic message type
@@ -29,7 +29,7 @@ export class WorldModel3DPuginBase {
 
     /** 
      * Plugin constructor, make sure to call super(world_model)
-     * @constructs WorldModel3DPuginBase
+     * @constructs WorldModel3DPluginBase
      * @param {WorldModel3DWidget} world_model - widget instance reference
      */
     constructor(world_model) {

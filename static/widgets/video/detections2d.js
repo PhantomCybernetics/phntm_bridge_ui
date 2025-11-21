@@ -1,7 +1,7 @@
-import { VideoPuginBase } from "./video-plugin-base.js";
+import { VideoPluginBase } from "./video-plugin-base.js";
 import * as THREE from "three";
 
-export class VideoWidget_Detections2D extends VideoPuginBase {
+export class VideoWidget_Detections2D extends VideoPluginBase {
     static SOURCE_TOPIC_TYPE = 'vision_msgs/msg/Detection2DArray';
     static SOURCE_DESCRIPTION = 'Detection 2D Array';   
     static SOURCE_DEFAULT_TOPIC = null;
