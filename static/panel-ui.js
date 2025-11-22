@@ -1727,7 +1727,7 @@ export class PanelUI {
 				left: offset.left,
 				top: offset.top - $(window).scrollTop() + 30,
 			});
-		align_el.addClass("selecting");
+		align_with_el.addClass("selecting");
 
 		render_list(this.client.discovered_topics);
 
@@ -1745,7 +1745,7 @@ export class PanelUI {
 				that.client.off("topics", render_list);
 				$("#touch-ui-dialog-underlay").unbind().css("display", "none");
 				// $('#close-touch-ui-dialog').unbind();
-				align_el.removeClass("selecting");
+				align_with_el.removeClass("selecting");
 				if (on_cancel_cb) {
 					on_cancel_cb();
 				}
