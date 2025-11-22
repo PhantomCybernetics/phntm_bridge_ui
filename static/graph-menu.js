@@ -360,17 +360,10 @@ export class GraphMenu {
 			let h = 20 + 5 * (this.nodes[id_node]["connections"] - 1);
 			node_offset += h + 2 + 16;
 			let node_el = $('<div class="graph_node"></div>');
-			let box_el = $(
-				'<div class="box" style="height:' + h + 'px;">' + id_node + "</div>",
-			);
+			let box_el = $('<div class="box" style="height:' + h + 'px;">' + id_node + "</div>");
 
-			if (
-				this.ui.client.discovered_nodes[id_node] &&
-				this.ui.client.discovered_nodes[id_node].params_editable
-			) {
-				let params_icon_el = $(
-					'<span class="params-edit-icon" title="Edit runtime ROS parameters"></span>',
-				);
+			if (this.ui.client.discovered_nodes[id_node] && this.ui.client.discovered_nodes[id_node].params_readable) {
+				let params_icon_el = $('<span class="params-edit-icon" title="Edit runtime ROS parameters"></span>');
 				params_icon_el.click((e) => {
 					e.cancelBubble = true;
 					e.stopPropagation();
@@ -384,9 +377,7 @@ export class GraphMenu {
 
 				node_links.forEach((node_link) => {
 					if (node_link.qos_error || node_link.qos_warning) {
-						let icon_err = $(
-							'<span class="link-err-icon" tabindex="0"></span>',
-						);
+						let icon_err = $('<span class="link-err-icon" tabindex="0"></span>');
 						let icon_tooltip_el = $('<span class="tooltip"></span>');
 						icon_tooltip_el.appendTo(icon_err);
 						icon_err.appendTo(node_icons_el);

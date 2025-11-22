@@ -317,7 +317,8 @@ export class BrowserClient extends EventTarget {
 						publishers: {},
 						subscribers: {},
 						services: {},
-						params_editable: false,
+						params_readable: false,
+						params_writeable: false,
 					};
 					if (nodes_data[that.id_robot][node]["publishers"]) {
 						let topics = Object.keys(
@@ -399,12 +400,15 @@ export class BrowserClient extends EventTarget {
 								that.discovered_nodes[node]["_srvGetParameters"] = service;
 							if (msg_type == "rcl_interfaces/srv/SetParameters")
 								that.discovered_nodes[node]["_srvSetParameters"] = service;
+
 							if (that.discovered_nodes[node]["_srvListParameters"] &&
 								that.discovered_nodes[node]["_srvDescribeParameters"] &&
-								that.discovered_nodes[node]["_srvGetParameters"] &&
-								that.discovered_nodes[node]["_srvSetParameters"]
+								that.discovered_nodes[node]["_srvGetParameters"]
 							) {
-								that.discovered_nodes[node].params_editable = true;
+								that.discovered_nodes[node].params_readable = true;
+							}
+							if (that.discovered_nodes[node]["_srvSetParameters"] ) {
+								that.discovered_nodes[node].params_writeable = true;
 							}
 
 							that.discovered_services[service] = {

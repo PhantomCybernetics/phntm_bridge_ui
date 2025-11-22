@@ -228,7 +228,7 @@ export class NodeParamsDialog {
 		}
 		this.editor_size = editor_size;
 
-		if (this.selected_param_description.read_only) {
+		if (this.selected_param_description.read_only || !this.node.params_writeable) {
 			this.btn_set.addClass("read-only");
 			this.btn_set.attr("title", "Parameter is read-only");
 		} else {
@@ -256,11 +256,7 @@ export class NodeParamsDialog {
 
 		this.cont_el.empty();
 		this.cont_el.append(
-			$(
-				"<h3>" +
-					this.node.node +
-					'</h3><span class="title">Runtime ROS Parameters</span>',
-			),
+			$("<h3>" + this.node.node + '</h3><span class="title">Runtime ROS Parameters</span>'),
 		);
 
 		this.list_el = $('<div class="params-list"></div>');
@@ -284,15 +280,7 @@ export class NodeParamsDialog {
 				if (list_reply.err) {
 					if (that.node == node) {
 						that.list_el.empty();
-						that.list_el.append(
-							$(
-								'<div class="load-err">' +
-									(list_reply.msg
-										? list_reply.msg
-										: "Error while fetching params") +
-									"</div>",
-							),
-						);
+						that.list_el.append($('<div class="load-err">' + (list_reply.msg ? list_reply.msg : "Error while fetching params") + "</div>"));
 					}
 					return;
 				}
@@ -306,14 +294,7 @@ export class NodeParamsDialog {
 						if (descriptions_reply.err) {
 							if (that.node == node) {
 								that.list_el.empty();
-								that.list_el.append(
-									$(
-										'<div class="load-err">' +
-											(descriptions_reply.msg
-												? descriptions_reply.msg
-												: "Error while fetching param descriptions") +
-											"</div>",
-									),
+								that.list_el.append($('<div class="load-err">' + (descriptions_reply.msg ? descriptions_reply.msg : "Error while fetching param descriptions") + "</div>"),
 								);
 							}
 							return;
@@ -327,32 +308,27 @@ export class NodeParamsDialog {
 								if (vals_reply.err) {
 									if (that.node == node) {
 										that.list_el.empty();
-										that.list_el.append(
-											$(
-												'<div class="load-err">' +
-													(vals_reply.msg
-														? vals_reply.msg
-														: "Error while fetching params") +
-													"</div>",
-											),
-										);
+										that.list_el.append($('<div class="load-err">' + (vals_reply.msg ? vals_reply.msg : "Error while fetching params") + "</div>"));
+									}
+									return;
+								}
+								if (!vals_reply || !vals_reply.values || !vals_reply.values.length) {
+									if (that.node == node) {
+										that.list_el.empty();
+										that.list_el.append($('<div class="load-err">Error while fetching params, received empty values</div>'));
 									}
 									return;
 								}
 								that.list_el.empty();
-
+								
+								console.warn('list_reply', list_reply);
+								console.warn('vals_reply', vals_reply);
 								for (let i = 0; i < list_reply.result.names.length; i++) {
 									let name = list_reply.result.names[i];
 									let value = vals_reply.values[i];
 									let description = descriptions_reply.descriptors[i];
 									let type_hr = that.getTypeHR(value["type"]);
-									let param_label_el = $(
-										'<div class="param-name prevent-select">' +
-											name +
-											'<span class="param-type">' +
-											type_hr +
-											"</span></div>",
-									);
+									let param_label_el = $('<div class="param-name prevent-select">' + name + '<span class="param-type">' + type_hr + "</span></div>");
 									that.list_el.append(param_label_el);
 									param_label_el.click((ev) => {
 										that.selectParam(
@@ -462,6 +438,7 @@ export class NodeParamsDialog {
 		this.btn_set = btn_set;
 		btn_set.click((ev) => {
 			if (btn_set.hasClass("read-only")) return;
+			if (!node.params_writeable) return;
 
 			btn_set.addClass("working");
 
