@@ -1754,7 +1754,7 @@ export class PanelUI {
 
 	addCustomWidget(widget_class, plugin_classes) {
 		this.widgets[widget_class.name] = {
-			label: widget_class.label,
+			label: widget_class.LABEL,
 			class: widget_class,
 			plugin_classes: plugin_classes
 		};

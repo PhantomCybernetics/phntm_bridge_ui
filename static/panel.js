@@ -253,7 +253,7 @@ export class Panel {
 						null, // widget_css_class passed only to super 
 						this.ui.widgets[this.id_source].plugin_classes // world model plugins
 					); //no data yet
-					this.title_el.text(this.ui.widgets[this.id_source].class.label);
+					this.title_el.text(this.ui.widgets[this.id_source].class.LABEL);
 					fallback_show_src = false;
 				}
 			
