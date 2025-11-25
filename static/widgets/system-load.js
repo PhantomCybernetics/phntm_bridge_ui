@@ -6,7 +6,7 @@ import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
 export class SystemLoadWidget extends SingleTypePanelWidgetBase {
 	static DEFAULT_WIDTH = 5;
 	static DEFAULT_HEIGHT = 7;
-	static handled_msg_types = [ 'phntm_interfaces/msg/SystemInfo' ];
+	static HANDLED_MSG_TYPES = [ 'phntm_interfaces/msg/SystemInfo' ];
 
 	constructor(panel, topic) {
 		super(panel, topic, 'system-load');
