@@ -160,6 +160,11 @@ export class Panel {
 			}, 2000); // hold panel label for 2s to edit
 		}, { passive: true });
 
+		title_el.addEventListener('contextmenu', function(e) { // prevents android menu from showing 
+			e.preventDefault();
+			return false;
+		}, false);
+
 		title_el.addEventListener("touchend", () => {
 			if (that.editing) return;
 			if (that.edit_timeout) {
@@ -792,16 +797,25 @@ export class Panel {
 	}
 
 	maximize(state = true) {
-		// if (state == this.maximized)
-		//     return;
 		if (state) {
+
+			if (!this.style_before_maximizing) {
+				this.style_before_maximizing = {
+					'top': $(this.grid_widget).css('top'),
+					'left': $(this.grid_widget).css('left'),
+					'width': $(this.grid_widget).css('width'),
+					'height': $(this.grid_widget).css('height'),
+				}
+			}
+
 			if (isTouchDevice()) this.ui.openFullscreen();
 
-			let h = window.innerHeight; //does not work on mobils afari (adddress bar is not included)
+			let h = window.innerHeight; //doesn't work on mobile safari (adddress bar is not included)
 			if (isTouchDevice() && isSafari()) {
 				h = "100dvh";
 			}
-			console.log(`Maximizing panel ${this.id_source} w.height=${h}`);
+			console.log(`Maximizing panel ${this.id_source} w.height=${h}`, this.style_before_maximizing);
+			
 			$("BODY").addClass("no-scroll");
 			this.ui.setMaximizedPanel(this);
 			$(this.grid_widget)
@@ -819,35 +833,19 @@ export class Panel {
 				this.ui.setMaximizedPanel(null);
 			}
 			$(this.grid_widget).removeClass("maximized").css({
-				top: "",
-				height: "",
+				top: this.style_before_maximizing['top'],
+				height: this.style_before_maximizing['height'],
 			});
+			delete this.style_before_maximizing;
 			$("BODY").removeClass("no-scroll");
 
 			if (!isTouchDevice()) {
 				this.ui.grid.resizable(this.grid_widget, true);
 				this.ui.grid.movable(this.grid_widget, true);
 			}
-
-			// if (isTouchDevice())
-			//     this.ui.closeFullscreen();
 		}
 		this.maximized = state;
-		let that = this;
-
-		let start = Date.now();
-		// console.log('animating onresize')
-		let resize_timer = window.setInterval(() => {
-			that.onResize();
-			let done_animating = start + 1000 < Date.now();
-			if (done_animating) {
-				// console.log('done animating, stopping onresize')
-				window.clearInterval(resize_timer);
-			}
-		}, 10);
-		// window.setTimeout(()=>{
-		//     that.onResize()
-		// }, 500); // resize at the end of the animation
+		this.onResize();
 	}
 
 	onData(msg, ev) {
