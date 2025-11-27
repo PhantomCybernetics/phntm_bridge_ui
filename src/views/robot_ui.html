@@ -238,121 +238,124 @@
 		$('<span id="preloader-'+fname+'"/>').appendTo('BODY');
 	});
 
-	$(document).ready(function () {
-		try {
-			let robot = new BrowserClient({
-				socket_url: "<%= bridge_socket_url %>",
-				socket_path: "/app/socket.io/",
-				socket_auto_connect: false,
-				bridge_files_url: "<%= bridge_files_url %>",
-				app_id: "<%= app_id %>",
-				id_robot: "<%= id_robot %>",
-				force_turn: window.location.search.indexOf("force_turn") !== -1, // force TURN connection with ?force_turn=1 (debug)
-			});
+	let robot = new BrowserClient({
+		socket_url: "<%= bridge_socket_url %>",
+		socket_path: "/app/socket.io/",
+		socket_auto_connect: false,
+		bridge_files_url: "<%= bridge_files_url %>",
+		app_id: "<%= app_id %>",
+		id_robot: "<%= id_robot %>",
+		force_turn: window.location.search.indexOf("force_turn") !== -1, // force TURN connection with ?force_turn=1 (debug)
+	});
+	window.robot = robot; // make available to analytics
 
-			let input_manager = new InputManager(robot);
-			input_manager.registerDriver(JoyInputDriver);
-			input_manager.registerDriver(TwistInputDriver);
-			custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriverBase)
-				for (const key in module) {
-					if (isSubclassOf(module[key], InputDriverBase)) {
-						input_manager.registerDriver(module[key]);
-					}
-				}
-			});
+	//$(document).ready(function () {
+	//	try {
 
-			let panel_ui = new PanelUI(robot, 32, input_manager);
-
-			// add core single type panel widgets
-			let single_type_panel_classes = [ BatteryStateWidget,
-											  RangeWidget,
-											  LaserScanWidget,
-											  ImuWidget,
-											  LogWidget,
-											  SystemLoadWidget
-											];
-			// find custom single type panel widgets
-			custom_modules.forEach((module) => {
-				for (const key in module) {
-					if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
-						single_type_panel_classes.push(module[key]);
-					}
-				}
-			});
-			single_type_panel_classes.forEach((widget_class)=>{
-				widget_class.HANDLED_MSG_TYPES.forEach((msg_type) => {
-					panel_ui.addTypeWidget(msg_type, widget_class);
-				});
-			});
-			
-			// add video widget with overlay plugins
-			let video_plugin_classes = [ VideoWidget_Detections2D ];
-			// find custom video overlays
-			custom_modules.forEach((module) => {
-				for (const key in module) {
-					if (isSubclassOf(module[key], VideoPluginBase)) {
-						video_plugin_classes.push(module[key]);
-					}
-				}
-			});
-			VideoWidget.HANDLED_MSG_TYPES.forEach((msg_type) => {
-				panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
-			});
-
-			// add world model 3d with overlat plugins
-			let world_model_3d_plugin_classes = [
-				WorldModel3DWidget_Laser,
-				WorldModel3DWidget_Range,
-				WorldModel3DWidget_CameraInfo,
-				WorldModel3DWidget_Detections3D
-			];
-			custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPluginBase)
-				for (const key in module) {
-					if (isSubclassOf(module[key], WorldModel3DPluginBase)) {
-						world_model_3d_plugin_classes.push(module[key]);
-					}
-				}
-			});
-			panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
-
-			// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
-			custom_modules.forEach((module) => { 
-				for (const key in module) {
-					if (isSubclassOf(module[key], CompositePanelWidgetBase)) {
-						panel_ui.addCustomWidget(module[key]);
-					}
-				}
-			});
-
-			panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
-			panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
-			panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
-			 // load custom service widgets (must be a subclass of ServiceInputBase)
-			custom_modules.forEach((module) => {
-				for (const key in module) {
-					if (isSubclassOf(module[key], ServiceInputBase)) {
-						panel_ui.addCustomServiceWidget(key, module[key]);
-					}
-				}
-			});
-
-			// init panel setup from url, also subscribes to topics and cameras required by panel widgets
-			panel_ui.panelsFromURLHash(window.location.hash);
-
-			robot.on("error", (err, msg) => {
-				console.error("Robot returned error: " + err, msg);
-			});
-
-			//connects socket.io, then runs handshake with the robot
-			robot.connect();
-
-			if (navigator.userAgent.toLowerCase().includes("firefox")) {
-				panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+	let input_manager = new InputManager(robot);
+	input_manager.registerDriver(JoyInputDriver);
+	input_manager.registerDriver(TwistInputDriver);
+	custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriverBase)
+		for (const key in module) {
+			if (isSubclassOf(module[key], InputDriverBase)) {
+				input_manager.registerDriver(module[key]);
 			}
-		} catch (e) {
-			console.error(e);
 		}
 	});
+
+	let panel_ui = new PanelUI(robot, 32, input_manager);
+
+	// add core single type panel widgets
+	let single_type_panel_classes = [ BatteryStateWidget,
+										RangeWidget,
+										LaserScanWidget,
+										ImuWidget,
+										LogWidget,
+										SystemLoadWidget
+									];
+	// find custom single type panel widgets
+	custom_modules.forEach((module) => {
+		for (const key in module) {
+			if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
+				single_type_panel_classes.push(module[key]);
+			}
+		}
+	});
+	single_type_panel_classes.forEach((widget_class)=>{
+		widget_class.HANDLED_MSG_TYPES.forEach((msg_type) => {
+			panel_ui.addTypeWidget(msg_type, widget_class);
+		});
+	});
+	
+	// add video widget with overlay plugins
+	let video_plugin_classes = [ VideoWidget_Detections2D ];
+	// find custom video overlays
+	custom_modules.forEach((module) => {
+		for (const key in module) {
+			if (isSubclassOf(module[key], VideoPluginBase)) {
+				video_plugin_classes.push(module[key]);
+			}
+		}
+	});
+	VideoWidget.HANDLED_MSG_TYPES.forEach((msg_type) => {
+		panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
+	});
+
+	// add world model 3d with overlat plugins
+	let world_model_3d_plugin_classes = [
+		WorldModel3DWidget_Laser,
+		WorldModel3DWidget_Range,
+		WorldModel3DWidget_CameraInfo,
+		WorldModel3DWidget_Detections3D
+	];
+	custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPluginBase)
+		for (const key in module) {
+			if (isSubclassOf(module[key], WorldModel3DPluginBase)) {
+				world_model_3d_plugin_classes.push(module[key]);
+			}
+		}
+	});
+	panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
+
+	// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
+	custom_modules.forEach((module) => { 
+		for (const key in module) {
+			if (isSubclassOf(module[key], CompositePanelWidgetBase)) {
+				panel_ui.addCustomWidget(module[key]);
+			}
+		}
+	});
+
+	panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
+	panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
+	panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
+		// load custom service widgets (must be a subclass of ServiceInputBase)
+	custom_modules.forEach((module) => {
+		for (const key in module) {
+			if (isSubclassOf(module[key], ServiceInputBase)) {
+				panel_ui.addCustomServiceWidget(key, module[key]);
+			}
+		}
+	});
+
+	// init panel setup from url, also subscribes to topics and cameras required by panel widgets
+	panel_ui.panelsFromURLHash(window.location.hash);
+
+	robot.on("error", (err, msg) => {
+		console.error("Robot returned error: " + err, msg);
+	});
+
+	//connects socket.io, then runs handshake with the robot
+	robot.connect();
+
+	if (navigator.userAgent.toLowerCase().includes("firefox")) {
+		panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+	}
+		//} catch (e) {
+		//	console.error(e);
+		//}
+	//});
+	
 </script>
 
 <%- include('partial/footer.html'); %>
