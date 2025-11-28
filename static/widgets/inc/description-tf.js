@@ -1255,8 +1255,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// also find the farthest for initial camera distance
 		Object.keys(robot.joints).forEach((key) => {
 			robot.joints[key].getWorldPosition(wp);
-			let wp_magnitude = wp.length();
-			pt_distances.push(wp_magnitude);
 			joints_avg.add(wp);
 			joints_num++;
 		});
@@ -1273,21 +1271,24 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				}
 			});
 		}
+		Object.keys(robot.joints).forEach((key) => {
+			robot.joints[key].getWorldPosition(wp);
+			pt_distances.push(wp.distanceTo(joints_avg));
+		});
 		Object.keys(robot.links).forEach((key) => {
 			robot.links[key].getWorldPosition(wp);
-			let wp_magnitude = wp.length();
-			pt_distances.push(wp_magnitude);
+			pt_distances.push(wp.distanceTo(joints_avg));
 		});
 		Object.keys(robot.frames).forEach((key) => {
 			robot.frames[key].getWorldPosition(wp);
-			let wp_magnitude = wp.length();
-			pt_distances.push(wp_magnitude);
+			pt_distances.push(wp.distanceTo(joints_avg));
 		});
+
 		pt_distances.sort((a, b) => a - b);
 		let num_distances = pt_distances.length;
 		let model_size_approx = num_distances ? pt_distances[Math.round(num_distances*0.9)] : 2.0; // use ~90th percentile to avoid outliers
 
-		console.log('Model size estimated at '+model_size_approx+"; mum pt_distances="+num_distances);
+		console.log('[AutofocusTarget] Model size estimated at '+model_size_approx+"; num pt_distances="+num_distances);
 		if (focus_joint && focus_joint_key)
 			this.setCameraTarget(focus_joint, focus_joint_key, false);
 
@@ -1295,7 +1296,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		if (this.vars.follow_target && !this.camera_distance_initialized) {
 			this.camera_distance_initialized = true;
 			let initial_dist = model_size_approx * DescriptionTFWidget.INITIAL_CAMERA_DISTANCE_MULTIPLIER;
-			this.camera_pos.normalize().multiplyScalar(initial_dist);
+			console.log('[AutofocusTarget] Setting initial camera distance to '+initial_dist);
+			console.log('[AutofocusTarget] Cam pos before', this.camera_pos);
+			this.camera_pos.normalize().multiplyScalar(initial_dist).add(joints_avg);
+			console.log('[AutofocusTarget] Cam pos after', this.camera_pos);
 			this.camera.position.copy(this.camera_pos);
 		}
 	}
