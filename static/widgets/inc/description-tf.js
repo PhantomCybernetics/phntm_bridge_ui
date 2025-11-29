@@ -52,6 +52,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// TODO: custom (e.g. https://skyboxgen.com/)
 	];
 
+	static LIGHT_WIDE_SPOTLIGHT   = 0;
+	static LIGHT_NARROW_SPOTLIGHT = 1;
+	static LIGHT_DIRECTIONAL      = 2;
+	static LIGHT_FLASHLIGHT       = 3;
+	static LIGHT_AMBIENT_ONLY     = 4;
 	static LIGHTS = [
 		'Spotlight',
 		'Narrow spotlight',
@@ -77,7 +82,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			render_pose_graph: false,
 			render_ground_plane: 8, // blue marks
 			render_skybox: 4, // mars skybox
-			render_light: 1 // wide spot light
+			render_light: DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT // wide spot light
 		};
 
 		this.panel.fps_el.addClass("rendering_stats");
@@ -283,7 +288,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			camera_target_pos_material,
 		);
 		this.camera_target_pos.position.set(0, 0, 0); // adjusted by url
-		this.camera_target_pos.visible = false; //enable when debugging
+		this.camera_target_pos.visible = false; // enable when debugging
 		this.scene.add(this.camera_target_pos);
 
 		this.loadPanelConfig();
@@ -814,7 +819,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		setLightMenuLabel();
 
 		render_light_btn_left.click(()=>{
-			if (that.vars.render_light <= 0) that.vars.render_light = DescriptionTFWidget.LIGHTS.length-1;
+			if (that.vars.render_light <= DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT) that.vars.render_light = DescriptionTFWidget.LIGHT_AMBIENT_ONLY;
 			else that.vars.render_light--;
 
 			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
@@ -823,7 +828,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			that.renderDirty();
 		});
 		render_light_btn_right.click(()=>{
-			if (that.vars.render_light >= DescriptionTFWidget.LIGHTS.length-1) that.vars.render_light = 0;
+			if (that.vars.render_light >= DescriptionTFWidget.LIGHT_AMBIENT_ONLY) that.vars.render_light = DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT;
 			else that.vars.render_light++;
 
 			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
@@ -909,37 +914,18 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.ambience = null;
 		}
 
-		// if (this.lught_pos_tester) {
-		// 	this.lught_pos_tester.removeFromParent();
-		// 	this.lught_pos_tester = null;
-		// }
+		// light pos matches the skybox
 		let light_pos = DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos ? new THREE.Vector3(DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[0], DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[1], DescriptionTFWidget.SKYBOXES[this.vars.render_skybox].light_pos[2]) : null;
 		if (light_pos) {
-			// let mat = new THREE.MeshBasicMaterial({
-			// 	color: new THREE.Color('red'),
-			// 	transparent: false,
-			// 	opacity: 1
-			// });
-			// let primitive = new THREE.Mesh(new THREE.SphereGeometry(.5,32), mat);
-			// primitive.castShadow = false;
-			// primitive.receiveShadow = false;
-
-			// if (type_no == 1)
-			// 	light_pos.multiplyScalar(.5);
 			if (this.robot) {
 				console.log('Adding light robot_pos = ', this.robot.position, 'light_pos=', light_pos);
 				let rwp = new THREE.Vector3();
 				this.robot.getWorldPosition(rwp);
 				light_pos.add(rwp);
-				//console.log('Adding light_pos= ', light_pos);
 			}
-				
-			// primitive.position.copy(light_pos);
-			// this.scene.add(primitive);
-			// this.lught_pos_tester = primitive;
 		}
 
-		if (type_no == 0 || type_no == 1) { // spot & wide spot light
+		if (type_no == DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT || type_no == DescriptionTFWidget.LIGHT_NARROW_SPOTLIGHT) {
 
 			this.light = new THREE.SpotLight(0xffffff, 250, 0, type_no == 0 ? Math.PI / 10 : Math.PI / 35);
 			this.scene.add(this.light);
@@ -947,11 +933,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				this.light.position.copy(light_pos);
 			else
 				this.light.position.set(10, type_no == 0 ? 5 : 15, 0); // will stay 5m above the model
-
+			
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
 
-		} else if (type_no == 2) { // directioinal
+		} else if (type_no == DescriptionTFWidget.LIGHT_DIRECTIONAL) {
 
 			this.light = new THREE.DirectionalLight(0xffffff, 1.0, 0, Math.PI / 10);
 			
@@ -964,7 +950,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
 
-		} else if (type_no == 3) { // flashlight
+		} else if (type_no == DescriptionTFWidget.LIGHT_FLASHLIGHT) {
 
 			this.light = new THREE.SpotLight(0xffffff, 2, 0, Math.PI / 4, 0, 0.5);
 			
@@ -977,7 +963,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
 			
-		} else if (type_no == 4) { // only ambinece, no shadows
+		} else if (type_no == DescriptionTFWidget.LIGHT_AMBIENT_ONLY) { // only ambinece, no shadows
 
 			this.ambience = new THREE.AmbientLight(0xffffff, 1.0); // stronger white light
 			this.scene.add(this.ambience);
@@ -991,7 +977,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.light.shadow.camera.near = 0.5; // default
 			this.light.shadow.camera.far = 20; // default
 		}
-
 	}
 
 	onClose() {
@@ -1555,8 +1540,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					// moves ros space so that the initial ronot's position and rotation is aligned with the scene's origin
 					// all furher transforms then take place in the ros space
 
-					if (
-						this.vars.follow_target &&
+					if (this.vars.follow_target &&
 						this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
 					) {
 						this.ros_space.attach(this.camera_target_pos);
@@ -1571,8 +1555,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 						.applyQuaternion(this.ros_space.quaternion);
 					this.ros_space.position.copy(t_pos.clone().negate());
 
-					if (
-						this.vars.follow_target &&
+					if (this.vars.follow_target &&
 						this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
 					) {
 						this.scene.attach(this.camera_target_pos);
@@ -1652,6 +1635,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		const cam_lerp_amount = 1.0;
 		let that = this;
 
+		//let d_pos = new THREE.Vector3();
+
 		// set model transforms
 		if (this.robot_model.frames) {
 			let transform_ch_frames = Object.keys(this.smooth_transforms_queue);
@@ -1680,10 +1665,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 					let new_robot_world_position = new THREE.Vector3();
 
-					let move_camera =
-						this.vars.follow_target &&
-						this.robot_pose_initialized &&
-						this.camera_target_key != DescriptionTFWidget.ROS_SPACE_KEY;
+					let move_camera = this.vars.follow_target && this.robot_pose_initialized && this.camera_target_key != DescriptionTFWidget.ROS_SPACE_KEY;
 
 					if (!this.vars.fix_robot_base) {
 						// robot free to move around
@@ -1705,11 +1687,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 						if (move_camera) {
 							this.camera_pos.add(d_pos); // move camera by d
-							if (this.light && this.vars.render_light != 3)
+							if (this.light && this.vars.render_light != DescriptionTFWidget.LIGHT_FLASHLIGHT)
 								this.light.position.add(d_pos);
 						}
-					} else {
-						// keeping robot fixes in place
+					} else { // keeping robot fixes in place
 						this.robot.getWorldPosition(new_robot_world_position); // only get world pos (to rotate around)
 					}
 
@@ -1741,8 +1722,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					}
 
 					// saves new camera pos in relation to robot as it moves around
-					if (
-						!this.set_camera_target_offset &&
+					if (!this.set_camera_target_offset &&
 						!this.vars.follow_target &&
 						this.last_camera_url_update + 1000 < Date.now()
 					) {
@@ -1753,8 +1733,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					}
 
 					this.robot_pose_initialized = true;
-					if (this.light && this.vars.render_light != 3)
-						this.light.target = this.robot;
 
 					this.renderDirty();
 				} else if (t_child && t_parent) {
@@ -1899,6 +1877,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 
 		this.camera_pose_initialized = true; // lerp camera from now on
+
+		if (this.light && this.vars.render_light != DescriptionTFWidget.LIGHT_FLASHLIGHT)
+			this.light.target = this.camera_target_pos;
 
 		// render the scene
 		if (this.controls_dirty || this.render_dirty) {
