@@ -56,12 +56,12 @@
     <link rel="stylesheet" href="/static/gridstack/gridstack.min.css"/>
     <script src="/static/gridstack/gridstack-all.js"></script>
 
-    <% custom_css.forEach(function(inc){ %>
+    <% if (typeof custom_css != 'undefined') { custom_css.forEach(function(inc) { %>
     <link rel="stylesheet" href="<%= inc %>"/>
-    <% }); %>
+    <% })}; %>
 
 </head>
-<body>
+<body class="<%- typeof body_class != 'undefined' ?body_class : '' %>">
 
 <script type="text/javascript">
     const supportsImportMaps = HTMLScriptElement.supports && HTMLScriptElement.supports('importmap');

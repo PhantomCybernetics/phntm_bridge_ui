@@ -8,6 +8,8 @@ import fs from "fs"
 import type { Debugger } from "./lib/debugger";
 import type { BridgeUiConfig } from "./config";
 
+const errorPageTitle:string = 'PHNTM Bridge Error';
+
 export function printStartupMessage(
 	{ uiVersion }: { uiVersion: string },
 	config: BridgeUiConfig,
@@ -38,6 +40,8 @@ export function createWebUIServerExpressApp(
 	webExpressApp.engine(".html", ejs.renderFile);
 	webExpressApp.set("views", path.join(__dirname, "../src/views"));
 	webExpressApp.set("view engine", "html");
+	webExpressApp.use(express.urlencoded({ extended: true })); // for form data
+
 	webExpressApp.use("/static/", express.static("static/"));
 	webExpressApp.use("/static/socket.io/", express.static("node_modules/socket.io-client/dist/"));
 	webExpressApp.use("/static/gridstack/", express.static("node_modules/gridstack/dist/"));
@@ -59,19 +63,46 @@ export function createWebUIServerExpressApp(
 	});
 
 	webExpressApp.get("/", async function (req: express.Request, res: express.Response) {
-		// let ip:string = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
-
-		res.setHeader("Content-Type", "text/html; charset=utf-8");
-		res.send("Ohi, this is Bridge UI server");
+		res.render("login", {
+			// title: "Log in to PHNTM Bridge",
+			analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+			ui_git_version: uiVersion,
+			login: req.query.login ? req.query.login : '',
+		});
 	});
 
-	webExpressApp.get(
-		config.path + ":ID",
-		async function (req: express.Request, res: express.Response) {
+	webExpressApp.post('/login', (req: express.Request, res: express.Response) => {
+		// TODO
+		return res.redirect('/?error=1&login='+req.body.login);
+	});
+
+	webExpressApp.get("/queue-test", async function (req: express.Request, res: express.Response) {
+		res.render("queue", {
+			// title: "Log in to PHNTM Bridge",
+			analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+			ui_git_version: uiVersion,
+		});
+	});
+
+	function isValidObjectId(id:string):boolean {
+		return /^[0-9a-fA-F]{24}$/.test(id);
+	}
+
+	webExpressApp.get(config.path + ":ID", (req: express.Request, res: express.Response) => {
 			res.setHeader("Content-Type", "text/html; charset=utf-8");
 
 			// query the Bridge Server (closest) for the registered instance of this robot
 			let idRobot: string = req.params.ID;
+			if (!isValidObjectId(idRobot)) {
+				res.status(400).render("error", {
+					title: errorPageTitle,
+					code: 400,
+					error: "Invalid Robot ID",
+					analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+					ui_git_version: uiVersion
+				});
+				return;
+			}
 			axios.post( // REST request
 					config.bridgeLocateUrl,
 					{
@@ -84,12 +115,25 @@ export function createWebUIServerExpressApp(
 				.then((response: AxiosResponse) => {
 					if (response.status != 200) {
 						$d.err("Locate returned code " + response.status + " for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.send("Error locating robot on Bridge Server, Web UI credentials misconfigured (err: " + response.status + ")");
+						res.status(500).render("error", {
+							title: errorPageTitle,
+							code: 500,
+							error: 'Error locating robot on Bridge Server <span class="detail">Web UI credentials misconfigured, server returned: ' + response.status + '</span>',
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 						return;
 					}
 					if (response.data["id_robot"] != idRobot) {
 						$d.err("Locate returned code wrong robot id for " + idRobot + ":", response.data);
-						res.send("Error locating robot on Bridge Server");
+						//res.send("Error locating robot on Bridge Server");
+						res.status(500).render("error", {
+							title: errorPageTitle,
+							code: 500,
+							error: "Error locating robot on Bridge Server",
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 						return;
 					}
 					let robot_bridge_sever: string = response.data["bridge_server"] + ":" + config.bridgeSocketPort;
@@ -111,20 +155,57 @@ export function createWebUIServerExpressApp(
 				.catch((error: AxiosError) => {
 					if (error.code === "ECONNABORTED") {
 						$d.err("Locating request timed out for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.send("Timed out locating robot on Bridge Server");
+						res.status(408).render("error", {
+							title: errorPageTitle,
+							code: 408,
+							error: "Timed out locating robot on Bridge Server",
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 					} else if (error.code === "ECONNREFUSED") {
 						$d.err("Locating request refused for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.send("Error connecing to Bridge Server, connection refused");
+						res.status(403).render("error", {
+							title: errorPageTitle,
+							code: 403,
+							error: 'Error connecing to Bridge Server <span class="detail">Connection refused</span>',
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 					} else if (error.status == 404) {
 						$d.err("Locate returned code 404 for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.send("Robot not found on Bridge Server");
+						res.status(404).render("error", {
+							title: errorPageTitle,
+							code: 404,
+							error: "Robot not found on Bridge Server",
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 					} else {
 						$d.err("Error locating robot " + idRobot + " at " + config.bridgeLocateUrl + ":", error.message);
-						res.send("Error locating robot on Bridge Server, Web UI seems misconfigured (err: " + error.code + ")");
+						res.status(500).render("error", {
+							title: errorPageTitle,
+							code: 500,
+							error: 'Error locating robot on Bridge Server <span class="detail">Web UI seems misconfigured, server returned: ' + error.code + '</span>',
+							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+							ui_git_version: uiVersion
+						});
 					}
 				});
 		},
 	);
+
+
+	// 404 handler (must be last)
+	webExpressApp.use((req: express.Request, res: express.Response) => {
+		res.status(404).render("error", {
+			title: errorPageTitle,
+			code: 404,
+			error: "Page not found",
+			analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+			ui_git_version: uiVersion
+		});
+	});
+
 
 	return webExpressApp;
 }

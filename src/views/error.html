@@ -1,0 +1,10 @@
+<%- include('partial/header.html', { body_class:"simple"}); %>
+
+<div id="error-page">
+    <span id="error-page-logo"></span>
+    <span class="icon"></span>
+    <%- typeof code != 'undefined' ? '<span class="code">'+code+': </span>' : '' %>
+    <%- error %>
+</div>
+
+<%- include('partial/footer.html'); %>

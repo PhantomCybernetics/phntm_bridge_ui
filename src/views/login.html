@@ -1,0 +1,38 @@
+<%- include('partial/header.html', { body_class:"simple"}); %>
+
+
+<div id="login-page">
+    <span id="login-page-logo"></span>
+
+    <form id="login-form" action="/login" method="POST">
+        <div class="form-content">
+            <div class="line">
+                <label for="email">E-mail:</label>
+                <input type="text" name="login" id="login" <% if (login != '') { %>value="<%= login %>"<% } else { %>autofocus<% } %>/>
+            </div>
+
+            <div class="line">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" <% if (login != '') { %>autofocus<% } %>/>
+            </div>
+            
+            <div class="line">
+                <button type="submit">Log in</button>
+            </div>
+        </div>
+    </form>
+    
+</div>
+
+<% if (login != '') { %>
+<script type="text/javascript">
+    $(document).ready(() => {
+        $('#login-form .form-content').addClass('error');
+        setTimeout(()=>{
+            $('#login-form .form-content').removeClass('error');
+        }, 610);
+    });
+</script>
+<% } %>
+
+<%- include('partial/footer.html'); %>

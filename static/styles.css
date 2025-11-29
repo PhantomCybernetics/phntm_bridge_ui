@@ -57,6 +57,9 @@ body::after {
 		url("/static/graph/icon-view.svg")
 		url("/static/graph/icon-external-link.svg")
 		url("/static/graph/phantom-cybernetics-logo-white.svg")
+		url("/static/graph/dead-robot.svg")
+		url("/static/graph/bridge-logo.svg")
+		url('/static/graph/robot-queued.svg')
 		;
 }
 
@@ -4520,7 +4523,8 @@ BODY.desktop-ui #bottom-links {
 	font-size: 13px;
 }
 
-BODY.desktop-ui #bottom-links {
+BODY.desktop-ui #bottom-links,
+BODY.simple #bottom-links  {
 	text-align: right;
 	padding: 7px 10px 7px 10px;
 	color: #ffffff23;
@@ -4537,7 +4541,8 @@ BODY.desktop-ui #bottom-links {
 	display: none;
 }
 
-BODY.desktop-ui #bottom-links I {
+BODY.desktop-ui #bottom-links I,
+BODY.simple #bottom-links I {
 	margin-right: 4px;
 }
 
@@ -6904,4 +6909,224 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
 
 .video_overlay_cont SVG .detection-res {
 	background-color: #000;
+}
+
+BODY.simple {
+	margin: 0px;
+	padding: 0px;
+}
+
+BODY.simple #bottom-links {
+	display: block;
+}
+
+#error-page,
+#queue-page {
+	color: #fff;
+    font-size: 30px;
+    position: absolute;
+    left: 50%;
+    top: max(50%, 270px);
+    background: #9e0000;
+    transform: translate(-50%, -50%);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+#queue-page H1 {
+	position: absolute;
+	top: -190px;
+	left: 50%;
+	transform: translate(-50%, -100%);
+	white-space: nowrap;
+	padding: 10px 20px !important;
+}
+
+#queue-page {
+	font-size: 22px;
+	background: #00366a;
+}
+
+#queue-page #num-waiting {
+	display: block;
+	margin-top: 20px;
+	/* text-align: center; */
+	
+}
+#queue-page #num-waiting B {
+	font-size: 30px;
+}
+
+#queue-page .explanation {
+	position: absolute;
+    width: calc(100% - 40px);
+    top: calc(100% + 0px);
+    font-size: 16px;
+    padding: 20px;
+    opacity: .5;
+    text-align: center;
+}
+
+#error-page .icon,
+#queue-page .icon {
+	position: absolute;
+    left: 50%;
+    bottom: -150px;
+    width: 100px;
+    height: 100px;
+    background-image: url(/static/graph/dead-robot.svg);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    transform: translate(-50%, 0px);
+}
+
+#queue-page .icon {
+	background-image: url(/static/graph/robot-queued.svg);
+	width: 160px;
+	height: 160px;
+}
+
+@media (max-width: 600px) {
+	#error-page,
+	#queue-page {
+		width: 80%;
+	}
+}
+@media (min-width: 600px) {
+	#error-page,
+	#queue-page {
+		left: calc(50% + 60px);
+	}
+	#error-page .icon,
+	#queue-page .icon {
+		left: -120px;
+		top: 30px;
+		transform: translate(0px, -42%);
+	}
+	#queue-page .icon {
+		left: -180px;
+	}
+}
+
+#error-page .detail {
+	display: block;
+    font-size: 20px;
+    margin-top: 10px;
+}
+
+#error-page-logo,
+#queue-page-logo {
+	position: absolute;
+    left: 50%;
+    top: -180px;
+    width: min(350px, 80vw);
+    height: 120px;
+    background-image: url(/static/graph/bridge-logo.svg);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-position: 0px 0px;
+    transform: translate(-50%, 0px);
+    opacity: 0.5;
+}
+
+#queue-page-logo {
+	 top: -150px;
+	 width: min(270px, 80vw);
+	 opacity: 1.0;
+}
+
+#login-page {
+	color: #fff;
+    font-size: 20px;
+    position: absolute;
+    left: 50%;
+    top: max(50%, 270px);
+    transform: translate(-50%, -50%);
+	width: min(450px, 80%);
+	
+}
+
+#login-page FORM {
+	margin: 0px;
+	padding: 0px;
+}
+
+#login-page .form-content {
+	padding: 20px;
+    border-radius: 10px;
+	background: #000000;
+	width: calc(100% - 40px);
+	height: 135px;
+	position: relative;
+}
+
+
+#login-page .form-content.error {
+	animation-name: login-err-shake;
+	animation-duration: 0.2s;
+	animation-iteration-count: 3;
+}
+
+@keyframes login-err-shake {
+	0% {
+		left: 0px;
+	}
+	25% {
+		left: 3px;
+	}
+	75% {
+		left: -3px;
+	}
+	100% {
+		left: 0px;
+	}
+}
+
+
+#login-page-logo {
+	position: absolute;
+    left: 50%;
+    top: -180px;
+	width: min(350px, 80vw);
+    height: 120px;
+    background-image: url(/static/graph/bridge-logo.svg);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-position: 0px 0px;
+    transform: translate(-50%, 0px);
+}
+
+#login-page DIV.line {
+	position: relative;
+	height: 50px;
+}
+
+#login-page LABEL {
+	position: absolute;
+	left: 0px;
+	line-height: 40px;
+}
+
+#login-page INPUT {
+	position: absolute;
+    left: 140px;
+    color: #000;
+    border-radius: 5px;
+    line-height: 40px;
+    border: 0px;
+    margin: 0px;
+    padding: 0px 10px;
+	width: calc(100% - 160px);
+}
+
+#login-page BUTTON {
+	background-color: #005a00;
+    color: #fff;
+    position: absolute;
+    right: 0px;
+    border-radius: 5px;
+    line-height: 40px;
+    padding: 0px 20px;
+    border: 0px;
+	font-weight: bold;
 }
