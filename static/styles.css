@@ -68,6 +68,7 @@ BODY.desktop-ui {
 }
 
 BODY.no-scroll,
+BODY.waiting,
 BODY.touch-gamepad,
 BODY.touch-ui.gamepad-editing {
 	overflow: hidden;
@@ -374,7 +375,8 @@ BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 #input-manager-overlay,
 #touch-ui-dialog-underlay,
 #msg-type-dialog-underlay,
-#dialog-modal-confirm-underlay {
+#dialog-modal-confirm-underlay,
+#waiting-dialog-underlay {
 	display: none;
 	position: fixed;
 	left: 0px;
@@ -6921,7 +6923,7 @@ BODY.simple #bottom-links {
 }
 
 #error-page,
-#queue-page {
+#waiting-dialog {
 	color: #fff;
     font-size: 30px;
     position: absolute;
@@ -6933,42 +6935,42 @@ BODY.simple #bottom-links {
     border-radius: 10px;
 }
 
-#queue-page H1 {
-	position: absolute;
-	top: -190px;
-	left: 50%;
-	transform: translate(-50%, -100%);
-	white-space: nowrap;
-	padding: 10px 20px !important;
-}
-
-#queue-page {
-	font-size: 22px;
+#waiting-dialog {
+	font-size: 20px;
 	background: #00366a;
+	display: none;
 }
 
-#queue-page #num-waiting {
+BODY.waiting #waiting-dialog {
+	display: block;
+	z-index: 201;
+}
+BODY.waiting #waiting-dialog-underlay {
+	display: block;
+	z-index: 200;
+	cursor: default;
+	background-color: rgb(0 0 0 / 86%);
+}
+
+#waiting-dialog #waiting-dialog-queue-info {
 	display: block;
 	margin-top: 20px;
 	/* text-align: center; */
 	
 }
-#queue-page #num-waiting B {
+
+#waiting-dialog #waiting-dialog-num-connected {
+	background-color: #fff;
+    padding: 0px 3px;
+    font-weight: bold;
+    color: #00366a;
+    border-radius: 5px;
+}
+#waiting-dialog #num-waiting B {
 	font-size: 30px;
 }
 
-#queue-page .explanation {
-	position: absolute;
-    width: calc(100% - 40px);
-    top: calc(100% + 0px);
-    font-size: 16px;
-    padding: 20px;
-    opacity: .5;
-    text-align: center;
-}
-
-#error-page .icon,
-#queue-page .icon {
+#error-page .icon {
 	position: absolute;
     left: 50%;
     bottom: -150px;
@@ -6980,15 +6982,34 @@ BODY.simple #bottom-links {
     transform: translate(-50%, 0px);
 }
 
-#queue-page .icon {
+#waiting-dialog .icon {
 	background-image: url(/static/graph/robot-queued.svg);
 	width: 160px;
 	height: 160px;
+	display: block;
+    position: absolute;
+	left: 50%;
+    top: -180px;
+    transform: translate(-50%, 0px);
+}
+
+/* animiated dots */
+#waiting-dialog .icon SVG {
+	position: absolute;
+    top: 36px;
+    left: 23px;
+}
+#waiting-dialog .icon SVG .dot1 { animation: bounce 1.4s infinite 0s; }
+#waiting-dialog .icon SVG .dot2 { animation: bounce 1.4s infinite 0.2s; }
+#waiting-dialog .icon SVG .dot3 { animation: bounce 1.4s infinite 0.4s; }
+@keyframes bounce {
+	0%, 100% { transform: translateY(0); opacity: 1; }
+	50% { transform: translateY(-5px); opacity: 0.3; }
 }
 
 @media (max-width: 600px) {
 	#error-page,
-	#queue-page {
+	#waiting-dialog {
 		width: 80%;
 	}
 }
@@ -7005,6 +7026,7 @@ BODY.simple #bottom-links {
 	}
 	#queue-page .icon {
 		left: -180px;
+		top: 80px;
 	}
 }
 
@@ -7014,8 +7036,7 @@ BODY.simple #bottom-links {
     margin-top: 10px;
 }
 
-#error-page-logo,
-#queue-page-logo {
+#error-page-logo {
 	position: absolute;
     left: 50%;
     top: -180px;
@@ -7026,14 +7047,8 @@ BODY.simple #bottom-links {
     background-size: 100% 100%;
     background-position: 0px 0px;
     transform: translate(-50%, 0px);
-    opacity: 0.5;
 }
 
-#queue-page-logo {
-	 top: -150px;
-	 width: min(270px, 80vw);
-	 opacity: 1.0;
-}
 
 #login-page {
 	color: #fff;

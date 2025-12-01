@@ -133,6 +133,8 @@ export class BrowserClient extends EventTarget {
 	input_manager = null;
 	extrernal_scripts = {};
 
+	is_waiting = false;
+
 	constructor(opts) {
 		super();
 
@@ -158,7 +160,8 @@ export class BrowserClient extends EventTarget {
 
 		this.ice_servers_config = [];
 		this.force_turn = opts.force_turn;
-
+		this.is_waiting = false;
+		
 		this.init_complete = false;
 		this.msg_writers = {}; //msg_type => writer
 		this.msg_readers = {}; //msg_type => reader
@@ -1083,6 +1086,14 @@ export class BrowserClient extends EventTarget {
 			: robot_data["git_sha"]
 				? "#" + robot_data["git_sha"].slice(0, 7)
 				: null;
+
+		if (robot_data["wait"]) {
+			this.is_waiting = true;
+			this.emit('wait', robot_data["wait"]);
+		} else if (this.is_waiting) {
+			this.is_waiting = false;
+			this.emit('wait_ended');
+		}
 
 		if (robot_data["ice_servers"]) {
 			console.log("Got ice servers: ", robot_data["ice_servers"]);

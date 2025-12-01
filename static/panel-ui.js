@@ -155,6 +155,26 @@ export class PanelUI {
 		this.connection_uptime_timer = null;
 		this.last_connection_uptime = "";
 
+		client.on("wait", (info) => {
+			$('#waiting-dialog-num-connected').text(info['num_connected'])
+			let queue_info = '';
+			if (info['pos'] === 0) {
+				queue_info = 'You are <b>the first one</b> in the queue...';	
+			} else if (info['pos'] === 1) {
+				queue_info = '<b>1 user</b> is ahead of you in the queue...';	
+			} else {
+				queue_info = '<b>'+info['pos']+' users</b> are ahead of you in the queue...';	
+			}
+			$('#waiting-dialog-queue-info').html(queue_info);
+			$('BODY').addClass('waiting');
+			that.setDocumentTitle();
+		});
+
+		client.on("wait_ended", (info) => {
+			$('BODY').removeClass('waiting');
+			that.setDocumentTitle();
+		});
+
 		client.on("introspection", (state) => {
 			if (state) {
 				$("#introspection_state")
@@ -766,7 +786,9 @@ export class PanelUI {
 
 		if (this.is_sleeping) {
 			document.title = "{Zzz) " + this.client.name + " @ PHNTM Bridge";
-		} else {
+		} else if (this.client.is_waiting) {
+			document.title = "{Waiting) " + this.client.name + " @ PHNTM Bridge";
+		}  else {
 			document.title = this.client.name + " @ PHNTM Bridge";
 		}
 	}
