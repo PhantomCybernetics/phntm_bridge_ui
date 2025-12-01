@@ -60,6 +60,7 @@ body::after {
 		url("/static/graph/dead-robot.svg")
 		url("/static/graph/bridge-logo.svg")
 		url('/static/graph/robot-queued.svg')
+		url('/static/graph/icon-lock.svg')
 		;
 }
 
@@ -3603,7 +3604,8 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
 }
 
 #profile-unsaved-warn,
-#input-unsaved-warn {
+#input-unsaved-warn,
+#input-locked-warn {
 	position: absolute;
 	background: magenta;
 	color: #ffffff;
@@ -3614,7 +3616,7 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
 	right: -5px;
 	top: -4px;
 	font-weight: bold;
-	width: 17px;
+	width: 19px;
 	height: 17px;
 	text-align: center;
 	vertical-align: middle;
@@ -3635,6 +3637,23 @@ BODY.desktop-ui #gamepad #gamepad_settings #input-profile-select {
 }
 
 #gamepad #input-unsaved-warn.unsaved {
+	display: block;
+}
+
+#input-locked-warn {
+	left: 2px;
+    right: auto;
+    top: 5px;
+    background-image: url(/static/graph/icon-lock.svg);
+    background-repeat: no-repeat;
+    background-size: 13px;
+    display: none;
+    background-position: 3px 3px;
+   
+    background-color: yellow;
+}
+
+#input-locked-warn.locked {
 	display: block;
 }
 

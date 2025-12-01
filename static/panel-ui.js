@@ -2955,13 +2955,10 @@ export class PanelUI {
 			]);
 
 			this.input_manager.setTouchGamepadOn(true);
-			if (
-				this.input_manager.controllers["touch"] &&
-				!this.input_manager.controllers["touch"].enabled
-			) {
+			if (this.input_manager.controllers["touch"] && !this.input_manager.controllers["touch"].enabled) {
 				this.input_manager.setControllerEnabled(
 					this.input_manager.controllers["touch"],
-					true,
+					true, // enable
 					true,
 				);
 			}
@@ -2972,13 +2969,10 @@ export class PanelUI {
 			// }
 
 			this.input_manager.setTouchGamepadOn(false);
-			if (
-				this.input_manager.controllers["touch"] &&
-				this.input_manager.controllers["touch"].enabled
-			) {
+			if (this.input_manager.controllers["touch"] && this.input_manager.controllers["touch"].enabled) {
 				this.input_manager.setControllerEnabled(
 					this.input_manager.controllers["touch"],
-					false,
+					false, // disable
 					true,
 				);
 			}

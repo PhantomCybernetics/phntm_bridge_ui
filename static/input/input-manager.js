@@ -26,10 +26,13 @@ export class InputManager {
 		this.controller_enabled_cb = $("#controller-enabled-cb");
 		this.controller_enabled_cb.prop("checked", false);
 		this.input_status_icon = $("#input-status-icon");
+		this.input_locked_icon = $("#input-locked-warn");
 		this.debug_output_panel = $("#gamepad-output-panel");
 
 		this.cooldown_drivers = {};
 		this.topics_transmitted_last_frame = {};
+
+		this.server_locked_topics = { }; // topics locked by others
 
 		let that = this;
 		this.zero2 = new THREE.Vector2(0, 0);
@@ -53,6 +56,11 @@ export class InputManager {
 		});
 		client.on("peer_disconnected", () => {
 			that.unlockAllServices();
+		});
+		client.on("input_locks", (locked_topics) => {
+			console.log("Got input locks", locked_topics);
+			that.server_locked_topics = locked_topics;
+			that.updateLockIcon();
 		});
 
 		this.open = false;
@@ -493,7 +501,7 @@ export class InputManager {
 				false,
 			); // touch gets enabled by virtual gamepad
 
-			console.log("Initiated profiles for gamepad " + c.id);
+			console.log("Initiated profiles for controller " + c.id);
 		}
 
 		this.makeControllerIcons();
@@ -512,8 +520,49 @@ export class InputManager {
 		}
 	}
 
-	setControllerEnabled(c, state, update_icons = true) {
-		let report_change = c.enabled != state && (c.enabled !== undefined || state); // initial enabled = undefined (don't report on init, unless on)
+	updateLockIcon() {
+		let show_locked = false;
+		Object.values(this.server_locked_topics).forEach((id_locked_peer)=>{
+			if (id_locked_peer != this.client.socket_auth.id_instance) {
+				console.warn('lock', id_locked_peer, this.client.id_robot);
+				show_locked = true;
+			}
+		});
+		if (show_locked)
+			this.input_locked_icon.addClass('locked');
+		else
+			this.input_locked_icon.removeClass('locked');
+	}
+
+	setControllerEnabled(c, state, update_icons = true, update_lock = true) {
+
+		if (!c.profiles || !this.current_profile || !c.profiles[this.current_profile])
+			return; // driver not loaded
+		let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+
+		// if (state && this.server_locked_topics.indexOf(d.output_topic) > -1) {
+		// 	state = false; // keep disabled; topic locked by somebody else
+		// }
+
+		let that = this;
+		if (state) {
+			this.client.lockInputTopic(d.output_topic, (success) => {
+				if (success) {
+					that._doSetControllerEnabled(c, true, d.output_topic, update_icons);
+				} else {
+					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
+				}
+			});
+		} else {
+			if (update_lock)
+				this.client.unlockInputTopic(d.output_topic);
+			this._doSetControllerEnabled(c, false, null, update_icons);
+		}
+	}
+
+	_doSetControllerEnabled(c, state, output_topic, update_icons) {
+
+		let show_notification = c.enabled != state && (c.enabled !== undefined || state); // initial enabled = undefined (don't report on init, unless on)
 
 		c.enabled = state;
 		this.saveUserControllerEnabled(c);
@@ -534,27 +583,18 @@ export class InputManager {
 		// disable controllers producing into the same topic to avoid conflicsts
 		if (state) {
 			let c_ids = Object.keys(this.controllers);
-			if (!c.profiles || !this.current_profile || !c.profiles[this.current_profile])
-				return; // driver not loaded
-			let d =
-				c.profiles[this.current_profile].driver_instances[
-					c.profiles[this.current_profile].driver
-				];
 			c_ids.forEach((cc_id) => {
 				let cc = this.controllers[cc_id];
 				if (cc_id == c.id) return;
 				if (!cc.enabled) return;
-				let dd =
-					cc.profiles[this.current_profile].driver_instances[
-						cc.profiles[this.current_profile].driver
-					];
-				if (dd.output_topic == d.output_topic) {
-					this.setControllerEnabled(cc, false, false);
+				let dd = cc.profiles[this.current_profile].driver_instances[cc.profiles[this.current_profile].driver];
+				if (dd.output_topic == output_topic) {
+					this.setControllerEnabled(cc, false, false, false);
 				}
 			});
 		}
 
-		if (report_change) {
+		if (show_notification) {
 			let label = c.id;
 			if (label == "touch") label = "Touch input";
 			else if (label == "keyboard") label = "Keyboard";

@@ -260,6 +260,13 @@ export class BrowserClient extends EventTarget {
 			}, 0);
 		});
 
+		this.socket.on("input_locks", (data) => {
+			if (!data[that.id_robot]) return;
+			setTimeout(() => {
+				that.emit("input_locks", data[that.id_robot]['locked_topics'] ? data[that.id_robot]['locked_topics'] : {});
+			}, 0);
+		});
+
 		this.socket.on("peer_service_call", (data) => {
 			if (!data[that.id_robot]) return;
 
@@ -885,6 +892,16 @@ export class BrowserClient extends EventTarget {
 		return this.topic_writers[topic].send(msg);
 	}
 
+	lockInputTopic(topic, cb) {
+		this.socket.emit("input:lock", { id_robot: this.id_robot, topic: topic }, (lock_res) => {
+			cb(lock_res['success']);
+		});
+	}
+
+	unlockInputTopic(topic) {
+		this.socket.emit("input:unlock", { id_robot: this.id_robot, topic: topic });
+	}
+
 	// not removing writers ever
 	// removeWriter(topic) {
 	// 	if (!this.writers[topic]) {
@@ -1102,6 +1119,10 @@ export class BrowserClient extends EventTarget {
 			this.emit('wait_ended');
 		}
 
+		if (robot_data["input_locks"]) {
+			this.emit("input_locks", robot_data["input_locks"]);
+		}
+		
 		if (robot_data["ice_servers"]) {
 			console.log("Got ice servers: ", robot_data["ice_servers"]);
 			if (!robot_data["ice_servers"].length) {
