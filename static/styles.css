@@ -4816,12 +4816,15 @@ BODY.desktop-ui #gamepad-settings-panel.has-buttons {
 
 #gamepad-settings-panel .driver-error {
 	background: #be1e1e;
-	display: block;
-	border-radius: 5px;
-	padding: 5px;
-	font-size: 14px;
-	text-align: center;
-	clear: both;
+    display: block;
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 14px;
+    text-align: left;
+    clear: both;
+    margin-top: 5px;
+    float: left;
+	width: calc(100% - 10px);
 }
 
 #gamepad-buttons-panel BUTTON {

@@ -161,7 +161,7 @@ export class BrowserClient extends EventTarget {
 		this.ice_servers_config = [];
 		this.force_turn = opts.force_turn;
 		this.is_waiting = false;
-		
+
 		this.init_complete = false;
 		this.msg_writers = {}; //msg_type => writer
 		this.msg_readers = {}; //msg_type => reader
@@ -857,11 +857,18 @@ export class BrowserClient extends EventTarget {
 								let res_topic = one_res[0];
 								let dc_id = one_res[1];
 								let res_msg_type = one_res[2];
-								that._makeWriteDataChannel(
-									res_topic,
-									dc_id,
-									res_msg_type,
-								);
+								if (dc_id == 0) {
+									console.error("Error creating a topic writer for " + res_topic);
+									that.ui.showNotification('Error creating publisher for ' + res_topic + ' with type ' + res_msg_type, 'error',
+															 'The topic may exist with a different type'
+									);
+								} else {
+									that._makeWriteDataChannel(
+										res_topic,
+										dc_id,
+										res_msg_type,
+									);
+								}
 							});
 						}
 					}
@@ -1229,6 +1236,14 @@ export class BrowserClient extends EventTarget {
 				let topic = topic_data[0];
 				let dc_id = topic_data[1];
 				let msg_type = topic_data[2];
+
+				if (!dc_id) {
+					console.error("Error creating a topic writer for " + topic);
+					that.ui.showNotification('Error creating publisher for ' + topic + ' with type ' + msg_type, 'error',
+											 'The topic may exist with a different type'
+					);
+					return;
+				}
 
 				if (dc_id && that.topic_writers[topic] && that.topic_writers[topic].msg_type == msg_type) {
 					that.topic_writers[topic].dc_id = dc_id;
