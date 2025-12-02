@@ -577,6 +577,10 @@ export class InputManager {
 					that._doSetControllerEnabled(c, true, d.output_topic, update_icons);
 				} else {
 					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
+					if (c === that.edited_controller) {
+						c.enabled = false;
+						that.controller_enabled_cb.prop("checked", c.enabled);
+					}
 				}
 			});
 		} else {
