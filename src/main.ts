@@ -15,7 +15,7 @@ const $d: Debugger = Debugger.Get("[Bridge Web]");
 const config = await getConfig();
 const gitTag = GetExactTagOnHead();
 const gitCommit = GetGitCommitHash();
-const uiVersion = gitTag ? gitTag : (gitCommit ? '#' + gitCommit.slice(-7) : '?');
+const uiVersion = gitTag ? gitTag : (gitCommit ? '#' + gitCommit.slice(0, 7) : '?');
 
 printStartupMessage({ uiVersion }, config);
 
