@@ -66,7 +66,14 @@ Reload systemctl daemon
 sudo systemctl daemon-reload
 ```
 
-### Launch:
+### Add Git safe directory for root
+We read git commit and tags as root to display in the UI. The repo must be added to global safe.directory like this:
+
+``` bash
+sudo git config --global --add safe.directory /home/ubuntu/phntm_bridge_ui
+```
+
+### Launch
 
 ```bash
 sudo systemctl start phntm_bridge_ui.service

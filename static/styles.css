@@ -4638,11 +4638,19 @@ BODY.hamburger #bottom-links.inline {
 	float: left;
 }
 
-#bottom-links A {
+#bottom-links A, #bottom-links A:hover {
 	color: #ffffff4a;
 	margin: 0px 4px 0px 0px;
 	line-height: 20px;
 	display: inline-block;
+	text-decoration: underline;
+}
+
+#bridge-version-info A,
+#bridge-ui-version-info A {
+	color: #ffffff23;
+	text-decoration: none;
+	font-size: 12px !important;
 }
 
 BODY.hamburger #bottom-links A {
