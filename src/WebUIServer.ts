@@ -130,6 +130,7 @@ export function createWebUIServerExpressApp(
 					let robot_bridge_files_url: string = response.data["bridge_server"] + ":" + config.bridgeFilesPort + "/%SECRET%/%ROBOT_ID%/%URL%";
 					let robot_custom_css:string[] = response.data["ui_custom_css"] ? response.data["ui_custom_css"] : [];
 					let robot_custom_js:string[] = response.data["ui_custom_js"] ? response.data["ui_custom_js"] : [];
+					let background_disconnect_sec:number = response.data["ui_background_disconnect_sec"] ? response.data["ui_background_disconnect_sec"] : 0.0;
 					$d.l('Locate returned:', response.data);
 					res.render("robot_ui", {
 						id_robot: req.params.ID,
@@ -140,6 +141,7 @@ export function createWebUIServerExpressApp(
 						ui_git_version: uiVersion,
 						custom_css: robot_custom_css,
                     	custom_js: robot_custom_js,
+						background_disconnect_sec: background_disconnect_sec,
 					});
 				})
 				.catch((error: AxiosError) => {

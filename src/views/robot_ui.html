@@ -290,7 +290,8 @@
 		}
 	});
 
-	let panel_ui = new PanelUI(robot, 32, input_manager);
+	let background_disconnect_sec = parseFloat('<%= background_disconnect_sec %>');
+	let panel_ui = new PanelUI(robot, 32, input_manager, background_disconnect_sec);
 
 	// add core single type panel widgets
 	let single_type_panel_classes = [ BatteryStateWidget,

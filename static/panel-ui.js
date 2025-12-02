@@ -66,7 +66,7 @@ export class PanelUI {
 		};
 	}
 
-	constructor(client, grid_cell_height, input_manager) {
+	constructor(client, grid_cell_height, input_manager, background_disconnect_sec) {
 		this.client = client;
 		this.client.ui = this;
 
@@ -76,7 +76,7 @@ export class PanelUI {
 		this.reconnection_timer = null;
 		this.disconnect_timer = null;
 		this.reconnection_delay = 1000; // ms
-		this.background_disconnect_delay = 1000 * 60 * 2; // 2 min
+		this.background_disconnect_delay_ms = background_disconnect_sec * 1000; // * 60 * 2; // 2 min
 		// document.querySelector("body").requestFullscreen();
 		this.grid_cell_height = grid_cell_height;
 
@@ -697,7 +697,7 @@ export class PanelUI {
 				clearTimeout(that.disconnect_timer);
 				that.disconnect_timer = setTimeout(
 					delayedDisconnectSockerTimer,
-					that.background_disconnect_delay,
+					that.background_disconnect_delay_ms,
 				);
 			}
 			that.is_visible = visibility;
