@@ -8,17 +8,18 @@ C; //force import typings with string prototype extension
 
 import { getConfig } from "./config";
 import { Debugger } from "./lib/debugger";
-import { GetCerts } from "./lib/helpers";
+import { GetCerts, GetGitCommitHash, GetExactTagOnHead } from "./lib/helpers";
 import { createWebUIServerExpressApp, printStartupMessage } from "./WebUIServer";
 
 const $d: Debugger = Debugger.Get("[Bridge Web]");
 const config = await getConfig();
-const uiVersion = (await import("../package.json")).version;
+const gitTag = GetExactTagOnHead();
+const gitCommit = GetGitCommitHash();
+const uiVersion = gitTag ? gitTag : (gitCommit ? '#' + gitCommit.slice(-7) : '?');
 
 printStartupMessage({ uiVersion }, config);
 
 const webExpressApp = express();
-
 createWebUIServerExpressApp({ $d, uiVersion }, config, webExpressApp);
 
 function httpsOptions() {

@@ -1,4 +1,5 @@
 import { Debugger } from "./debugger";
+import { execSync } from 'child_process';
 
 const $d: Debugger = Debugger.Get();
 
@@ -45,3 +46,22 @@ export function Die(message?: string): void {
 	$d.log(m.bgRed);
 	process.exit(1);
 }
+
+export function GetGitCommitHash(): string|null {
+  try {
+    const hash = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    return hash;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function GetExactTagOnHead(): string|null {
+  try {
+    const tag = execSync('git describe --exact-match --tags --abbrev=0', { encoding: 'utf8' }).trim();
+    return tag;
+  } catch (error) {
+    return null;  // no exact tag on HEAD
+  }
+}
+
