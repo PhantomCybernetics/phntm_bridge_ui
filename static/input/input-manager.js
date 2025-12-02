@@ -525,7 +525,7 @@ export class InputManager {
 
 			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
 			if (d.output_topic == topic) {
-				this.setControllerEnabled(c, false, true, true, false); // no need to update the server, this topic is locked by somebody else
+				this.setControllerEnabled(c, false, true, false); // no need to update the server, this topic is locked by somebody else
 			}
 		});
 	}
@@ -534,6 +534,7 @@ export class InputManager {
 		console.log("Got input locks", locked_topics);
 		this.server_locked_topics = locked_topics;
 
+		// process locks by others
 		let show_locked = false;
 		Object.keys(this.server_locked_topics).forEach((locked_topic)=>{
 			let id_locked_peer = this.server_locked_topics[locked_topic];
@@ -546,9 +547,20 @@ export class InputManager {
 			this.input_locked_icon.addClass('locked');
 		else
 			this.input_locked_icon.removeClass('locked');
+		
+		// if the server didn't return locks for currently anabled controlleds / driver, lock them
+		Object.values(this.controllers).forEach((c)=>{
+			if (!c.profiles || !c.enabled || !this.current_profile || !c.profiles[this.current_profile])
+				return;
+
+			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+			if (!this.server_locked_topics[d.output_topic]) { // driver instance's topic not among server locks
+				this.setControllerEnabled(c, true, true);
+			}
+		});
 	}
 
-	setControllerEnabled(c, state, update_icons = true, update_server_lock = true) {
+	setControllerEnabled(c, state, update_icons=true, update_server_lock=true) {
 
 		if (!c.profiles || !this.current_profile || !c.profiles[this.current_profile])
 			return; // driver not loaded
