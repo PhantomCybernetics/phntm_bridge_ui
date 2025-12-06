@@ -276,9 +276,6 @@
 	});
 	window.robot = robot; // make available to analytics
 
-	//$(document).ready(function () {
-	//	try {
-
 	let input_manager = new InputManager(robot);
 	input_manager.registerDriver(JoyInputDriver);
 	input_manager.registerDriver(TwistInputDriver);
@@ -376,13 +373,9 @@
 	//connects socket.io, then runs handshake with the robot
 	robot.connect();
 
-	if (navigator.userAgent.toLowerCase().includes("firefox")) {
-		//panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
-	}
-		//} catch (e) {
-		//	console.error(e);
-		//}
-	//});
+	// if (navigator.userAgent.toLowerCase().includes("firefox")) {
+	// 	panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+	// }
 	
 </script>
 

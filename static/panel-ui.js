@@ -677,7 +677,7 @@ export class PanelUI {
 			$("BODY").removeClass("menu-cancels-scroll");
 		});
 
-		function delayedDisconnectSockerTimer() {
+		const delayedDisconnectSockerTimer = () => {
 			if (that.is_visible) return;
 			console.log("Delayed disconnect");
 			that.is_sleeping = true;
@@ -685,23 +685,25 @@ export class PanelUI {
 			that.setDocumentTitle();
 		}
 
-		const onUIVisibilityChange = async () => {
-			console.log("document.visibilityState: " + document.visibilityState);
+		const onUIVisibilityChange = () => {
+			console.log("document.visibilityState: " + document.visibilityState, that.background_disconnect_delay_ms);
 			let visibility = document.visibilityState === "visible";
 			if (visibility && !that.is_visible) {
-				clearTimeout(that.disconnect_timer);
+				if (that.disconnect_timer)
+					clearTimeout(that.disconnect_timer);
+				that.is_visible = visibility;
 				that.disconnect_timer = null;
 				that.client.connect();
 				that.is_sleeping = false;
 				that.setDocumentTitle();
 			} else if (!visibility && that.is_visible && !that.run_in_background) {
-				clearTimeout(that.disconnect_timer);
-				that.disconnect_timer = setTimeout(
-					delayedDisconnectSockerTimer,
-					that.background_disconnect_delay_ms,
-				);
+				if (that.disconnect_timer)
+					clearTimeout(that.disconnect_timer);
+				that.is_visible = visibility;
+				that.disconnect_timer = setTimeout(() => {
+					delayedDisconnectSockerTimer();
+				}, that.background_disconnect_delay_ms); // the delay can be much longer on firefox (bg timer throttling)
 			}
-			that.is_visible = visibility;
 		};
 
 		document.addEventListener("visibilitychange", onUIVisibilityChange);
@@ -2445,14 +2447,14 @@ export class PanelUI {
 			);
 		}
 
-		if (hash_joined.length > 0)
-			window.location.hash = hash_joined; //remove hash
-		else
-			history.pushState(
-				"",
-				document.title,
-				window.location.pathname + window.location.search,
-			);
+		if (this.url_hash_timeout)
+			clearTimeout(this.url_hash_timeout)
+		this.url_hash_timeout = setTimeout(()=>{
+			if (hash_joined.length > 0)
+				window.location.hash = hash_joined; //remove hash
+			else
+				history.pushState("", document.title, window.location.pathname + window.location.search);
+		}, 50); // limit how often we set url hash
 	}
 
 	panelsFromURLHash(hash) {
