@@ -26,7 +26,7 @@ export class LaserScanWidget extends SingleTypePanelWidgetBase {
 
 		let that = this;
 
-		this.widget_el.on("mousewheel", (ev) => {
+		this.widget_el.on("wheel", (ev) => {
 			ev.preventDefault();
 			let d = ev.originalEvent.deltaY;
 			that.setZoom(that.zoom - d * 0.005);

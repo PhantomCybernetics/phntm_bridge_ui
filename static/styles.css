@@ -4748,7 +4748,7 @@ BODY.desktop-ui #gamepad-settings-panel {
 
 #gamepad-settings-panel .line INPUT,
 #gamepad-settings-panel .line SELECT {
-	width: calc(60% - 10px) !important;
+	width: calc(60% - 20px) !important;
 	float: left;
 	margin: 0px;
 	border: 0px;
@@ -4761,7 +4761,7 @@ BODY.desktop-ui #gamepad-settings-panel {
 	font-size: 16px;
 }
 #gamepad-settings-panel .line SELECT {
-	width: 60% !important;
+	width: calc(60% - 10px) !important;
 	padding-left: 5px !important;
 }
 
