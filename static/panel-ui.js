@@ -275,7 +275,7 @@ export class PanelUI {
 			}
 		});
 
-		client.on("media_stream", (id_src, stream) => {
+		client.on("media_stream", (id_src, stream, mid) => {
 			// console.warn('Client got a stream for ' + id_src, stream);
 
 			let panel = that.panels[id_src];
@@ -285,7 +285,7 @@ export class PanelUI {
 				return;
 			}
 
-			panel.setMediaStream(stream.id);
+			panel.setMediaStream(stream, mid);
 		});
 
 		let last_saved_name = this.loadLastRobotName();
@@ -2340,8 +2340,11 @@ export class PanelUI {
 
 			panel_ids.forEach((id_panel) => {
 				let panel = that.panels[id_panel];
+				if (!panel.mid)
+					return;
 
-				if (id_panel == res.trackIdentifier) {
+				if (panel.mid == res.mid) {
+
 					let stats_string = "";
 					stats_string += `${res.timestamp}<br>`;
 					let fps = 0;
@@ -2565,62 +2568,48 @@ export class PanelUI {
 	}
 
 	updateWebrtcStatus() {
-		let state = null;
-		const [remote_type, remote_ip] = this.client.getPeerConnectionInfo();
 		let pc = this.client.pc;
-		if (pc) {
-			state =
-				pc.connectionState.charAt(0).toUpperCase() + pc.connectionState.slice(1);
-		} else {
-			state = "Offline";
-		}
+		let that = this;
+		this.client.getPeerConnectionInfo((remote_type, remote_ip)=>{			
+			let state = null;
+			if (pc) {
+				state = pc.connectionState.charAt(0).toUpperCase() + pc.connectionState.slice(1);
+			} else {
+				state = "Offline";
+			}
 
-		let wrtc_info_lines = [
-			'<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">' +
-				this.last_connection_uptime +
-				"</span>",
-		];
-		if (remote_ip && remote_ip.indexOf("redacted") === -1)
-			wrtc_info_lines.push(
-				'<span class="label">IP: </span> <span id="robot_ip">' +
-					remote_ip +
-					"</span>",
-			);
+			let wrtc_info_lines = ['<span class="label">WebRTC:</span> <span id="webrtc_status"></span> <span id="webrtc_connection_uptime" title="Last connection uptime">' +
+									that.last_connection_uptime +
+								   '</span>',
+								  ];
+			if (remote_ip && remote_ip.indexOf("redacted") === -1)
+				wrtc_info_lines.push('<span class="label">IP: </span> <span id="robot_ip">' + remote_ip + "</span>");
 
-		this.webrtc_info_el.html(wrtc_info_lines.join("<br>"));
-		this.webrtc_status_el = $("#webrtc_status");
-		this.webrtc_uptime_el = $("#webrtc_connection_uptime");
+			that.webrtc_info_el.html(wrtc_info_lines.join("<br>"));
+			that.webrtc_status_el = $("#webrtc_status");
+			that.webrtc_uptime_el = $("#webrtc_connection_uptime");
 
-		if (state == "Connected") {
-			let is_p2p = [ "host", "prflx", "srflx" ].indexOf(remote_type) > -1;
-			this.webrtc_status_el.html(
-				'<span class="online">' +
-					state +
-					"</span> " +
-					(is_p2p
-						? '<span class="online-p2p">[' + remote_type +' p2p]</span>'
-						: '<span class="online-relay">[' + remote_type + "]</span>"),
-			);
-			this.trigger_wifi_scan_el.removeClass("working");
-			if (is_p2p)
-				this.setDotState(2, "green", "WebRTC connected to robot (p2p)");
-			else
-				this.setDotState(
-					2,
-					"yellow",
-					"WebRTC connected to robot via relay (" + remote_type + ")",
-				);
-		} else if (state == "Connecting") {
-			this.webrtc_status_el.html('<span class="connecting">' + state + "</span>");
-			// $('#robot_wifi_info').addClass('offline')
-			this.trigger_wifi_scan_el.removeClass("working");
-			this.setDotState(2, "orange", "WebRTC connecting...");
-		} else {
-			this.webrtc_status_el.html('<span class="offline">' + state + "</span>");
-			// $('#robot_wifi_info').addClass('offline')
-			this.trigger_wifi_scan_el.removeClass("working");
-			this.setDotState(2, "red", "WebRTC " + state);
-		}
+			if (state == "Connected") {
+				let is_p2p = [ "host", "prflx", "srflx" ].indexOf(remote_type) > -1;
+				that.webrtc_status_el.html('<span class="online">' + state + "</span> " +
+										  (is_p2p ? '<span class="online-p2p">[' + remote_type +' p2p]</span>' : '<span class="online-relay">[' + remote_type + "]</span>"));
+				that.trigger_wifi_scan_el.removeClass("working");
+				if (is_p2p)
+					that.setDotState(2, "green", "WebRTC connected to robot (p2p)");
+				else
+					that.setDotState(2, "yellow", "WebRTC connected to robot via relay (" + remote_type + ")");
+			} else if (state == "Connecting") {
+				that.webrtc_status_el.html('<span class="connecting">' + state + "</span>");
+				// $('#robot_wifi_info').addClass('offline')
+				that.trigger_wifi_scan_el.removeClass("working");
+				that.setDotState(2, "orange", "WebRTC connecting...");
+			} else {
+				that.webrtc_status_el.html('<span class="offline">' + state + "</span>");
+				// $('#robot_wifi_info').addClass('offline')
+				that.trigger_wifi_scan_el.removeClass("working");
+				that.setDotState(2, "red", "WebRTC " + state);
+			}
+		});
 	}
 
 	setDotState(dot_no, color, label) {

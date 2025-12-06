@@ -11,6 +11,7 @@ export class Panel {
 
 	id_source = null;
 	id_stream = null;
+	mid = null; // can't use trackIdentifier bcs Firefox overwrites it
 	msg_type = null; //str
 	msg_type_class = null;
 
@@ -593,18 +594,12 @@ export class Panel {
 			return;
 		}
 
+		let that = this;
 		setTimeout(() => {
-			if (
-				[
-					"video",
-					"sensor_msgs/msg/Image",
-					"sensor_msgs/msg/CompressedImage",
-					"ffmpeg_image_transport_msgs/msg/FFMPEGPacket",
-				].indexOf(this.msg_type) > -1
-			) {
-				this.onStream(stream);
+			if ([ "video", "sensor_msgs/msg/Image", "sensor_msgs/msg/CompressedImage", "ffmpeg_image_transport_msgs/msg/FFMPEGPacket" ].indexOf(that.msg_type) > -1) {
+				that.onStream(stream);
 			} else {
-				this.onData(msg, ev);
+				that.onData(msg, ev);
 			}
 		}, 0);
 	};
@@ -951,25 +946,24 @@ export class Panel {
 		console.log("Got stream for " + this.id_source + ": ", stream);
 	}
 
-	setMediaStream(id_stream = null) {
-		if (!id_stream && !this.id_stream) {
+
+	setMediaStream(stream = null, mid=null) {
+		if (!stream && !this.id_stream) {
 			console.debug("No media stream given, nor set for panel yet");
 			return;
 		}
-		if (id_stream) this.id_stream = id_stream;
-
-		console.log("Panel setting stream to id_stream=", this.id_stream);
-
-		// if (this.ui.client.media_streams[this.id_stream]) { // assign stream, if already available
-		//     this.setMediaStream(panel.ui.client.media_streams[panel.id_stream]);
-		// }
+		if (stream)
+			this.id_stream = stream.id;
+		if (mid)
+			this.mid = mid; // can't use trackIdentifier bcs Firefox overwrites it
 
 		let video_el = document.getElementById("panel_video_" + this.n);
 		if (!video_el) {
 			console.log("Panel video element #panel_video_" + this.n + " not ready yet");
 			return;
 		}
-		let stream = this.ui.client.media_streams[this.id_stream];
+		if (!stream)
+			stream = this.ui.client.media_streams[this.id_stream];
 		if (!stream) {
 			console.error("Stream " + this.id_stream + " not an object", stream);
 			return;

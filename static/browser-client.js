@@ -1637,7 +1637,7 @@ export class BrowserClient extends EventTarget {
 
 				Object.keys(that.topic_streams).forEach((id_src) => {
 					if (that.topic_streams[id_src] == stream.id) {
-						that.emit("media_stream", id_src, stream);
+						that.emit("media_stream", id_src, stream, evt.transceiver.mid);
 					}
 				});
 
@@ -1710,23 +1710,42 @@ export class BrowserClient extends EventTarget {
 		return pc;
 	}
 
-	getPeerConnectionInfo() {
+	getPeerConnectionInfo(cb) {
 		if (this.pc &&
 			this.pc.connectionState == "connected" &&
 			this.pc.sctp &&
 			this.pc.sctp.transport &&
 			this.pc.sctp.transport.iceTransport
 		) {
-			let selectedPair =
-				this.pc.sctp.transport.iceTransport.getSelectedCandidatePair();
-			if (selectedPair && selectedPair.remote) {
-				console.log("Remote peer: ", selectedPair.remote);
-				return [selectedPair.remote.type, selectedPair.remote.address];
-			} else {
-				return [null, null];
+			if (this.pc.sctp.transport.iceTransport.getSelectedCandidatePair) { // Chrome
+				let selectedPair = this.pc.sctp.transport.iceTransport.getSelectedCandidatePair();	
+				if (selectedPair && selectedPair.remote) {
+					console.log("Remote peer: ", selectedPair.remote);
+					cb(selectedPair.remote.type, selectedPair.remote.address);
+				} else {
+					cb(null, null);
+				}
+			} else { // Firefox
+				//console.warn('getPeerConnectionInfo res', this.pc.getReceivers());
+				this.pc.getStats().then((results) => {
+					//console.warn('getPeerConnectionInfo FF', results);
+					let found = false;
+					results.forEach((pair)=>{
+						if (pair.selected) {
+							//console.warn('getPeerConnectionInfo pair', pair);
+							let selectedPair = results.get(pair.remoteCandidateId);
+							//console.warn('getPeerConnectionInfo selectedPair', selectedPair);
+							cb(selectedPair.candidateType, selectedPair.address);
+							found = true;
+							return;
+						}
+					});
+					if (!found)
+						cb(null, null);
+				});
 			}
 		} else {
-			return [null, null];
+			cb(null, null);
 		}
 	}
 
@@ -1738,11 +1757,16 @@ export class BrowserClient extends EventTarget {
 			state: this.pc ? this.pc.connectionState : "n/a",
 		};
 		if (this.pc && this.pc.connectionState == "connected") {
-			const [remote_type, remote_ip] = this.getPeerConnectionInfo();
-			con_data["method"] = remote_type;
-			con_data["ip"] = remote_ip;
+			let that = this;
+			this.getPeerConnectionInfo((remote_type, remote_ip)=>{
+				con_data["method"] = remote_type;
+				con_data["ip"] = remote_ip;
+				that.socket.emit("wrtc-info", con_data);
+			});
+		} else {
+			this.socket.emit("wrtc-info", con_data);
 		}
-		this.socket.emit("wrtc-info", con_data);
+		
 	}
 
 	async getPeerStats() {
