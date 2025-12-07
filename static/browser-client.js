@@ -198,11 +198,11 @@ export class BrowserClient extends EventTarget {
 			console.log("Socket.io connected with id " + that.socket.id);
 
 			setTimeout(() => {
-				that._initRobotConnection();
+				that.emit("socket_connect"); // ui reconnects
 			}, 0);
 
 			setTimeout(() => {
-				that.emit("socket_connect"); // ui reconnects
+				that._initRobotConnection();
 			}, 0);
 		});
 

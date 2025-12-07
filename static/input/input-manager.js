@@ -36,6 +36,7 @@ export class InputManager {
 
 		let that = this;
 		this.zero2 = new THREE.Vector2(0, 0);
+		this.auto_lock_enabled_controller_topics = true;
 
 		this.last_touch_input = {};
 		let last_robot_defaults = localStorage.getItem(
@@ -59,6 +60,9 @@ export class InputManager {
 		});
 		client.on("input_locks", (locked_topics) => {
 			that.onServerLocksUpdate(locked_topics);
+		});
+		client.on("socket_connect", () => {
+			that.auto_lock_enabled_controller_topics = true;
 		});
 
 		this.open = false;
@@ -531,7 +535,7 @@ export class InputManager {
 	}
 
 	onServerLocksUpdate(locked_topics) {
-		console.log("Got input locks", locked_topics);
+		console.log("Got server input locks", locked_topics);
 		this.server_locked_topics = locked_topics;
 
 		// process locks by others
@@ -548,16 +552,21 @@ export class InputManager {
 		else
 			this.input_locked_icon.removeClass('locked');
 		
-		// if the server didn't return locks for currently anabled controlleds / driver, lock them
-		Object.values(this.controllers).forEach((c)=>{
-			if (!c.profiles || !c.enabled || !this.current_profile || !c.profiles[this.current_profile])
-				return;
+		// if the server didn't return locks for currently enabled controllers / drivers, lock them (only on 1st received locks)
+		if (this.auto_lock_enabled_controller_topics) {
+			this.auto_lock_enabled_controller_topics = false;
+			Object.values(this.controllers).forEach((c)=>{
+				if (!c.profiles || !c.enabled || !this.current_profile || !c.profiles[this.current_profile])
+					return;
 
-			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-			if (!this.server_locked_topics[d.output_topic]) { // driver instance's topic not among server locks
-				this.setControllerEnabled(c, true, true);
-			}
-		});
+				let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+				console.warn("Auto locking input into " + d.output_topic);
+				if (!this.server_locked_topics[d.output_topic]) { // driver instance's topic not among server locks
+					this.setControllerEnabled(c, true, true);
+				}
+			});
+		}
+		
 	}
 
 	setControllerEnabled(c, state, update_icons=true, update_server_lock=true) {
@@ -572,20 +581,23 @@ export class InputManager {
 
 		let that = this;
 		if (state) {
+			console.warn('Locking input into ' + d.output_topic);
 			this.client.lockInputTopic(d.output_topic, (success) => {
 				if (success) {
 					that._doSetControllerEnabled(c, true, d.output_topic, update_icons);
 				} else {
 					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
+					c.enabled = false;
 					if (c === that.edited_controller) {
-						c.enabled = false;
 						that.controller_enabled_cb.prop("checked", c.enabled);
 					}
 				}
 			});
 		} else {
-			if (update_server_lock)
+			if (update_server_lock) {
+				console.warn('Unlocking input into ' + d.output_topic);
 				this.client.unlockInputTopic(d.output_topic);
+			}	
 			this._doSetControllerEnabled(c, false, null, update_icons);
 		}
 	}
@@ -636,6 +648,48 @@ export class InputManager {
 		if (update_icons) this.makeControllerIcons();
 	}
 
+	setProfile(id_profile) {
+		console.log("Setting input profile to " + id_profile);
+
+		this.resetAll(); //reset old
+		let that = this;
+
+		// unlock all old topics
+		Object.values(this.controllers).forEach((c) => {
+			if (!c.enabled) return;
+			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+			console.warn('Unlocking input into ' + d.output_topic);
+			this.client.unlockInputTopic(d.output_topic);
+		});
+
+		this.current_profile = id_profile;
+		this.showInputProfileNotification();
+		this.resetAll(); //reset new
+		this.makeUI();
+		this.renderTouchButtons();
+
+		// try to lock lock all new topics, disable controller on fail
+		Object.values(this.controllers).forEach((c) => {
+			if (!c.enabled) return;
+			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+			console.warn('Locking input into ' + d.output_topic);
+			this.client.lockInputTopic(d.output_topic, (success) => {
+				if (!success) {
+					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
+					c.enabled = false;
+					if (c === that.edited_controller) {
+						that.controller_enabled_cb.prop("checked", c.enabled);
+					}
+				}
+			});
+		});
+
+		// new profile remembered only when already saved
+		if (this.current_profile == this.profiles[this.current_profile].id_saved) {
+			this.saveLastUserProfile(this.current_profile);
+		}
+	}
+
 	disableControllersWithConflictingDiver(active_driver) {
 		let change = false;
 		let c_ids = Object.keys(this.controllers);
@@ -679,6 +733,13 @@ export class InputManager {
 	makeNewProfile() {
 		this.resetAll(); // reset current input
 
+		Object.values(this.controllers).forEach((c) => {
+			if (!c.enabled) return;
+			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+			console.warn('Unlocking input into ' + d.output_topic);
+			this.client.unlockInputTopic(d.output_topic);
+		});
+
 		let id_new_profile = "Profile-" + Date.now();
 		console.log("Making " + id_new_profile);
 		this.profiles[id_new_profile] = {
@@ -716,6 +777,22 @@ export class InputManager {
 
 		// focus driver options first
 		if (!first_profile_created) $("#gamepad_settings #gamepad-settings-tab").click();
+
+		// try to lock lock all new topics, disable controller on fail
+		Object.values(this.controllers).forEach((c) => {
+			if (!c.enabled) return;
+			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
+			console.warn('Locking input into ' + d.output_topic);
+			this.client.lockInputTopic(d.output_topic, (success) => {
+				if (!success) {
+					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
+					c.enabled = false;
+					if (c === that.edited_controller) {
+						that.controller_enabled_cb.prop("checked", c.enabled);
+					}
+				}
+			});
+		});
 
 		return id_new_profile;
 	}
@@ -1908,8 +1985,6 @@ export class InputManager {
 				.unbind()
 				.change((ev) => {
 					let val = $(ev.target).val();
-					console.log("Selected profile val " + val);
-
 					that.closeProfileBasicsEdit();
 
 					// let current_profile = that.current_gamepad.profiles[that.current_gamepad.current_profile];
@@ -1917,24 +1992,8 @@ export class InputManager {
 						that.makeNewProfile();
 						that.showInputProfileNotification();
 					} else {
-						that.resetAll(); //reset old
-						that.current_profile = $(ev.target).val();
-						that.showInputProfileNotification();
-						that.resetAll(); //reset new
-						that.makeUI();
-						that.renderTouchButtons();
-						if (
-							that.current_profile ==
-							that.profiles[that.current_profile].id_saved
-						) {
-							//new profile remembered when saved
-							that.saveLastUserProfile(that.current_profile);
-						}
+						that.setProfile($(ev.target).val());
 					}
-					// that.save_last_user_gamepad_profile(
-					//     that.current_gamepad.id,
-					//     that.current_gamepad.current_profile
-					// );
 				});
 
 			if (
@@ -3819,17 +3878,8 @@ export class InputManager {
 						);
 						return;
 					}
-					console.log("Setting input profile to " + btn.set_ctrl_profile);
-
 					that.closeProfileBasicsEdit();
-
-					that.resetAll();
-					that.current_profile = btn.set_ctrl_profile;
-					that.saveLastUserProfile(that.current_profile);
-					that.showInputProfileNotification();
-					that.resetAll();
-					that.makeUI();
-					that.renderTouchButtons();
+					that.setProfile(btn.set_ctrl_profile);
 				}
 				break;
 			case "ui-profile":
