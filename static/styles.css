@@ -5638,6 +5638,7 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
     padding: 10px;
     border-radius: 10px;
     text-align: left;
+	scrollbar-width: none;
 }
 
 #about-dialog-buttons {
