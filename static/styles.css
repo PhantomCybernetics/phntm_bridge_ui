@@ -118,6 +118,8 @@ h1 .label {
 	text-overflow: clip;
 	white-space: nowrap;
 	height: 35px;
+	line-height: 35px;
+	font-size: 28px;
 	/* min-width: 200px; */
 }
 
@@ -5342,7 +5344,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 		left: -3px;
 	}
 	100% {
-		opacity: 0px;
+		left: 0px;
 	}
 }
 
