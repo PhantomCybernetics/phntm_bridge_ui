@@ -2209,7 +2209,7 @@ export class PanelUI {
 			let btn_label = req_data.attempt_roam ? "Scan &amp; Roam" : "Scan Wi-Fi";
 			this.confirmDialog(
 				'<span class="warn-icon"></span>Depending on your hardware setup, ' +
-					'this action can leave your machine offline. See <a href="https://docs.phntm.io/bridge/wifi-scanning-and-roaming.html" target="_blank">more info here</a><br><br>' +
+					'this action can leave your machine offline. See <a href="https://docs.phntm.io/bridge/wifi-scanning-and-roaming" target="_blank">more info here</a><br><br>' +
 					"Before attempting to scan or roam, make sure you have local console access and can reboot the system if necessary.",
 				"warn",
 				btn_label,
