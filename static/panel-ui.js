@@ -606,12 +606,18 @@ export class PanelUI {
 			}
 
 			// must be only called on user action
-			if (e.type == "change") that.updateUrlHash();
+			if (e.type == "change")
+				that.updateUrlHash();
+			
+			Object.values(that.panels).forEach((panel)=>{
+				panel.onResize();
+			});
 		});
 
 		this.grid.on("resizestart resize resizestop", function (e, el) {
-			let id_source = $(el).find(".grid_panel").attr("data-source");
-			that.panels[id_source].onResize();
+			Object.values(that.panels).forEach((panel)=>{
+				panel.onResize();
+			});
 		});
 
 		$("#introspection_state").click((ev) => {
