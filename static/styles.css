@@ -5641,6 +5641,10 @@ BODY.desktop-ui #dialog-modal-confirm-buttons BUTTON:hover {
 	scrollbar-width: none;
 }
 
+BODY.portrait #about-dialog #about-dialog-content {
+	max-height: calc(100vh - 400px);
+}
+
 #about-dialog-buttons {
     position: absolute;
     bottom: 10px;
