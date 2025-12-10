@@ -126,7 +126,8 @@ export function createWebUIServerExpressApp(
 						});
 						return;
 					}
-					let robot_bridge_sever: string = response.data["bridge_server"] + ":" + config.bridgeSocketPort;
+					let bridge_socket_url: string = response.data["bridge_server"] + ":" + config.bridgeSocketPort;
+					let bridge_server: string = new URL(response.data["bridge_server"]).hostname;
 					let robot_bridge_files_url: string = response.data["bridge_server"] + ":" + config.bridgeFilesPort + "/%SECRET%/%ROBOT_ID%/%URL%";
 					let robot_custom_css:string[] = response.data["ui_custom_css"] ? response.data["ui_custom_css"] : [];
 					let robot_custom_js:string[] = response.data["ui_custom_js"] ? response.data["ui_custom_js"] : [];
@@ -134,9 +135,10 @@ export function createWebUIServerExpressApp(
 					$d.l('Locate returned:', response.data);
 					res.render("robot_ui", {
 						id_robot: req.params.ID,
-						bridge_socket_url: robot_bridge_sever, //
+						bridge_socket_url: bridge_socket_url, //
 						bridge_files_url: robot_bridge_files_url,
 						app_id: config.appId,
+						bridge_server: bridge_server,
 						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
 						ui_git_version: uiVersion,
 						custom_css: robot_custom_css,

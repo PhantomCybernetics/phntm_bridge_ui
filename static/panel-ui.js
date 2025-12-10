@@ -554,30 +554,22 @@ export class PanelUI {
 			}, 0);
 		});
 
+		client.on("instance", () => {
+			setTimeout(() => {
+				that.updateServerConnectionState(true);
+			}, 0);
+		});
+
 		// browser's Socket.io connection to the Bridge Server's server
 		client.socket.on("connect", () => {
 			setTimeout(() => {
-				$("#socketio_status").html(
-					'<span class="label">Bridge Server:</span> <span class="online">Connected [Socket.io]</span>',
-				);
-				that.setDotState(
-					0,
-					"green",
-					"This client is conected to Bridge Server [Socket.io]",
-				);
+				that.updateServerConnectionState(true);
 			}, 0);
 		});
 
 		client.socket.on("disconnect", () => {
 			setTimeout(() => {
-				$("#socketio_status").html(
-					'<span class="label">Bridge Server:</span> <span class="offline">Disconnected [Socket.io]</span>',
-				);
-				that.setDotState(
-					0,
-					"red",
-					"This client is disconnected from Bridge Server [Socket.io]",
-				);
+				that.updateServerConnectionState(false);
 			}, 0);
 		});
 
@@ -2645,6 +2637,25 @@ export class PanelUI {
 		else if (percent < 50) this.wifi_signal_el.addClass("q50");
 		else if (percent < 75) this.wifi_signal_el.addClass("q75");
 		else this.wifi_signal_el.addClass("q100");
+	}
+
+	updateServerConnectionState(connected) {
+		if (connected) {
+			$("#socketio_status").html(
+				'<span class="label">Bridge Server:</span> '+ this.client.bridge_server + '<br>' +
+				'<span class="label">Socket.io:</span> <span class="online">Connected</span> <br>' +
+				'<span class="label">Peer ID:</span> ' + (this.client.socket_auth.id_instance ? this.client.socket_auth.id_instance : '-'),
+			);
+			this.setDotState(0, "green", "This client is conected to Bridge Server [Socket.io]");
+		} else {
+			$("#socketio_status").html(
+				'<span class="label">Bridge Server:</span> '+ this.client.bridge_server + '<br>' +
+				'<span class="label">Socket.io:</span> <span class="offline">Disconnected</span> <br>' +
+				'<span class="label">Peer ID:</span> ' + (this.client.socket_auth.id_instance ? this.client.socket_auth.id_instance : '-'),
+			);
+			this.setDotState(0, "red", "This client is disconnected from Bridge Server [Socket.io]");
+		}
+		
 	}
 
 	updateNumPeers(num) {

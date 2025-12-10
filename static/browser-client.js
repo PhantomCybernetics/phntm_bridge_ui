@@ -116,7 +116,7 @@ export class BrowserClient extends EventTarget {
 	discovered_services = {}; // str service => { msg_type: str}
 
 	topic_streams = {}; // topic/cam => id_stream
-	media_streams = {}; // id_stream => MediaStream
+	open_media_streams = {}; // id_stream => { mid: string, stream: MediaStream } 
 
 	event_calbacks = {};
 	topic_calbacks = {};
@@ -152,6 +152,7 @@ export class BrowserClient extends EventTarget {
 
 		//defaults to phntm bridge service
 		this.socket_url = opts.socket_url;
+		this.bridge_server = opts.bridge_server;
 		this.socket_path = opts.socket_path !== undefined ? opts.socket_path : "/app/socket.io/";
 		this.socket_auto_connect = opts.socket_auto_connect !== undefined ? opts.socket_auto_connect : false;
 
@@ -171,8 +172,7 @@ export class BrowserClient extends EventTarget {
 		this.can_change_subscriptions = false;
 		this.requested_subscription_change = false;
 		this.topic_streams = {};
-		//this.topic_configs = {}; //id => extra topic config
-		this.media_streams = {}; //id_stream => stream
+		this.open_media_streams = {}; 
 		this.latest = {};
 
 		this.supported_msg_types = [];
@@ -242,6 +242,7 @@ export class BrowserClient extends EventTarget {
 						that.pc = null;
 					}
 					that.socket_auth.id_instance = id_instance;
+					that.emit('instance');
 				}
 			}, 0);
 		});
@@ -455,11 +456,11 @@ export class BrowserClient extends EventTarget {
 		});
 
 		window.addEventListener("beforeunload", function (e) {
-			let stream_ids = Object.keys(that.media_streams);
+			let open_stream_ids = Object.keys(that.open_media_streams);
 
-			stream_ids.forEach((id_stream) => {
-				console.warn("Killing stream " + id_stream, that.media_streams[id_stream]);
-				that.media_streams[id_stream].getTracks().forEach((track) => {
+			open_stream_ids.forEach((id_stream) => {
+				console.warn("Stopping stream " + id_stream, that.open_media_streams[id_stream].stream);
+				that.open_media_streams[id_stream].stream.getTracks().forEach((track) => {
 					track.stop();
 				});
 			});
@@ -710,7 +711,7 @@ export class BrowserClient extends EventTarget {
 			return this.subscribers[id_source];
 		}
 
-		console.log("Creating subscriber for " + id_source + "; init_complete=" + this.init_complete);
+		console.warn("Creating subscriber for " + id_source + "; init_complete=" + this.init_complete);
 
 		this.subscribers[id_source] = new Subscriber(this, id_source);
 
@@ -966,10 +967,8 @@ export class BrowserClient extends EventTarget {
 			that._processRobotData(robot_data, (answer_data) => {
 				that.socket.emit("sdp:answer", answer_data, (res_answer) => {
 					if (!res_answer || !res_answer["success"]) {
-						console.error(
-							"Error answering topic read subscription offer: ",
-							res_answer,
-						);
+						console.error("Error answering topic read subscription offer: ", res_answer);
+						that._clearConnection();
 						return;
 					}
 				});
@@ -1304,9 +1303,9 @@ export class BrowserClient extends EventTarget {
 						console.log("Stream " + id_stream + " already in use for " + id_src);
 					}
 
-					if (that.media_streams[id_stream]) {
+					if (that.open_media_streams[id_stream]) {
 						console.log("Re-using stream for " + id_src + "; " + that.topic_streams[id_src]);
-						that.emit("media_stream", id_src, that.media_streams[id_stream]);
+						that.emit("media_stream", id_src, that.open_media_streams[id_stream].stream, that.open_media_streams[id_stream].mid);
 					}
 				} else if (that.topic_streams[id_src]) {
 					//stream closed
@@ -1527,8 +1526,8 @@ export class BrowserClient extends EventTarget {
 	_clearConnection() {
 		console.warn("Clearing session");
 		this.session = null; // pc session
-		//this.socket_auth.id_instance = null; // Bridge Server will generate new instance id on connection
-		// this.init_complete = false;
+		this.socket_auth.id_instance = null; // Bridge Server will generate new instance id on connection
+		this.init_complete = false;
 
 		let that = this;
 		Object.keys(this.topic_writers).forEach((topic) => {
@@ -1541,7 +1540,7 @@ export class BrowserClient extends EventTarget {
 				that.topic_readers[topic].dc.close(); // deleted in dc close handler
 			}
 		});
-		this.media_streams = {};
+		this.open_media_streams = {};
 		this.topic_streams = {};
 		if (this.pc != null) {
 			this.pc.close(); // make new pc
@@ -1549,6 +1548,10 @@ export class BrowserClient extends EventTarget {
 		}
 
 		this.emit("peer_disconnected"); // updates the ui
+
+		if (this.robot_socket_online) {
+			this.socket.disconnect();
+		}
 	}
 
 	_onDCMessage(dc, msg_evt) {
@@ -1632,12 +1635,16 @@ export class BrowserClient extends EventTarget {
 
 			for (let i = 0; i < evt.streams.length; i++) {
 				let stream = evt.streams[i];
-
-				that.media_streams[stream.id] = stream;
+				let mid = evt.transceiver.mid;
+				
+				that.open_media_streams[stream.id] = { 
+					stream: stream,
+					mid: mid,
+				}
 
 				Object.keys(that.topic_streams).forEach((id_src) => {
 					if (that.topic_streams[id_src] == stream.id) {
-						that.emit("media_stream", id_src, stream, evt.transceiver.mid);
+						that.emit("media_stream", id_src, stream, mid);
 					}
 				});
 

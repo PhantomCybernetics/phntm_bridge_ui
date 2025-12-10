@@ -109,7 +109,8 @@ export class Panel {
 		console.log("Adding widget " + id_source + ": ", widget_opts);
 		this.grid_widget = grid.addWidget(widget_opts);
 	
-		this.ui.client.onTopicData(id_source, this.onDataContextWrapper);
+		if (id_source.indexOf('/') === 0)
+			this.ui.client.onTopicData(id_source, this.onDataContextWrapper);
 
 		// setTimeout(() => {
 		// 	panels[id_source].onResize();
@@ -537,12 +538,12 @@ export class Panel {
 			this.pause_el.addClass("paused");
 			this.pause_el.attr("title", "Unpause");
 			if (this.display_widget && this.display_widget.onUnpaused)
-				this.display_widget.onUnpaused();
+				this.display_widget.onPaused();
 		} else {
 			this.pause_el.removeClass("paused");
 			this.pause_el.attr("title", "Pause");
 			if (this.display_widget && this.display_widget.onPaused)
-				this.display_widget.onPaused();
+				this.display_widget.onUnpaused();
 		}
 	}
 
@@ -962,8 +963,8 @@ export class Panel {
 			console.log("Panel video element #panel_video_" + this.n + " not ready yet");
 			return;
 		}
-		if (!stream)
-			stream = this.ui.client.media_streams[this.id_stream];
+		if (!stream && this.ui.client.open_media_streams[this.id_stream])
+			stream = this.ui.client.open_media_streams[this.id_stream].stream;
 		if (!stream) {
 			console.error("Stream " + this.id_stream + " not an object", stream);
 			return;

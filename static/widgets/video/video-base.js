@@ -28,6 +28,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 		this.video_stats_enabled = this.panel.getPanelVarAsBool('st', false);
 		this.last_video_freeze_count = 0;
 		this.video_stats_el = $("#video_stats_" + panel.n);
+
 		if (this.video_stats_enabled)
 			this.video_stats_el.addClass("enabled");
 
@@ -36,24 +37,25 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 
 		let that = this;
 
-		let video_el = document.getElementById("panel_video_" + panel.n);
+		this.video_el = document.getElementById("panel_video_" + panel.n);
 
-		video_el.onloadedmetadata = () => {
-			video_el.play().catch((e) => console.error("Play failed:", e));
+		this.video_el.onloadedmetadata = () => {
+			if (!that.panel.paused)
+				that.video_el.play().catch((e) => console.error("Play failed:", e));
 		};
 
-		video_el.addEventListener("resize", () => {
+		this.video_el.addEventListener("resize", () => {
 			// Safari sometimes doesn't load meta properly => wait for actual dimensions
 			if (that.videoWidth != -1 || that.videoHeight != -1) return;
 
-			if (!video_el.videoWidth || !video_el.videoHeight) {
-				console.log("Invalid video metadata loaded, ignoring; w, h = ", video_el.videoWidth, video_el.videoHeight);
+			if (!that.video_el.videoWidth || !that.video_el.videoHeight) {
+				console.log("Invalid video metadata loaded, ignoring; w, h = ", that.video_el.videoWidth, that.video_el.videoHeight);
 				return;
 			}
 
-			console.log("Video meta loaded:", video_el.videoWidth, video_el.videoHeight);
-			that.videoWidth = video_el.videoWidth;
-			that.videoHeight = video_el.videoHeight;
+			console.log("Video meta loaded:", that.video_el.videoWidth, that.video_el.videoHeight);
+			that.videoWidth = that.video_el.videoWidth;
+			that.videoHeight = that.video_el.videoHeight;
 
 			Object.values(this.plugins).forEach((p)=>{
 				if (p.onResize)
@@ -65,7 +67,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			console.log("(Assigned) Stream error", ev);
 		});
 
-		this.panel.setMediaStream();
+		this.panel.setMediaStream(); // try init
 
 		this.overlay_topics = {};
 		this.next_overlay_id = 0;
@@ -159,6 +161,30 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			this.video_stats_el.html(this.last_video_stats_string);
 
 		return this.panel.fps.toFixed(0) + " FPS"; // set in ui.updateAllVideoStats
+	}
+
+	onPaused() {
+		let id_stream = this.client.topic_streams[this.topic];
+		if (!id_stream || !this.client.open_media_streams[id_stream]) return;
+
+		console.log("Pausing stream for " + this.topic + "; " + id_stream);
+		// this.client.open_media_streams[id_stream].stream.getTracks().forEach((track) => {
+		// 	track.enabled = false;
+		// });
+		$(this.video_el).prop('autoplay', false);
+		this.video_el.pause();
+	}
+
+	onUnpaused() {
+		let id_stream = this.client.topic_streams[this.topic];
+		if (!id_stream || !this.client.open_media_streams[id_stream]) return;
+
+		console.log("Unpausing stream for " + this.topic + "; " + id_stream);
+		// this.client.open_media_streams[id_stream].stream.getTracks().forEach((track) => {
+		// 	track.enabled = true;
+		// });
+		$(this.video_el).prop('autoplay', true);
+		this.video_el.play().catch((e) => console.error("Play failed:", e));
 	}
 
 	onClose() {
