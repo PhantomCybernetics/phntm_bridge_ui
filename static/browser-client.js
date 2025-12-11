@@ -717,7 +717,7 @@ export class BrowserClient extends EventTarget {
 
 		if (this.init_complete) {
 			//not waiting for initial bulk subs collection
-			console.log("emitting subscribe for " + id_source);
+			console.log("Emitting subscribe for " + id_source);
 
 			if (this.add_subscribers_timeout) {
 				window.clearTimeout(this.add_subscribers_timeout);
@@ -1527,7 +1527,6 @@ export class BrowserClient extends EventTarget {
 		console.warn("Clearing session");
 		this.session = null; // pc session
 		this.socket_auth.id_instance = null; // Bridge Server will generate new instance id on connection
-		this.init_complete = false;
 
 		let that = this;
 		Object.keys(this.topic_writers).forEach((topic) => {
