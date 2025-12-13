@@ -535,7 +535,7 @@ export class InputManager {
 	}
 
 	onServerLocksUpdate(locked_topics) {
-		console.log("Got server input locks", locked_topics);
+		console.log("Got server input locks", locked_topics, 'this id_instance='+this.client.socket_auth.id_instance);
 		this.server_locked_topics = locked_topics;
 
 		// process locks by others

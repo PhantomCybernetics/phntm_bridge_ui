@@ -246,6 +246,10 @@ export class Panel {
 		}
 
 		if (msg_type && !this.initiated && this.ui.config_received) {
+			if (msg_type == 'video' || IsImageTopic(msg_type)) {
+				this.fps_visible = this.getPanelVarAsBool('fps', true);
+			}
+
 			console.log("Initiating panel " + this.id_source + " for " + msg_type);
 
 			// set w/h before widget constructors

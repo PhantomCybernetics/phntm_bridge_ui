@@ -234,10 +234,7 @@ export class BrowserClient extends EventTarget {
 				if (that.socket_auth.id_instance != id_instance) {
 					console.warn("Got new id instance: " + id_instance);
 					if (that.pc) {
-						console.warn(
-							"Removing pc for old instance: " +
-								that.socket_auth.id_instance,
-						);
+						console.warn("Removing pc for old instance: " + that.socket_auth.id_instance);
 						that.pc.close();
 						that.pc = null;
 					}
@@ -1144,10 +1141,7 @@ export class BrowserClient extends EventTarget {
 			}
 		}
 
-		if (
-			this.robot_socket_online &&
-			!this.pc /*|| this.pc.signalingState == 'closed' */
-		) {
+		if (this.robot_socket_online && !this.pc /*|| this.pc.signalingState == 'closed' */ ) {
 			console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
 			this.pc = this._initPeerConnection(this.id_robot);
 		} else if (this.robot_socket_online) {
