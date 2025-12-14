@@ -64,6 +64,27 @@ export class InputManager {
 		client.on("socket_connect", () => {
 			that.auto_lock_enabled_controller_topics = true;
 		});
+		client.on("socket_disconnect", () => {
+			that.server_locked_topics = {};
+		});
+		client.on('socket_connect instance update', () => {
+			if (!that.client.id_instance)
+				return;
+			if (!that.client.robot_socket_online)
+				return;
+			Object.values(that.controllers).forEach((c)=>{
+				if (!c.profiles || !c.enabled || !that.current_profile || !c.profiles[that.current_profile])
+					return;
+
+				let d = c.profiles[that.current_profile].driver_instances[c.profiles[that.current_profile].driver];
+				if (!that.server_locked_topics[d.output_topic] || that.server_locked_topics[d.output_topic] != that.client.id_instance) { // driver instance's topic not among server locks
+					console.log("Auto locking input into " + d.output_topic);
+					that.setControllerEnabled(c, true, true);
+				} else if (that.server_locked_topics[d.output_topic] && that.server_locked_topics[d.output_topic] != that.client.id_instance) {
+					that.setControllerEnabled(c, false, true, false);
+				}
+			});
+		});
 
 		this.open = false;
 		this.open_panel = "axes"; // axes, buttons, output, settings
@@ -535,14 +556,14 @@ export class InputManager {
 	}
 
 	onServerLocksUpdate(locked_topics) {
-		console.log("Got server input locks", locked_topics, 'this id_instance='+this.client.socket_auth.id_instance);
+		console.log("Got server input locks", locked_topics, 'this id_instance='+this.client.id_instance);
 		this.server_locked_topics = locked_topics;
 
 		// process locks by others
 		let show_locked = false;
 		Object.keys(this.server_locked_topics).forEach((locked_topic)=>{
 			let id_locked_peer = this.server_locked_topics[locked_topic];
-			if (id_locked_peer != this.client.socket_auth.id_instance) {
+			if (id_locked_peer != this.client.id_instance) {
 				show_locked = true;
 				this.disableControllersByTopic(locked_topic);
 			}
@@ -560,7 +581,7 @@ export class InputManager {
 					return;
 
 				let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-				console.warn("Auto locking input into " + d.output_topic);
+				console.log("Auto locking input into " + d.output_topic);
 				if (!this.server_locked_topics[d.output_topic]) { // driver instance's topic not among server locks
 					this.setControllerEnabled(c, true, true);
 				}
@@ -581,7 +602,7 @@ export class InputManager {
 
 		let that = this;
 		if (state) {
-			console.warn('Locking input into ' + d.output_topic);
+			console.log('Locking input into ' + d.output_topic);
 			this.client.lockInputTopic(d.output_topic, (success) => {
 				if (success) {
 					that._doSetControllerEnabled(c, true, d.output_topic, update_icons);
@@ -595,7 +616,7 @@ export class InputManager {
 			});
 		} else {
 			if (update_server_lock) {
-				console.warn('Unlocking input into ' + d.output_topic);
+				console.log('Unlocking input into ' + d.output_topic);
 				this.client.unlockInputTopic(d.output_topic);
 			}	
 			this._doSetControllerEnabled(c, false, null, update_icons);
@@ -658,7 +679,7 @@ export class InputManager {
 		Object.values(this.controllers).forEach((c) => {
 			if (!c.enabled) return;
 			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-			console.warn('Unlocking input into ' + d.output_topic);
+			console.log('Unlocking input into ' + d.output_topic);
 			this.client.unlockInputTopic(d.output_topic);
 		});
 
@@ -672,7 +693,7 @@ export class InputManager {
 		Object.values(this.controllers).forEach((c) => {
 			if (!c.enabled) return;
 			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-			console.warn('Locking input into ' + d.output_topic);
+			console.log('Locking input into ' + d.output_topic);
 			this.client.lockInputTopic(d.output_topic, (success) => {
 				if (!success) {
 					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');
@@ -736,7 +757,7 @@ export class InputManager {
 		Object.values(this.controllers).forEach((c) => {
 			if (!c.enabled) return;
 			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-			console.warn('Unlocking input into ' + d.output_topic);
+			console.log('Unlocking input into ' + d.output_topic);
 			this.client.unlockInputTopic(d.output_topic);
 		});
 
@@ -782,7 +803,7 @@ export class InputManager {
 		Object.values(this.controllers).forEach((c) => {
 			if (!c.enabled) return;
 			let d = c.profiles[this.current_profile].driver_instances[c.profiles[this.current_profile].driver];
-			console.warn('Locking input into ' + d.output_topic);
+			console.log('Locking input into ' + d.output_topic);
 			this.client.lockInputTopic(d.output_topic, (success) => {
 				if (!success) {
 					that.ui.showNotification('Input into ' + d.output_topic + ' locked by another peer', 'error');

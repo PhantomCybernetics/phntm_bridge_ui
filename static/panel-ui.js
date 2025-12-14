@@ -2644,14 +2644,14 @@ export class PanelUI {
 			$("#socketio_status").html(
 				'<span class="label">Bridge Server:</span> '+ this.client.bridge_server + '<br>' +
 				'<span class="label">Socket.io:</span> <span class="online">Connected</span> <br>' +
-				'<span class="label">Peer ID:</span> ' + (this.client.socket_auth.id_instance ? this.client.socket_auth.id_instance : '-'),
+				'<span class="label">Peer ID:</span> ' + (this.client.id_instance ? this.client.id_instance : '-'),
 			);
 			this.setDotState(0, "green", "This client is conected to Bridge Server [Socket.io]");
 		} else {
 			$("#socketio_status").html(
 				'<span class="label">Bridge Server:</span> '+ this.client.bridge_server + '<br>' +
 				'<span class="label">Socket.io:</span> <span class="offline">Disconnected</span> <br>' +
-				'<span class="label">Peer ID:</span> ' + (this.client.socket_auth.id_instance ? this.client.socket_auth.id_instance : '-'),
+				'<span class="label">Peer ID:</span> ' + (this.client.id_instance ? this.client.id_instance : '-'),
 			);
 			this.setDotState(0, "red", "This client is disconnected from Bridge Server [Socket.io]");
 		}

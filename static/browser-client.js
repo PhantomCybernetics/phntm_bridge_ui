@@ -105,7 +105,9 @@ export function IsFastVideoTopic(t) {
 
 export class BrowserClient extends EventTarget {
 	id_robot = null;
-	session = null;
+	pc_session = null;
+	id_instance = null;
+
 	supported_msg_types = []; // served from Bridge Server
 
 	pc = null;
@@ -148,7 +150,9 @@ export class BrowserClient extends EventTarget {
 			console.error("Missing opts.app_id");
 			return false;
 		}
-		this.session = null;
+
+		this.pc_session = null;
+		this.id_instance = null;
 
 		//defaults to phntm bridge service
 		this.socket_url = opts.socket_url;
@@ -182,7 +186,6 @@ export class BrowserClient extends EventTarget {
 
 		this.socket_auth = {
 			id_app: this.app_id,
-			id_instance: null, // stored for reconnects when known
 		};
 
 		this.socket = io(this.socket_url, {
@@ -206,9 +209,26 @@ export class BrowserClient extends EventTarget {
 			}, 0);
 		});
 
+		this.socket.on("instance", (id_instance) => { // sent upon connect
+			setTimeout(() => {
+				if (that.id_instance != id_instance) {
+					console.warn("Got new ID instance: " + id_instance);
+					if (that.pc) {
+						console.warn("Removing pc for old instance: " + that.id_instance);
+						that.pc.close();
+						that.pc = null;
+					}
+					that.id_instance = id_instance;
+					that.emit('instance');
+				}
+			}, 0);
+		});
+
+
 		this.on("socket_disconnect", () => {
 			console.log("Got robot socket disconect");
 			that.robot_socket_online = false;
+			that.id_instance = null;
 			that.emit("update");
 			that._clearConnection();
 		});
@@ -227,21 +247,6 @@ export class BrowserClient extends EventTarget {
 		this.socket.on("connect_error", (err) => {
 			console.error("Socket.io connect error: " + err);
 			that.emit("socket_disconnect"); // ui reconnects
-		});
-
-		this.socket.on("instance", (id_instance) => {
-			setTimeout(() => {
-				if (that.socket_auth.id_instance != id_instance) {
-					console.warn("Got new id instance: " + id_instance);
-					if (that.pc) {
-						console.warn("Removing pc for old instance: " + that.socket_auth.id_instance);
-						that.pc.close();
-						that.pc = null;
-					}
-					that.socket_auth.id_instance = id_instance;
-					that.emit('instance');
-				}
-			}, 0);
 		});
 
 		this.socket.on("robot", (robot_data, return_callback) => {
@@ -506,20 +511,27 @@ export class BrowserClient extends EventTarget {
 		return this.msg_writers[msg_type];
 	}
 
-	on(event, cb) {
+	on(what, cb) {
 		// TMP
-		if (event.indexOf("/") === 0) {
+		if (what.indexOf("/") === 0) {
 			console.error("Use onTopicData to subscribe to topics!");
 			return;
 		}
 
-		if (!this.event_calbacks[event])
-			this.event_calbacks[event] = [];
+		let events = what.split(' ');
+		events.forEach((e)=>{
+			e = e.trim();
+			if (!e)
+				return;
 
-		let p = this.event_calbacks[event].indexOf(cb);
-		if (p > -1) return;
+			if (!this.event_calbacks[e])
+				this.event_calbacks[e] = [];
 
-		this.event_calbacks[event].push(cb);
+			let p = this.event_calbacks[e].indexOf(cb);
+			if (p > -1) return; // handler already set
+
+			this.event_calbacks[e].push(cb);
+		})
 	}
 
 	once(event, cb) {
@@ -1063,13 +1075,13 @@ export class BrowserClient extends EventTarget {
 
 		if (robot_data["session"]) {
 			// no session means server pushed just brief info
-			if (this.session != robot_data["session"]) {
-				console.warn("NEW PC SESSION " + robot_data["session"]);
-				if (this.session || this.pc) {
-					this._clearConnection(); // closes the pc so that we can start a new one
+			if (this.pc_session != robot_data["session"]) {
+				console.warn("New PC session: " + robot_data["session"]);
+				if (this.pc_session || this.pc) {
+					this._clearConnection(); // closes the pc so that we can start a new one (closed on disconnect)
 				}
 			}
-			this.session = robot_data["session"];
+			this.pc_session = robot_data["session"];
 		}
 
 		let error = robot_data["err"] ? robot_data["err"] : null;
@@ -1142,10 +1154,10 @@ export class BrowserClient extends EventTarget {
 		}
 
 		if (this.robot_socket_online && !this.pc /*|| this.pc.signalingState == 'closed' */ ) {
-			console.warn(`Creating new webrtc peer w id_instance=${this.socket_auth.id_instance}`);
+			console.warn(`Creating new webrtc peer w id_instance=${this.id_instance}`);
 			this.pc = this._initPeerConnection(this.id_robot);
 		} else if (this.robot_socket_online) {
-			console.info(`Valid webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.socket_auth.id_instance}`);
+			console.info(`Valid webrtc peer, robot_socket_online=${this.robot_socket_online} pc=${this.pc} id_instance=${this.id_instance}`);
 			// should autoconnect ?!?!
 		}
 
@@ -1519,8 +1531,7 @@ export class BrowserClient extends EventTarget {
 
 	_clearConnection() {
 		console.warn("Clearing session");
-		this.session = null; // pc session
-		this.socket_auth.id_instance = null; // Bridge Server will generate new instance id on connection
+		this.pc_session = null; // pc session
 
 		let that = this;
 		Object.keys(this.topic_writers).forEach((topic) => {
