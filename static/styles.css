@@ -61,6 +61,8 @@ body::after {
 		url("/static/graph/bridge-logo.svg")
 		url('/static/graph/robot-queued.svg')
 		url('/static/graph/icon-lock.svg')
+		url("/static/graph/icon-lock-horizon.svg")
+		url("/static/graph/icon-lock-horizon-on.svg")
 		;
 }
 
@@ -2383,6 +2385,8 @@ BODY.desktop-ui .monitor_menu_content A.msg_types.err:hover,
 	cursor: grab;
 	white-space: nowrap;
 	padding-left: 25px; /* pause btn */
+	height: 22px;
+	line-height: 22px;
 }
 
 /* prevent select on touch - title used to trigger panel edit */
@@ -2981,12 +2985,20 @@ BODY.desktop-ui .panel-btn:hover,
 	background-size: 20px 20px;
 }
 
-.panel-btn.focus-btn {
+.panel-btn.camera-follows-selection-btn {
 	background-image: url("/static/graph/icon-focus.svg");
 	background-size: 20px 20px;
 }
-.panel-btn.focus-btn.on {
+.panel-btn.camera-follows-selection-btn.on {
 	background-image: url("/static/graph/icon-focus-on.svg");
+}
+
+.panel-btn.camera-lock-horizon-btn {
+	background-image: url("/static/graph/icon-lock-horizon.svg");
+	background-size: 20px 20px;
+}
+.panel-btn.camera-lock-horizon-btn.on {
+	background-image: url("/static/graph/icon-lock-horizon-on.svg");
 }
 
 .panel-btn.labels-btn {

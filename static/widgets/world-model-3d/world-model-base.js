@@ -1,5 +1,6 @@
 import { DescriptionTFWidget } from "../inc/description-tf.js";
 import { MultiTopicSource } from "../inc/multitopic.js";
+import { SpaceMouse } from '../../input/space-mouse.js'
 
 export class WorldModel3DWidget extends DescriptionTFWidget {
 	static LABEL = "World Model 3D";
@@ -10,6 +11,8 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 		super(panel, 'description-tf', false); // don't start rendering loop yet
 
 		let that = this;
+
+		this.space_mouse = new SpaceMouse(this);
 
 		//$("#panel_title_" + panel.n).text(WorldModel3DWidget.label);
 
@@ -50,7 +53,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 
 		this.rendering = true;
 		this.renderDirty();
-		requestAnimationFrame((t) => this.renderingLoop());
+		requestAnimationFrame((t) => this.renderingLoop(t));
 	}
 
 	onSourcesChange(source_topics) {
@@ -74,7 +77,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 		this.panel.updateMenu();
 	}
 
-	renderingLoop() {
+	renderingLoop(t) {
 		if (!this.rendering) return;
 
 		// render all plugins
@@ -83,7 +86,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 				p.onRender();
 		});
 
-		super.renderingLoop(); //description-tf render
+		super.renderingLoop(t); //description-tf render
 	}
 
 	onModelRemoved() {

@@ -377,7 +377,7 @@ export class GraphMenu {
 
 				node_links.forEach((node_link) => {
 					if (node_link.qos_error || node_link.qos_warning) {
-						let icon_err = $('<span class="link-err-icon" tabindex="0"></span>');
+						let icon_err = $('<span class="link-err-icon"></span>');
 						let icon_tooltip_el = $('<span class="tooltip"></span>');
 						icon_tooltip_el.appendTo(icon_err);
 						icon_err.appendTo(node_icons_el);

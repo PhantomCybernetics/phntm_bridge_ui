@@ -509,7 +509,14 @@ export class Panel {
 	}
 
 	storePanelVarAsFloatArray(var_name, value, precision=3) {
-		let s = value.map(x => x.toFixed(precision)).join(',');
+		let s = value.map((x) => {
+			if (x === '' || x === null)
+				return '';
+			else if (typeof x === 'string')
+				return x;
+			else
+				return x.toFixed(precision);
+		}).join(',');
 		let change = this.panel_vars[var_name] !== s;
 		if (s !== this.panel_vars_defaults[var_name] && s != '')
 			this.panel_vars[var_name] = s; 

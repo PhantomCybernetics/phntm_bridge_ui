@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 export function buf2hex(buffer) {
 	// buffer is an ArrayBuffer
 	return [...new Uint8Array(buffer)]
@@ -255,4 +257,13 @@ export function isSubclassOf(Child, Parent) {
     proto = Object.getPrototypeOf(proto);
   }
   return false;
+}
+
+export function signedAngle(_v1, _v2, axis = new THREE.Vector3(0, 1, 0)) {
+	let v1 = _v1.clone().normalize();
+	let v2 = _v2.clone().normalize();
+	let angle = v1.angleTo(v2);
+	let cross = new THREE.Vector3().crossVectors(v1, v2);
+	let sign = Math.sign(cross.dot(axis));
+	return sign * angle;
 }

@@ -1,13 +1,15 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg } from "/static/inc/lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg, signedAngle } from "/static/inc/lib.js";
 import * as THREE from "three";
 import { STLLoader } from "stl-loader";
 import { ColladaLoader } from "collada-loader";
-import { OrbitControls } from "orbit-controls";
+//import { OrbitControls } from "/static/input/OrbitControls.js";
+import { TrackballControls } from "/static/input/TrackballControls.js";
 import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
 import { MultiTopicSource } from "./multitopic.js";
 import { Vector3, Quaternion, LoadingManager } from "three";
 import { CompositePanelWidgetBase } from './composite-widget-base.js'
+import { SpaceMouse } from '../../input/space-mouse.js'
 
 export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static LABEL = "Robot description (URFD) + Transforms";
@@ -24,6 +26,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static L_ROS_ORIGIN_MARKER = 8;
 	static L_ROS_ORIGIN_LABEL = 9;
 
+	static INITIAL_CAMERA_POSITION = new THREE.Vector3(1, 0.5, 1); // will be multiplied by detected model scale * INITIAL_CAMERA_DISTANCE_MULTIPLIER
 	static INITIAL_CAMERA_DISTANCE_MULTIPLIER = 3.0; // camera will start this times the detected model size away
 
 	static ROS_SPACE_KEY = "ROS_SPACE";
@@ -76,7 +79,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			render_links: true,
 			render_joints: false,
 			render_ros_origin: false,
-			follow_target: true,
+			camera_follows_selection: true,
+			camera_lock_horizon: true,
 			perspective_camera: true,
 			fix_robot_base: false, // robot will be fixed in place
 			render_pose_graph: false,
@@ -92,11 +96,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.pose_graph_size = 500; // keeps this many nodes in pg (TODO: to robot's config?)
 		this.tf_static_to_apply = {}; //topic => msg
 
-		this.smooth_transforms_queue = {};
+		this.transforms_queue = {};
 		this.camera_pose_initialized = false; // first hard set pose, then smooth lerp
-		this.camera_distance_initialized = false; // determine distance to target if false; only once (if target autodetected)
-		this.robot_pose_initialized = false; // true after 1st base transform
-		this.camera_target_pose_initialized = false; // 1st cam to target will not lerp
+		//this.camera_distance_initialized = false; // determine distance to target if false; only once (if target autodetected)
+		this.robot_pose_initialized = {}; // 'urdf_key': true after 1st transform
+		this.animate_camera_cursor_to_target = false; // 1st set will not lerp
 		this.set_ortho_camera_zoom = -1; // if > 0, used on camera init
 		this.set_camera_view = null; // animate to position if set
 
@@ -177,8 +181,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.perspective_btn = $('<span class="panel-btn perspective-btn" title="Perspective"></span>');
 		this.panel.panel_btns_el.append(this.perspective_btn);
 
-		this.focus_btn = $('<span class="panel-btn focus-btn" title="Camera follows selection"></span>');
-		this.panel.panel_btns_el.append(this.focus_btn);
+		this.camera_follows_selection_btn = $('<span class="panel-btn camera-follows-selection-btn" title="Camera follows selection"></span>');
+		this.panel.panel_btns_el.append(this.camera_follows_selection_btn);
+
+		this.camera_lock_horizon_btn = $('<span class="panel-btn camera-lock-horizon-btn" title="Lock horizon"></span>');
+		this.panel.panel_btns_el.append(this.camera_lock_horizon_btn);
 
 		let view_select = $('<span class="panel-select view-select" title="Set camera position"></span>');
 		let view_select_content = $('<span class="panel-select-content"></span>');
@@ -229,10 +236,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.labelRenderer.domElement.style.top = "0px";
 		document.getElementById("panel_widget_" + panel.n).appendChild(this.labelRenderer.domElement);
 
-		this.camera_pos = new THREE.Vector3(1, 0.5, 1);
-		this.camera_target = null;
-		this.camera_target_key = null;
-
+		//this.initial_camera_world_position = new THREE.Vector3(1, 0.5, 1);
+		
 		this.ros_space = new THREE.Object3D();
 		this.ros_origin_axis_el = null;
 		this.ros_origin_label_el = null;
@@ -279,17 +284,36 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			},
 		);
 
-		const camera_target_pos_geometry = new THREE.SphereGeometry(0.01, 32, 16);
-		const camera_target_pos_material = new THREE.MeshBasicMaterial({
-			color: 0xff00ff,
-		});
-		this.camera_target_pos = new THREE.Mesh(
-			camera_target_pos_geometry,
-			camera_target_pos_material,
-		);
-		this.camera_target_pos.position.set(0, 0, 0); // adjusted by url
-		this.camera_target_pos.visible = false; // enable when debugging
-		this.scene.add(this.camera_target_pos);
+		this.DEBUG_CAMERA = false;
+
+		this.camera_controls_target = new THREE.Mesh(new THREE.SphereGeometry(0.01, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+		this.camera_controls_target.position.set(0, 0, 0); // adjusted by url
+		this.camera_controls_target.visible = this.DEBUG_CAMERA; // enable when debugging
+		this.scene.add(this.camera_controls_target);
+
+		this.camera_selection = new THREE.Mesh(new THREE.SphereGeometry(0.01, 32, 16), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+		this.camera_selection.position.set(0, 0, 0); // adjusted by url
+		this.camera_selection.visible = this.DEBUG_CAMERA; // enable when debugging
+		this.scene.add(this.camera_selection);
+
+		this.camera_selection_key = null;
+		this.camera_selection_ref = null;
+		this.last_camera_selection_key = null;
+		this.last_camera_selection_ref = null;
+		
+		this._camera_up = new THREE.Vector3();
+		this._up_axis = new THREE.Vector3();
+		this._camera_fw_axis = new THREE.Vector3();
+		this._up_axis_projection = new THREE.Vector3();
+		this._camera_selection_position_world_space = new THREE.Vector3();
+		this._camera_controls_target_position_world_space = new THREE.Vector3();
+		this._camera_position_world_space = new THREE.Vector3();
+		this._camera_rotation_world_space = new THREE.Quaternion();
+		this._ref_frame_rotation_world_space = new THREE.Quaternion();
+
+		this._new_robot_world_position = new THREE.Vector3();
+		this._old_robot_world_position = new THREE.Vector3();
+		this._delta_robot_pos = new THREE.Vector3();
 
 		this.loadPanelConfig();
 
@@ -298,22 +322,41 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.last_camera_url_update = Number.NEGATIVE_INFINITY;
 
 		// follow target toggle
-		if (this.vars.follow_target) {
-			this.focus_btn.addClass("on");
+		if (this.vars.camera_follows_selection) {
+			this.camera_follows_selection_btn.addClass("on");
 		}
-		this.focus_btn.click(function (ev) {
-			that.vars.follow_target = !$(this).hasClass("on");
-			that.panel.storePanelVarAsBool('f', that.vars.follow_target);
-			if (that.vars.follow_target) {
+		this.camera_follows_selection_btn.click(function (ev) {
+			that.vars.camera_follows_selection = !$(this).hasClass("on");
+			that.panel.storePanelVarAsBool('f', that.vars.camera_follows_selection);
+			if (that.vars.camera_follows_selection) {
 				$(this).addClass("on");
-				that.controls.enablePan = false;
+				that.camera_selection_key = that.last_camera_selection_key;
+				that.camera_selection_ref = that.last_camera_selection_ref;
 			} else {
 				$(this).removeClass("on");
-				that.controls.enablePan = true;
-				that.camera_target.getWorldPosition(that.camera_target_pos.position);
 			}
 			that.makeRobotMarkers();
 			that.makeROSOriginMarker();
+			that.storeCameraPosePanelVars();
+			that.renderDirty();
+		});
+
+		// lock horizon toggle
+		if (this.vars.camera_lock_horizon) {
+			this.camera_lock_horizon_btn.addClass("on");
+		}
+		this.camera_lock_horizon_btn.click(function (ev) {
+			that.vars.camera_lock_horizon = !$(this).hasClass("on");
+			that.controls.fixHorizon = that.vars.camera_lock_horizon;
+			that.panel.storePanelVarAsBool('ch', that.vars.camera_lock_horizon);
+			if (that.vars.camera_lock_horizon) {
+				$(this).addClass("on");
+				//that.controls.enablePan = false;
+			} else {
+				$(this).removeClass("on");
+				//that.controls.enablePan = true;
+				//that.camera_target.getWorldPosition(that.camera_controls_target.position);
+			}
 			that.storeCameraPosePanelVars();
 			that.renderDirty();
 		});
@@ -364,32 +407,38 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// make camera (persp/orto) when type, pos and focus is determined
 		this.makeCamera();
 
-		if (!this.camera_pose_initialized) {
-			this.camera.position.copy(this.camera_pos);
-			this.camera.lookAt(this.camera_target_pos);
-		}
+		// if (!this.set_camera_view) {
+		// 	this.camera.position.copy(this.INITIAL_CAMERA_POSITION);
+		// 	this.camera.lookAt(this.camera_controls_target);
+		// }
 
-		this.controls = new OrbitControls(this.camera, this.labelRenderer.domElement);
-		this.controls.enablePan = !this.vars.follow_target;
+		this.controls = new TrackballControls(this.camera, this.labelRenderer.domElement);
+		console.warn('controls', this.controls);
+		this.controls.staticMoving = true; // no damping
+		this.controls.keys = []; // disable ASD controls
+		//this.controls.enablePan = !this.vars.camera_follows_selection;
 		this.renderer.domElement.addEventListener("pointerdown", (ev) => {
 			ev.preventDefault(); // stop from moving the panel
 		});
 		this.controls.addEventListener("change", () => {
-			this.controlsChanged();
+			that.controlsChanged();
+			//that.controls.update();
 		});
 		this.controls.addEventListener("end", () => {
 			that.storeCameraPosePanelVars(); // saves camera pos in url
 		});
 		this.controls_dirty = false;
 
-		this.controls.target = this.camera_target_pos.position; // panning moves the target
-		if (!this.camera_pose_initialized) {
-			this.controls.update();
-		}
+		this.controls.target = this.camera_controls_target.position; // panning moves the target
+		this.controls.lookTarget = this.camera_controls_target.position;
+		this.controls.fixHorizon = this.vars.camera_lock_horizon;
+		// if (!this.set_camera_view) {
+		// 	this.controls.update();
+		// }
 
 		this.setLight(this.vars.render_light);
 		if (this.light)
-			this.light.lookAt(this.camera_target_pos);
+			this.light.lookAt(this.camera_selection);
 
 		this.ground_plane_geometry = new THREE.PlaneGeometry(100, 100);
 		this.setGroundPlane(this.vars.render_ground_plane);
@@ -431,8 +480,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		if (start_rendering_loop) {
 			this.rendering = true;
 			this.renderDirty();
-			requestAnimationFrame((t) => this.renderingLoop());
+			requestAnimationFrame((t) => this.renderingLoop(t));
 		}
+
+		this.space_mouse = null; // set in child class (only one panel can be controlled by space mouse at the time)
 	}
 
 	onResize() {
@@ -482,9 +533,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			if (this.vars.perspective_camera) {
 				if (old_camera.isOrthographicCamera) {
 					// compensate for ortho > persp
-					const targetDistance = this.camera.position.distanceTo(
-						this.camera_target_pos.position,
-					);
+					const targetDistance = this.camera.position.distanceTo(this.camera_controls_target.position);
 					const visibleHeight =
 						(old_camera.top - old_camera.bottom) / old_camera.zoom;
 					const fovRadians = THREE.MathUtils.degToRad(this.camera.fov);
@@ -500,9 +549,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					this.camera.zoom = old_camera.zoom; // keep ortho zoom
 				} else {
 					// compensate for perp > ortho
-					const targetDistance = this.camera.position.distanceTo(
-						this.camera_target_pos.position,
-					);
+					const targetDistance = this.camera.position.distanceTo(this.camera_controls_target.position);
 					const fovRadians = THREE.MathUtils.degToRad(old_camera.fov);
 					const visibleHeight = 2 * Math.tan(fovRadians / 2) * targetDistance;
 
@@ -555,13 +602,15 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 	moveCameraToView(position) {
 		let rwq = new THREE.Quaternion();
-		if (this.vars.follow_target && this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY)
+		if (!this.vars.camera_follows_selection || this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY)
 			this.ros_space.getWorldQuaternion(rwq);
 		else
 			this.robot.getWorldQuaternion(rwq);
 
+		this.camera_controls_target.position.copy(this.camera_selection.position);
+
 		let target_pos = new THREE.Vector3();
-		let d = this.camera.position.distanceTo(this.camera_target_pos.position);
+		let d = this.camera.position.distanceTo(this.camera_controls_target.position);
 		let delta_rot = new THREE.Quaternion();
 		const gl_offset = 0.0001; // avoiding gimbal lock of orbital controls with a tiny offset
 		switch (position) {
@@ -592,15 +641,14 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 
 		target_pos.applyQuaternion(rwq);
-		this.controls.enableRotate = false;
-		this.controls.enablePan = false;
+		this.controls.enabled = false;
 
 		this.set_camera_view = {
-			start: Date.now(),
-			start_cam_position: new THREE.Vector3().copy(this.camera.position),
-			start_cam_rotation: new THREE.Quaternion().copy(this.camera.quaternion),
-			target_offset_pos: target_pos,
-			target_rot: delta_rot,
+			'start': Date.now(),
+			'start_cam_position': new THREE.Vector3().copy(this.camera.position),
+			'start_cam_rotation': new THREE.Quaternion().copy(this.camera.quaternion),
+			'target_offset_pos': target_pos,
+			'target_rot': delta_rot,
 		};
 	}
 
@@ -982,6 +1030,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	onClose() {
 		super.onClose();
 
+		if (this.space_mouse) {
+			this.space_mouse.destroy();
+			delete this.space_mouse;
+		}
+
 		this.rendering = false; //kills the loop
 		this.controls.dispose();
 		this.controls = null;
@@ -993,59 +1046,79 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 	storeCameraPosePanelVars() {
 
-		//	focus position or model node or vector3 (in robot space)
-		let focus_pos_robot_space;
-		if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY && this.vars.follow_target)
-			focus_pos_robot_space = this.ros_space.worldToLocal(this.camera_target_pos.position.clone());
-		else
-			focus_pos_robot_space = this.robot.worldToLocal(this.camera_target_pos.position.clone());
+		if (this.set_camera_view)
+			return; // don't store until done setting initial camera pose		
 	
-		let focus_target = this.camera_target_key;
-		if (!focus_target || !this.vars.follow_target) {
-			// focus point in robot space
-			this.panel.storePanelVarAsVector3('ft', focus_pos_robot_space);
-		} else {
-			this.panel.storePanelVarAsString('ft', focus_target);
-		}
+		let ref_frame = (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY || !this.vars.camera_follows_selection || !this.camera_selection_ref)
+						? this.ros_space
+						: this.camera_selection_ref;
+		
+		this.camera_selection.getWorldPosition(this._camera_selection_position_world_space);
+		let camera_selection_pos = ref_frame.worldToLocal(this._camera_selection_position_world_space); 
+		this.camera_controls_target.getWorldPosition(this._camera_controls_target_position_world_space);
+		let camera_controls_target_pos = ref_frame.worldToLocal(this._camera_controls_target_position_world_space); 
+		this.camera.getWorldPosition(this._camera_position_world_space);
+		let camera_pos = ref_frame.worldToLocal(this._camera_position_world_space);
+		this.camera.getWorldQuaternion(this._camera_rotation_world_space);
+		ref_frame.getWorldQuaternion(this._ref_frame_rotation_world_space);
+		let camera_rotation = this._camera_rotation_world_space.premultiply(this._ref_frame_rotation_world_space.invert());
+		
+		this._camera_fw_axis.subVectors(camera_pos, camera_controls_target_pos); // in ref_frame
 
-		// camera rotation and distance from focal target (in robot space)
-		if (this.set_camera_target_offset)
-			return; // don't store more until done setting pose
+		this._up_axis.set(0,0,1); // Z is up in ROS
+		if (this._camera_fw_axis.angleTo(this._up_axis) < 0.25) this._up_axis.set(1,0,0); // dodge gimbal lock, X is fw in ROS
+		this._up_axis_projection.copy(this._up_axis).projectOnPlane(this._camera_fw_axis.normalize());
 
-		let cam_pos_robot_space;
-		if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY && this.vars.follow_target)
-			cam_pos_robot_space = this.ros_space.worldToLocal(
-				this.camera.position.clone(),
-			);
+		this._camera_up.set(0,1,0).applyQuaternion(camera_rotation).normalize();
+		let cam_axis_angle = signedAngle(this._up_axis_projection, this._camera_up, this._camera_fw_axis);
+
+		if (!this.camera_selection_key || !this.vars.camera_follows_selection)
+			this.panel.storePanelVarAsVector3('cs', camera_selection_pos);
 		else
-			cam_pos_robot_space = this.robot.worldToLocal(this.camera.position.clone());
-		let cam_distance = cam_pos_robot_space.distanceTo(focus_pos_robot_space);
-		let rwq = new THREE.Quaternion();
-		if (focus_target == DescriptionTFWidget.ROS_SPACE_KEY)
-			this.ros_space.getWorldQuaternion(rwq);
-		else this.robot.getWorldQuaternion(rwq);
-		let cam_rot_robot_space = rwq.invert().multiply(this.camera.quaternion.clone());
+			this.panel.storePanelVarAsString('cs', this.camera_selection_key);
+		let cam_pos_arr = [ camera_controls_target_pos.x, camera_controls_target_pos.y, camera_controls_target_pos.z,
+							camera_pos.x, camera_pos.y, camera_pos.z ];
+		if (Math.abs(cam_axis_angle) > 0.0001) // in rad
+			cam_pos_arr.push(cam_axis_angle);
+		else
+			cam_pos_arr.push('0'); // mandatory val, horizon locked
+		if (!this.vars.perspective_camera) // add othro zoom, cheaper to pass zoom than to calculate respective offset on every change
+			cam_pos_arr.push(this.camera.zoom.toFixed(3)); // 8th val optional
+		this.panel.storePanelVarAsFloatArray('cp', cam_pos_arr);
 
-		// saving as string[] bcs of the various precisions
-		const quat_precision = 10;
-		let val = [ cam_rot_robot_space.x.toFixed(quat_precision),
-					cam_rot_robot_space.y.toFixed(quat_precision),
-					cam_rot_robot_space.z.toFixed(quat_precision),
-					cam_rot_robot_space.w.toFixed(quat_precision),
-					cam_distance.toFixed(3)];
-	
-		if (!this.vars.perspective_camera) { // add othro zoom
-			// cheaper to pass ortho zoom than to calculate respective offset on every change
-			val.push(this.camera.zoom.toFixed(3)); // 6th val
-			this.panel.storePanelVarAsStringArray('cp', val);
-		} else {
-			this.panel.storePanelVarAsStringArray('cp', val);
+		if (this.DEBUG_CAMERA) {
+			if (!this.test_up)
+				this.test_up = new THREE.Mesh(new THREE.SphereGeometry(0.01, 32, 16), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+			ref_frame.attach(this.test_up);
+			this.test_up.position.copy(this._up_axis);
+
+			if (this.test_line_up_projection)
+				this.test_line_up_projection.removeFromParent();
+			this.test_line_up_projection = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+				camera_controls_target_pos, camera_controls_target_pos.clone().add(this._up_axis_projection)
+			]), new THREE.LineBasicMaterial({ color: 0x00ff00 })); // green up axis
+			ref_frame.add(this.test_line_up_projection);
+
+			if (this.test_line_camera_dir)	
+				this.test_line_camera_dir.removeFromParent();
+			this.test_line_camera_dir = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+				camera_controls_target_pos, camera_pos
+			]), new THREE.LineBasicMaterial({ color: 0xffffff })); // white fw fector
+			ref_frame.add(this.test_line_camera_dir);
+
+			if (this.test_line_camera_up)	
+				this.test_line_camera_up.removeFromParent();
+			this.test_line_camera_up = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+				camera_controls_target_pos, camera_controls_target_pos.clone().add(this._camera_up)
+			]), new THREE.LineBasicMaterial({ color: 0xff00ff })); // magenta camera up in local space
+			ref_frame.add(this.test_line_camera_up);
 		}
 	}
 
 	loadPanelConfig() {
 	
-		this.vars.follow_target = this.panel.getPanelVarAsBool('f', this.vars.follow_target);
+		this.vars.camera_follows_selection = this.panel.getPanelVarAsBool('f', this.vars.camera_follows_selection);
+		this.vars.camera_lock_horizon = this.panel.getPanelVarAsBool('ch', this.vars.camera_lock_horizon);
 		this.vars.perspective_camera = this.panel.getPanelVarAsInt('ct', this.vars.perspective_camera ? 1 : 0) == 1;
 		this.vars.render_joints = this.panel.getPanelVarAsBool('jnt', this.vars.render_joints);
 		this.vars.render_links = this.panel.getPanelVarAsBool('lnk', this.vars.render_links);
@@ -1059,29 +1132,34 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.vars.render_skybox = this.panel.getPanelVarAsInt('sky', this.vars.render_skybox);
 		this.vars.render_light = this.panel.getPanelVarAsInt('lght', this.vars.render_light);
 
-		let focus_target_pos = this.panel.getPanelVarAsVector3('ft', undefined);
-		if (focus_target_pos) {
-			this.camera_target_pos.position.copy(
-				this.robot.localToWorld(focus_target_pos),
-			);
-			this.camera_target_key = null;
+		let camera_selection_pos = this.panel.getPanelVarAsVector3('cs', undefined);
+		if (camera_selection_pos) {
+			this.camera_selection_key = null;
 		} else {
-			this.camera_target_key = this.panel.getPanelVarAsString('ft', null); // camera will be set on description
+			this.camera_selection_key = this.panel.getPanelVarAsString('cs', null); // camera will be set on description
 		}
 
 		let cam_pos_arr = this.panel.getPanelVarAsFloatArray('cp', undefined);
-		if (cam_pos_arr && cam_pos_arr.length > 4) {
-			let cam_rot_robot_space = new THREE.Quaternion(cam_pos_arr[0], cam_pos_arr[1], cam_pos_arr[2], cam_pos_arr[3]).normalize();
-			let dist_to_target = cam_pos_arr[4];
-			if (cam_pos_arr.length > 5)
-				this.set_ortho_camera_zoom = cam_pos_arr[5];
+		if (cam_pos_arr && cam_pos_arr.length > 5) {
 
-			this.set_camera_target_offset = {
-				rotation: cam_rot_robot_space,
-				distance: dist_to_target,
+			let camera_controls_target_pos = new THREE.Vector3(cam_pos_arr[0], cam_pos_arr[1], cam_pos_arr[2]);
+			let camera_pos = new THREE.Vector3(cam_pos_arr[3], cam_pos_arr[4], cam_pos_arr[5]);
+			let cam_axis_angle = cam_pos_arr.length > 6 ? parseFloat(cam_pos_arr[6]) : 0.0;
+
+			if (cam_pos_arr.length > 7)
+				this.set_ortho_camera_zoom = parseFloat(cam_pos_arr[7]); // evaluated in makeCamera()
+
+			//let cam_rot_robot_space = new THREE.Quaternion(cam_pos_arr[0], cam_pos_arr[1], cam_pos_arr[2], cam_pos_arr[3]).normalize();
+			//let dist_to_target = cam_pos_arr[4];
+			
+			// evaluated in renderingLoop()
+			this.set_camera_view = {
+				'camera_selection_pos': camera_selection_pos,
+				'camera_controls_target_pos': camera_controls_target_pos,
+				'camera_pos': camera_pos,
+				'cam_axis_angle': cam_axis_angle
 			};
-			this.camera_distance_initialized = true; // don't autodetect
-			this.camera_pose_initialized = true;
+			//this.camera_distance_initialized = true; // don't autodetect
 		}
 			
 		this.sources.loadAssignedTopicsFromPanelVars();
@@ -1119,7 +1197,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.renderDirty();
 	}
 
-	cleanModel(obj, in_visual = false, in_collider = false, force_material = null) {
+	cleanModel(obj, in_visual = false, in_collider = false,
+		       force_material = null,
+			   visuals_layer = DescriptionTFWidget.L_VISUALS,
+			   colliders_layer = DescriptionTFWidget.L_COLLIDERS)
+	{
 		if (obj.isLight || obj.isScene || obj.isCamera) {
 			return false;
 		}
@@ -1154,13 +1236,13 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
             obj.castShadow = true;
             obj.receiveShadow = true;
             obj.renderOrder = -1;
-            obj.layers.set(DescriptionTFWidget.L_VISUALS);
+            obj.layers.set(visuals_layer);
         
         // colliders
         } else if (obj.isMesh && in_collider) {
             obj.material = this.collider_mat;
             obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
-            obj.layers.set(DescriptionTFWidget.L_COLLIDERS);
+            obj.layers.set(colliders_layer);
         }
 
 		// count vers & tris
@@ -1175,7 +1257,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		if (obj.children && obj.children.length) {
 			for (let i = 0; i < obj.children.length; i++) {
 				let ch = obj.children[i];
-				let res = this.cleanModel(ch, in_visual, in_collider, force_material); // recursion
+				let res = this.cleanModel(ch, in_visual, in_collider, force_material, visuals_layer, colliders_layer); // recursion
 				if (!res) {
 					obj.remove(ch);
 					i--;
@@ -1193,6 +1275,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.robot_model.removeFromParent(); // not changing or moving this.robot
 		this.robot_model = null;
 		this.last_processed_desc = null;
+		this.robot_pose_initialized = {};
 		while (this.labelRenderer.domElement.children.length > 0) {
 			this.labelRenderer.domElement.removeChild(
 				this.labelRenderer.domElement.children[0],
@@ -1200,28 +1283,28 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 	}
 
-	getAutofocusTarget() {
+	getAutofocusTarget() { // called in onDescriptionData()
 		let robot = this.robot_model;
 
-		if (this.camera_target_key && robot.joints[this.camera_target_key]) {
-			this.setCameraTarget(
-				robot.joints[this.camera_target_key],
-				this.camera_target_key,
+		if (this.camera_selection_key && robot.joints[this.camera_selection_key]) {
+			this.setCameraSelectionObject(
+				robot.joints[this.camera_selection_key],
+				this.camera_selection_key,
 				false,
 			);
 			return;
 		}
-		if (this.camera_target_key && robot.links[this.camera_target_key]) {
-			this.setCameraTarget(
-				robot.links[this.camera_target_key],
-				this.camera_target_key,
+		if (this.camera_selection_key && robot.links[this.camera_selection_key]) {
+			this.setCameraSelectionObject(
+				robot.links[this.camera_selection_key],
+				this.camera_selection_key,
 				false,
 			);
 			return;
 		}
 
-		if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY) {
-			this.setCameraTarget(
+		if (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY) {
+			this.setCameraSelectionObject(
 				this.ros_space,
 				DescriptionTFWidget.ROS_SPACE_KEY,
 				false,
@@ -1231,101 +1314,133 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		let wp = new Vector3();
 		let pt_distances = [];
-		let joints_avg = new Vector3(0, 0, 0);
+		let joints_avg_world = new Vector3(0, 0, 0);
 		let joints_num = 0;
-		let focus_joint = null;
-		let focus_joint_key = null;
+		let central_joint = null;
+		let central_joint_key = null;
 
 		// find the joint closest to avg center and set as target
 		// also find the farthest for initial camera distance
 		Object.keys(robot.joints).forEach((key) => {
 			robot.joints[key].getWorldPosition(wp);
-			joints_avg.add(wp);
+			joints_avg_world.add(wp);
 			joints_num++;
 		});
 		if (joints_num) {
-			joints_avg.divideScalar(joints_num);
+			joints_avg_world.divideScalar(joints_num);
 			let closest_joint_dist = Number.POSITIVE_INFINITY;
 			Object.keys(robot.joints).forEach((key) => {
 				robot.joints[key].getWorldPosition(wp);
-				let d = wp.distanceTo(joints_avg);
+				let d = wp.distanceTo(joints_avg_world);
 				if (d < closest_joint_dist) {
 					closest_joint_dist = d;
-					focus_joint = robot.joints[key];
-					focus_joint_key = key;
+					central_joint = robot.joints[key];
+					central_joint_key = key;
 				}
 			});
 		}
 		Object.keys(robot.joints).forEach((key) => {
 			robot.joints[key].getWorldPosition(wp);
-			pt_distances.push(wp.distanceTo(joints_avg));
+			pt_distances.push(wp.distanceTo(joints_avg_world));
 		});
 		Object.keys(robot.links).forEach((key) => {
 			robot.links[key].getWorldPosition(wp);
-			pt_distances.push(wp.distanceTo(joints_avg));
+			pt_distances.push(wp.distanceTo(joints_avg_world));
 		});
 		Object.keys(robot.frames).forEach((key) => {
 			robot.frames[key].getWorldPosition(wp);
-			pt_distances.push(wp.distanceTo(joints_avg));
+			pt_distances.push(wp.distanceTo(joints_avg_world));
 		});
 
 		pt_distances.sort((a, b) => a - b);
 		let num_distances = pt_distances.length;
 		let model_size_approx = num_distances ? pt_distances[Math.round(num_distances*0.9)] : 2.0; // use ~90th percentile to avoid outliers
 
-		console.log('[AutofocusTarget] Model size estimated at '+model_size_approx+"; num pt_distances="+num_distances);
-		if (focus_joint && focus_joint_key)
-			this.setCameraTarget(focus_joint, focus_joint_key, false);
+		console.log('[AutofocusTarget] Model size estimated at '+model_size_approx+"; auto central joint is "+central_joint_key);
+		if (central_joint && central_joint_key)
+			this.setCameraSelectionObject(central_joint, central_joint_key, false); // saves last selection
 
 		// set initial distance proportional to model size
-		if (this.vars.follow_target && !this.camera_distance_initialized) {
-			this.camera_distance_initialized = true;
+		if (!this.set_camera_view) {
+
 			let initial_dist = model_size_approx * DescriptionTFWidget.INITIAL_CAMERA_DISTANCE_MULTIPLIER;
 			console.log('[AutofocusTarget] Setting initial camera distance to '+initial_dist);
-			console.log('[AutofocusTarget] Cam pos before', this.camera_pos);
-			this.camera_pos.normalize().multiplyScalar(initial_dist).add(joints_avg);
-			console.log('[AutofocusTarget] Cam pos after', this.camera_pos);
-			this.camera.position.copy(this.camera_pos);
+			let camera_world_pos = DescriptionTFWidget.INITIAL_CAMERA_POSITION.clone()
+								   .normalize()
+								   .multiplyScalar(initial_dist)
+								   .add(joints_avg_world);
+			
+			let ref_frame = (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY || !this.vars.camera_follows_selection || !this.camera_selection_ref)
+						  ? this.ros_space
+						  : this.camera_selection_ref;
+
+			let camera_ref_frame_pos = ref_frame.worldToLocal(camera_world_pos);
+			let selection_ref_frame_pos = ref_frame === this.ros_space ? ref_frame.worldToLocal(joints_avg_world) : new THREE.Vector3(0,0,0);
+
+			this.set_camera_view = {
+				'camera_selection_pos': selection_ref_frame_pos,
+				'camera_controls_target_pos': selection_ref_frame_pos,
+				'camera_pos': camera_ref_frame_pos,
+				'cam_axis_angle': 0.0 // horizon level
+			};
 		}
 	}
 
-	setCameraTarget(new_target, new_target_key, force_follow = false) {
+	setCameraSelectionObject(new_target, new_target_key, force_look_at = false) {
 		console.log("Setting cam target to: " + new_target_key);
-		this.camera_target = new_target;
-		this.camera_target_key = new_target_key;
 
-		if (!this.vars.follow_target && force_follow) {
-			this.vars.follow_target = true;
-			this.panel.storePanelVarAsInt('f', 1);
-			this.focus_btn.addClass("on");
-		}
+		let taget_world_pos = new THREE.Vector3();
+		new_target.getWorldPosition(taget_world_pos);
+
+		this.scene.attach(this.camera_selection);
+		this.scene.attach(this.camera_controls_target);
+
+		this.camera_selection.position.copy(taget_world_pos);
+		this.camera_controls_target.position.copy(taget_world_pos);
+
+		this.camera_selection_key = new_target_key;
+		this.camera_selection_ref = new_target;
+
+		this.last_camera_selection_key = new_target_key;
+		this.last_camera_selection_ref = new_target;
+
+		// if (!this.vars.camera_follows_selection && force_look_at) {
+		// 	this.vars.camera_follows_selection = true;
+		// 	this.panel.storePanelVarAsInt('f', 1);
+		// 	this.camera_follows_selection_btn.addClass("on");
+		// }
 		
-		if (force_follow)
+		if (force_look_at)
 			this.storeCameraPosePanelVars();
-		// 	//only refresh on click
-		// 	this.panel.ui.updateUrlHash();
 
 		this.makeRobotMarkers();
 		this.makeROSOriginMarker();
 	}
 
-	setCameraTargetPosition(new_target_pos) {
-		console.log("Setting cam target positino to: [" + new_target_pos.x.toFixed(2) + ";" + new_target_pos.y.toFixed(2) + ";" + new_target_pos.z.toFixed(3) + "]");
-		this.camera_target_pos.position.copy(new_target_pos);
-		this.camera.lookAt(this.camera_target_pos);
+	setCameraSelectionPosition(new_cursor_world_position) {
+		console.log("Setting camera selection to: [" + new_cursor_world_position.x.toFixed(2) + ";" + new_cursor_world_position.y.toFixed(2) + ";" + new_cursor_world_position.z.toFixed(3) + "]");
+
+		this.scene.attach(this.camera_selection);
+		this.scene.attach(this.camera_controls_target);
+
+		this.camera_selection.position.copy(new_cursor_world_position);
+		this.camera_controls_target.position.copy(new_cursor_world_position);
+
+		//this.camera.lookAt(this.camera_controls_target.position);
 		this.controls.update();
 
-		// this.camera_target = null;
-		// this.camera_target_key = null;
+		this.camera_selection_key = null;
+		this.camera_selection_ref = null;
 
-		if (this.vars.follow_target) {
-			this.vars.follow_target = false;
+		if (this.vars.camera_follows_selection) {
+			this.vars.camera_follows_selection = false;
 			this.panel.storePanelVarAsInt('f', 0);
-			this.focus_btn.removeClass("on");
-			this.storeCameraPosePanelVars()
+			this.camera_follows_selection_btn.removeClass("on");
 			this.makeRobotMarkers();
 			this.makeROSOriginMarker();
 		}
+
+		this.storeCameraPosePanelVars()
 	}
 
 	makeRobotMarkers() {
@@ -1424,22 +1539,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		return markers;
 	}
 
-	makeMark(
-		target,
-		label_text,
-		layer_axes,
-		layer_labels,
-		axis_size = 0.02,
-		h_center = true,
-		v_center = 0,
-	) {
-		let is_selected = this.vars.follow_target && target == this.camera_target;
+	makeMark(target, label_text, layer_axes, layer_labels, axis_size = 0.02, h_center = true, v_center = 0) {
+		let is_selected = this.vars.camera_follows_selection && target === this.camera_selection_ref;
 
-		if (
-			!is_selected &&
-			(layer_axes == DescriptionTFWidget.L_JOINTS ||
-				layer_axes == DescriptionTFWidget.L_LINKS)
-		) {
+		if (!is_selected && (layer_axes == DescriptionTFWidget.L_JOINTS || layer_axes == DescriptionTFWidget.L_LINKS)) {
 			axis_size = 0.015;
 		}
 
@@ -1472,7 +1575,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			label_el = new CSS2DObject(el);
 			let that = this;
 			el.addEventListener("pointerdown", function (ev) {
-				that.setCameraTarget(target, label_text, true); // label=key, turns on following
+				that.setCameraSelectionObject(target, label_text, true); // label=key, turns on following
 				ev.preventDefault();
 			});
 			target.add(label_el);
@@ -1501,6 +1604,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		if (topic == '/tf_static') {
 			console.log('Got /tf_static:', tf);
+		} else if (!this.tf_logged) {
+			this.tf_logged = true;
+			console.log('Got /tf:', tf);
 		}
 
 		for (let i = 0; i < tf.transforms.length; i++) {
@@ -1512,8 +1618,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			// if (filter.indexOf(tf.transforms[i].header.frame_id) > -1 || filter.indexOf(id_child) > -1)
 			// 	console.log('TF: "' + tf.transforms[i].header.frame_id + ' > ' + id_child + '" ('+topic+'):', tf);
 
-			// if (this.smooth_transforms_queue[id_child] !== undefined && this.smooth_transforms_queue[id_child].stamp > ns_stamp)
-			//     continue; //throw out older transforms
+			if (this.transforms_queue[id_child] !== undefined && this.transforms_queue[id_child].stamp >= ns_stamp)
+				continue; //throw out older transforms
 
 			t.rotation = new Quaternion(
 				t.rotation.x,
@@ -1527,7 +1633,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				t.translation.z,
 			);
 
-			this.smooth_transforms_queue[id_child] = {
+			this.transforms_queue[id_child] = {
 				parent: tf.transforms[i].header.frame_id,
 				transform: t,
 				stamp: ns_stamp,
@@ -1537,31 +1643,35 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				//this is the base link
 
 				if (!this.ros_space_offset_set) {
-					// moves ros space so that the initial ronot's position and rotation is aligned with the scene's origin
+					// moves ros space so that the initial robot's position and rotation is aligned with the scene's origin
 					// all furher transforms then take place in the ros space
 
-					if (this.vars.follow_target &&
-						this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
-					) {
-						this.ros_space.attach(this.camera_target_pos);
-						this.ros_space.attach(this.camera);
-					}
+					let ref_frame = (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY || !this.vars.camera_follows_selection || !this.camera_selection_ref)
+						? this.ros_space
+						: this.camera_selection_ref;
+					ref_frame.attach(this.camera_controls_target);
+					ref_frame.attach(this.camera);
+					ref_frame.attach(this.camera_selection);
+					// if (this.vars.camera_follows_selection && this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY) {
+					// 	this.ros_space.attach(this.camera_controls_target);
+					// 	this.ros_space.attach(this.camera);
+					// }
 
-					this.ros_space.quaternion.copy(
-						this.ros_space_default_rotation.clone().multiply(t.rotation.clone().invert()),
-					); // robot aligned with scene
+					this.ros_space.quaternion.copy(this.ros_space_default_rotation)
+										     .multiply(t.rotation.clone().invert()); // robot aligned with scene
 					let t_pos = t.translation
 						.clone()
 						.applyQuaternion(this.ros_space.quaternion);
 					this.ros_space.position.copy(t_pos.clone().negate());
 
-					if (this.vars.follow_target &&
-						this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
-					) {
-						this.scene.attach(this.camera_target_pos);
-						this.scene.attach(this.camera);
-						this.camera.getWorldPosition(this.camera_pos);
-					}
+					this.scene.attach(this.camera_controls_target);
+					this.scene.attach(this.camera);
+					this.scene.attach(this.camera_selection);
+
+					// if (this.vars.camera_follows_selection && this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY) {
+					// 	this.scene.attach(this.camera_controls_target);
+					// 	this.scene.attach(this.camera);
+					// }
 
 					this.ros_space_offset_set = true;
 				}
@@ -1616,7 +1726,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 	controlsChanged() {
 		this.controls_dirty = true;
-		this.camera_pos.copy(this.camera.position);
 	}
 
 	renderDirty() {
@@ -1625,9 +1734,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.render_dirty = true;
 	}
 
-	renderingLoop() {
-		if (!this.rendering || !this.robot_model) {
-			requestAnimationFrame((t) => this.renderingLoop());
+	renderingLoop(now) {
+		if (!this.rendering || !this.robot_model || (this.vars.camera_follows_selection && !this.camera_selection_ref)) {
+			requestAnimationFrame((t) => this.renderingLoop(t));
 			return;
 		}
 
@@ -1637,13 +1746,144 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		//let d_pos = new THREE.Vector3();
 
+		// move camera to position relative to target (animation after view is selected)
+		if (this.set_camera_view && this.set_camera_view['camera_pos']) { // from panel vars or auto focus
+
+			let camera_controls_target_pos = this.set_camera_view['camera_controls_target_pos']; // in ref_frame space
+			let camera_pos = this.set_camera_view['camera_pos']; // in ref_frame space
+			let cam_axis_angle = this.set_camera_view['cam_axis_angle'];
+			let camera_selection_pos = this.set_camera_view['camera_selection_pos'];
+
+			let ref_frame = (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY || !this.vars.camera_follows_selection || !this.camera_selection_ref)
+					? this.ros_space
+					: this.camera_selection_ref;
+			
+			let camera_fw_axis = new THREE.Vector3().subVectors(camera_pos, camera_controls_target_pos).normalize(); // in ref_frame
+
+			let up_axis = new THREE.Vector3(0,0,1); // Z is up in ROS
+			if (camera_fw_axis.angleTo(up_axis) < 0.25) up_axis.set(1,0,0); // dodge gimbal lock, X is fw in ROS
+			let up_axis_projection = new THREE.Vector3().copy(up_axis).projectOnPlane(camera_fw_axis).normalize();
+			
+			ref_frame.attach(this.camera);
+			ref_frame.attach(this.camera_controls_target);
+			ref_frame.attach(this.camera_selection);
+
+			if (this.DEBUG_CAMERA) {
+				if (!this.test_up)
+					this.test_up = new THREE.Mesh(new THREE.SphereGeometry(0.01, 32, 16), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+				ref_frame.attach(this.test_up);
+				this.test_up.position.copy(up_axis);
+
+				if (this.test_line_up_projection)
+					this.test_line_up_projection.removeFromParent();
+				this.test_line_up_projection = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+					camera_controls_target_pos, camera_controls_target_pos.clone().add(up_axis_projection)
+				]), new THREE.LineBasicMaterial({ color: 0x00ff00 })); // green up axis
+				ref_frame.add(this.test_line_up_projection);
+
+				if (this.test_line_camera_dir)	
+					this.test_line_camera_dir.removeFromParent();
+				this.test_line_camera_dir = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+					camera_controls_target_pos, camera_pos
+				]), new THREE.LineBasicMaterial({ color: 0xffffff })); // white fw fector
+				ref_frame.add(this.test_line_camera_dir);
+			}
+
+			this.camera_controls_target.position.copy(camera_controls_target_pos);
+			this.camera.position.copy(camera_pos);
+			if (camera_selection_pos)
+				this.camera_selection.position.copy(camera_selection_pos);
+
+			const camera_right = new THREE.Vector3().crossVectors(camera_fw_axis, up_axis_projection).normalize();
+			const matrix = new THREE.Matrix4().set(
+				camera_right.x, up_axis_projection.x, -camera_fw_axis.x, 0,
+				camera_right.y, up_axis_projection.y, -camera_fw_axis.y, 0,
+				camera_right.z, up_axis_projection.z, -camera_fw_axis.z, 0,
+				0, 0, 0, 1
+			);
+			this.camera.setRotationFromMatrix(matrix.setPosition(0, 0, 0));  // apply rotation only
+			this.camera.rotateOnWorldAxis(camera_fw_axis, cam_axis_angle);
+			
+			this.scene.attach(this.camera);
+			this.scene.attach(this.camera_controls_target);
+			this.scene.attach(this.camera_selection);
+
+			this.controls.update();
+			this.set_camera_view = null; // done
+			this.camera_pose_initialized = true; // lerp camera from now on
+		}
+
+		else if (this.set_camera_view && this.set_camera_view['start']) { // slerp
+
+			const animation_duration = 1000;
+
+			if (this.camera_selection && this.vars.camera_follows_selection) {
+				this.camera_selection.getWorldPosition(this.camera_controls_target.position);
+			}
+
+			let lerp_amount = (Date.now() - this.set_camera_view['start']) / animation_duration;
+			let done = false;
+			if (lerp_amount >= 1.0) {
+				lerp_amount = 1.0;
+				done = true;
+			}
+
+			let target_pos = this.camera_controls_target.position
+				.clone()
+				.add(this.set_camera_view['target_offset_pos']); //update as the robor/target move
+			this.camera.position.copy(
+				this.set_camera_view['start_cam_position'].lerp(target_pos, lerp_amount),
+			);
+
+			let rwq = new THREE.Quaternion();
+			if (!this.vars.camera_follows_selection || this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY)
+				this.ros_space.getWorldQuaternion(rwq);
+			else this.robot.getWorldQuaternion(rwq);
+			let target_rot = rwq.multiply(this.set_camera_view['target_rot'].clone()); //update as the robor/target move
+			this.camera.quaternion.copy(
+				this.set_camera_view['start_cam_rotation'].slerp(target_rot, lerp_amount),
+			);
+
+			//this.camera_world_pos.copy(this.camera.position);
+			this.controls_dirty = true;
+
+			if (done) {
+				this.set_camera_view = null;
+				this.controls.enabled = true;
+				this.controls.update();
+				this.storeCameraPosePanelVars();
+				this.camera_pose_initialized = true; // lerp camera from now on
+			}
+
+		} else if (this.camera_pose_initialized) {
+			if (this.space_mouse && this.space_mouse.animating) {
+				this.space_mouse.space_mouse.update3dcontroller({
+           			'frame': { 'time': now }
+				});
+			
+			} else {
+				this.controls.update();
+			}			
+		}
+
 		// set model transforms
 		if (this.robot_model.frames) {
-			let transform_ch_frames = Object.keys(this.smooth_transforms_queue);
+
+			if (this.vars.camera_follows_selection && this.camera_selection_ref) {
+				this.camera_selection_ref.attach(this.camera);
+				this.camera_selection_ref.attach(this.camera_controls_target);
+				this.camera_selection_ref.attach(this.camera_selection);
+				this.camera_selection.position.set(0,0,0);
+				if (this.space_mouse && this.space_mouse.pivot_position)
+					this.camera_selection_ref.attach(this.space_mouse.pivot_position);
+			}
+
+			let transform_ch_frames = Object.keys(this.transforms_queue);
 			for (let i = 0; i < transform_ch_frames.length; i++) {
+
 				let id_child = transform_ch_frames[i];
-				let id_parent = this.smooth_transforms_queue[id_child].parent;
-				let t = this.smooth_transforms_queue[id_child].transform;
+				let id_parent = this.transforms_queue[id_child].parent;
+				let t = this.transforms_queue[id_child].transform;
 
 				let t_parent = this.robot_model.frames[id_parent];
 				let t_child = this.robot_model.frames[id_child];
@@ -1663,67 +1903,46 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				if (id_child == this.robot_model.name) {
 					// robot base frame => move this.robot in ros_space
 
-					let new_robot_world_position = new THREE.Vector3();
-
-					let move_camera = this.vars.follow_target && this.robot_pose_initialized && this.camera_target_key != DescriptionTFWidget.ROS_SPACE_KEY;
-
-					if (!this.vars.fix_robot_base) {
-						// robot free to move around
+					if (!this.vars.fix_robot_base) { // robot moves around
 						let pos = t.translation;
 
-						let old_robot_world_position = new THREE.Vector3();
-						this.robot.getWorldPosition(old_robot_world_position);
+						this.robot.getWorldPosition(this._old_robot_world_position);
 
-						if (this.robot_pose_initialized)
+						if (!this.robot_pose_initialized[id_child])
+							this.robot.position.copy(pos); // 1st hard set without lerping
+						else
 							this.robot.position.lerp(pos, lerp_amount);
-						else this.robot.position.copy(pos); // 1st hard set without lerping
 
-						this.robot.getWorldPosition(new_robot_world_position);
+						this.robot.getWorldPosition(this._new_robot_world_position);
+						this._delta_robot_pos.subVectors(this._new_robot_world_position, this._old_robot_world_position);
 
-						let d_pos = new THREE.Vector3().subVectors(
-							new_robot_world_position,
-							old_robot_world_position,
-						);
-
-						if (move_camera) {
-							this.camera_pos.add(d_pos); // move camera by d
-							if (this.light && this.vars.render_light != DescriptionTFWidget.LIGHT_FLASHLIGHT)
-								this.light.position.add(d_pos);
-						}
-					} else { // keeping robot fixes in place
-						this.robot.getWorldPosition(new_robot_world_position); // only get world pos (to rotate around)
+						// move light
+						if (this.light && this.vars.render_light != DescriptionTFWidget.LIGHT_FLASHLIGHT && this.robot_pose_initialized[id_child] &&
+							this.vars.camera_follows_selection && this.camera_selection_key != DescriptionTFWidget.ROS_SPACE_KEY
+						) this.light.position.add(this._delta_robot_pos);
 					}
 
-					let old_robot_world_rotation = new THREE.Quaternion();
-					this.robot.getWorldQuaternion(old_robot_world_rotation);
+					// let old_robot_world_rotation = new THREE.Quaternion();
+					// this.robot.getWorldQuaternion(old_robot_world_rotation);
 
 					// let rot = new THREE.Quaternion(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
 					// rot = rot.multiply(this.rot_offset);
 
 					// set robot rot (even when fixes)
-					if (this.robot_pose_initialized)
+					if (!this.robot_pose_initialized[id_child])
+						this.robot.quaternion.copy(t.rotation); // 1st hard set
+					else
 						this.robot.quaternion.slerp(t.rotation, lerp_amount);
-					else this.robot.quaternion.copy(t.rotation); // 1st hard set
 
-					let new_robot_world_rotation = new THREE.Quaternion();
-					this.robot.getWorldQuaternion(new_robot_world_rotation);
+					// let new_robot_world_rotation = new THREE.Quaternion();
+					// this.robot.getWorldQuaternion(new_robot_world_rotation);
 
 					// let d_rot_rad = old_robot_world_rotation.angleTo(new_robot_world_rotation);
-					let d_rot = new_robot_world_rotation.multiply(
-						old_robot_world_rotation.invert(),
-					);
-
-					// rotate camera with the robot
-					if (move_camera) {
-						this.camera_pos
-							.sub(new_robot_world_position)
-							.applyQuaternion(d_rot)
-							.add(new_robot_world_position);
-					}
+					//let d_rot = new_robot_world_rotation.multiply(old_robot_world_rotation.invert());
 
 					// saves new camera pos in relation to robot as it moves around
-					if (!this.set_camera_target_offset &&
-						!this.vars.follow_target &&
+					if (!this.set_camera_view &&
+						!this.vars.camera_follows_selection &&
 						this.last_camera_url_update + 1000 < Date.now()
 					) {
 						setTimeout(() => {
@@ -1732,15 +1951,30 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 						}, 0);
 					}
 
-					this.robot_pose_initialized = true;
+					this.robot_pose_initialized[id_child] = true;
 
 					this.renderDirty();
+
 				} else if (t_child && t_parent) {
 					// animate all other model joints
 
 					let orig_p = t_child.parent;
 					t_parent.attach(t_child);
-					if (this.robot_pose_initialized) {
+					if (!this.robot_pose_initialized[id_child]) {
+						// 1st hard set
+						t_child.position.set(
+							t.translation.x,
+							t.translation.y,
+							t.translation.z
+						);
+						t_child.quaternion.set(
+							t.rotation.x,
+							t.rotation.y,
+							t.rotation.z,
+							t.rotation.w
+						);
+						this.robot_pose_initialized[id_child] = true;
+					} else {
 						t_child.position.lerp(
 							new THREE.Vector3(
 								t.translation.x,
@@ -1758,138 +1992,60 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 							),
 							lerp_amount,
 						);
-					} else {
-						// 1st hard set
-						t_child.position.copy(
-							new THREE.Vector3(
-								t.translation.x,
-								t.translation.y,
-								t.translation.z,
-							),
-						);
-						t_child.quaternion.copy(
-							new THREE.Quaternion(
-								t.rotation.x,
-								t.rotation.y,
-								t.rotation.z,
-								t.rotation.w,
-							),
-						);
 					}
 					orig_p.attach(t_child);
 
 					this.renderDirty();
 				}
 			}
+
+			this.scene.attach(this.camera);
+			this.scene.attach(this.camera_controls_target);
+			this.scene.attach(this.camera_selection);
+			if (this.space_mouse && this.space_mouse.pivot_position)
+				this.scene.attach(this.space_mouse.pivot_position);
 		}
 
-		// set camera rot and offset from url (only once)
-		if (this.set_camera_target_offset) {
-			if (this.camera_target && this.vars.follow_target) {
-				this.camera_target.getWorldPosition(this.camera_target_pos.position);
-			}
+		this.transforms_queue = {};
 
-			let rwq = new THREE.Quaternion();
-			if (this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY)
-				this.ros_space.getWorldQuaternion(rwq);
-			else this.robot.getWorldQuaternion(rwq);
-			let cam_rot = rwq.multiply(this.set_camera_target_offset.rotation);
 
-			let v = new THREE.Vector3(0, 0, this.set_camera_target_offset.distance); // -z is fw
-			v.applyQuaternion(cam_rot);
+		// set camera rot and offset from url (only once on init)
+		// if (this.set_camera_target_offset) {
+		// 	if (this.camera_selection && this.vars.camera_follows_selection) {
+		// 		this.camera_selection.getWorldPosition(this.camera_controls_target.position);
+		// 	}
 
-			this.camera_pos.copy(this.camera_target_pos.position.clone().add(v));
-			this.camera.position.copy(this.camera_pos);
-			this.camera.quaternion.copy(cam_rot);
+		// 	let rwq = new THREE.Quaternion();
+		// 	if (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY)
+		// 		this.ros_space.getWorldQuaternion(rwq);
+		// 	else this.robot.getWorldQuaternion(rwq);
+		// 	let cam_rot = rwq.multiply(this.set_camera_target_offset.rotation);
 
-			this.set_camera_target_offset = null;
-			this.controls.update();
-		}
+		// 	let v = new THREE.Vector3(0, 0, this.set_camera_target_offset.distance); // -z is fw
+		// 	v.applyQuaternion(cam_rot);
 
-		// move camera to position relative to target
-		else if (this.set_camera_view) {
-			const animation_duration = 1000;
+		// 	this.camera_world_pos.copy(this.camera_controls_target.position.clone().add(v));
+		// 	this.camera.position.copy(this.camera_world_pos);
+		// 	this.camera.quaternion.copy(cam_rot);
 
-			if (this.camera_target && this.vars.follow_target) {
-				this.camera_target.getWorldPosition(this.camera_target_pos.position);
-			}
-
-			let lerp_amount =
-				(Date.now() - this.set_camera_view.start) / animation_duration;
-			let done = false;
-			if (lerp_amount >= 1.0) {
-				lerp_amount = 1.0;
-				done = true;
-			}
-
-			let target_pos = this.camera_target_pos.position
-				.clone()
-				.add(this.set_camera_view.target_offset_pos); //update as the robor/target move
-			this.camera.position.copy(
-				this.set_camera_view.start_cam_position.lerp(target_pos, lerp_amount),
-			);
-
-			let rwq = new THREE.Quaternion();
-			if (
-				this.vars.follow_target &&
-				this.camera_target_key == DescriptionTFWidget.ROS_SPACE_KEY
-			)
-				this.ros_space.getWorldQuaternion(rwq);
-			else this.robot.getWorldQuaternion(rwq);
-			let target_rot = rwq.multiply(this.set_camera_view.target_rot.clone()); //update as the robor/target move
-			this.camera.quaternion.copy(
-				this.set_camera_view.start_cam_rotation.slerp(target_rot, lerp_amount),
-			);
-
-			this.camera_pos.copy(this.camera.position);
-			this.controls_dirty = true;
-
-			if (done) {
-				this.set_camera_view = null;
-				this.controls.enableRotate = true;
-				this.controls.enablePan = !this.vars.follow_target;
-				this.controls.update();
-				this.storeCameraPosePanelVars();
-			}
-		}
-
-		// move the camera if fixed to target
-		else if (this.vars.follow_target && this.camera_pose_initialized) {
-			let pos_to_maintain = new THREE.Vector3().copy(this.camera_pos);
-
-			this.camera.position.lerp(this.camera_pos, cam_lerp_amount);
-
-			if (this.camera_target) {
-				let new_target_pos = new THREE.Vector3();
-				this.camera_target.getWorldPosition(new_target_pos);
-				if (this.camera_target_pose_initialized) {
-					this.camera_target_pos.position.lerp(new_target_pos, cam_lerp_amount);
-				} else {
-					this.camera_target_pos.position.copy(new_target_pos);
-					this.camera_target_pose_initialized = true;
-				}
-				// this.camera.lookAt(this.camera_target_pos);
-				// console.log('Focusing on ['+new_target_pos.x+';'+new_target_pos.y+';'+new_target_pos.z+']');
-			}
-
-			this.controls.update();
-			this.camera_pos = pos_to_maintain;
-		}
-
-		this.camera_pose_initialized = true; // lerp camera from now on
+		// 	this.set_camera_target_offset = null;
+		// 	this.controls.update();
+		// }
 
 		if (this.light && this.vars.render_light != DescriptionTFWidget.LIGHT_FLASHLIGHT)
-			this.light.target = this.camera_target_pos;
+			this.light.target = this.camera_selection;
 
 		// render the scene
-		if (this.controls_dirty || this.render_dirty) {
-			this.controls_dirty = false;
-			this.render_dirty = false;
+		if ((this.controls_dirty || this.render_dirty)) {
 			try {
+
+				this.controls_dirty = false;
+				this.render_dirty = false;
 				this.renderer.render(this.scene, this.camera);
 				this.labelRenderer.render(this.scene, this.camera);
 				this.rendering_error_logged = false;
 				this.panel.updateFps();
+
 			} catch (e) {
 				if (!this.rendering_error_logged) {
 					this.rendering_error_logged = true;
@@ -1915,6 +2071,6 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// 	this.light.lookAt(cp);
 		// }
 
-		requestAnimationFrame((t) => this.renderingLoop());
+		requestAnimationFrame((t) => this.renderingLoop(t));
 	}
 }

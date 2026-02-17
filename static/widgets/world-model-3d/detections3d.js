@@ -14,6 +14,7 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
     static SOURCE_DEFAULT_TOPIC = null;
     static SOURCE_MAX_NUM = -1;
 	static L_DETECTION_LABELS = 10; // unique layer for the labels
+	static L_DETECTION_VISUALS = 11; // unique layer for the models and bboxes
 	static CLEAR_TIMEOUT_MS = 300; // clear if no new data received in this long
 	static DEFAULT_DETECTION_COLOR = new THREE.Color(0xff00ff);
 
@@ -267,8 +268,9 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 				el.addEventListener("pointerdown", function (ev) {
 					let m = overlay.detection_markers[d.class_id][i_class];
 					let pos = new THREE.Vector3();
-					m.getWorldPosition(pos);
-					that.world_model.setCameraTargetPosition(pos);
+					let box = new THREE.Box3().setFromObject(m);
+					box.getCenter(pos);
+					that.world_model.setCameraSelectionPosition(pos);
 					ev.preventDefault();
 				});
 				label2d.center.set(0.5, 0);
@@ -291,7 +293,9 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 						let model = new THREE.Object3D();
 						model.copy(this.loaded_models[model_path]); // src with original materials
 						let use_model_materials = overlay.detection_class_colors[d.class_id] ? false : true;
-						this.world_model.cleanModel(model, true, false, use_model_materials ? null : this.getMaterialForColor(overlay.detection_class_colors[d.class_id]));
+						this.world_model.cleanModel(model, true, false,
+													use_model_materials ? null : this.getMaterialForColor(overlay.detection_class_colors[d.class_id]),
+													WorldModel3DWidget_Detections3D.L_DETECTION_VISUALS);
 						model.is_model = true; // not a bbox
 						f.add(model);
 						overlay.detection_markers[d.class_id][i_class] = model;
@@ -479,6 +483,9 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 			this.world_model.camera.layers.enable(WorldModel3DWidget_Detections3D.L_DETECTION_LABELS);
 		else
 			this.world_model.camera.layers.disable(WorldModel3DWidget_Detections3D.L_DETECTION_LABELS);
+
+		// always show visuals
+		this.world_model.camera.layers.enable(WorldModel3DWidget_Detections3D.L_DETECTION_VISUALS);
     }
 
 	clearVisuals(topic) {
