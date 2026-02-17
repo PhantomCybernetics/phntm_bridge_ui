@@ -6,7 +6,7 @@ The web server itself does not connect to anything, it merely servers semi-stati
 
 You can fork this repository and host it yourself to customize the default UI provided. The configuration file specifies which Bridge Server shall the client connect to.
 
-![Infrastructure map](https://raw.githubusercontent.com/PhantomCybernetics/phntm_bridge_docs/refs/heads/main/img/Architecture_UI_Server.png)
+![Infrastructure map](https://raw.githubusercontent.com/PhantomCybernetics/phntm_bridge_docs/refs/heads/main/img/Architecture_UI.svg)
 
 # Install Bridge UI
 
