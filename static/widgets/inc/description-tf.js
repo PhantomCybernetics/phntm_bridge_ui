@@ -6,10 +6,8 @@ import { ColladaLoader } from "collada-loader";
 import { TrackballControls } from "/static/input/TrackballControls.js";
 import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
-import { MultiTopicSource } from "./multitopic.js";
 import { Vector3, Quaternion, LoadingManager } from "three";
 import { CompositePanelWidgetBase } from './composite-widget-base.js'
-import { SpaceMouse } from '../../input/space-mouse.js'
 
 export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static LABEL = "Robot description (URFD) + Transforms";
@@ -68,7 +66,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		'Ambient light (no shadows)'
 	];
 
-	constructor(panel, widget_css_class, start_rendering_loop=true) {
+	constructor(panel, widget_css_class, start_rendering_loop=true, init_multisource=true) {
 		super(panel, widget_css_class);
 
 		// defaults overwritten by url params
@@ -318,6 +316,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.loadPanelConfig();
 
 		// - panel vars loaded here - //
+
+		if (init_multisource)
+			this.sources.init();
 
 		this.last_camera_url_update = Number.NEGATIVE_INFINITY;
 
@@ -1161,14 +1162,14 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			};
 			//this.camera_distance_initialized = true; // don't autodetect
 		}
-			
-		this.sources.loadAssignedTopicsFromPanelVars();
 	}
 
 	onDescriptionData(topic, desc) {
 		if (this.panel.paused)
 			// TODO: process last received data on unpause
 			return;
+
+		console.log('IN: data for: ', topic);
 
 		if (desc.data == this.last_processed_desc) {
 			console.warn("Ignoring identical robot description from " + topic);
@@ -1860,10 +1861,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				this.space_mouse.space_mouse.update3dcontroller({
            			'frame': { 'time': now }
 				});
-			
 			} else {
 				this.controls.update();
-			}			
+			}
 		}
 
 		// set model transforms

@@ -8,7 +8,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 	static DEFAULT_HEIGHT = 18;
 
 	constructor(panel, unused_widget_css_class, plugin_classes) {
-		super(panel, 'description-tf', false); // don't start rendering loop yet
+		super(panel, 'description-tf', false, false); // don't start rendering loop yet, don't init sources
 
 		let that = this;
 
@@ -45,7 +45,7 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 			});
 		}
 
-		this.sources.loadAssignedTopicsFromPanelVars(); // init sources unhandled by parent
+		this.sources.init(); // init plugin sources (unhandled by parent)
 
 		this.base_link_frame = null;
 		

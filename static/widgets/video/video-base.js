@@ -100,7 +100,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			});
 		}
 
-		this.sources.loadAssignedTopicsFromPanelVars(); // init sources
+		this.sources.init(); // init sources
 
 		this.onSourcesChange(this.sources.getSources());		
 	}

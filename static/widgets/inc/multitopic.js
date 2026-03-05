@@ -32,7 +32,7 @@ export class MultiTopicSource extends EventTarget {
 			args_parsed: false,
 		};
 		this.sources.push(new_src);
-		this.updateSlots(new_src);
+		//this.updateSourceSlots(new_src);
 	}
 
 	on(event, cb) {
@@ -122,24 +122,31 @@ export class MultiTopicSource extends EventTarget {
 		for (let i = 0; i < this.sources.length; i++) {
 			let topics = [];
 			this.sources[i].topic_slots.forEach((slot) => {
-				if (slot.selected_topic && slot.selected_topic != this.sources[i].default_topic) //don't store defaults
+				if (slot.selected_topic) //don't store defaults
 					topics.push(slot.selected_topic);
 			});
+			if (topics.length == 1 && topics[0] == this.sources[i].default_topic) {
+				topics = [];
+			}
 			this.panel.storePanelVarAsStringArray("in"+i, topics);
 		}
 	}
 
-	loadAssignedTopicsFromPanelVars() {
+	init() {
 		let that = this;
+		let sources_initialsed_from_panel_vars = [];
+
 		Object.keys(this.panel.panel_vars).forEach((var_name)=>{
 			if (var_name.indexOf("in") !== 0) return; // not a multitopic var, skip
 
 			let i = parseInt(var_name.substring(2));
 			let src = that.sources[i];
 			if (!src) return;
+
 			if (src.panel_config_loaded) return; //only once
 			
 			let topics = that.panel.getPanelVarAsStringArray(var_name, []);
+			console.warn('IN: "'+i+'"', topics);
 			for (let j = 0; j < topics.length; j++) {
 				let slot = src.topic_slots[j];
 				if (!slot) {
@@ -159,27 +166,38 @@ export class MultiTopicSource extends EventTarget {
 				}
 			}
 			src.panel_config_loaded = true;
+			sources_initialsed_from_panel_vars.push(i);
 
-			that.updateSlots(src);
+			that.updateSourceSlots(src);
 		});
+
+		// int sources without panel vars
+		for (let i = 0; i < this.sources.length; i++) {
+			if (sources_initialsed_from_panel_vars.indexOf(i) > -1)
+				continue;
+			this.updateSourceSlots(this.sources[i]);
+		}
 
 		this.updateMenuContent();
 	}
 
-	updateSlots(src) {
+	updateSourceSlots(src) {
 		let num_slots = src.topic_slots.length;
 		let all_slots_full = true;
-		let default_topic_assigned = false;
+		let assign_default_topic = true;
 		src.topic_slots.forEach((slot) => {
-			if (!slot.selected_topic) all_slots_full = false;
-			if (slot.selected_topic == src.default_topic) default_topic_assigned = true;
+			if (slot.selected_topic)
+				assign_default_topic = false;
+			else
+				all_slots_full = false;
+			//if (slot.selected_topic == src.default_topic) default_topic_assigned = true;
 		});
 
 		while ((all_slots_full && src.num == -1) || num_slots < src.num) {
 			let assign_topic = null;
-			if (!default_topic_assigned) {
+			if (assign_default_topic) {
 				assign_topic = src.default_topic;
-				default_topic_assigned = true;
+				assign_default_topic = false;
 			}
 			let new_topic_slot = {
 				src: src,
@@ -197,7 +215,8 @@ export class MultiTopicSource extends EventTarget {
 	}
 
 	assignSlotTopic(slot) {
-		if (slot.topic) return true; //already assigned
+		if (slot.topic)
+			return true; //already assigned
 
 		let assigned = false;
 
@@ -222,7 +241,7 @@ export class MultiTopicSource extends EventTarget {
 
 		slot.topic = topic.id;
 		this.subscribed_topics[topic.id] = slot;
-		console.log("Topic assigned: " + topic.id);
+		console.log("IN: Topic assigned: " + topic.id);
 
 		slot.cb_wrapper = (data) => {
 			// console.log('multitopic setting slot with '+topic.id, data);
@@ -472,7 +491,7 @@ export class MultiTopicSource extends EventTarget {
 					// console.log('Selected '+topic);
 					slot.selected_topic = topic;
 					that.assignSlotTopic(slot);
-					that.updateSlots(slot.src);
+					that.updateSourceSlots(slot.src);
 					that.updateMenuContent();
 					that.storeAssignedTopicsPanelVars();
 					that.emit("change", that.getSources());
