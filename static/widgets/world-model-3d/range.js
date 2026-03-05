@@ -21,10 +21,15 @@ export class WorldModel3DWidget_Range extends WorldModel3DPluginBase {
             let frame_id = msg.header.frame_id;
             let f = this.world_model.robot_model.getFrame(frame_id);
             if (!f) {
-                let err = 'Frame "' + frame_id + '" not found in robot model for range data from ' + topic;
-                this.ui.showNotification(err, "error");
-                console.error(err);
+                if (!this.overlays[topic].error_logged) {
+                    this.overlays[topic].error_logged = true;
+                    let err = 'Frame "' + frame_id + '" not found in robot model for range data from ' + topic;
+                    this.ui.showNotification(err, "error");
+                    console.error(err);
+                }
                 return;
+            } else if (this.overlays[topic].error_logged) {
+                delete this.overlays[topic].error_logged;
             }
 
             let a_tan = Math.tan(msg.field_of_view / 2.0);
