@@ -672,9 +672,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// render joints
 		let render_joints_line_el = $('<div class="menu_line"></div>');
 		let render_joints_label = $('<label for="render_joints_' + this.panel.n + '">Render joints</label>');
-		let render_joints_cb = $('<input type="checkbox" ' + (this.vars.render_joints ? "checked" : "") + ' id="render_joints_' + this.panel.n + '" title="Render joints"/>');
-		render_joints_label.append(render_joints_cb).appendTo(render_joints_line_el);
-		render_joints_cb.change(function (ev) {
+		this.render_joints_cb = $('<input type="checkbox" ' + (this.vars.render_joints ? "checked" : "") + ' id="render_joints_' + this.panel.n + '" title="Render joints"/>');
+		render_joints_label.append(this.render_joints_cb).appendTo(render_joints_line_el);
+		this.render_joints_cb.change(function (ev) {
 			that.vars.render_joints = $(this).prop("checked");
 			that.panel.storePanelVarAsBool('jnt', that.vars.render_joints);
 			if (that.vars.render_joints) {
@@ -694,9 +694,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// render links
 		let render_links_line_el = $('<div class="menu_line"></div>');
 		let render_links_label = $('<label for="render_links_' + this.panel.n + '">Render links</label>');
-		let render_links_cb = $('<input type="checkbox" ' + (this.vars.render_links ? "checked" : "") + ' id="render_links_' + this.panel.n + '" title="Render links">');
-		render_links_label.append(render_links_cb).appendTo(render_links_line_el);
-		render_links_cb.change(function (ev) {
+		this.render_links_cb = $('<input type="checkbox" ' + (this.vars.render_links ? "checked" : "") + ' id="render_links_' + this.panel.n + '" title="Render links">');
+		render_links_label.append(this.render_links_cb).appendTo(render_links_line_el);
+		this.render_links_cb.change(function (ev) {
 			that.vars.render_links = $(this).prop("checked");
 			that.panel.storePanelVarAsBool('lnk', that.vars.render_links);
 			if (that.vars.render_links) {
@@ -737,9 +737,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// render visuals
 		let render_visuals_line_el = $('<div class="menu_line"></div>');
 		let render_visuals_label = $('<label for="render_visuals_' + this.panel.n + '"">Show visuals</label>');
-		let render_visuals_cb = $('<input type="checkbox" ' + (this.vars.render_visuals ? "checked" : "") + ' id="render_visuals_' + this.panel.n + '" title="Render visuals"/>');
-		render_visuals_label.append(render_visuals_cb).appendTo(render_visuals_line_el);
-		render_visuals_cb.change(function (ev) {
+		this.render_visuals_cb = $('<input type="checkbox" ' + (this.vars.render_visuals ? "checked" : "") + ' id="render_visuals_' + this.panel.n + '" title="Render visuals"/>');
+		render_visuals_label.append(this.render_visuals_cb).appendTo(render_visuals_line_el);
+		this.render_visuals_cb.change(function (ev) {
 			that.vars.render_visuals = $(this).prop("checked");
 			that.panel.storePanelVarAsBool('vis', that.vars.render_visuals);
 			if (that.vars.render_visuals)
@@ -752,11 +752,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// render colliders
 		let render_collisions_line_el = $('<div class="menu_line"></div>');
 		let render_collisions_label = $('<label for="render_collisions_' + this.panel.n + '"">Show collisions</label>');
-		let render_collisions_cb = $('<input type="checkbox" ' + (this.vars.render_collisions ? "checked" : "") + ' id="render_collisions_' + this.panel.n + '" title="Render collisions"/>');
+		this.render_collisions_cb = $('<input type="checkbox" ' + (this.vars.render_collisions ? "checked" : "") + ' id="render_collisions_' + this.panel.n + '" title="Render collisions"/>');
 		render_collisions_label
-			.append(render_collisions_cb)
+			.append(this.render_collisions_cb)
 			.appendTo(render_collisions_line_el);
-		render_collisions_cb.change(function (ev) {
+		this.render_collisions_cb.change(function (ev) {
 			that.vars.render_collisions = $(this).prop("checked");
 			that.panel.storePanelVarAsBool('col', that.vars.render_collisions);
 			if (that.vars.render_collisions)
@@ -1902,7 +1902,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			{
 				this.controls.update();
 			}
-			
+
 		}
 
 		// set model transforms
@@ -2111,5 +2111,31 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// }
 
 		requestAnimationFrame((t) => this.renderingLoop(t));
+	}
+
+	handleSpaceMouseCommand(cmd_id) {
+		switch (cmd_id) {
+			case 'PHNTM_3D_SET_TOP_VIEW': this.moveCameraToView('top'); break;
+			case 'PHNTM_3D_SET_LEFT_VIEW': this.moveCameraToView('left'); break;
+			case 'PHNTM_3D_SET_RIGHT_VIEW': this.moveCameraToView('right'); break;
+			case 'PHNTM_3D_SET_FRONT_VIEW': this.moveCameraToView('front'); break;
+			case 'PHNTM_3D_SET_BACK_VIEW': this.moveCameraToView('back'); break;
+			case 'PHNTM_3D_SET_BOTTOM_VIEW': this.moveCameraToView('bottom'); break;
+
+			case 'PHNTM_3D_TOGGLE_PERSPECTIVE': this.perspective_btn.click(); break;
+			case 'PHNTM_3D_TOGGLE_FOLLOW_SELECTION': this.camera_follows_selection_btn.click(); break;
+			case 'PHNTM_3D_TOGGLE_LOCK_HORIZON': this.camera_lock_horizon_btn.click(); break;
+			case 'PHNTM_3D_TOGGLE_DISPLAY_MODEL_LABELS': this.labels_btn.click(); break;
+
+			case 'PHNTM_3D_TOGGLE_RENDER_JOINTS': this.render_joints_cb.prop('checked', function (i, val) { return !val; }).trigger('change'); break;
+			case 'PHNTM_3D_TOGGLE_RENDER_LINKS': this.render_links_cb.prop('checked', function (i, val) { return !val; }).trigger('change'); break;
+
+			case 'PHNTM_3D_TOGGLE_RENDER_VISUALS': this.render_visuals_cb.prop('checked', function (i, val) { return !val; }).trigger('change'); break;
+			case 'PHNTM_3D_TOGGLE_RENDER_COLLISIONS': this.render_collisions_cb.prop('checked', function (i, val) { return !val; }).trigger('change'); break;
+
+			default:
+				console.error('Unknown command id ', cmd_id);
+				break;
+		}
 	}
 }

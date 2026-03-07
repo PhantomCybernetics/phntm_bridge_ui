@@ -115,44 +115,39 @@ export class SpaceMouse {
 
     // this function fills the action and images structures that are exposed
     // to the 3Dconnexion button configuration editor
-    // THIS DOESN'T WORK with 3DConnexion driver
     _getApplicationCommands(buttonBank, images) {
-        // Add a couple of categories / menus / tabs to the buttonbank/menubar/toolbar
-        // Use the categories to group actions so that the user can find them easily
-        let fileNode = buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_ID_FILE', 'File'));
-        let editNode = buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_ID_EDIT', 'Edit'));
+        // Add exported commands
+        // the user maps these to RMs in config panel
+        // (Categories don't work on Mac)
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_TOP_VIEW', 'Top View', 'Set top view'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_LEFT_VIEW', 'Left  View', 'Set left view'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_RIGHT_VIEW', 'Right View', 'Set right view'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_FRONT_VIEW', 'Front View', 'Set front view'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_BACK_VIEW', 'Back View', 'Set back view'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_SET_BOTTOM_VIEW', 'Bottom View', 'Set bottom view'));
 
-        // // Add menu items / actions
-        // fileNode.push(new TDx._3Dconnexion.Action('ID_OPEN', 'Open', 'Open file'));
-        // fileNode.push(new TDx._3Dconnexion.Action('ID_CLOSE', 'Close', 'Close file'));
-        // fileNode.push(new TDx._3Dconnexion.Action('ID_EXIT', 'Exit', 'Exit program'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_PERSPECTIVE', 'Perspective', 'Toggle camera perspective'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_FOLLOW_SELECTION', 'Follow Selection', 'Toggle camera follows selection'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_LOCK_HORIZON', 'Lock Horizon', 'Toggle camera horizon lock'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_DISPLAY_MODEL_LABELS', 'Model Labels', 'Toggle display model labels'));
 
-        // // Add menu items / actions
-        // editNode.push(new TDx._3Dconnexion.Action('ID_UNDO', 'Undo', 'Shortcut is Ctrl + Z'));
-        // editNode.push(new TDx._3Dconnexion.Action('ID_REDO', 'Redo', 'Shortcut is Ctrl + Y'));
-        // editNode.push(new TDx._3Dconnexion.Action('ID_CUT', 'Cut', 'Shortcut is Ctrl + X'));
-        // editNode.push(new TDx._3Dconnexion.Action('ID_COPY', 'Copy', 'Shortcut is Ctrl + C'));
-        // editNode.push(new TDx._3Dconnexion.Action('ID_PASTE', 'Paste', 'Shortcut is Ctrl + V'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_RENDER_JOINTS', 'Render Joints', 'Toggle rendering of joint markers'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_RENDER_LINKS', 'Render Links', 'Toggle rendering of link markers'));
 
-        // Now add the images to the cache and associate it with the menu item by using the same id as the menu item / action
-        // These images will be shown in the 3Dconnexion properties editor and in the UI elements which display the
-        // active button configuration of the 3dmouse
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_OPEN'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_CLOSE'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_EXIT'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_CUT'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_COPY'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_PASTE'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_UNDO'));
-        images.push(TDx._3Dconnexion.ImageItem.fromURL('/static/graph/graph.png', 'ID_REDO'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_RENDER_VISUALS', 'Render Visuals', 'Toggle rendering of visuals'));
+        buttonBank.push(new TDx._3Dconnexion.Action('PHNTM_3D_TOGGLE_RENDER_COLLISIONS', 'Render Collisions', 'Toggle rendering of colliders'));
     }
 
     // this callback is called when a command, that was exported by setting the commands property,
     // is invoked by a button press on the 3dmouse
     // THIS DOESN'T WORK with 3DConnexion driver
-    setActiveCommand(id) {
+    setActiveCommand(cmd_id) {
+        if (!cmd_id)
+            return;
         if (this.debug)
-            console.log("3Dconnexion Id of command to execute= ", id);
+            console.warn("3Dconnexion command to execute= ", cmd_id);
+
+        this.widget.handleSpaceMouseCommand(cmd_id);
     }
 
     // getCoordinateSystem is queried to determine the coordinate system of the application
