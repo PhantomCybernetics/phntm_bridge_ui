@@ -145,19 +145,25 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				loader.load(path, (geom) => {
 					let stl_base_mat = new THREE.MeshStandardMaterial({
 						color: 0xffffff,
-						side: THREE.DoubleSide,
+						side: THREE.FrontSide,
 						depthWrite: true,
 					});
 					let clean_model = new THREE.Mesh(geom, stl_base_mat);
-					that.cleanModel(clean_model, true);
-					done_cb(clean_model);
+					that.cleanModelTree(clean_model, path);
+					done_cb(clean_model); // adds loaded to the tree
+					that.fixModelTreeMaterials(clean_model, path); // call when the loaded obj has a parent (might be in collider / visual)
 				});
 			} else if (/\.dae$/i.test(path)) {
 				const loader = new ColladaLoader(manager);
 				loader.load(path, (dae) => {
+					if (!dae || !dae.scene) {
+						that.panel.ui.showNotification("Error loading resource, DAE scene not found", "error", url);
+						return;
+					}
 					let clean_model = dae.scene;
-					that.cleanModel(clean_model, true);
+					that.cleanModelTree(clean_model, path);
 					done_cb(clean_model);
+					that.fixModelTreeMaterials(clean_model, path);
 				});
 			} else {
 				console.error(`Could not load model at ${path}.\nNo loader available`);
@@ -475,7 +481,12 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.collider_mat = new THREE.MeshStandardMaterial({
 			color: 0xffff00,
 			emissive: 0xffff00,
+			depthTest: true,
+  			depthWrite: true,
 			wireframe: true,
+			polygonOffset: true,
+  			polygonOffsetFactor: -1, // pull towards camera
+  			polygonOffsetUnits: -1
 		});
 
 		if (start_rendering_loop) {
@@ -1021,8 +1032,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		if (this.light) {
 			this.light.castShadow = true; // default false
-			this.light.shadow.mapSize.width = 5 * 1024; // default
-			this.light.shadow.mapSize.height = 5 * 1024; // default
+			this.light.shadow.mapSize.width = 10 * 1024; // default
+			this.light.shadow.mapSize.height = 10 * 1024; // default
 			this.light.shadow.camera.near = 0.5; // default
 			this.light.shadow.camera.far = 20; // default
 		}
@@ -1187,7 +1198,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.stats_model_verts = 0;
 		this.robot_model = this.urdf_loader.parse(desc.data);
 		// this.robot_model.visible = false; // show when all loading is done and model cleaned
-		this.cleanModel(this.robot_model);
+		this.cleanModelTree(this.robot_model, topic);
+		this.fixModelTreeMaterials(this.robot_model, topic); // fix materials of primitives
 		this.robot.add(this.robot_model);
 		this.robot_model.position.set(0, 0, 0); //reset pose, transform move with this.robot
 		this.robot_model.quaternion.set(0, 0, 0, 1);
@@ -1198,51 +1210,74 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.renderDirty();
 	}
 
-	cleanModel(obj, in_visual = false, in_collider = false,
-		       force_material = null,
-			   visuals_layer = DescriptionTFWidget.L_VISUALS,
-			   colliders_layer = DescriptionTFWidget.L_COLLIDERS)
+	cleanModelTree(obj, debug_source_name)
 	{
-		if (obj.isLight || obj.isScene || obj.isCamera) {
-			return false;
+		if (obj.isLight || obj.isScene || obj.isCamera)
+			return false; // ignore these in recursion
+
+		if (obj.children && obj.children.length) {
+			for (let i = 0; i < obj.children.length; i++) {
+				let ch = obj.children[i];
+				let res = this.cleanModelTree(ch, debug_source_name); // recursion
+				if (!res) {
+					obj.remove(ch);
+					i--;
+				}
+			}
 		}
 
-		if (obj.isURDFVisual) {
+		return true;
+	}
+
+	fixModelTreeMaterials(obj, debug_source_name, in_visual = false, in_collider = false, force_material = null,
+		visuals_layer = DescriptionTFWidget.L_VISUALS, colliders_layer = DescriptionTFWidget.L_COLLIDERS)
+	{
+		if (obj.isLight || obj.isScene || obj.isCamera)
+			return false; // ignore these in recursion
+
+		let parent = obj.parent;
+		if (obj.isURDFVisual || (parent && parent.isURDFVisual))
 			in_visual = true;
-		} else if (obj.isURDFCollider) {
+		else if (obj.isURDFCollider || (parent && parent.isURDFCollider))
 			in_collider = true;
-		}
 
 		obj.frustumCulled = true;
 
         // mesh visuals
-        if (obj.isMesh && in_visual) {
+        if (!in_collider && obj.isMesh && in_visual) {
 			if (force_material) {
 				obj.material = force_material;
-			} else if (!obj.material) {
-                console.log('Obj didn\t have material: ', obj);
+			} else if (!obj.material) { //material not set
+                console.log('Obj didn\t have material ('+debug_source_name+'): ', obj);
                 obj.material = new THREE.MeshStandardMaterial({
                     color: 0xffffff,
-                    side: THREE.FrontSide,
+					depthTest: true,
                     depthWrite: true,
+                    side: THREE.FrontSide,
+					polygonOffset: true,
+  					polygonOffsetFactor: 1, // pull towards camera
+  					polygonOffsetUnits: 1
                 });
                 obj.material.needsUpdate = true;
-            } else if (!force_material) {
-                console.log('Obj "' + obj.name + '" had material: ', obj);
+            } else { // tweak existing material
+                console.log('Obj "' + obj.name + '" had own material ('+debug_source_name+'): ', obj);
                 obj.material.depthWrite = true;
+				obj.material.depthTest = true;
                 obj.material.side = THREE.FrontSide;
+				obj.material.polygonOffset = true;
+				obj.material.polygonOffsetFactor = 1; // pull towards camera
+				obj.material.polygonOffsetUnits = 1;
+				obj.material.needsUpdate = true;
             }
-			if (!force_material)
-            	obj.material.needsUpdate = true;
+
             obj.castShadow = true;
             obj.receiveShadow = true;
             obj.renderOrder = -1;
             obj.layers.set(visuals_layer);
         
-        // colliders
+        // mesh colliders
         } else if (obj.isMesh && in_collider) {
             obj.material = this.collider_mat;
-            obj.scale.multiplyScalar(1.005); //make a bit bigger to avoid z-fighting
             obj.layers.set(colliders_layer);
         }
 
@@ -1258,7 +1293,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		if (obj.children && obj.children.length) {
 			for (let i = 0; i < obj.children.length; i++) {
 				let ch = obj.children[i];
-				let res = this.cleanModel(ch, in_visual, in_collider, force_material, visuals_layer, colliders_layer); // recursion
+				let res = this.fixModelTreeMaterials(ch, debug_source_name, in_visual, in_collider, force_material, visuals_layer, colliders_layer); // recursion
 				if (!res) {
 					obj.remove(ch);
 					i--;

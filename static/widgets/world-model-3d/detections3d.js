@@ -293,9 +293,10 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 						let model = new THREE.Object3D();
 						model.copy(this.loaded_models[model_path]); // src with original materials
 						let use_model_materials = overlay.detection_class_colors[d.class_id] ? false : true;
-						this.world_model.cleanModel(model, true, false,
-													use_model_materials ? null : this.getMaterialForColor(overlay.detection_class_colors[d.class_id]),
-													WorldModel3DWidget_Detections3D.L_DETECTION_VISUALS);
+						this.world_model.cleanModelTree(model, model_path);
+						this.world_model.fixModelTreeMaterials(model, model_path, true, false,
+							use_model_materials ? null : this.getMaterialForColor(overlay.detection_class_colors[d.class_id]),
+							WorldModel3DWidget_Detections3D.L_DETECTION_VISUALS);
 						model.is_model = true; // not a bbox
 						f.add(model);
 						overlay.detection_markers[d.class_id][i_class] = model;
