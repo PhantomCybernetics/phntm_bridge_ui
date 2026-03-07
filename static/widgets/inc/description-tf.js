@@ -1892,13 +1892,17 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			}
 
 		} else if (this.camera_pose_initialized) {
-			if (this.space_mouse && this.space_mouse.animating) {
+
+			if (this.space_mouse && this.space_mouse.initialized) {
 				this.space_mouse.space_mouse.update3dcontroller({
            			'frame': { 'time': now }
 				});
-			} else {
+			}
+			if (!this.space_mouse || !this.space_mouse.animating)
+			{
 				this.controls.update();
 			}
+			
 		}
 
 		// set model transforms

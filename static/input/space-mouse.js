@@ -10,8 +10,10 @@ export class SpaceMouse {
         this.widget = widget;
         this.animating = false;
         this.space_mouse = null;
+        this.initialized = false;
 
         this.debug = true;
+        this.debug_verbose = false;
 
         this._camera_right = new THREE.Vector3();
         this._camera_world_position = new THREE.Vector3();
@@ -386,12 +388,14 @@ export class SpaceMouse {
 
     // onStartMotion is called when the 3DMouse starts sending data
     onStartMotion() {
-        if (this.animating)
-            return;
+        // if (this.animating)
+        //     return;
 
         if (this.debug)
             console.warn('3Dconnexion start motion');
         
+        this.initialized = true;
+
         this.animating = true;
         this.widget.controls.enabled = false; // disable OrbitControls
         
@@ -416,7 +420,7 @@ export class SpaceMouse {
     // setViewMatrix is called when the navlib sets the view matrix
     setViewMatrix(data) {
 
-        if (this.debug)
+        if (this.debug && this.debug_verbose)
             console.log('3Dconnexion setViewMatrix');
 
         if (!this.animating)
@@ -456,6 +460,8 @@ export class SpaceMouse {
             }
         }
 
+        this.widget.controls_dirty = true;
+
         this._releaseOnTimeout();
     }
 
@@ -467,12 +473,13 @@ export class SpaceMouse {
         let that = this;
         this._releaseTimeout = setTimeout(() => {
             if (that.animating)
-                that.onStopMotion();
+                that._onStopMotion();
         }, 200); // ms
     }
 
     // onStopMotion is called when the 3DMouse stops sending data
-    onStopMotion() {
+    // this is called on timeout bcs onStopMotion seems to misfire
+    _onStopMotion() {
         if (!this.animating)
             return;
         if (this.debug)
