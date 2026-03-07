@@ -11,7 +11,7 @@ export class SpaceMouse {
         this.animating = false;
         this.space_mouse = null;
 
-        this.debug = false;
+        this.debug = true;
 
         this._camera_right = new THREE.Vector3();
         this._camera_world_position = new THREE.Vector3();
@@ -48,10 +48,14 @@ export class SpaceMouse {
     }
 
     onFocus() {
+        if (this.debug)
+            console.log("3Dconnexion onFocus");
         this.space_mouse.focus();
     }
 
     onBlur() {
+        if (this.debug)
+            console.log("3Dconnexion onBlur");
         this.space_mouse.blur();
     }
 
@@ -386,7 +390,7 @@ export class SpaceMouse {
             return;
 
         if (this.debug)
-            console.log('3Dconnexion start motion');
+            console.warn('3Dconnexion start motion');
         
         this.animating = true;
         this.widget.controls.enabled = false; // disable OrbitControls
@@ -415,6 +419,9 @@ export class SpaceMouse {
         if (this.debug)
             console.log('3Dconnexion setViewMatrix');
 
+        if (!this.animating)
+            return this._releaseOnTimeout();
+
         this.widget.camera.attach(this.widget.camera_controls_target);
 
         // note data is a column major matrix
@@ -442,7 +449,7 @@ export class SpaceMouse {
         if (this.widget.controls.fixHorizon) {
             if (this.pivot_position) { //3dconnexion driver - horizon lock in settings
                 this.widget.camera.getWorldPosition(this._camera_world_position);
-                 this._camera_right.set(1,0,0).applyMatrix4(this.widget.camera.matrixWorld).sub(this._camera_world_position);
+                this._camera_right.set(1,0,0).applyMatrix4(this.widget.camera.matrixWorld).sub(this._camera_world_position);
                 this._disableHorizonLockOnYChange(this._camera_right.y);
             } else { // Spacenavd - fix horizon via controls, if enabled
                 this.widget.controls.update();
@@ -466,8 +473,10 @@ export class SpaceMouse {
 
     // onStopMotion is called when the 3DMouse stops sending data
     onStopMotion() {
+        if (!this.animating)
+            return;
         if (this.debug)
-            console.log('3Dconnexion stop motion');
+            console.warn('3Dconnexion stop motion');
         this.animating = false;
 
         this.widget.controls.update();
