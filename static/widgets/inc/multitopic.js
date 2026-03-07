@@ -331,7 +331,7 @@ export class MultiTopicSource extends EventTarget {
 
 		this.sources.forEach((src) => {
 			src.topic_slots.forEach((slot) => {
-				if (slot.topic) this.makeTopicButton(slot);
+				if (slot.topic || slot.selected_topic) this.makeTopicButton(slot);
 				else this.makeEmptyButton(slot);
 			});
 		});
@@ -383,18 +383,9 @@ export class MultiTopicSource extends EventTarget {
 	makeTopicButton(slot) {
 		let that = this;
 
-		let btn = $(
-			'<button class="val" title="' +
-				slot.label +
-				" - " +
-				slot.msg_type +
-				'">' +
-				slot.topic +
-				"</button>",
-		);
-		let rem_btn = $(
-			'<span class="remove" title="Remove"><span class="icon"></span></span>',
-		);
+		let topic = slot.topic ? slot.topic : (slot.selected_topic ? slot.selected_topic : null);
+		let btn = $('<button class="val" title="' + slot.label + " - " + slot.msg_type + '">' + topic + "</button>");
+		let rem_btn = $('<span class="remove" title="Remove"><span class="icon"></span></span>');
 		rem_btn.appendTo(btn);
 
 		btn.on("click", (e) => {
@@ -402,7 +393,6 @@ export class MultiTopicSource extends EventTarget {
 				rem_btn.trigger("click");
 				return;
 			}
-
 			that.widget.panel.ui.messageTypeDialog(slot.msg_type);
 		});
 
