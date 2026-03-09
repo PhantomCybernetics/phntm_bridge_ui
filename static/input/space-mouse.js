@@ -41,10 +41,8 @@ export class SpaceMouse {
             selection: false
         };
 
-        this.space_mouse = new TDx._3Dconnexion(this);
-        if (!this.space_mouse.connect()) {
-            console.warn('Cannot connect to 3Dconnexion NL-Proxy');
-        }
+        this.onFocus();
+
         window.addEventListener('focus', () => this.onFocus());
         window.addEventListener('blur', () => this.onBlur());
     }
@@ -52,13 +50,23 @@ export class SpaceMouse {
     onFocus() {
         if (this.debug)
             console.log("3Dconnexion onFocus");
-        this.space_mouse.focus();
+
+        if (this.space_mouse)
+            return;
+
+        this.space_mouse = new TDx._3Dconnexion(this);
+         if (!this.space_mouse.connect()) {
+            console.warn('Cannot connect to 3Dconnexion NL-Proxy');
+        }
     }
 
     onBlur() {
         if (this.debug)
             console.log("3Dconnexion onBlur");
-        this.space_mouse.blur();
+        this.space_mouse.delete3dmouse();
+        this.space_mouse = null;
+        this.initialized = false;
+        this.animating = false;
     }
 
     onConnect() {
