@@ -230,8 +230,8 @@ export class PanelUI {
 			that.updateWebrtcStatus();
 			that.updateLayout(); // robot name length affects layout
 
-			let client_version_info = client.client_version ? client.client_version : "N/A";
-			client_version_info = '<a href="https://github.com/PhantomCybernetics/phntm_bridge_client/commits/main/" target="_blank">' + client_version_info + '</a>';
+			let client_version_info = client.client_version ? client.client_version : "?";
+			client_version_info = '<a href="https://github.com/PhantomCybernetics/phntm_bridge_client/commit/'+client_version_info+'" target="_blank">#' + client_version_info + '</a>';
 			if (client.ros_distro)
 				client_version_info += " @ " + client.ros_distro.charAt(0).toUpperCase() + client.ros_distro.slice(1);
 			if (client_version_info)

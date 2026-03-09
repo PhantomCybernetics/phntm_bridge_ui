@@ -25,7 +25,7 @@ export function printStartupMessage(
 	console.log((" Bridge Locate URL: " + config.bridgeLocateUrl + "").green);
 	console.log((" App ID: " + config.appId + "").green);
 	console.log((" App Key: " + config.appKey + "").green);
-	console.log((" UI version: " + uiVersion).green);
+	console.log((" UI version: #" + uiVersion).green);
 	console.log(" ".green);
 	console.log("----------------------------------------------------------------------".yellow);
 }

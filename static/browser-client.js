@@ -1116,7 +1116,7 @@ export class BrowserClient extends EventTarget {
 		this.client_version = robot_data["git_tag"]
 			? robot_data["git_tag"]
 			: robot_data["git_sha"]
-				? "#" + robot_data["git_sha"].slice(0, 7)
+				? robot_data["git_sha"].slice(0, 7)
 				: null;
 
 		if (robot_data["wait"]) {
