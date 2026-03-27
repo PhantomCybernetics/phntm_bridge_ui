@@ -41,38 +41,73 @@ export class SpaceMouse {
             selection: false
         };
 
-        this.onFocus();
+        //this.onFocus();
+        this.was_once_connected = false;
+        this.initProxy();
 
         window.addEventListener('focus', () => this.onFocus());
         window.addEventListener('blur', () => this.onBlur());
     }
 
-    onFocus() {
-        if (this.debug)
-            console.log("3Dconnexion onFocus");
-
-        if (this.space_mouse)
-            return;
-
+    initProxy() {
+        console.warn('3Dconnexion initializing...');
         this.space_mouse = new TDx._3Dconnexion(this);
-         if (!this.space_mouse.connect()) {
+        this.space_mouse.debug = this.debug_verbose;
+        if (!this.space_mouse.connect()) {
             console.warn('Cannot connect to 3Dconnexion NL-Proxy');
         }
-    }
-
-    onBlur() {
-        if (this.debug)
-            console.log("3Dconnexion onBlur");
-        this.space_mouse.delete3dmouse();
-        this.space_mouse = null;
-        this.initialized = false;
-        this.animating = false;
     }
 
     onConnect() {
         console.log('3Dconnexion NL-Proxy connected');
         let name = 'Phntm Bridge 3D View'; // name to identify the application for the 3D mouse property panels
+        if (!this.space_mouse) {
+            console.log('3Dconnexion Missing space_mouse instance');
+            return;
+        }
+        this.was_once_connected = true;
         this.space_mouse.create3dmouse(window, name); // we need to pass in a focusable object, we can use the <div /> if it has a tabindex
+    }
+
+    onError(err) {
+        console.error('3Dconnexion error', err);
+    }
+
+    onTimeout() {
+        console.error('3Dconnexion timed out');
+    }
+
+    onFocus() {
+        if (!this.space_mouse)
+            return;
+
+        if (!this.space_mouse.session && this.was_once_connected) {
+            return this.initProxy();
+        }
+
+        // this.space_mouse = new TDx._3Dconnexion(this);
+        //  if (!this.space_mouse.connect()) {
+        //     console.warn('Cannot connect to 3Dconnexion NL-Proxy');
+        // }
+
+        this.space_mouse.focus();
+        
+        if (this.debug)
+            console.log("3Dconnexion onFocus", this.space_mouse);
+    }
+
+    onBlur() {
+        if (this.debug)
+            console.log("3Dconnexion onBlur");
+        // this.space_mouse.delete3dmouse();
+        // this.space_mouse = null;
+        // this.initialized = false;
+        // this.animating = false;
+
+        if (!this.space_mouse)
+            return;
+
+        this.space_mouse.blur();
     }
 
     on3dmouseCreated() {
@@ -409,7 +444,10 @@ export class SpaceMouse {
         if (this.pivot_position) {
             this.pivot_position.getWorldPosition(this._pivot_base_world_position);
             this.pivot_position.getWorldQuaternion(this._pivot_base_world_quaternion);
-        }        
+        }
+
+        if (this._releaseTimeout)
+			clearTimeout(this._releaseTimeout);
 
         this.widget.renderDirty();
     }

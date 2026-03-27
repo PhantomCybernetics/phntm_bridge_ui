@@ -267,3 +267,12 @@ export function signedAngle(_v1, _v2, axis = new THREE.Vector3(0, 1, 0)) {
 	let sign = Math.sign(cross.dot(axis));
 	return sign * angle;
 }
+
+export function uuidToBytes(uuid_str) {
+  const clean_hex = uuid_str.replace(/-/g, '');
+  const bytes = new Uint8Array(clean_hex.length / 2);
+  for (let i = 0; i < clean_hex.length; i += 2) {
+    bytes[i / 2] = parseInt(clean_hex.slice(i, i + 2), 16);
+  }
+  return Array.from(bytes);
+}

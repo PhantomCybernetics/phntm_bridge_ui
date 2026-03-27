@@ -279,6 +279,15 @@ export class BrowserClient extends EventTarget {
 			}, 0);
 		});
 
+		this.socket.on("action_result", (data) => {
+			if (!data[that.id_robot]) return;
+
+			setTimeout(() => {
+				console.log("Got peer action result", data[that.id_robot]);
+				that.emit("action_result", data[that.id_robot]);
+			}, 0);
+		});
+
 		this.socket.on("robot:update", (update_data, return_callback) => {
 			setTimeout(() => {
 				that._processRobotData(update_data, return_callback);
@@ -399,9 +408,27 @@ export class BrowserClient extends EventTarget {
 						let services = Object.keys(nodes_data[that.id_robot][node]["services"]);
 						services.forEach((service) => {
 							let msg_type = nodes_data[that.id_robot][node]["services"][service];
+
+							
+							// if (msg_type.endsWith('_GetResult'))
+							// 	msg_type = msg_type.replace('_GetResult', '_Result');
+
+							let msg_type_request = msg_type + '_Request';
+							let msg_type_response = msg_type + '_Response';
+							let is_action = false;
+
+							if (msg_type.indexOf('/action/') > -1) {
+								is_action = true;
+								msg_type_request = msg_type + '_Goal';
+								msg_type_response = msg_type + '_Result';
+							}
+
 							that.discovered_nodes[node].services[service] = {
-								service: service,
-								msg_type: msg_type,
+								'service': service,
+								'msg_type': msg_type,
+								'msg_type_request': msg_type_request,
+								'msg_type_respone': msg_type_response,
+								'is_action': is_action
 							};
 
 							// detect parameter services for each node
@@ -425,8 +452,11 @@ export class BrowserClient extends EventTarget {
 							}
 
 							that.discovered_services[service] = {
-								service: service,
-								msg_type: msg_type,
+								'service': service,
+								'msg_type': msg_type,
+								'msg_type_request': msg_type_request,
+								'msg_type_respone': msg_type_response,
+								'is_action': is_action
 							};
 
 							let config = this.getServiceConfig(service);
@@ -1830,10 +1860,7 @@ export class BrowserClient extends EventTarget {
 
 	serviceCall(service, data, silent_req, timeout_sec, cb) {
 		let that = this;
-		if (
-			this.service_request_callbacks[service] &&
-			this.service_request_callbacks[service].length
-		) {
+		if (this.service_request_callbacks[service] && this.service_request_callbacks[service].length) {
 			let num_completed = 0;
 			let abort = false;
 			for (let i = 0; i < this.service_request_callbacks[service].length; i++) {

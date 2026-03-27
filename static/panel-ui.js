@@ -116,9 +116,7 @@ export class PanelUI {
 		this.wifi_scan_enabled = false;
 		this.wifi_roam_enabled = false;
 
-		let wifi_scan_warning_suppressed = localStorage.getItem(
-			"wifi-scan-warning-suppressed:" + this.client.id_robot,
-		);
+		let wifi_scan_warning_suppressed = localStorage.getItem("wifi-scan-warning-suppressed:" + this.client.id_robot);
 		this.wifi_scan_warning_suppressed = wifi_scan_warning_suppressed == "true";
 
 		this.graph_menu = new GraphMenu(this);
@@ -134,9 +132,9 @@ export class PanelUI {
 		this.service_input_dialog = new ServiceInputDialog(client);
 		this.node_params_dialog = new NodeParamsDialog(client);
 		this.default_service_btns = null; // from the robot
-		this.service_btns = {}; //id srv => btn[]
+		this.service_btns = {}; // id srv => btn[]
 		this.service_btns_edited = {}; // editor's working copy
-		this.service_btn_els = {};
+		this.service_btn_containers = {}; // id_servcie => [ inline_container_el, wrapped_container_el ]
 
 		this.conn_dot_els = [];
 		for (let i = 0; i < 3; i++) {
@@ -149,6 +147,7 @@ export class PanelUI {
 		this.webrtc_uptime_el = null; // -//-
 		this.webrtc_info_el = $("#webrtc_info");
 		this.trigger_wifi_scan_el = $("#trigger_wifi_scan");
+		this.trigger_wifi_roam_el = $("#trigger_wifi_roam");
 		this.robot_wifi_info_el = $("#robot_wifi_info");
 
 		this.last_connected_time = null;
@@ -215,17 +214,12 @@ export class PanelUI {
 							"</span>"),
 			);
 
-			that.setDotState(
-				1,
-				client.robot_socket_online ? "green" : "red",
-				"Robot " +
-					(client.robot_socket_online ? "conected to" : "disconnected from") +
-					" Bridge Server [Socket.io]",
-			);
+			that.setDotState(1, client.robot_socket_online ? "green" : "red", "Robot " + (client.robot_socket_online ? "conected to" : "disconnected from") + " Bridge Server [Socket.io]");
 			if (!client.robot_socket_online) {
 				that.updateWifiSignal(-1);
 				that.updateNumPeers(-1);
 				that.updateRTT(false);
+				that.onSocketConnectionLost();
 			}
 			that.updateWebrtcStatus();
 			that.updateLayout(); // robot name length affects layout
@@ -251,13 +245,10 @@ export class PanelUI {
 		}
 
 		client.on("socket_disconnect", () => {
-			that.setDotState(
-				1,
-				client.robot_socket_online ? "green" : "red",
-				"Robot " +
-					(client.robot_socket_online ? "conected to" : "disconnected from") +
-					" Bridge Server [Socket.io]",
-			);
+			
+			that.onSocketConnectionLost();
+
+			that.setDotState(1, client.robot_socket_online ? "green" : "red", "Robot " + (client.robot_socket_online ? "conected to" : "disconnected from") + " Bridge Server [Socket.io]");
 			console.log("UI got socket_disconnect, timer=", that.reconnection_timer);
 
 			if (!that.reconnection_timer) {
@@ -342,6 +333,8 @@ export class PanelUI {
 			that.default_service_btns = robot_service_buttons; // {} if undefined on robot
 			that.servicesMenuFromNodes();
 		});
+
+		client.on('action_result', (data) => that.onActionResult(data));
 
 		// triggered after input_config
 		client.on("ui_config", (robot_ui_config) => {
@@ -533,8 +526,8 @@ export class PanelUI {
 			that.updateRTT(false);
 			// this.updateWifiStatus();
 			that.trigger_wifi_scan_el.css("display", "none");
+			that.trigger_wifi_roam_el.css("display", "none");
 			that.robot_wifi_info_el.empty().css("display", "none");
-
 			that.updateWebrtcStatus();
 		});
 
@@ -634,17 +627,38 @@ export class PanelUI {
 			}
 		});
 
-		$("#trigger_wifi_scan").click(() => {
+		this.trigger_wifi_scan_el.click((e) => {
+			e.cancelBubble = true;
+			e.stopPropagation();
 			that.triggerWifiScan(false);
 		});
 
-		$("#trigger_wifi_roam").click(() => {
+		this.trigger_wifi_roam_el.click((e) => {
+			e.cancelBubble = true;
+			e.stopPropagation();
 			that.triggerWifiScan(true);
 		});
 
-		$("#graph_controls").on("mouseenter", (e) => {
+		$("#graph_controls").on("mousemove", (e) => {
 			if ($("#graph_controls").hasClass("hover_waiting"))
 				$("#graph_controls").removeClass("hover_waiting");
+		});
+
+		$("#service_controls").on("mousemove", (e) => {
+			if ($("#service_controls").hasClass("hover_waiting"))
+				$("#service_controls").removeClass("hover_waiting");
+		});
+
+		$("#network-info-wrapper").on("mousemove", (e) => {
+			if ($("#network-info-wrapper").hasClass("hover_waiting"))
+				$("#network-info-wrapper").removeClass("hover_waiting");
+		});
+
+		$('#fixed-header, #grid-stack-container').on('click', (e) => {
+			[ $("#graph_controls"), $("#service_controls"), $("#network-info-wrapper") ].forEach((el)=>{
+				if (el.hasClass('hover_waiting'))
+					el.removeClass('hover_waiting');
+			});
 		});
 
 		// hanburger menu handlers
@@ -877,6 +891,10 @@ export class PanelUI {
 
 			panel.floating_menu_top = null;
 		}
+	}
+
+	onSocketConnectionLost() {
+		this.clearAllWorkingServices();
 	}
 
 	showPageError(msg_html) {
@@ -1613,11 +1631,22 @@ export class PanelUI {
 	}
 
 	messageTypeDialog(msg_type) {
+
 		let msg_type_class = msg_type ? this.client.findMessageType(msg_type) : null;
 
 		let content = '<span class="error">Message type not loaded</span>';
 		if (msg_type_class) {
 			content = JSON.stringify(this.getMessageDefs(msg_type_class), null, 4);
+		} else if (msg_type.indexOf('/action/') > -1) {
+			let goal_class = this.client.findMessageType(msg_type + "_Goal");
+			let res_class = this.client.findMessageType(msg_type + "_Result");
+			if (goal_class || res_class) {
+				content = "Goal:\n";
+				content += JSON.stringify(this.getMessageDefs(goal_class), null, 4);
+
+				content += "\n\nResult:\n";
+				content += JSON.stringify(this.getMessageDefs(res_class), null, 4);
+			}
 		} else {
 			let req_class = this.client.findMessageType(msg_type + "_Request");
 			let res_class = this.client.findMessageType(msg_type + "_Response");
@@ -1827,28 +1856,31 @@ export class PanelUI {
 	}
 
 	loadServiceBtns(nodes) {
-		let that = this;
+		if (this.default_service_btns === null) // wait for robot defaults
+			return;
 
 		console.log('Loading service btns...');
 
-		this.service_btns = {};
 		Object.values(nodes).forEach((node) => {
 			Object.keys(node.services).forEach((service) => {
+				if (this.service_btns[service])
+					return; // only once per service
+
 				// defaults from the robot
-				if (that.default_service_btns[service]) {
-					that.service_btns[service] = that.default_service_btns[service];
-					// console.log('Loaded '+that.service_btns[service].length+' default btns for '+service);
+				if (this.default_service_btns[service]) {
+					this.service_btns[service] = that.default_service_btns[service];
+					// console.log('Loaded '+this.service_btns[service].length+' default btns for '+service);
 				}
 
 				// overwrite w local saved (edited version untouched here)
 				let stored_btns = localStorage.getItem(
-					"service-btns:" + that.client.id_robot + ":" + service,
+					"service-btns:" + this.client.id_robot + ":" + service,
 				);
 				if (stored_btns) {
-					that.service_btns[service] = [];
+					this.service_btns[service] = [];
 					stored_btns = JSON.parse(stored_btns); //arr
 					stored_btns.forEach((one_btn) => {
-						that.service_btns[service].push(one_btn);
+						this.service_btns[service].push(one_btn);
 					});
 					// console.log('Loaded '+stored_btns.length+' user btns for '+service);
 				}
@@ -1859,7 +1891,7 @@ export class PanelUI {
 	saveServiceButtons(service, btns) {
 		let saved_btn_data = [];
 
-		this.service_btns[service].length = 0;
+		let new_service_buttons = [];
 
 		btns.forEach((btn) => {
 			let one_btn_data = {
@@ -1872,8 +1904,14 @@ export class PanelUI {
 				sort_index: btn.sort_index,
 			};
 			saved_btn_data.push(one_btn_data);
-			this.service_btns[service].push(one_btn_data);
+
+			let new_btn = Object.assign({}, one_btn_data);
+			if (btn.src_ref) {
+				new_btn.el = btn.src_ref.el;
+			}
+			new_service_buttons.push(new_btn);
 		});
+		this.service_btns[service] = new_service_buttons;
 		let json_btns = JSON.stringify(saved_btn_data);
 		localStorage.setItem(
 			"service-btns:" + this.client.id_robot + ":" + service,
@@ -1896,30 +1934,37 @@ export class PanelUI {
 		for (let i = 0; i < service_ids.length; i++) {
 			let id_service = service_ids[i];
 			let service = node.services[id_service];
-			let msg_type = node.services[id_service].msg_type;
+			let srv_type = node.services[id_service].msg_type;
 
-			let msg_class = this.client.findMessageType(service.msg_type + "_Request");
+			let msg_class_request = this.client.findMessageType(service['msg_type_request']);
 			let service_short = service.service.replace("/" + node.node, "");
 
-			let service_content = $('<div class="service ' + (msg_class ? "handled" : "nonhandled") + '" data-service="' + service.service + '" data-msg_type="' + service.msg_type +'">' +
+			let service_content = $('<div class="service ' + (msg_class_request ? "handled" : "nonhandled") + '" data-service="' + service.service + '" data-msg_type="' + srv_type +'">' +
 										'<div class="service_heading" title="' + service.service + '">' + service_short + '</div>' +
 									"</div>");
 
-			let msg_type_link = $('<div class="service_input_type" id="service_input_type_' + i + '" title="' + (msg_class ? msg_type : msg_type + " unsupported message type") + '">' + msg_type + "</div>");
-			msg_type_link.click(() => {
-				that.messageTypeDialog(msg_type);
+			let msg_type_link = $('<div class="service_input_type" id="service_input_type_' + i + '" title="' + (msg_class_request ? srv_type : srv_type + " unsupported message type") + '">' + srv_type + "</div>");
+			msg_type_link.click((e) => {
+
+				e.cancelBubble = true;
+				e.stopPropagation();
+
+				$("#service_controls").addClass("hover_waiting"); //this will keep menu open (removed on next mouse enter)
+
+				that.messageTypeDialog(srv_type);
 			});
 			msg_type_link.appendTo(service_content);
 
-			let service_input_el = $('<div class="service_input" id="service_input_' + i + '"></div>');
-			this.service_btn_els[service.service] = service_input_el;
+			let service_buttons_inline_el = $('<div class="service_buttons_inline"></div>');
+			let service_buttons_wrapped_el = $('<div class="service_buttons_wrapped"></div>');
+			this.service_btn_containers[service.service] = [ service_buttons_inline_el, service_buttons_wrapped_el ] ;
 
-			this.renderServiceMenuControls(service, msg_class, node, node_cont_el);
+			service_content.append([ service_buttons_inline_el, service_buttons_wrapped_el ]);
 
-			service_content.append(service_input_el);
+			this.renderServiceMenuControls(service, msg_class_request, node, node_cont_el);
 
 			let has_user_defs = this.service_btns[service.service] && this.service_btns[service.service].length;
-			if (!has_user_defs && ((!msg_class && this.collapse_unhandled_services) || this.collapse_services.indexOf(msg_type) > -1 || this.collapse_services.indexOf(id_service) > -1))
+			if (!has_user_defs && ((!msg_class_request && this.collapse_unhandled_services) || this.collapse_services.indexOf(srv_type) > -1 || this.collapse_services.indexOf(id_service) > -1))
 				collapsed_services.push(service_content);
 			else prefered_services.push(service_content);
 		}
@@ -1985,19 +2030,25 @@ export class PanelUI {
 
 		let id_service = service.service;
 
-		let service_input_controls_el = this.service_btn_els[id_service];
-		if (!service_input_controls_el) return;
+		let wrapper_els = this.service_btn_containers[id_service];
+		if (!wrapper_els || wrapper_els.length != 2) return;
 
-		service_input_controls_el.empty();
+		let inline_controls_cont = wrapper_els[0];
+		let wrapped_controls_cont = wrapper_els[1];
+		inline_controls_cont.empty();
+		wrapped_controls_cont.empty();
+
 		let that = this;
-		if (this.service_widget_map[id_service]) {
+
+		if (this.service_widget_map[id_service]) { // handled by custom service widged
+
 			if (!this.service_widget_map[id_service].widget) {
 				let widget_class_name = this.service_widget_map[id_service]["class_name"];
 				if (this.custom_service_widgets[widget_class_name]) {
 					let widget_class = this.custom_service_widgets[widget_class_name]["class"];
 					this.service_widget_map[id_service].widget = new widget_class(id_service, this.client);
 					
-					this.service_widget_map[id_service].widget.makeElements(service_input_controls_el);
+					this.service_widget_map[id_service].widget.makeElements(inline_controls_cont);
 					this.service_widget_map[id_service].widget.getCurrentValue(
 						(val) => { // on success
 							if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
@@ -2011,7 +2062,7 @@ export class PanelUI {
 					);
 				}
 			} else {
-				this.service_widget_map[id_service].widget.makeElements(service_input_controls_el); // render first
+				this.service_widget_map[id_service].widget.makeElements(inline_controls_cont); // render first
 				this.service_widget_map[id_service].widget.getCurrentValue(
 					(val) => { // on success
 						if (that.service_widget_map[id_service] && that.service_widget_map[id_service].widget)
@@ -2024,34 +2075,38 @@ export class PanelUI {
 					}
 				);
 			}
-			return; //handled by custom widget
+			
+		} else { // generic payload buttons
+
+			let msg_type = msg_class.name.endsWith("_Request") ? msg_class.name.replace("_Request", "") : msg_class.name;
+			if (msg_class.definitions && msg_class.definitions.length == 1 && msg_class.definitions[0].name == "structure_needs_at_least_one_member") {
+				// ignore https://github.com/ros2/rosidl_python/pull/73
+				ServiceInput_Empty.MakeMenuControls(
+					inline_controls_cont,
+					service,
+					this.client
+				);
+			} else if (this.service_widgets[msg_type] != undefined) {
+				// btn by known service type
+				this.service_widgets[msg_type].MakeMenuControls(
+					inline_controls_cont,
+					service,
+					this.client
+				);
+			} else {
+				// custom user-defined btns
+				UserButtonsServiceInput.MakeMenuControls(
+					inline_controls_cont,
+					wrapped_controls_cont,
+					service,
+					this.client,
+					node,
+					node_cont
+				);
+			}
+
 		}
 
-		let msg_type = msg_class.name.endsWith("_Request") ? msg_class.name.replace("_Request", "") : msg_class.name;
-		if (msg_class.definitions && msg_class.definitions.length == 1 && msg_class.definitions[0].name == "structure_needs_at_least_one_member") {
-			// ignore https://github.com/ros2/rosidl_python/pull/73
-			ServiceInput_Empty.MakeMenuControls(
-				service_input_controls_el,
-				service,
-				this.client
-			);
-		} else if (this.service_widgets[msg_type] != undefined) {
-			// btn by known service type
-			this.service_widgets[msg_type].MakeMenuControls(
-				service_input_controls_el,
-				service,
-				this.client
-			);
-		} else {
-			// custom user-defined btns
-			UserButtonsServiceInput.MakeMenuControls(
-				service_input_controls_el,
-				service,
-				this.client,
-				node,
-				node_cont
-			);
-		}
 	}
 
 	clearCustomServiceWidgets(all_current_service_ids) {
@@ -2068,18 +2123,18 @@ export class PanelUI {
 	servicesMenuFromNodes() {
 		let nodes = this.client.discovered_nodes;
 		if (!Object.keys(nodes).length) return;
-
+		
 		if (this.collapse_services === null)
-			// empty, [] when loaded
-			return;
-
-		if (this.default_service_btns === null)
 			// empty, [] when loaded
 			return;
 
 		this.loadServiceBtns(nodes); // reloads all, keeping edits untouched
 
-		$("#service_list").empty();
+		let service_list_el = $("#service_list");
+
+		let saved_scroll_top = service_list_el.scrollTop();
+	
+		service_list_el.empty();
 		this.num_services = 0;
 
 		let nodes_sorted = Object.values(nodes).sort((a, b) => {
@@ -2089,12 +2144,13 @@ export class PanelUI {
 		let all_current_service_ids = [];
 		nodes_sorted.forEach((node) => {
 			let node_cont_el = $('<div class="node-cont"></div>');
+			node_cont_el.appendTo(service_list_el);
 			let node_service_ids = this.renderNodeServicesMenu(node, node_cont_el);
-			node_cont_el.appendTo($("#service_list"));
 			this.num_services += node_service_ids.length;
 			all_current_service_ids = all_current_service_ids.concat(node_service_ids);
 		});
 		this.clearCustomServiceWidgets(all_current_service_ids);
+		service_list_el.scrollTop(saved_scroll_top); // keep scroll offset
 
 		$("#services_heading .full-w").html(
 			this.num_services == 1 ? "Service" : "Services",
@@ -2164,6 +2220,10 @@ export class PanelUI {
 			return;
 		}
 
+		if (!this.wifi_scan_warning_suppressed) { // service request cb shows dialog
+			$("#network-info-wrapper").addClass("hover_waiting"); // this will keep menu open (removed on next mouse enter)
+		}
+
 		let that = this;
 		this.client.serviceCall(
 			this.wifi_scan_service,
@@ -2185,7 +2245,7 @@ export class PanelUI {
 
 	onWifiScanRequest(req_data, cb) {
 		if (!req_data) req_data = {};
-		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
+		let dropdown_btn = req_data.attempt_roam ? this.trigger_wifi_roam_el : this.trigger_wifi_scan_el;
 		let action_enabled = req_data.attempt_roam ? this.wifi_roam_enabled : this.wifi_scan_enabled;
 		let what = req_data.attempt_roam ? "roaming" : "scanning";
 		let signal_monitor = $("#signal-monitor");
@@ -2215,10 +2275,7 @@ export class PanelUI {
 					// confirm
 					if (dont_show_again) {
 						that.wifi_scan_warning_suppressed = true;
-						localStorage.setItem(
-							"wifi-scan-warning-suppressed:" + that.client.id_robot,
-							true,
-						); // warning won't be shown any more
+						localStorage.setItem("wifi-scan-warning-suppressed:" + that.client.id_robot, true); // warning won't be shown any more
 					}
 					setWorkingState();
 					cb(true); //proceed
@@ -2238,7 +2295,7 @@ export class PanelUI {
 
 	onWifiScanReply(req_data, reply_data) {
 		if (!req_data) req_data = {};
-		let dropdown_btn = req_data.attempt_roam ? $("#trigger_wifi_roam") : $("#trigger_wifi_scan");
+		let dropdown_btn = req_data.attempt_roam ? this.trigger_wifi_roam_el : this.trigger_wifi_scan_el;
 		let signal_monitor = $("#signal-monitor");
 
 		dropdown_btn.removeClass("working");
@@ -2594,6 +2651,7 @@ export class PanelUI {
 				that.webrtc_status_el.html('<span class="online">' + state + "</span> " +
 										  (is_p2p ? '<span class="online-p2p">[' + remote_type +' p2p]</span>' : '<span class="online-relay">[' + remote_type + "]</span>"));
 				that.trigger_wifi_scan_el.removeClass("working");
+				that.trigger_wifi_roam_el.removeClass("working");
 				if (is_p2p)
 					that.setDotState(2, "green", "WebRTC connected to robot (p2p)");
 				else
@@ -2602,11 +2660,13 @@ export class PanelUI {
 				that.webrtc_status_el.html('<span class="connecting">' + state + "</span>");
 				// $('#robot_wifi_info').addClass('offline')
 				that.trigger_wifi_scan_el.removeClass("working");
+				that.trigger_wifi_roam_el.removeClass("working");
 				that.setDotState(2, "orange", "WebRTC connecting...");
 			} else {
 				that.webrtc_status_el.html('<span class="offline">' + state + "</span>");
 				// $('#robot_wifi_info').addClass('offline')
 				that.trigger_wifi_scan_el.removeClass("working");
+				that.trigger_wifi_roam_el.removeClass("working");
 				that.setDotState(2, "red", "WebRTC " + state);
 			}
 		});
@@ -3269,17 +3329,19 @@ export class PanelUI {
 		});
 	}
 
-	serviceMenuBtnCall(service, btn, btn_el) {
+	serviceUserPayloadCall(service, btn, btn_el) {
 		let that = this;
+
 		if (btn_el) btn_el.addClass("working");
 		let show_request = btn.show_request;
 		let show_reply = btn.show_reply;
+		
 		this.client.serviceCall(service, btn.value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
 			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
 		});
 	}
 
-	serviceButtonElementCall(service, value, btn_el, show_reply = null) { // show_reply = auto, only if err or reply data
+	serviceSimplePayloadCall(service, value, btn_el, show_reply = null) { // show_reply = auto, only if err or reply data
 		let that = this;
 		if (btn_el) btn_el.addClass("working");
 		let show_request = false;
@@ -3288,11 +3350,18 @@ export class PanelUI {
 		});
 	}
 
-	serviceReplyNotification(btn_el, id_service, show_reply, service_reply) {
-		let id_parts = id_service.split("/");
+	serviceReplyNotification(btn_el, service, show_reply, service_reply) {
+		let id_parts = service.split("/");
 		let short_id = id_parts[id_parts.length - 1];
+		let is_action = this.client.discovered_services[service] && this.client.discovered_services[service].is_action;
 
-		if (btn_el) btn_el.removeClass("working");
+		let what = is_action ? 'Action' : 'Service';
+
+		if (btn_el && !is_action) btn_el.removeClass("working");
+
+		if (is_action && btn_el && service_reply.goal_uuid) {
+			btn_el.attr('data-goal_uuid', service_reply.goal_uuid);
+		}
 
 		let is_err = false;
 
@@ -3306,16 +3375,15 @@ export class PanelUI {
 					service_reply._notification.detail,
 				);
 
-			if (service_reply._notification.style == "error") is_err = true;
+			if (service_reply._notification.style == "error")
+				is_err = true;
+
 		} else {
 			// auto
 
 			let err_in_resuls = false;
-			if (
-				service_reply &&
-				service_reply.results &&
-				Array.isArray(service_reply.results)
-			) {
+
+			if (service_reply && service_reply.results && Array.isArray(service_reply.results)) {
 				service_reply.results.forEach((res) => {
 					if (res.successful === false) {
 						err_in_resuls = true;
@@ -3323,11 +3391,7 @@ export class PanelUI {
 					}
 				});
 			}
-			if (
-				service_reply &&
-				service_reply.result &&
-				service_reply.result.successful === false
-			)
+			if (service_reply && service_reply.result && service_reply.result.successful === false)
 				err_in_resuls = true;
 
 			const replacer = (key, value) => {
@@ -3346,12 +3410,10 @@ export class PanelUI {
 				return value;
 			};
 
-			if (service_reply && show_reply === null) {
-				//auto (only show when there is something interesting in the reply)
+			if (service_reply && show_reply === null) { //auto (only show when there is something interesting in the reply)
 				let reply_keys = Object.keys(service_reply);
 				reply_keys = reply_keys.filter(
-					(item) =>
-						["success", "successful", "err", "error"].indexOf(item) === -1,
+					(item) => ["success", "successful", "err", "error"].indexOf(item) === -1,
 				);
 				if (service_reply.message && service_reply.message.length) {
 					show_reply = true;
@@ -3365,26 +3427,29 @@ export class PanelUI {
 			let message, detail;
 			if (service_reply && service_reply.err) {
 				// showing errors always
-				message = "Service " + short_id + " returned error";
+				message = what + ' ' + short_id + ' returned error';
 				detail = service_reply.msg;
 				is_err = true;
-			} else if (
-				service_reply &&
-				(service_reply.success === false ||
-					service_reply.successful === false ||
-					err_in_resuls ||
-					service_reply.error)
-			) {
+			} else if (service_reply && (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)) {
 				// showing errors always
-				message = "Service " + short_id + " returned error";
+				message = what + ' ' + short_id + ' returned error';
 				detail = JSON.stringify(service_reply, replacer, 2);
 				is_err = true;
 			} else if (service_reply && service_reply.success === true && show_reply) {
 				//std set bool & trugger
-				message = "Service " + short_id + " replied: Success";
+				message =  what + ' ' + short_id + ' replied: Success';
 				detail = JSON.stringify(service_reply, replacer, 2);
+			} else if (is_action && service_reply && service_reply.accepted === false) {
+				message =  what + ' ' + short_id + ' goal refused';
+				detail = JSON.stringify(service_reply, replacer, 2);
+				is_err = true;
+				show_reply = true;
+				if (btn_el) {
+					btn_el.removeClass("working");
+					btn_el.attr('data-goal_uuid', '');
+				}
 			} else if (show_reply) {
-				message = "Service " + short_id + " replied";
+				message =  what + ' ' + short_id + ' replied';
 				detail = JSON.stringify(service_reply, replacer, 2);
 			}
 
@@ -3396,17 +3461,69 @@ export class PanelUI {
 				this.showNotification(
 					message,
 					is_err ? "error" : null,
-					id_service + "<br><pre>" + detail + "</pre>",
+					service + "<br><pre>" + detail + "</pre>",
 				);
 		}
 
 		if (is_err && btn_el) {
 			// do the error btn wobble
-			btn_el.addClass("btn_err");
+			btn_el
+				.removeClass("working")
+				.addClass("btn_err");
 			setTimeout(() => {
 				btn_el.removeClass("btn_err");
 			}, 600);
 		}
+	}
+
+	onActionResult(data) {
+		if (data.goal_uuid) {
+			let btns_els_to_check = [];
+			let btn_els = $('#service_list BUTTON[data-goal_uuid="'+data.goal_uuid+'"]');
+			btn_els.each((idx, el) => {
+				btns_els_to_check.push($(el));
+			});
+			if (this.service_btns_edited) {
+				Object.values(this.service_btns_edited).forEach((btns_edited)=>{
+					btns_edited.forEach((btn_edited)=>{
+						if (btn_edited.test_call_btn_el.attr('data-goal_uuid') == data.goal_uuid) {
+							btns_els_to_check.push(btn_edited.test_call_btn_el);
+						}
+					});
+				});
+			}
+			btns_els_to_check.forEach((btn_el) => {
+				let was_working = btn_el.hasClass('working');
+				btn_el.removeClass("working").attr('data-goal_uuid', '');
+				if ((data.status == 5 || data.status == 6) && was_working) { // action calcelled or aborted
+					btn_el.addClass("btn_err"); // do the error btn wobble
+					setTimeout(() => {
+						btn_el.removeClass("btn_err");
+					}, 600);
+				}
+			});
+		}
+	}
+
+	// called on socket connection loss
+	clearAllWorkingServices() {
+		let btns_els_to_clear = [];
+		let btn_els = $('#service_list BUTTON.working');
+		btn_els.each((idx, el) => {
+			btns_els_to_clear.push($(el));
+		});
+		if (this.service_btns_edited) {
+			Object.values(this.service_btns_edited).forEach((btns_edited)=>{
+				btns_edited.forEach((btn_edited)=>{
+					btns_els_to_clear.push(btn_edited.test_call_btn_el);
+				});
+			});
+		}
+		btns_els_to_clear.forEach((btn_el) => {
+			btn_el
+				.removeClass("working")
+				.attr('data-goal_uuid', '');
+		});
 	}
 
 	showNotification(msg_html, css_class, detail_html = null) {
@@ -3551,8 +3668,8 @@ export class PanelUI {
 				   '<span class="label" title="' + msg.quality + "/" + msg.quality_max + '" style="cursor:help;">Quality:</span> ' + qPercent.toFixed(0) + "%<br> " +
 				   '<span class="label">Level:</span> ' + msg.level + "<br> " +
 				   '<span class="label">Noise:</span> ' + msg.noise + " ";
-		$("#trigger_wifi_scan").css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
-		$("#trigger_wifi_roam").css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
+		this.trigger_wifi_scan_el.css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
+		this.trigger_wifi_roam_el.css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
 
 		if (msg.supports_scanning) {
 			if (!this.wifi_scan_service) {

@@ -155,7 +155,8 @@ h3 {
 
 .prevent-select,
 .touch_buttons .btn,
-#gamepad_settings .tab {
+#gamepad_settings .tab,
+BUTTON {
 	user-select: none; /* Standard syntax */
 	-webkit-user-select: none; /* Safari */
 	-webkit-text-select: none;
@@ -1252,12 +1253,6 @@ BODY.hamburger .docker_btns button {
 	margin: 0px 15px 0px 0px;
 }
 
-.docker_btns button.working {
-	background: #ff8c00 !important;
-	filter: grayscale(0) opacity(1) !important;
-	cursor: wait;
-}
-
 BODY.desktop-ui .docker_btns button:hover,
 .running .docker_btns button.docker_run,
 .exited .docker_btns button.docker_stop {
@@ -1279,7 +1274,7 @@ BODY.desktop-ui .docker_btns button:hover,
 #service_list {
 	overflow-x: hidden;
 	overflow: scroll;
-	background: #ecafed;
+	background: #f3c4ed;
 	left: 0px;
 	width: 510px;
 	max-height: 520px;
@@ -1296,7 +1291,7 @@ BODY.desktop-ui .docker_btns button:hover,
 	margin-top: 5px;
 	padding: 5px 10px;
 	border-radius: 5px;
-	background: #5b5252;
+	background: #b311a3;
 	color: #fff;
 	margin-left: 0px;
 	width: unset;
@@ -1325,7 +1320,8 @@ BODY.top-menu #topic_controls.active:hover #topic_list,
 BODY.top-menu #widget_controls.active:hover #widget_list,
 BODY.top-menu #camera_controls.active:hover #cameras_list,
 BODY.top-menu #docker_controls.active:hover #docker_list,
-BODY.top-menu #service_controls.active.setting_shortcuts #service_list {
+BODY.top-menu #service_controls.active.setting_shortcuts #service_list,
+BODY.top-menu #service_controls.hover_waiting #service_list {
 	display: block;
 }
 
@@ -1472,18 +1468,32 @@ BODY.hamburger #docker_controls H3 {
 	text-align: center;
 }
 
-.service_input {
+.service_buttons_inline {
 	position: absolute;
 	top: 0px;
 	right: 5px;
 	background: #ec9cef;
 	height: 100%;
 	padding-left: 5px;
+	/* background-color: red; */
 }
 
-.service.nonhandled .service_input {
+.service_buttons_wrapped {
+	position: relative;
+	/* background-color: blue; */
+	white-space: normal;
+    text-align: right;
+}
+
+.service_buttons_wrapped .service_button {
+	left: 5px; /* align with inline */
+}
+
+.service.nonhandled .service_buttons_inline,
+.service.nonhandled .service_buttons_wrapped {
 	display: none;
 }
+
 .service_input_type {
 	color: white;
 	font-size: 12px;
@@ -1804,6 +1814,7 @@ BODY.hamburger #docker_controls H3 {
 }
 
 #network-info-wrapper:hover #network-details,
+#network-info-wrapper.hover_waiting #network-details,
 #battery-info:hover #battery-details {
 	display: block;
 }
@@ -1853,11 +1864,7 @@ BUTTON#trigger_wifi_roam {
 	float: left;
 }
 
-BUTTON#trigger_wifi_scan.working,
-BUTTON#trigger_wifi_roam.working {
-	background: #ff8c00;
-	cursor: wait;
-}
+
 
 /* #robot_stats {
     width: 440px;
@@ -6033,9 +6040,66 @@ BODY.portrait #about-dialog #about-dialog-content {
 .service_button.working:hover,
 #service-input-dialog BUTTON.btn-save.working,
 #service-input-dialog BUTTON.btn-call.working,
-#node-params-dialog BUTTON.working {
+#node-params-dialog BUTTON.working,
+.docker_btns button.working,
+BUTTON#trigger_wifi_scan.working,
+BUTTON#trigger_wifi_roam.working {
 	cursor: wait;
-	background: #ff8c00 !important;
+	/* background: yellow !important; */
+}
+
+.service_button.action.working,
+.service_button.action.working:hover,
+#service-input-dialog BUTTON.btn-call.action.working,
+#service-input-dialog BUTTON.btn-call.action.working:hover
+{
+	cursor:pointer;
+}
+
+.docker_btns button.working {
+	filter: grayscale(0) opacity(1) !important;
+}
+
+.fancy_worker {
+    border: none;
+    outline: none;
+    position: relative;
+    z-index: 0;
+}
+
+.fancy_worker.working:before {
+    content: '';
+    background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    position: absolute;
+    top: 0px;
+    left:0px;
+    background-size: 400%;
+    z-index: -1;
+    /* filter: blur(5px); */
+    width: calc(100% + 0px);
+    height: calc(100% + 0px);
+    animation: glowing 20s linear infinite;
+    opacity: 1;
+    transition: opacity .3s ease-in-out;
+    border-radius: 5px;
+}
+
+/* .fancy_worker.working:after {
+    z-index: -1;
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #111;
+    left: 0;
+    top: 0;
+    border-radius: 10px;
+} */
+
+@keyframes glowing {
+    0% { background-position: 0 0; }
+    /* 50% { background-position: 400% 0; } */
+    100% { background-position: 800% 0; }
 }
 
 #service-input-dialog BUTTON.btn-save:hover,
@@ -6192,13 +6256,13 @@ BODY.portrait #about-dialog #about-dialog-content {
 #service-input-dialog #service-input-dialog-menu-underlay {
 	display: none;
 	background-color: rgba(0, 0, 0, 0.457);
-	width: 100vw;
-	height: 100vh;
-	position: absolute;
-	z-index: 1;
-	left: calc(-50vw + Min(40vw, 275px) + 15px);
-	top: calc(-10vh - 50px);
-	cursor: pointer;
+    width: 200vw;
+    height: 200vh;
+    position: absolute;
+    z-index: 1;
+    left: -100vw;
+    top: -100vh;
+    cursor: pointer;
 }
 
 #service-input-dialog.narrow #service-input-dialog-menu-underlay,

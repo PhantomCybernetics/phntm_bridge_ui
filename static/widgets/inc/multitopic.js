@@ -146,7 +146,6 @@ export class MultiTopicSource extends EventTarget {
 			if (src.panel_config_loaded) return; //only once
 			
 			let topics = that.panel.getPanelVarAsStringArray(var_name, []);
-			console.warn('IN: "'+i+'"', topics);
 			for (let j = 0; j < topics.length; j++) {
 				let slot = src.topic_slots[j];
 				if (!slot) {

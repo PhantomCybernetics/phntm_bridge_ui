@@ -50,6 +50,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		{ label: 'Dark skybox', url: '/static/skyboxes/dark/', light_pos: [ 4, 7, -10] }, 
 		{ label: 'Mars skybox', url: '/static/skyboxes/mars/', light_pos: [ 5, 7, -10] }, // default
 		{ label: 'Moon skybox', url: '/static/skyboxes/moon/', light_pos: [ 4, 7, -10] },
+		{ label: 'Stars skybox', url: '/static/skyboxes/stars/', light_pos: [ -10, 7, 4] },
 		// TODO: custom (e.g. https://skyboxgen.com/)
 	];
 
@@ -145,7 +146,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				loader.load(path, (geom) => {
 					let stl_base_mat = new THREE.MeshStandardMaterial({
 						color: 0xffffff,
-						side: THREE.FrontSide,
+						side: THREE.DoubleSide,
 						depthWrite: true,
 					});
 					let clean_model = new THREE.Mesh(geom, stl_base_mat);
@@ -485,8 +486,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
   			depthWrite: true,
 			wireframe: true,
 			polygonOffset: true,
-  			polygonOffsetFactor: -1, // pull towards camera
-  			polygonOffsetUnits: -1
+  			polygonOffsetFactor: -2, // pull towards camera
+  			polygonOffsetUnits: -2
 		});
 
 		if (start_rendering_loop) {
@@ -987,25 +988,29 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		if (type_no == DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT || type_no == DescriptionTFWidget.LIGHT_NARROW_SPOTLIGHT) {
 
-			this.light = new THREE.SpotLight(0xffffff, 250, 0, type_no == 0 ? Math.PI / 10 : Math.PI / 35);
+			this.light = new THREE.SpotLight(0xffffff, 250, 0, type_no == DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT ? Math.PI / 10 : Math.PI / 32);
 			this.scene.add(this.light);
 			if (light_pos)
 				this.light.position.copy(light_pos);
 			else
-				this.light.position.set(10, type_no == 0 ? 5 : 15, 0); // will stay 5m above the model
-			
+				this.light.position.set(10, type_no == DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT ? 5 : 15, 0); // will stay 5m above the model
+
+			this.light.shadow.bias = -0.0001; // fixes rendering artefacts on double-sided surfaces
+
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
 
 		} else if (type_no == DescriptionTFWidget.LIGHT_DIRECTIONAL) {
 
-			this.light = new THREE.DirectionalLight(0xffffff, 1.0, 0, Math.PI / 10);
+			this.light = new THREE.DirectionalLight(0xffffff, 2.0, 0, Math.PI / 10);
 			
 			this.scene.add(this.light);
 			if (light_pos)
 				this.light.position.copy(light_pos);
 			else
 				this.light.position.set(10, 15, 0); // will stay 5m above the model
+
+			this.light.shadow.bias = -0.0003; // fixes rendering artefacts on double-sided surfaces
 
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
@@ -1020,6 +1025,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			//this.camera.getWorldPosition(cp);
 			this.light.target = this.camera;
 
+			this.light.shadow.bias = -0.001; // fixes rendering artefacts on double-sided surfaces
+			
 			this.ambience = new THREE.AmbientLight(0x606060); // soft white light
 			this.scene.add(this.ambience);
 			
@@ -1244,7 +1251,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		obj.frustumCulled = true;
 
         // mesh visuals
-        if (!in_collider && obj.isMesh && in_visual) {
+        if (in_visual && obj.isMesh && !in_collider) {
 			if (force_material) {
 				obj.material = force_material;
 			} else if (!obj.material) { //material not set
@@ -1253,7 +1260,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
                     color: 0xffffff,
 					depthTest: true,
                     depthWrite: true,
-                    side: THREE.FrontSide,
+                    side: THREE.DoubleSide,
 					polygonOffset: true,
   					polygonOffsetFactor: 1, // pull towards camera
   					polygonOffsetUnits: 1
@@ -1263,7 +1270,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
                 console.log('Obj "' + obj.name + '" had own material ('+debug_source_name+'): ', obj);
                 obj.material.depthWrite = true;
 				obj.material.depthTest = true;
-                obj.material.side = THREE.FrontSide;
+                obj.material.side = THREE.DoubleSide;
+				obj.material.shadowSide = THREE.FrontSide;
 				obj.material.polygonOffset = true;
 				obj.material.polygonOffsetFactor = 1; // pull towards camera
 				obj.material.polygonOffsetUnits = 1;
@@ -1276,7 +1284,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
             obj.layers.set(visuals_layer);
         
         // mesh colliders
-        } else if (obj.isMesh && in_collider) {
+        } else if (in_collider && obj.isMesh) {
             obj.material = this.collider_mat;
             obj.layers.set(colliders_layer);
         }

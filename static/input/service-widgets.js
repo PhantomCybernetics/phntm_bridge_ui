@@ -1,41 +1,89 @@
+import {
+	uuidToBytes,
+} from "../inc/lib.js";
+
+
 class ServiceInput {
 	static MakeMenuControls(target_el, service, client) {}
 }
 
 export class UserButtonsServiceInput extends ServiceInput {
-	static MakeMenuControls(target_el, service, client, node, node_cont) {
+	static MakeMenuControls(inline_controls_cont, wrapped_controls_cont, service, client, node, node_cont) {
 		if (!client.ui.service_btns[service.service])
 			client.ui.service_btns[service.service] = [];
 
-		let data_editor_btn = $(
-			'<button class="service_button data" title="Set service call data">{}</button>',
-		);
-		data_editor_btn.click((ev) => {
+		let data_editor_btn = $('<button class="service_button data" title="Set service call data">{}</button>');
+		data_editor_btn.click((e) => {
+			e.cancelBubble = true;
+			e.stopPropagation();
+			$("#service_controls").addClass("hover_waiting"); //this will keep menu open (removed on next mouse enter)
 			client.ui.service_input_dialog.show(service, node, node_cont);
 		});
-		target_el.append(data_editor_btn);
+		data_editor_btn.appendTo(inline_controls_cont);
 
 		let btns = client.ui.service_btns[service.service];
 		btns.sort((a, b) => {
 			return a.sort_index - b.sort_index;
 		});
+		let inline_btn = true;
+
+		let max_inline_width = (($("#service_list").width() - 20 - 15) / 2.0) - 40;
+		let running_width = 0;
+		let is_action = client.discovered_services[service.service] && client.discovered_services[service.service].is_action;
+		let action_cancel_service = is_action ? service.service + '/_action/cancel_goal': null;
+
 		btns.forEach((btn) => {
-			let btn_val_hr = JSON.stringify(btn.value, null, 2)
-				.replaceAll("\n", "&#10;")
-				.replaceAll('"', "&quot;");
-			let btn_el = $(
-				'<button class="service_button ' +
-					btn.color +
-					'" title="' +
-					btn_val_hr +
-					'">' +
-					btn.label +
-					"</button>",
-			);
-			btn_el.click((ev) => {
-				client.ui.serviceMenuBtnCall(service.service, btn, btn_el);
+
+			if (!btn.el) {
+				btn.el = $('<button class="service_button fancy_worker ' + btn.color + '">' + btn.label + "</button>");
+				if (is_action)
+					btn.el.addClass('action');
+			} else {
+				btn.el
+					.html(btn.label)
+					.removeClass( [ "blue", "green", "red", "orange", "magenta", "black" ] )
+					.addClass(btn.color);
+			}
+
+			if (inline_btn) {
+				btn.el.css({
+					'position': 'absolute',
+					'visibility': 'hidden',
+				});
+
+				btn.el.appendTo($("BODY"));
+
+				running_width += btn.el.width() + 5 + 5 + 5; // padding + one margin
+		
+				btn.el.css({
+			 		'position': 'relative',
+			 		'visibility': 'visible',
+				}).remove();
+
+				if (running_width > max_inline_width)
+					inline_btn = false;
+
+				btn.el.appendTo(inline_btn ? inline_controls_cont : wrapped_controls_cont);
+			} else { // wrapped
+				btn.el.appendTo(wrapped_controls_cont);
+			}
+
+			btn.el.unbind().click((ev) => {
+				let uuid = is_action ? btn.el.attr('data-goal_uuid') : null;
+				if (btn.el.hasClass('working') && is_action && uuid) {
+					btn.el.removeClass('working'); // wobbles on cancel fail, otherwise goes unlit immediatelly for feedback
+					let cancel_msg = {
+						'goal_uuid': uuidToBytes(uuid)
+					}
+					//console.warn('Calling ' + action_cancel_service  + ' {action_msgs/srv/CancelGoal} w '+ uuid, cancel_msg);
+					client.serviceCall(action_cancel_service, cancel_msg, true, client.default_service_timeout_sec, (service_reply) => {
+						client.ui.serviceReplyNotification(btn.el, action_cancel_service, false, service_reply);
+					});
+				} else {
+					client.ui.serviceUserPayloadCall(service.service, btn, btn.el);
+				}				
 			});
-			target_el.append(btn_el);
+
 		});
 	}
 }
@@ -43,10 +91,10 @@ export class UserButtonsServiceInput extends ServiceInput {
 // std_srvs/srv/Empty and std_srvs/srv/Trigger
 export class ServiceInput_Empty extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn = $('<button class="service_button blue">Call</button>');
+		let btn = $('<button class="service_button fancy_worker blue">Call</button>');
 
 		btn.click((ev) => {
-			client.ui.serviceButtonElementCall(service.service, null, btn);
+			client.ui.serviceSimplePayloadCall(service.service, null, btn);
 		});
 
 		target_el.append(btn);
@@ -56,15 +104,15 @@ export class ServiceInput_Empty extends ServiceInput {
 // std_srvs/srv/SetBool
 export class ServiceInput_Bool extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn_true = $('<button class="service_button green">True</button>');
-		let btn_false = $('<button class="service_button red">False</button>');
+		let btn_true = $('<button class="service_button fancy_worker green">True</button>');
+		let btn_false = $('<button class="service_button fancy_worker red">False</button>');
 
 		btn_true.click((ev) => {
-			client.ui.serviceButtonElementCall(service.service, { data: true }, btn_true);
+			client.ui.serviceSimplePayloadCall(service.service, { data: true }, btn_true);
 		});
 
 		btn_false.click((ev) => {
-			client.ui.serviceButtonElementCall(service.service, { data: false }, btn_false);
+			client.ui.serviceSimplePayloadCall(service.service, { data: false }, btn_false);
 		});
 
 		target_el.append(btn_true);
