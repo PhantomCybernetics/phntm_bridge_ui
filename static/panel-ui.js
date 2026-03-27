@@ -639,6 +639,7 @@ export class PanelUI {
 			that.triggerWifiScan(true);
 		});
 
+		// menus wait for hover after popup dialog closed
 		$("#graph_controls").on("mousemove", (e) => {
 			if ($("#graph_controls").hasClass("hover_waiting"))
 				$("#graph_controls").removeClass("hover_waiting");
@@ -655,6 +656,12 @@ export class PanelUI {
 		});
 
 		$('#fixed-header, #grid-stack-container').on('click', (e) => {
+			[ $("#graph_controls"), $("#service_controls"), $("#network-info-wrapper") ].forEach((el)=>{
+				if (el.hasClass('hover_waiting'))
+					el.removeClass('hover_waiting');
+			});
+		});
+		$('#battery-bar, #network-info, #graph_controls, #service_controls, #camera_controls, #docker_controls, #widget_controls').on('mousemove', (e) => {
 			[ $("#graph_controls"), $("#service_controls"), $("#network-info-wrapper") ].forEach((el)=>{
 				if (el.hasClass('hover_waiting'))
 					el.removeClass('hover_waiting');

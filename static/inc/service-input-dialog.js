@@ -553,6 +553,7 @@ export class ServiceInputDialog {
 			btn_menu_btn.click(() => {
 				if (!btn_menu.hasClass("open")) {
 					btn_menu.addClass("open");
+				
 					btn_tab.addClass("menu-open");
 					that.menu_underlay
 						.unbind()
@@ -893,10 +894,10 @@ export class ServiceInputDialog {
 		arr_block.append(vals_block);
 
 		arr_block.append($('<div class="cleaner"/>'));
-		let add_btn = $('<a href="#" class="add"/><span></span>Add</a>');
-		arr_block.append(add_btn);
-		let rem_btn = $('<a href="#" class="remove"/><span></span>Trim</a>');
+		let add_btn = $('<button class="add"/><span></span>Add</button>');
+		let rem_btn = $('<button class="remove"/><span></span>Trim</button>');
 		if (!arrayLength) rem_btn.addClass("hidden");
+		arr_block.append(add_btn);
 		arr_block.append([add_btn, rem_btn]);
 		arr_block.append($('<div class="cleaner"/>'));
 
@@ -1037,10 +1038,8 @@ export class ServiceInputDialog {
 						arr_block.append(vals_block);
 
 						arr_block.append($('<div class="cleaner"/>'));
-						let add_btn = $('<a href="#" class="add"/><span></span>Add</a>');
-						let rem_btn = $(
-							'<a href="#" class="remove"/><span></span>Trim</a>',
-						);
+						let add_btn = $('<button class="add"/><span></span>Add</button>');
+						let rem_btn = $('<button class="remove"/><span></span>Trim</button>');
 						if (!arrayLength) rem_btn.addClass("hidden");
 						arr_block.append([add_btn, rem_btn]);
 						arr_block.append($('<div class="cleaner"/>'));
