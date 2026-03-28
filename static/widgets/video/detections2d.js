@@ -29,8 +29,10 @@ export class VideoWidget_Detections2D extends VideoPluginBase {
 	}
 
 	setTopicConfig(topic, config) {
-		if (!config)
+		if (!config) {
 			console.error('Detections2D got empty config for '+ topic);
+			return;
+		}
 
 		let overlay = this.overlays[topic];
 		overlay.config = config;
@@ -183,7 +185,20 @@ export class VideoWidget_Detections2D extends VideoPluginBase {
         if (this.video.panel.paused) return;
 
 		let overlay = this.overlays[topic];
-		if (!overlay|| !overlay.svg) return; //not yet initiated
+		if (!overlay)
+			return;
+
+		if (!overlay.config && this.client.werePrefixedConfigsReceived()) {
+			if (!overlay.error_logged) {
+				overlay.error_logged = true; //only log once
+				let err = '2D detections topic ' + topic + ' not configured';
+				this.ui.showNotification(err, "error");
+				console.error(err);
+			}
+			return;
+		}
+	
+		if (!overlay.svg) return; //not yet initiated
 
 		let svg = overlay.svg;
 		svg.selectAll("rect").remove();

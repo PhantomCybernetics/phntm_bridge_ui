@@ -32,8 +32,9 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 	
     addTopic(topic) {
 		super.addTopic(topic);
-		console.warn('World Model Detections3D adding topic ', topic);
+		
 		let config = this.client.getTopicConfig(topic);
+		console.log('World Model Detections3D adding 3d detections topic', topic, config);
 
 		this.setTopicConfig(topic, config);
 
@@ -190,6 +191,16 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 		if (!overlay)
 			return;
 
+		if (!overlay.config && this.client.werePrefixedConfigsReceived()) {
+			if (!overlay.error_logged) {
+				overlay.error_logged = true; //only log once
+				let err = '3D detections topic ' + topic + ' not configured';
+				this.ui.showNotification(err, "error");
+				console.error(err);
+			}
+			return;
+		}
+
 		if (!overlay.config)
 			return; // wait for config
 
@@ -197,7 +208,7 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 		let f = this.world_model.robot_model.getFrame(frame_id);
 		if (!f) {
 			if (!overlay.error_logged) {
-				overlay.error_logge = true; //only log once
+				overlay.error_logged = true; //only log once
 				let err = 'Frame "' + frame_id + '" not found in robot model for detection data from ' + topic;
 				this.ui.showNotification(err, "error");
 				console.error(err);

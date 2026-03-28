@@ -132,6 +132,7 @@ export class BrowserClient extends EventTarget {
 
 	ui_config = {};
 	prefixed_configs = {};
+	prefixed_configs_received = false;
 	input_manager = null;
 	extrernal_scripts = {};
 
@@ -178,6 +179,9 @@ export class BrowserClient extends EventTarget {
 		this.topic_streams = {};
 		this.open_media_streams = {}; 
 		this.latest = {};
+
+		this.prefixed_configs = {};
+		this.prefixed_configs_received = false;
 
 		this.supported_msg_types = [];
 		this.ui = null; // ui ref
@@ -670,6 +674,10 @@ export class BrowserClient extends EventTarget {
 			return this.prefixed_configs[topic];
 
 		return null; // no config
+	}
+
+	werePrefixedConfigsReceived() {
+		return this.prefixed_configs_received;
 	}
 
 	onTopicConfig(topic, cb) {
@@ -1194,7 +1202,8 @@ export class BrowserClient extends EventTarget {
 		// topic and service extra configs from yaml
 		if (robot_data["prefixed_configs"]) {
 			console.log("UI got prefixed_configs: ", robot_data["prefixed_configs"]);
-			this.prefixed_configs = robot_data["prefixed_configs"]; 
+			this.prefixed_configs = robot_data["prefixed_configs"];
+			this.prefixed_configs_received = true;
 			this.emit("prefixed_configs", this.prefixed_configs);
 		}
 
