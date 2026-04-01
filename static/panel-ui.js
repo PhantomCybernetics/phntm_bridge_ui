@@ -1875,7 +1875,7 @@ export class PanelUI {
 
 				// defaults from the robot
 				if (this.default_service_btns[service]) {
-					this.service_btns[service] = that.default_service_btns[service];
+					this.service_btns[service] = this.default_service_btns[service];
 					// console.log('Loaded '+this.service_btns[service].length+' default btns for '+service);
 				}
 

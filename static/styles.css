@@ -5709,6 +5709,31 @@ BODY.portrait #about-dialog #about-dialog-content {
 	background-repeat: no-repeat;
 }
 
+#about-dialog INPUT#about-dialog-remember-close {
+    float: left;
+    margin: 4px 8px 0px 0px;
+}
+#about-dialog LABEL.remember-close {
+    position: absolute;
+    left: 5px;
+    top: 7px;
+    color: #ffffff75;
+}
+#about-dialog LABEL.remember-close .long {
+    display: inline;;
+}
+#about-dialog LABEL.remember-close .short {
+    display: none;
+}
+@media (max-width: 600px) { /* if viewport is less than this, show short label */
+    #about-dialog LABEL.remember-close .long {
+        display: none;
+    }
+    #about-dialog LABEL.remember-close .short {
+        display: inline;
+    }
+}
+
 .marker_label,
 .detection_label {
 	padding: 5px;
