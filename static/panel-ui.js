@@ -723,21 +723,12 @@ export class PanelUI {
 					delayedDisconnectSockerTimer();
 				}, that.background_disconnect_delay_ms); // the delay can be much longer on firefox (bg timer throttling)
 			}
-		};
+		}
 
 		document.addEventListener("visibilitychange", onUIVisibilityChange);
 
 		$(window).on("scroll touchmove", { passive: false }, (ev) => {
 			if (that.panel_menu_on) {
-				if (that.menu_locked_scroll) {
-					ev.preventDefault();
-					ev.stopPropagation();
-					console.log("ignoring win scroll", ev);
-					// window.scrollTo(that.menu_locked_scroll.x, that.menu_locked_scroll.y);
-					return;
-				}
-				console.log("win scroll", ev);
-
 				that.panelMenuTouchToggle(); //off
 			}
 		});
@@ -754,11 +745,6 @@ export class PanelUI {
 				that.closeFullscreen(); // reset fs
 			}
 		});
-
-		// window.addEventListener('touchstart', (ev) => {
-		//     // ev.preventDefault();
-		//     // ev.stopPropagation();
-		// }, { passive: false });
 
 		$(window).on("resize", () => {
 			if (that.panel_menu_on) {

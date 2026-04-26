@@ -210,28 +210,10 @@ export class Panel {
 			});
 		}
 
-		menu_content_el.addEventListener("touchstart", (ev) => {
-			// console.log('menu touchstart', ev);
-			// ev.preventDefault();
-			that.ui.menu_locked_scroll = true;
-
-			// ev.stopPropagation();
-		}, { passive: true });
-
-		// this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
-		//     console.log('menu touchmove', ev);
-		//     ev.preventDefault();
-		//     // that.ui.menu_locked_scroll = true;
-
-		//     ev.stopPropagation();
-		// });
-
-		menu_content_el.addEventListener("touchend", (ev) => {
-			// console.log('menu touchend', ev);
-			// ev.preventDefault();
-			that.ui.menu_locked_scroll = null;
-			// ev.stopPropagation();
-		}, { passive: true });
+		//prevent window scroll from closin this menu
+		this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
+		    ev.stopPropagation();
+		});
 	}
 
 	// init with message type when it's known
