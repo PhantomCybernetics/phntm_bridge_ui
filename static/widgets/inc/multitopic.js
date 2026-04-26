@@ -383,7 +383,7 @@ export class MultiTopicSource extends EventTarget {
 		let that = this;
 
 		let topic = slot.topic ? slot.topic : (slot.selected_topic ? slot.selected_topic : null);
-		let btn = $('<button class="val" title="' + slot.label + " - " + slot.msg_type + '">' + topic + "</button>");
+		let btn = $('<button class="val" title="' + slot.label + " - " + slot.msg_type + '" oncontextmenu="return false;">' + topic + "</button>");
 		let rem_btn = $('<span class="remove" title="Remove"><span class="icon"></span></span>');
 		rem_btn.appendTo(btn);
 
