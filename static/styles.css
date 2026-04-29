@@ -1584,7 +1584,14 @@ BODY.hamburger #docker_controls H3 {
 	color: green;
 }
 
-.service_button.data:hover {
+@media (hover: hover) {
+	.service_button.data:hover {
+		background: white;
+		color: black;
+	}
+}
+
+.service_button.data:active {
 	background: white;
 	color: black;
 }
@@ -1864,19 +1871,6 @@ BUTTON#trigger_wifi_roam {
 	float: left;
 }
 
-
-
-/* #robot_stats {
-    width: 440px;
-} */
-
-/* #monitors {
-    margin-top: 50px;
-} */
-
-#topic_list A.topic {
-}
-
 .grid_panel {
 	height: 100%;
 	padding-bottom: 0px;
@@ -1908,7 +1902,7 @@ BUTTON#trigger_wifi_roam {
 }
 
 .grid-stack-item.maximized .panel_btns {
-	right: 66px;
+	right: 54px;
 	top: 56px;
 }
 
@@ -1945,26 +1939,6 @@ BODY.touch-ui.touch-gamepad .monitor_menu {
 BODY.touch-ui .editing .monitor_menu {
 	background-color: #005a00;
 }
-
-/* makes the hover area bigger for your conveninence */
-/* .monitor_menu .hover_keeper { 
-    display: none;
-    position: absolute;
-    left: -5%;
-    top: -13%;
-    width: 107%;
-    height: 120%;
-    background-color: transparent;
-    z-index: -1;
-    background-color: red;
-}
-.monitor_menu.right .hover_keeper {
-    left: -10%;
-}
-
-BODY.touch-ui .monitor_menu .hover_keeper {
-    display: none;
-} */
 
 BODY.touch-ui .monitor_menu_content .menu_content_underlay {
 	/* makes the hover area bigger for your conveninence */
@@ -2096,6 +2070,12 @@ BODY.desktop-ui .monitor_menu.hover_waiting .monitor_menu_content {
 	white-space: nowrap;
 	cursor: pointer;
 }
+.monitor_menu_content .menu_line LABEL SPAN,
+.monitor_menu_content .menu_line .label SPAN {
+	text-overflow: ellipsis;
+    display: inline-block;
+    overflow: hidden;
+}
 
 BODY.touch-ui .monitor_menu_content .menu_line A,
 BODY.touch-ui .monitor_menu_content .menu_line LABEL,
@@ -2104,6 +2084,11 @@ BODY.touch-ui .monitor_menu_content .menu_line .label {
 	/* background: red; */
 	line-height: 20px;
 	font-size: 18px;
+}
+
+BODY.touch-ui .monitor_menu_content .menu_line.buttons_right LABEL SPAN,
+BODY.touch-ui .monitor_menu_content .menu_line.buttons_right .label SPAN {
+	max-width: calc(100% - 100px);
 }
 
 .monitor_menu_content .panel_msg_types_line SPAN.msg_types {
@@ -2462,7 +2447,7 @@ BODY.touch-ui .grid-stack-item.maximized .panel-title {
 
 .grid-stack-item.maximized .monitor_menu {
 	top: 58px;
-	right: 20px;
+	right: 12px;
 }
 
 .grid-stack-item.maximized .panel_widget {
@@ -3207,6 +3192,12 @@ BODY.touch-ui .editing .grid-stack-item-content {
 	border-radius: 3px;
 	display: none;
 }
+
+.maximized .video_stats,
+.maximized .panel_fps {
+	top: 100px; /* blow menu buttons */
+}
+
 .panel_fps.rendering_stats {
 	text-align: right;
 }
@@ -3727,7 +3718,7 @@ BUTTON#delete-input-profile .icon {
 	display: none;
 }
 
-@keyframes delete_wobble {
+@keyframes wobble {
 	0% {
 		rotate: 3deg;
 	}
@@ -3755,7 +3746,7 @@ BUTTON#delete-input-profile.warn .icon {
 	background-position: 0px 0px;
 	background-size: 17px;
 	left: unset;
-	animation-name: delete_wobble;
+	animation-name: wobble;
 	animation-duration: 0.2s;
 	animation-iteration-count: infinite;
 }
@@ -4474,16 +4465,31 @@ BODY.touch-ui .menu_line.rot_ctrl {
 	background-color: #383838;
 }
 
-.menu_line.zoom_ctrl .minus:hover,
-.menu_line.zoom_ctrl .plus:hover,
-.menu_line.buttons_right .left:hover,
-.menu_line.buttons_right .right:hover,
-.menu_line.plus_minus_ctrl .minus:hover,
-.menu_line.plus_minus_ctrl .plus:hover,
-.menu_line.rot_ctrl .rot-left:hover,
-.menu_line.rot_ctrl .rot-right:hover,
-.menu_line.buttons_right .left:hover,
-.menu_line.buttons_right .right:hover {
+@media (hover: hover) {
+	.menu_line.zoom_ctrl .minus:hover,
+	.menu_line.zoom_ctrl .plus:hover,
+	.menu_line.buttons_right .left:hover,
+	.menu_line.buttons_right .right:hover,
+	.menu_line.plus_minus_ctrl .minus:hover,
+	.menu_line.plus_minus_ctrl .plus:hover,
+	.menu_line.rot_ctrl .rot-left:hover,
+	.menu_line.rot_ctrl .rot-right:hover,
+	.menu_line.buttons_right .left:hover,
+	.menu_line.buttons_right .right:hover {
+		background-color: #0051ff;
+	}
+}
+
+.menu_line.zoom_ctrl .minus:active,
+.menu_line.zoom_ctrl .plus:active,
+.menu_line.buttons_right .left:active,
+.menu_line.buttons_right .right:active,
+.menu_line.plus_minus_ctrl .minus:active,
+.menu_line.plus_minus_ctrl .plus:active,
+.menu_line.rot_ctrl .rot-left:active,
+.menu_line.rot_ctrl .rot-right:active,
+.menu_line.buttons_right .left:active,
+.menu_line.buttons_right .right:active {
 	background-color: #0051ff;
 }
 
@@ -4498,6 +4504,12 @@ BODY.touch-ui .menu_line.rot_ctrl {
     margin-left: 4px;
     margin: 0px 0px 0px 5px;
     padding: 0px;
+}
+
+BODY.touch-ui .menu_line.buttons_right .left,
+BODY.touch-ui .menu_line.buttons_right .right {
+	line-height: 17px;
+    height: 28px;
 }
 
 .menu_line.rot_ctrl .rot-left .icon,
@@ -5170,26 +5182,10 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 	opacity: 0.2;
 }
 
-@keyframes sorting_wobble {
-	0% {
-		rotate: 3deg;
-	}
-	/* 25%  {rotate: -5deg} */
-	50% {
-		rotate: -3deg;
-	}
-	/* 75%  {rotate: -5deg} */
-	100% {
-		rotate: 3deg;
-	}
-}
-
 .touch_buttons.ui-sortable .btn {
-	border-style: dotted;
-	/* animation-name: sorting_wobble;
-    animation-duration: .2s;
-    animation-iteration-count: infinite; */
-	/* color: yellow; */
+	animation-name: wobble;
+	animation-duration: 0.2s;
+	animation-iteration-count: infinite;
 }
 
 .touch_buttons .btn:active,
@@ -5990,7 +5986,7 @@ BODY.portrait #about-dialog #about-dialog-content {
 #node-params-dialog.thin {
 	width: calc(100% - 40px);
 	left: 10px;
-	top: -40px;
+	top: 20px;
 	max-width: unset; /* expand to full w*/
 }
 
@@ -6165,9 +6161,25 @@ BUTTON#trigger_wifi_roam.working {
     margin-right: 5px; */
 }
 
-#service-input-dialog .btn-tabs-sortable {
+#service-input-dialog .btn-tabs {
 	/* background-color: lime; */
 	float: left;
+}
+
+BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab.touch-sortable .label {
+	animation-name: wobble;
+	animation-duration: 0.2s;
+	animation-iteration-count: infinite;
+	/* padding-right: 10px; */
+}
+
+BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab.touch-sortable .btn-menu-btn {
+	/* display: none; */
+}
+
+BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sortable):not(.selected) {
+	/* display: none; */
+	opacity: 0.5;
 }
 
 #service-input-dialog .btn-tab {
@@ -6194,7 +6206,7 @@ BUTTON#trigger_wifi_roam.working {
 	line-height: 40px;
 	padding: 0px 10px 0px 10px;
 	cursor: pointer;
-
+	touch-action: manipulation;
 	user-select: none; /* Standard syntax */
 	-webkit-user-select: none; /* Safari */
 	-webkit-text-select: none;
@@ -6250,11 +6262,11 @@ BUTTON#trigger_wifi_roam.working {
 	display: block;
 }
 
-#service-input-dialog .btns-line .btn-menu,
+#service-input-dialog .btn-menu,
 #service-input-dialog .btn-json .json-menu {
 	position: absolute;
-	left: -27px;
-	top: 49px;
+	left: 0px;
+	top: 114px;
 	background: #fec2ff;
 	width: auto;
 	z-index: 4;
@@ -6296,16 +6308,25 @@ BUTTON#trigger_wifi_roam.working {
 	top: -20px;
 }
 
-#service-input-dialog .btns-line .btn-menu .arrow {
+#service-input-dialog .btn-menu .menu-arrow {
 	position: absolute;
-	width: 30px;
-	height: 30px;
-	display: block;
-	background: #fec2ff;
-	rotate: 45deg;
-	left: 25px;
-	top: -5px;
-	z-index: 1;
+    width: 30px;
+    height: 16px;
+    display: block;
+    top: -13px;
+    z-index: 1;
+    clip-path: inset(0px);
+    overflow: hidden;
+}
+
+#service-input-dialog .btn-menu .menu-arrow SPAN {
+	position: absolute;
+    width: 30px;
+    height: 30px;
+    display: block;
+    background: #fec2ff;
+    rotate: 45deg;
+    top: 6px;
 }
 
 #service-input-dialog .json-menu .arrow {
@@ -6320,8 +6341,8 @@ BUTTON#trigger_wifi_roam.working {
 	z-index: 1;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON,
-#service-input-dialog .btns-line .btn-menu LABEL,
+#service-input-dialog .btn-menu BUTTON,
+#service-input-dialog .btn-menu LABEL,
 #service-input-dialog .json-menu BUTTON {
 	text-align: left;
 	line-height: 23px;
@@ -6347,42 +6368,38 @@ BUTTON#trigger_wifi_roam.working {
 	color: #fff;
 	cursor: pointer;
 }
-#service-input-dialog .btns-line .btn-menu LABEL {
+#service-input-dialog .btn-menu LABEL {
 	padding-right: 30px;
 }
 
-#service-input-dialog .btns-line .btn-menu LABEL INPUT[type="checkbox"] {
+#service-input-dialog .btn-menu LABEL INPUT[type="checkbox"] {
 	position: absolute;
 	right: 10px;
 	top: 10px;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON:hover,
-#service-input-dialog .btns-line .btn-menu LABEL:hover,
+#service-input-dialog .btn-menu BUTTON:hover,
+#service-input-dialog .btn-menu LABEL:hover,
 #service-input-dialog .json-menu BUTTON:hover {
 	background-color: #c879da;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON.rem.warn,
-#service-input-dialog .btns-line .btn-menu BUTTON.rem:hover {
+#service-input-dialog .btn-menu BUTTON.rem.warn,
+#service-input-dialog .btn-menu BUTTON.rem:hover {
 	background-color: rgb(173, 0, 0);
 }
 
-#service-input-dialog .btns-line .btn-menu.open {
+#service-input-dialog .btn-menu.open {
 	display: block;
 }
 
-#service-input-dialog .btns-line .btn-menu .arrow {
-	display: block;
-}
-
-#service-input-dialog .btns-line .btn-menu .colors {
+#service-input-dialog .btn-menu .colors {
 	width: 160px;
 	margin-right: -3px;
 	padding: 3px 0px 0px 0px;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn {
+#service-input-dialog .btn-menu BUTTON.color-btn {
 	float: left;
 	width: 37px;
 	height: 37px;
@@ -6391,7 +6408,7 @@ BUTTON#trigger_wifi_roam.working {
 	margin-bottom: 3px;
 }
 
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.selected {
+#service-input-dialog .btn-menu BUTTON.color-btn.selected {
 	border: 3px solid white;
 }
 
@@ -6399,11 +6416,10 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #2c6fff;
 	border-color: #0051ff;
 }
-#service-input-dialog .btn-opts label.blue,
+
 #service-input-dialog .btn-tab.blue .label,
-#service-input-dialog .btn-opts .btn-menu.blue,
 #service-input-dialog .btn-tab.blue .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.blue,
+#service-input-dialog .btn-menu BUTTON.color-btn.blue,
 .service_button.blue {
 	background-color: #0051ff;
 }
@@ -6415,11 +6431,9 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #019801;
 	border-color: #008700;
 }
-#service-input-dialog .btn-opts label.green,
 #service-input-dialog .btn-tab.green .label,
-#service-input-dialog .btn-opts .btn-menu.green,
 #service-input-dialog .btn-tab.green .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.green,
+#service-input-dialog .btn-menu BUTTON.color-btn.green,
 .service_button.green {
 	background-color: #008700;
 }
@@ -6431,11 +6445,9 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #d10303;
 	border-color: #a20101;
 }
-#service-input-dialog .btn-opts label.red,
 #service-input-dialog .btn-tab.red .label,
-#service-input-dialog .btn-opts .btn-menu.red,
 #service-input-dialog .btn-tab.red .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.red,
+#service-input-dialog .btn-menu BUTTON.color-btn.red,
 .service_button.red {
 	background-color: #a20101;
 }
@@ -6447,11 +6459,10 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #fc9c35;
 	border-color: #ff8400;
 }
-#service-input-dialog .btn-opts label.orange,
+
 #service-input-dialog .btn-tab.orange .label,
-#service-input-dialog .btn-opts .btn-menu.orange,
 #service-input-dialog .btn-tab.orange .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.orange,
+#service-input-dialog .btn-menu BUTTON.color-btn.orange,
 .service_button.orange {
 	background-color: #ff8400;
 }
@@ -6463,11 +6474,9 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #d210bf;
 	border-color: #b311a3;
 }
-#service-input-dialog .btn-opts label.magenta,
 #service-input-dialog .btn-tab.magenta .label,
-#service-input-dialog .btn-opts .btn-menu.magenta,
 #service-input-dialog .btn-tab.magenta .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.magenta,
+#service-input-dialog .btn-menu BUTTON.color-btn.magenta,
 .service_button.magenta {
 	background-color: #b311a3;
 }
@@ -6479,11 +6488,10 @@ BUTTON#trigger_wifi_roam.working {
 	background-color: #252525;
 	border-color: #000000;
 }
-#service-input-dialog .btn-opts label.black,
+
 #service-input-dialog .btn-tab.black .label,
-#service-input-dialog .btn-opts .btn-menu.black,
 #service-input-dialog .btn-tab.black .btn-edit-confirm,
-#service-input-dialog .btns-line .btn-menu BUTTON.color-btn.black,
+#service-input-dialog .btn-menu BUTTON.color-btn.black,
 .service_button.black {
 	background-color: #000000;
 }

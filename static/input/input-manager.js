@@ -1242,12 +1242,13 @@ export class InputManager {
 						new_btn.ros_srv_msg_type = null;
 						if (this.client.discovered_services[new_btn.ros_srv_id]) {
 							new_btn.ros_srv_msg_type = this.client.discovered_services[new_btn.ros_srv_id].msg_type;
+							new_btn.ros_srv_msg_type_request = this.client.discovered_services[new_btn.ros_srv_id].msg_type_request;
 						} else {
 							// otherwise checked on services update
 							console.log("ros-srv btn action missing message type, service " + new_btn.ros_srv_id + " not discovered yet?");
 							// this.client.runIntrospection();
 						}
-
+						
 						if (default_config.ros_srv_val !== undefined) {
 							new_btn.ros_srv_val = default_config.ros_srv_val;
 						}
@@ -1323,6 +1324,7 @@ export class InputManager {
 							// update missing message type
 							if (btn.ros_srv_id && !btn.ros_srv_msg_type && discovered_services[btn.ros_srv_id]) {
 								btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+								btn.ros_srv_msg_type_request = discovered_services[btn.ros_srv_id].ros_srv_msg_type_request;
 								console.log("Message type discovered for " + btn.ros_srv_id + ": " + btn.ros_srv_msg_type);
 							}
 
@@ -2674,10 +2676,11 @@ export class InputManager {
 
 			let node_opts = [];
 			service_ids.forEach((id_srv) => {
-				let msg_type = node.services[id_srv].msg_type;
+				let msg_type = this.client.discovered_services[id_srv].msg_type;
+				let msg_type_request = this.client.discovered_services[id_srv].msg_type_request;
 				// if (that.ui.ignored_service_types.includes(msg_type))
 				//     return; // not rendering ignored
-				node_opts.push('<option value="' + id_srv + ":" + msg_type + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
+				node_opts.push('<option value="' + id_srv + ':' + msg_type + ':' + msg_type_request + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
 			});
 
 			if (node_opts.length) {
@@ -2699,6 +2702,7 @@ export class InputManager {
 					that.ui.service_input_dialog.showInputManagerDialog(
 						btn.ros_srv_id,
 						btn.ros_srv_msg_type,
+						btn.ros_srv_msg_type_request,
 						btn.ros_srv_val,
 						(srv_payload) => {
 							console.warn("Setting srv payload for " + btn.ros_srv_id + ":", srv_payload);
@@ -2750,9 +2754,11 @@ export class InputManager {
 				let vals = val.split(":");
 				btn.ros_srv_id = vals[0];
 				btn.ros_srv_msg_type = vals[1];
+				btn.ros_srv_msg_type_request = vals[2];
 			} else {
 				btn.ros_srv_id = null;
 				btn.ros_srv_msg_type = null;
+				btn.ros_srv_msg_type_request = null;
 			}
 			btn.ros_srv_val = null; // remove val
 			console.log("btn set to ros srv " + btn.ros_srv_id + " msg type=" + btn.ros_srv_msg_type);
