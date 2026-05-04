@@ -1,6 +1,7 @@
 import { GraphMenu } from "/static/graph-menu.js";
 import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "/static/browser-client.js";
 import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
+import { GOAL_STATUS, WOBBLE_DURATION } from "/static/inc/const.js";
 // import { QRCodeStyling } from '/static/qr-code-styling/qr-code-styling.common.js';
 
 import { Panel } from "./panel.js";
@@ -219,7 +220,6 @@ export class PanelUI {
 				that.updateWifiSignal(-1);
 				that.updateNumPeers(-1);
 				that.updateRTT(false);
-				that.onSocketConnectionLost();
 			}
 			that.updateWebrtcStatus();
 			that.updateLayout(); // robot name length affects layout
@@ -246,8 +246,6 @@ export class PanelUI {
 
 		client.on("socket_disconnect", () => {
 			
-			that.onSocketConnectionLost();
-
 			that.setDotState(1, client.robot_socket_online ? "green" : "red", "Robot " + (client.robot_socket_online ? "conected to" : "disconnected from") + " Bridge Server [Socket.io]");
 			console.log("UI got socket_disconnect, timer=", that.reconnection_timer);
 
@@ -333,8 +331,6 @@ export class PanelUI {
 			that.default_service_btns = robot_service_buttons; // {} if undefined on robot
 			that.servicesMenuFromNodes();
 		});
-
-		client.on('action_result', (data) => that.onActionResult(data));
 
 		// triggered after input_config
 		client.on("ui_config", (robot_ui_config) => {
@@ -886,10 +882,6 @@ export class PanelUI {
 		}
 	}
 
-	onSocketConnectionLost() {
-		this.clearAllWorkingServices();
-	}
-
 	showPageError(msg_html) {
 		// console.log('Showing error', msg, error);
 		$("#page_message").html(msg_html).addClass("error");
@@ -1400,7 +1392,12 @@ export class PanelUI {
 				that.client.default_service_timeout_sec,
 				(reply) => {
 					$(btn).removeClass("working");
-					that.serviceReplyNotification(null, node_docker_srv, true, reply);
+					that.serviceReplyNotification(
+						null,
+						node_docker_srv,
+						false, // show notification
+						reply
+					);
 				},
 			);
 		}
@@ -1409,7 +1406,7 @@ export class PanelUI {
 		hosts.sort(); //keep sorted aphabetically
 		hosts.forEach((host) => {
 			let node_docker_srv = "/" + host + "/docker_command";
-			that.client.registerServiceReplyCallback(
+			that.client.registerServiceReplyHook(
 				node_docker_srv,
 				(req_data, reply_data) => {
 					that.onDockerCommandReply(req_data, reply_data);
@@ -1891,8 +1888,8 @@ export class PanelUI {
 				//clear of el refs
 				label: btn.label,
 				color: btn.color,
-				show_request: btn.show_request,
-				show_reply: btn.show_reply,
+				silent_request: btn.silent_request,
+				silent_reply: btn.silent_reply,
 				value: JSON.parse(JSON.stringify(btn.value)),
 				sort_index: btn.sort_index,
 			};
@@ -2229,8 +2226,8 @@ export class PanelUI {
 					that.serviceReplyNotification(
 						null,
 						this.wifi_scan_service,
-						true,
-						reply,
+						false, // show notification
+						reply
 					);
 			},
 		);
@@ -3322,31 +3319,103 @@ export class PanelUI {
 		});
 	}
 
-	serviceUserPayloadCall(service, btn, btn_el) {
+	// call service linked to a button element with simple payload (bool, null, trigger)
+	serviceButtonSimplePayloadCall(id_service, payload_data, btn_el, silent_reply = null) { // silent_reply = auto, only if err or reply data
 		let that = this;
-
 		if (btn_el) btn_el.addClass("working");
-		let show_request = btn.show_request;
-		let show_reply = btn.show_reply;
 		
-		this.client.serviceCall(service, btn.value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
-			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
-		});
+		this.client.serviceCall(id_service, payload_data, true, this.client.default_service_timeout_sec,
+			(service_reply) => {
+				that.serviceReplyNotification(btn_el, id_service, silent_reply, service_reply);
+			},
+			() => { // connection lost
+				btn_el.removeClass("working");
+			}
+		);
 	}
 
-	serviceSimplePayloadCall(service, value, btn_el, show_reply = null) { // show_reply = auto, only if err or reply data
+	// call service linked to a button element with a custom payload
+	// silent_reply = null => auto 
+	serviceButtonUserPayloadCall(id_service, payload_data, silent_request, silent_reply, btn_el) {
 		let that = this;
+
 		if (btn_el) btn_el.addClass("working");
-		let show_request = false;
-		this.client.serviceCall(service, value, !show_request, this.client.default_service_timeout_sec, (service_reply) => {
-			that.serviceReplyNotification(btn_el, service, show_reply, service_reply);
-		});
+		
+		this.client.serviceCall(id_service, payload_data, silent_request, this.client.default_service_timeout_sec,
+			(service_reply) => {
+				that.serviceReplyNotification(btn_el, id_service, silent_reply, service_reply);
+			},
+			() => { // connection lost
+				btn_el.removeClass("working");
+			}
+		);
+	}
+	
+	// call action linked to a button element
+	// silent_reply = null => auto
+	actionButtonUserPayloadCall(id_action, goal_payload_data, silent_request, silent_reply, btn_el) {
+		let that = this;
+
+		if (btn_el) btn_el.addClass("working");
+		
+		let goal_accepted = false;
+		this.client.actionCall(id_action, goal_payload_data, silent_request, this.client.default_service_timeout_sec,
+			(action_goal_reply) => { // goal accepted / refused
+				goal_accepted = action_goal_reply && action_goal_reply.accepted;
+				that.serviceReplyNotification(btn_el, id_action, silent_reply, action_goal_reply); // sets uuid
+			},
+			(action_result_reply) => { // result / cancel
+				if (goal_accepted)
+					that.actionResultReplyNotification(btn_el, id_action, btn_el.attr('data-goal_uuid'), silent_reply, action_result_reply);
+				btn_el.attr('data-goal_uuid', '');
+			},
+			() => { // connection lost
+				btn_el
+					.removeClass("working")
+					.attr('data-goal_uuid', '');
+			}
+		);
 	}
 
-	serviceReplyNotification(btn_el, service, show_reply, service_reply) {
-		let id_parts = service.split("/");
-		let short_id = id_parts[id_parts.length - 1];
-		let is_action = this.client.discovered_services[service] && this.client.discovered_services[service].is_action;
+	// cancel action call linkes to a button element
+	// goes unlit immediatelly for feedback, wobbles the element if cancel fails
+	cancelButtonActionCall(id_action, btn_el) {
+		let that = this;
+		btn_el.removeClass('working');
+		let uuid = btn_el.attr('data-goal_uuid');
+		this.client.cancelActionCall(id_action, uuid,
+			(id_cancel_service, cancel_service_reply) => {
+				that.serviceReplyNotification(
+					btn_el,
+					id_cancel_service,
+					true, // silent
+					cancel_service_reply);
+			}
+		);
+	}
+
+	formatNotificationData(data) {
+
+		const replacer = (key, value) => {
+			if (key == "byte_array_value" && Array.isArray(value)) {
+				let new_value = [];
+				for (let i = 0; i < value.length; i++)
+					if (value[i] instanceof ArrayBuffer) {
+						let uint8arr = new Uint8Array(value[i]);
+						new_value.push(uint8arr[0]);
+					} else new_value.push(value[i]);
+				return new_value;
+			}
+			return value;
+		};
+
+		return JSON.stringify(data, replacer, 2);
+	}
+	
+	serviceReplyNotification(btn_el, id_service, silent_reply, service_reply) {
+		let id_service_parts = id_service.split("/");
+		let short_id_service = id_service_parts[id_service_parts.length - 1];
+		let is_action = this.client.discovered_services[id_service] && this.client.discovered_services[id_service].is_action;
 
 		let what = is_action ? 'Action' : 'Service';
 
@@ -3357,23 +3426,23 @@ export class PanelUI {
 		}
 
 		let is_err = false;
+		let show_reply = silent_reply === null ? null : !silent_reply; // null = auto
 
-		if (service_reply._notification) {
-			// prepared by reply callback
-
-			if (show_reply)
+		if (service_reply._notification) { // prepared by a reply hook
+			
+			if (show_reply) {
 				this.showNotification(
 					service_reply._notification.label,
 					service_reply._notification.style,
 					service_reply._notification.detail,
 				);
+			}
 
 			if (service_reply._notification.style == "error")
 				is_err = true;
 
-		} else {
-			// auto
-
+		} else { // auto
+			
 			let err_in_resuls = false;
 
 			if (service_reply && service_reply.results && Array.isArray(service_reply.results)) {
@@ -3387,23 +3456,7 @@ export class PanelUI {
 			if (service_reply && service_reply.result && service_reply.result.successful === false)
 				err_in_resuls = true;
 
-			const replacer = (key, value) => {
-				// if (key == 'byte_array_value') return 'byte_array_value';
-
-				if (key == "byte_array_value" && Array.isArray(value)) {
-					let new_value = [];
-					for (let i = 0; i < value.length; i++)
-						if (value[i] instanceof ArrayBuffer) {
-							let uint8arr = new Uint8Array(value[i]);
-							new_value.push(uint8arr[0]);
-						} else new_value.push(value[i]);
-					return new_value;
-				}
-				// if (value instanceof ArrayBuffer) return '<ArrayBuffer>';
-				return value;
-			};
-
-			if (service_reply && show_reply === null) { //auto (only show when there is something interesting in the reply)
+			if (service_reply && show_reply === null) { // auto (only show when there is something interesting in the reply)
 				let reply_keys = Object.keys(service_reply);
 				reply_keys = reply_keys.filter(
 					(item) => ["success", "successful", "err", "error"].indexOf(item) === -1,
@@ -3420,42 +3473,49 @@ export class PanelUI {
 			let message, detail;
 			if (service_reply && service_reply.err) {
 				// showing errors always
-				message = what + ' ' + short_id + ' returned error';
+				message = what + ' ' + short_id_service + ' returned error';
 				detail = service_reply.msg;
 				is_err = true;
 			} else if (service_reply && (service_reply.success === false || service_reply.successful === false || err_in_resuls || service_reply.error)) {
 				// showing errors always
-				message = what + ' ' + short_id + ' returned error';
-				detail = JSON.stringify(service_reply, replacer, 2);
+				message = what + ' ' + short_id_service + ' returned error';
+				detail = this.formatNotificationData(service_reply);
 				is_err = true;
 			} else if (service_reply && service_reply.success === true && show_reply) {
 				//std set bool & trugger
-				message =  what + ' ' + short_id + ' replied: Success';
-				detail = JSON.stringify(service_reply, replacer, 2);
-			} else if (is_action && service_reply && service_reply.accepted === false) {
-				message =  what + ' ' + short_id + ' goal refused';
-				detail = JSON.stringify(service_reply, replacer, 2);
-				is_err = true;
-				show_reply = true;
-				if (btn_el) {
-					btn_el.removeClass("working");
-					btn_el.attr('data-goal_uuid', '');
+				message =  what + ' ' + short_id_service + ' replied: Success';
+				detail = this.formatNotificationData(service_reply);
+			} else if (is_action && service_reply && service_reply.accepted !== undefined) { // service goal reply
+				if (service_reply.accepted === true) {
+					message =  what + ' ' + short_id_service + ' goal accepted';
+				} else if (service_reply.accepted === false) {
+					message =  what + ' ' + short_id_service + ' goal refused';
+					is_err = true;
+					show_reply = true;
+					if (btn_el) {
+						btn_el.removeClass("working");
+						btn_el.attr('data-goal_uuid', '');
+					}
 				}
+				detail = this.formatNotificationData(service_reply);
 			} else if (show_reply) {
-				message =  what + ' ' + short_id + ' replied';
-				detail = JSON.stringify(service_reply, replacer, 2);
+				message =  what + ' ' + short_id_service + ' replied';
+				detail = this.formatNotificationData(service_reply);
 			}
 
 			if (service_reply.message) {
 				message = service_reply.message;
 			}
 
-			if (show_reply)
+			if (is_err)
+				show_reply = true;
+			if (show_reply) {
 				this.showNotification(
 					message,
 					is_err ? "error" : null,
-					service + "<br><pre>" + detail + "</pre>",
+					id_service + "<br><pre>" + detail + "</pre>",
 				);
+			}
 		}
 
 		if (is_err && btn_el) {
@@ -3465,58 +3525,44 @@ export class PanelUI {
 				.addClass("btn_err");
 			setTimeout(() => {
 				btn_el.removeClass("btn_err");
-			}, 600);
+			}, WOBBLE_DURATION);
 		}
 	}
 
-	onActionResult(data) {
-		if (data.goal_uuid) {
-			let btns_els_to_check = [];
-			let btn_els = $('#service_list BUTTON[data-goal_uuid="'+data.goal_uuid+'"]');
-			btn_els.each((idx, el) => {
-				btns_els_to_check.push($(el));
-			});
-			if (this.service_btns_edited) {
-				Object.values(this.service_btns_edited).forEach((btns_edited)=>{
-					btns_edited.forEach((btn_edited)=>{
-						if (btn_edited.test_call_btn_el.attr('data-goal_uuid') == data.goal_uuid) {
-							btns_els_to_check.push(btn_edited.test_call_btn_el);
-						}
-					});
-				});
-			}
-			btns_els_to_check.forEach((btn_el) => {
-				let was_working = btn_el.hasClass('working');
-				btn_el.removeClass("working").attr('data-goal_uuid', '');
-				if ((data.status == 5 || data.status == 6) && was_working) { // action calcelled or aborted
-					btn_el.addClass("btn_err"); // do the error btn wobble
-					setTimeout(() => {
-						btn_el.removeClass("btn_err");
-					}, 600);
-				}
-			});
-		}
-	}
+	actionResultReplyNotification(btn_el, id_action, goal_uuid, silent_reply, action_result_reply) {
 
-	// called on socket connection loss
-	clearAllWorkingServices() {
-		let btns_els_to_clear = [];
-		let btn_els = $('#service_list BUTTON.working');
-		btn_els.each((idx, el) => {
-			btns_els_to_clear.push($(el));
-		});
-		if (this.service_btns_edited) {
-			Object.values(this.service_btns_edited).forEach((btns_edited)=>{
-				btns_edited.forEach((btn_edited)=>{
-					btns_els_to_clear.push(btn_edited.test_call_btn_el);
-				});
-			});
+		let id_action_parts = id_action.split("/");
+		let short_id_action = id_action_parts[id_action_parts.length - 1];
+		let button_was_working = btn_el && btn_el.hasClass('working');
+
+		if (btn_el)
+			btn_el.removeClass("working");
+
+		if (button_was_working && (action_result_reply.status == GOAL_STATUS.CANCELED || action_result_reply.status == GOAL_STATUS.ABORTED)) { // action cancelled or aborted
+			btn_el.addClass("btn_err"); // do the error btn wobble
+			setTimeout(() => {
+				btn_el.removeClass("btn_err");
+			}, WOBBLE_DURATION);
 		}
-		btns_els_to_clear.forEach((btn_el) => {
-			btn_el
-				.removeClass("working")
-				.attr('data-goal_uuid', '');
-		});
+		// report cancel/abort/finish
+		let is_error = false;
+		let goal_result_hr = '';
+		switch (action_result_reply.status) {
+			case GOAL_STATUS.UNKNOWN: goal_result_hr = 'goal status unknown'; is_error = true; break;
+			case GOAL_STATUS.ACCEPTED: goal_result_hr = 'goal accepted'; break;
+			case GOAL_STATUS.EXECUTING: goal_result_hr = 'executing'; break;
+			case GOAL_STATUS.CANCELING: goal_result_hr = 'cancelling goal'; break;
+			case GOAL_STATUS.SUCCEEDED: goal_result_hr = 'goal succeeded'; break;
+			case GOAL_STATUS.CANCELED: goal_result_hr = 'goal cancelled'; break;
+			case GOAL_STATUS.ABORTED: goal_result_hr = 'goal aborted'; break;
+		}
+		if (silent_reply !== true || is_error) {
+			this.showNotification(
+				'Action ' + short_id_action + ' ' + goal_result_hr,
+				is_error ? 'error' : '',
+				id_action + "<br><pre>" + this.formatNotificationData(action_result_reply) + "</pre>",
+			);
+		}
 	}
 
 	showNotification(msg_html, css_class, detail_html = null) {
@@ -3669,13 +3715,13 @@ export class PanelUI {
 				let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
 				this.wifi_scan_service = "/" + iw_node + "/iw_scan";
 
-				this.client.registerServiceRequestCallback(
+				this.client.registerServiceRequestHook(
 					this.wifi_scan_service,
 					(req_data, cb) => {
 						this.onWifiScanRequest(req_data, cb);
 					},
 				);
-				this.client.registerServiceReplyCallback(
+				this.client.registerServiceReplyHook(
 					this.wifi_scan_service,
 					(req_data, reply_data) => {
 						this.onWifiScanReply(req_data, reply_data);

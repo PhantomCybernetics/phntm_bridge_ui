@@ -1,3 +1,5 @@
+import { uuidToBytes } from "./inc/lib.js";
+
 class TopicWriter {
 	constructor(client, topic, msg_type) {
 		this.client = client;
@@ -104,39 +106,6 @@ export function IsFastVideoTopic(t) {
 }
 
 export class BrowserClient extends EventTarget {
-	id_robot = null;
-	pc_session = null;
-	id_instance = null;
-
-	supported_msg_types = []; // served from Bridge Server
-
-	pc = null;
-	socket = null;
-
-	discovered_topics = {}; // str topic => { msg_types: str[], subscribed: bool }
-	discovered_nodes = {}; // str node => { msg_type: str}
-	discovered_services = {}; // str service => { msg_type: str}
-
-	topic_streams = {}; // topic/cam => id_stream
-	open_media_streams = {}; // id_stream => { mid: string, stream: MediaStream } 
-
-	event_calbacks = {};
-	topic_calbacks = {};
-	topic_config_callbacks = {};
-	service_config_callbacks = {};
-	ui_config_callbacks = [];
-
-	service_request_callbacks = {};
-	service_reply_callbacks = {};
-	default_service_timeout_sec = 10.0; // overwritten by ui config
-
-	ui_config = {};
-	prefixed_configs = {};
-	prefixed_configs_received = false;
-	input_manager = null;
-	extrernal_scripts = {};
-
-	is_waiting = false;
 
 	constructor(opts) {
 		super();
@@ -152,6 +121,7 @@ export class BrowserClient extends EventTarget {
 			return false;
 		}
 
+		this.pc = null;
 		this.pc_session = null;
 		this.id_instance = null;
 
@@ -168,6 +138,10 @@ export class BrowserClient extends EventTarget {
 		this.force_turn = opts.force_turn;
 		this.is_waiting = false;
 
+		this.discovered_topics = {}; // str topic => { msg_types: str[], subscribed: bool }
+		this.discovered_nodes = {}; // str node => { msg_type: str}
+		this.discovered_services = {}; // str service => { msg_type: str}
+
 		this.init_complete = false;
 		this.msg_writers = {}; //msg_type => writer
 		this.msg_readers = {}; //msg_type => reader
@@ -176,15 +150,32 @@ export class BrowserClient extends EventTarget {
 		this.subscribers = {}; //id => topic or cam reader
 		this.can_change_subscriptions = false;
 		this.requested_subscription_change = false;
-		this.topic_streams = {};
-		this.open_media_streams = {}; 
+		this.topic_streams = {}; // topic / cam => id_stream
+		this.open_media_streams = {}; // id_stream => { mid: string, stream: MediaStream } 
 		this.latest = {};
+
+		this.event_calbacks = {};
+		this.topic_calbacks = {};
+		this.topic_config_callbacks = {};
+		this.service_config_callbacks = {};
+		
+		this.ui = null; // ui ref
+		this.ui_config = {};
+		this.ui_config_callbacks = [];
+
+		this.input_manager = null;
+		this.extrernal_scripts = {};
 
 		this.prefixed_configs = {};
 		this.prefixed_configs_received = false;
 
-		this.supported_msg_types = [];
-		this.ui = null; // ui ref
+		this.supported_msg_types = []; // served from Bridge Server
+		
+		this.service_request_hooks = {};
+		this.service_reply_hooks = {};
+		this.default_service_timeout_sec = 10.0; // overwritten by ui config
+		this.unfinished_service_callbacks = []; // array of callbacks
+		this.actions_in_progress = {}; // uuid => callbacks
 
 		let that = this;
 
@@ -235,6 +226,7 @@ export class BrowserClient extends EventTarget {
 			that.id_instance = null;
 			that.emit("update");
 			that._clearConnection();
+			that._clearUnfinishedServiceCalls();
 		});
 
 		this.socket.on("disconnect", (reason) => {
@@ -285,10 +277,11 @@ export class BrowserClient extends EventTarget {
 
 		this.socket.on("action_result", (data) => {
 			if (!data[that.id_robot]) return;
-
+			
 			setTimeout(() => {
 				console.log("Got peer action result", data[that.id_robot]);
-				that.emit("action_result", data[that.id_robot]);
+				//that.emit("action_result", data[that.id_robot]);
+				that._handleActionResult(data[that.id_robot]);
 			}, 0);
 		});
 
@@ -1853,75 +1846,128 @@ export class BrowserClient extends EventTarget {
 		}
 	}
 
-	registerServiceRequestCallback(id_service, async_cb) {
-		if (!this.service_request_callbacks[id_service])
-			this.service_request_callbacks[id_service] = [];
-		if (this.service_request_callbacks[id_service].indexOf(async_cb) < 0)
-			this.service_request_callbacks[id_service].push(async_cb);
+	// request hooks are triggered before a service call
+	// they can cancel the call (use for confirmation dialogs)
+	registerServiceRequestHook(id_service, cb_hook) {
+		if (!this.service_request_hooks[id_service])
+			this.service_request_hooks[id_service] = [];
+		if (this.service_request_hooks[id_service].indexOf(cb_hook) < 0)
+			this.service_request_hooks[id_service].push(cb_hook);
 	}
 
-	registerServiceReplyCallback(id_service, cb) {
-		if (!this.service_reply_callbacks[id_service])
-			this.service_reply_callbacks[id_service] = [];
-		if (this.service_reply_callbacks[id_service].indexOf(cb) < 0)
-			this.service_reply_callbacks[id_service].push(cb);
+	// reply hooks are trigerred on service reply
+	registerServiceReplyHook(id_service, cb_hook) {
+		if (!this.service_reply_hooks[id_service])
+			this.service_reply_hooks[id_service] = [];
+		if (this.service_reply_hooks[id_service].indexOf(cb_hook) < 0)
+			this.service_reply_hooks[id_service].push(cb_hook);
 	}
 
-	serviceCall(service, data, silent_req, timeout_sec, cb) {
+	serviceCall(id_service, data, silent_req, timeout_sec, cb, cb_connection_lost) {
 		let that = this;
-		if (this.service_request_callbacks[service] && this.service_request_callbacks[service].length) {
-			let num_completed = 0;
+		// check request hooks as they can cancel service call
+		if (this.service_request_hooks[id_service] && this.service_request_hooks[id_service].length) {
+			let num_hooks_completed = 0;
 			let abort = false;
-			for (let i = 0; i < this.service_request_callbacks[service].length; i++) {
-				this.service_request_callbacks[service][i](data, (cb_res) => {
+			for (let i = 0; i < this.service_request_hooks[id_service].length; i++) {
+				this.service_request_hooks[id_service][i](data, (cb_res) => {
 					if (!cb_res) {
 						abort = true;
-						console.log("Service call " + service + " aborted by cb");
+						console.log("Service call " + id_service + " aborted by request hook");
 					}
 
-					num_completed++;
-					if (num_completed == this.service_request_callbacks[service].length) {
+					num_hooks_completed++;
+					if (num_hooks_completed == this.service_request_hooks[id_service].length) {
 						if (!abort) {
-							that._doServiceCall(service, data, silent_req, timeout_sec, cb);
+							that._doServiceCall(id_service, data, silent_req, timeout_sec, cb, cb_connection_lost);
 						} else {
-							if (cb) cb();
+							if (cb)
+								cb();
 						}
 					}
 				});
 			}
-		} else {
-			this._doServiceCall(service, data, silent_req, timeout_sec, cb);
+		} else { // no request hooks
+			this._doServiceCall(id_service, data, silent_req, timeout_sec, cb, cb_connection_lost);
 		}
 	}
 
-	_doServiceCall(service, data, silent_req, timeout_sec, cb) {
+	actionCall(id_action, goal_data, silent_req, timeout_sec, cb_goal, cb_result, cb_connection_lost) {
+		let that = this;
+		this.serviceCall(id_action, goal_data, silent_req, timeout_sec, (action_goal_reply)=>{
+			if (action_goal_reply && action_goal_reply.goal_uuid) {
+				that.actions_in_progress[action_goal_reply.goal_uuid] = cb_result; // called when result is received
+			}
+			if (cb_goal)
+				cb_goal(action_goal_reply);
+		}, cb_connection_lost);
+	}
+
+	_handleActionResult(action_result_reply) {
+		if (!action_result_reply['goal_uuid']) {
+			console.err("Action result is missing goal_uuid", action_result_reply);
+			return;
+		}
+		let uuid = action_result_reply['goal_uuid'];
+		if (this.actions_in_progress[uuid]) {
+			let cb = this.actions_in_progress[uuid];
+			delete this.actions_in_progress[uuid];
+			cb(action_result_reply);
+		}
+	}
+
+	cancelActionCall(id_action, uuid, cb) {
+		let id_cancel_service = id_action + '/_action/cancel_goal';
+		let cancel_msg = { 'goal_uuid': uuidToBytes(uuid) };
+
+		let that = this;
+		this.serviceCall(id_cancel_service, cancel_msg, true, this.default_service_timeout_sec, (cancel_service_reply) => {
+			if (cb)
+				cb(id_cancel_service, cancel_service_reply);
+		});
+	}
+
+	_doServiceCall(id_service, data, silent_req, timeout_sec, cb, cb_connection_lost) {
 		let req = {
 			id_robot: this.id_robot,
-			service: service,
+			service: id_service,
 			timeout_sec: timeout_sec,
 			msg: data, // payload; if data == undefined => no msg
 		};
+
 		if (this.ui && !silent_req) {
-			//let data_hr = (data !== null && data !== undefined);
 			this.ui.showNotification(
-				"Calling " + service,
+				"Calling " + id_service,
 				null,
 				"Request data:<br><pre>" + JSON.stringify(data, null, 2) + "</pre>",
 			);
 		}
-		let that = this;
+		
 		console.log("Service call request (timeout="+timeout_sec.toFixed(2)+")", req);
+
+		if (cb_connection_lost)
+			this.unfinished_service_callbacks.push(cb_connection_lost);
+
+		let that = this;
 		this.socket.emit("service", req, (reply) => {
 			console.log("Service call reply", reply);
 
-			if (that.service_reply_callbacks[service]) {
-				for (let i = 0; i < that.service_reply_callbacks[service].length; i++) {
-					that.service_reply_callbacks[service][i](data, reply);
+			if (that.service_reply_hooks[id_service]) {
+				for (let i = 0; i < that.service_reply_hooks[id_service].length; i++) {
+					that.service_reply_hooks[id_service][i](data, reply);
 				}
 			}
 
-			if (cb) cb(reply);
+			if (cb)
+				cb(reply);
 		});
+	}
+
+	_clearUnfinishedServiceCalls() {
+		this.unfinished_service_callbacks.forEach((cb_connection_lost)=>{
+			cb_connection_lost();
+		});
+		this.unfinished_service_callbacks = [];
 	}
 
 	runIntrospection(state = true) {

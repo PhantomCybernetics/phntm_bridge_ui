@@ -5164,18 +5164,22 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 }
 
 .touch_buttons .btn {
-	height: 40px;
+	height: 44px;
 	border: 0px;
 	outline: 0px;
 	border-radius: 10px;
 	margin: 0px 2px 0px 2px;
 	padding: 0px 10px;
-	background-color: #000000bf;
+	background-color: #033669;
 	color: #fff;
-	border: 2px solid #033669;
+	/* border: 2px solid #033669; */
 	font-size: 14px;
-	line-height: 40px;
+	line-height: 44px;
 	position: relative;
+}
+
+.touch_buttons .btn.working {
+	color: white !important;
 }
 
 .touch_buttons .btn.disabled {
@@ -5186,12 +5190,17 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 	animation-name: wobble;
 	animation-duration: 0.2s;
 	animation-iteration-count: infinite;
+	height: 40px;
+	line-height: 40px;
+	background-color: black !important;
+	border: 2px solid #033669;
+	color: white !important;
 }
 
-.touch_buttons .btn:active,
+/* .touch_buttons .btn:active,
 .touch_buttons .btn.working {
 	background-color: #033669;
-}
+} */
 
 .ui-sortable-helper {
 	/* background:red; */
@@ -5216,82 +5225,43 @@ BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons .
 	font-size: 20px;
 }
 
-BODY.touch-bottom-buttons.touch-gamepad
-	.touch_buttons#touch-ui-bottom-buttons.ui-sortable
-	.btn {
+BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons.ui-sortable .btn {
 	top: 5px;
 }
 
-BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
-	.touch_buttons#touch-ui-bottom-buttons
-	.btn {
+BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-bottom-buttons .btn {
 	top: 4px;
 	height: 38px;
 	font-size: 14px;
 	line-height: 38px;
 }
 
-.touch_buttons .btn.red {
-	border-color: red;
-}
-.touch_buttons .btn.red:active,
-.touch_buttons .btn.red.working {
-	background-color: red;
-}
+.touch_buttons .btn.red { background-color: red; }
+.touch_buttons.ui-sortable .btn.red { border-color: red; }
 
-.touch_buttons .btn.green {
-	border-color: lime;
-}
-.touch_buttons .btn.green:active,
-.touch_buttons .btn.green.working {
-	background-color: lime;
-	color: black;
-}
+.touch_buttons .btn.green { background-color: lime; color: black; }
+.touch_buttons.ui-sortable .btn.green { border-color: lime; }
 
-.touch_buttons .btn.blue {
-	border-color: blue;
-}
-.touch_buttons .btn.blue:active,
-.touch_buttons .btn.blue.working {
-	background-color: blue;
-}
+.touch_buttons .btn.blue { background-color: blue; }
+.touch_buttons.ui-sortable .btn.blue { border-color: blue; }
 
-.touch_buttons .btn.yellow {
-	border-color: yellow;
-}
-.touch_buttons .btn.yellow:active,
-.touch_buttons .btn.yellow.working {
-	background-color: yellow;
-	color: black;
-}
+.touch_buttons .btn.yellow { background-color: yellow; color: black; }
+.touch_buttons.ui-sortable .btn.yellow { border-color: yellow; }
 
-.touch_buttons .btn.orange {
-	border-color: orange;
-}
-.touch_buttons .btn.orange:active,
-.touch_buttons .btn.orange.working {
-	background-color: orange;
-	color: black;
-}
+.touch_buttons .btn.orange { background-color: orange; /* color: black; */ }
+.touch_buttons.ui-sortable .btn.orange { border-color: orange; }
 
-.touch_buttons .btn.magenta {
-	border-color: magenta;
-}
-.touch_buttons .btn.magenta:active,
-.touch_buttons .btn.magenta.working {
-	background-color: magenta;
-	color: black;
-}
+.touch_buttons .btn.magenta { background-color: magenta; /* color: black; */ }
+.touch_buttons.ui-sortable .btn.magenta { border-color: magenta; }
 
-.touch_buttons .btn.cyan {
-	border-color: cyan;
-}
+.touch_buttons .btn.cyan { background-color: cyan; color: black; }
+.touch_buttons.ui-sortable .btn.cyan { border-color: cyan; }
 
-.touch_buttons .btn.cyan:active,
-.touch_buttons .btn.cyan.working {
-	background-color: cyan;
-	color: black;
-}
+.touch_buttons .btn.white { background-color: white; color: black; }
+.touch_buttons.ui-sortable .btn.white { border-color: white; }
+
+.touch_buttons .btn.black { background-color: black;  }
+.touch_buttons.ui-sortable .btn.black { border-color: black; }
 
 #gamepad #gamepad_settings .config-row .small-settings-cb {
 	padding: 0px;
@@ -6071,10 +6041,16 @@ BUTTON#trigger_wifi_roam.working {
 
 .service_button.action.working,
 .service_button.action.working:hover,
-#service-input-dialog BUTTON.btn-call.action.working,
-#service-input-dialog BUTTON.btn-call.action.working:hover
-{
-	cursor:pointer;
+#service-input-dialog BUTTON.btn-call.working,
+#service-input-dialog BUTTON.btn-call:active {
+	cursor: pointer;
+	color: white !important;
+}
+@media (hover: hover) {
+	#service-input-dialog BUTTON.btn-call.working:hover {
+		cursor: pointer;
+		color: white !important;
+	}
 }
 
 .docker_btns button.working {
@@ -6103,6 +6079,10 @@ BUTTON#trigger_wifi_roam.working {
     opacity: 1;
     transition: opacity .3s ease-in-out;
     border-radius: 5px;
+}
+
+.touch_buttons .btn.fancy_worker.working:before  {
+	border-radius: 10px;
 }
 
 /* .fancy_worker.working:after {
@@ -6499,6 +6479,31 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	background-color: #171717;
 }
 
+#service-input-dialog .btn-tab.white .label,
+#service-input-dialog .btn-tab.white .btn-edit-confirm,
+#service-input-dialog .btn-menu BUTTON.color-btn.white,
+.service_button.white {
+	background-color: white;
+	color: black;
+}
+.service_button.white:hover {
+	background-color: rgb(232, 232, 232);
+}
+#service-input-dialog .btn-tab.white INPUT.btn-inp {
+	background-color: rgb(232, 232, 232);
+	border-color: white;
+	color: black;
+}
+
+#service-input-dialog .btn-tab.white.selected .btn-menu-btn{
+	filter: invert(1);
+}
+
+#service-input-dialog .btn-tab.white.selected .btn-edit-confirm {
+	background-color: black;
+	filter: invert(1);
+}	
+
 #service-input-dialog INPUT.btn-inp,
 #service-input-dialog .btn-inp-wh {
 	position: relative;
@@ -6587,9 +6592,21 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	color: white;
 }
 
-#service-input-dialog.input-manager .buttons BUTTON:hover {
+#service-input-dialog.input-manager .buttons BUTTON:active,
+#service-input-dialog.input-manager .buttons BUTTON.btn-json.open {
 	background-color: white;
 	color: black;
+}
+@media (hover: hover) {
+	#service-input-dialog.input-manager .buttons BUTTON:hover {
+		background-color: white;
+		color: black;
+	}
+}
+
+#service-input-dialog.input-manager .json-menu,
+#service-input-dialog.input-manager .json-menu .arrow {
+	background-color: #3a3376;
 }
 
 #service-input-dialog.input-manager .buttons BUTTON.btn-save {

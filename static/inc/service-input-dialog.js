@@ -1,4 +1,4 @@
-import { isTouchDevice, uuidToBytes } from "../inc/lib.js";
+import { isTouchDevice } from "../inc/lib.js";
 
 export class ServiceInputDialog {
 	constructor(client) {
@@ -27,8 +27,8 @@ export class ServiceInputDialog {
 		let btn = {
 			label: "Call",
 			color: "blue",
-			show_request: true,
-			show_reply: true,
+			silent_request: true,
+			silent_reply: false,
 			value: {},
 			sort_index: sort_index,
 			test_call_btn_el: $('<button class="btn-call fancy_worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
@@ -91,25 +91,24 @@ export class ServiceInputDialog {
 		this.btn_call_cont.empty();
 		btn.test_call_btn_el.appendTo(this.btn_call_cont);
 		let that = this;
-		btn.test_call_btn_el.unbind().click((ev) => {
-			let is_action = btn.is_action;
-			let uuid = is_action ? btn.test_call_btn_el.attr('data-goal_uuid') : null;
-			if (btn.test_call_btn_el.hasClass('working') && is_action && uuid) {
-				btn.test_call_btn_el.removeClass('working'); // wobbles on cancel fail, otherwise goes unlit immediatelly for feedback
-				let cancel_msg = {
-					'goal_uuid': uuidToBytes(uuid)
-				}		
-				//client.serviceUserPayloadCall(action_cancel_service, cancel_btn, btn.el);
-				that.client.serviceCall(btn.action_cancel_service, cancel_msg, true, that.client.default_service_timeout_sec, (service_reply) => {
-					that.client.ui.serviceReplyNotification(btn.test_call_btn_el, btn.action_cancel_service, false, service_reply);
-				});
-			} else {
-				that.client.ui.serviceUserPayloadCall(that.service.service, btn, btn.test_call_btn_el);
+		btn.test_call_btn_el.unbind().click((ev) => {			
+			if (btn.is_action && btn.test_call_btn_el.hasClass('working')) {
+				that.client.ui.cancelButtonActionCall(that.service.service, btn.test_call_btn_el);
+			} else if (!btn.is_action) { // service
+				that.client.ui.serviceButtonUserPayloadCall(
+					that.service.service, btn.value,
+					btn.silent_request, btn.silent_reply,
+					btn.test_call_btn_el);
+			} else { // action
+				that.client.ui.actionButtonUserPayloadCall(
+					that.service.service, btn.value,
+					btn.silent_request, btn.silent_reply,
+					btn.test_call_btn_el);
 			}
 		});
 	}
 
-	show(service, node, node_cont_el) {
+	showDialogServicesMenu(service, node, node_cont_el) {
 		this.service = service;
 
 		let is_action = this.client.discovered_services[service.service] && this.client.discovered_services[service.service].is_action;
@@ -196,6 +195,19 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+		let btn_json_paste_btn = $("<button>Paste Button Payload</button>");
+		btn_json_paste_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			// let val = JSON.stringify(that.msg, null, 4);
+			// navigator.clipboard.writeText(val);
+			// console.log("Copied button call json:", val);
+			// that.client.ui.showNotification(
+			// 	"Message JSON copied",
+			// 	null,
+			// 	"<pre>" + val + "</pre>",
+			// );
+		});
 		let btn_json_copy_service_btns = $("<button>Copy "+(is_action?"Action":"Service")+" Config (all buttons)</button>");
 		btn_json_copy_service_btns.click(() => {
 			btn_json.trigger("click"); // hide
@@ -207,8 +219,8 @@ export class ServiceInputDialog {
 				val[service.service].push({
 					label: btn.label,
 					color: btn.color,
-					show_request: btn.show_request,
-					show_reply: btn.show_reply,
+					silent_request: btn.silent_request,
+					silent_reply: btn.silent_reply,
 					value: btn.value,
 					sort_index: btn.sort_index,
 				});
@@ -244,8 +256,8 @@ export class ServiceInputDialog {
 					val[srv].push({
 						label: btn.label,
 						color: btn.color,
-						show_request: btn.show_request,
-						show_reply: btn.show_reply,
+						silent_request: btn.silent_request,
+						silent_reply: btn.silent_reply,
 						value: btn.value,
 						sort_index: btn.sort_index,
 					});
@@ -257,8 +269,8 @@ export class ServiceInputDialog {
 				val[service.service].push({
 					label: btn.label,
 					color: btn.color,
-					show_request: btn.show_request,
-					show_reply: btn.show_reply,
+					silent_request: btn.silent_request,
+					silent_reply: btn.silent_reply,
 					value: btn.value,
 					sort_index: btn.sort_index,
 				});
@@ -290,6 +302,7 @@ export class ServiceInputDialog {
 
 		json_menu.append([
 			btn_json_copy_btn,
+			btn_json_paste_btn,
 			btn_json_copy_service_btns,
 			btn_json_copy_all_services,
 		]);
@@ -328,7 +341,12 @@ export class ServiceInputDialog {
 
 		this.renderButtonTabs(is_action);
 
-		this.bottom_btns_el.append([btn_save, this.btn_call_cont, btn_json, btn_close]);
+		this.bottom_btns_el.append([
+			btn_save,
+			this.btn_call_cont,
+			btn_json,
+			btn_close
+		]);
 		this.cont_el.append([
 			this.btns_line_el,
 			$('<div class="cleaner"/>'),
@@ -351,7 +369,7 @@ export class ServiceInputDialog {
 		$("BODY").addClass("no-scroll");
 	}
 
-	showInputManagerDialog(id_service, msg_type, msg_type_request, initial_value, cb) {
+	showDialogInputManager(id_service, msg_type, msg_type_request, initial_value, silet_request, silent_reply, cb) {
 		this.service = {
 			'service': id_service,
 			'msg_type': msg_type,
@@ -370,6 +388,8 @@ export class ServiceInputDialog {
 
 		this.cont_el.append([$("<h3>" + this.service.service + "</h3>"), msg_type_link]);
 		this.msg_type = this.client.findMessageType(this.service.msg_type + "_Request");
+
+		console.log('msg_type', this.msg_type, this.service);
 
 		this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
 		this.cont_el.append(this.menu_underlay);
@@ -398,22 +418,78 @@ export class ServiceInputDialog {
 		});
 
 		let btn_test_call = $('<button class="btn-call fancy_worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>');
+		if (is_action)
+			btn_test_call.addClass('action');
 		btn_test_call.click((ev) => {
-			that.client.serviceCall(
-				that.service.service,
-				msg_ref ? msg_ref : undefined,
-				false,
-				that.client.default_service_timeout_sec,
-				(test_reply) => {
-					that.client.ui.serviceReplyNotification(
-						btn_test_call,
-						that.service.service,
-						true,
-						test_reply,
-					);
-				},
+
+			if (is_action && btn_test_call.hasClass('working')) {
+				that.client.ui.cancelButtonActionCall(that.service.service, btn_test_call);				
+			} else if (!is_action){ // service
+				that.client.ui.serviceButtonUserPayloadCall(
+					that.service.service, msg_ref ? msg_ref : undefined,
+					silet_request, silent_reply, 
+					btn_test_call
+				);
+			} else { // action
+				that.client.ui.actionButtonUserPayloadCall(
+					that.service.service, msg_ref ? msg_ref : undefined,
+					silet_request, silent_reply,
+					btn_test_call
+				);
+			}
+		});
+
+		let btn_json = $('<button class="btn-json">JSON</button>');
+		btn_json.click(() => {
+			if (!btn_json.hasClass("open")) {
+				btn_json.addClass("open");
+				that.menu_underlay
+					.unbind()
+					.show()
+					.click(() => {
+						btn_json.removeClass("open");
+						that.menu_underlay.unbind().hide();
+					});
+			} else {
+				btn_json.removeClass("open");
+				that.menu_underlay.unbind().hide();
+			}
+		});
+		let json_menu = $('<div class="json-menu"><span class="arrow"></span></div>');
+		json_menu.click((ev) => {
+			ev.stopPropagation();
+		});
+		let json_copy_btn = $("<button>Copy Payload</button>");
+		json_copy_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			let val = JSON.stringify(msg_ref ? msg_ref : undefined, null, 4);
+			navigator.clipboard.writeText(val);
+			console.log("Copied button call json:", val);
+			that.client.ui.showNotification(
+				"Message JSON copied",
+				null,
+				"<pre>" + val + "</pre>",
 			);
 		});
+		let json_paste_btn = $("<button>Paste Payload</button>");
+		json_paste_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			// let val = JSON.stringify(that.msg, null, 4);
+			// navigator.clipboard.writeText(val);
+			// console.log("Copied button call json:", val);
+			// that.client.ui.showNotification(
+			// 	"Message JSON copied",
+			// 	null,
+			// 	"<pre>" + val + "</pre>",
+			// );
+		});
+		json_menu.append([
+			json_copy_btn,
+			json_paste_btn
+		]);
+		json_menu.appendTo(btn_json);
 
 		let btn_save = $('<button class="btn-save">Save</button>');
 		btn_save.click((ev) => {
@@ -421,7 +497,12 @@ export class ServiceInputDialog {
 			cb(msg_ref); // TODO
 		});
 
-		this.bottom_btns_el.append([btn_save, btn_test_call, btn_close]);
+		this.bottom_btns_el.append([
+			btn_save,
+			btn_test_call,
+			btn_json,
+			btn_close
+		]);
 		this.cont_el.append([this.editor, this.bottom_btns_el]);
 
 		this.cont_el.draggable({
@@ -505,26 +586,26 @@ export class ServiceInputDialog {
 				});
 
 				// show request
-				let show_request_cb = $('<input type="checkbox"/>');
-				show_request_cb.prop("checked", btn.show_request);
-				let show_request_label = $('<label title="Service request will be shown as notification">Show request</label>');
-				show_request_label.prepend(show_request_cb);
-				show_request_cb.change((ev) => {
-					btn.show_request = $(ev.target).prop("checked");
+				let silent_request_cb = $('<input type="checkbox"/>');
+				silent_request_cb.prop("checked", btn.silent_request);
+				let silent_request_label = $('<label title="Service request will not be shown as notification">Silent request</label>');
+				silent_request_label.prepend(silent_request_cb);
+				silent_request_cb.change((ev) => {
+					btn.silent_request = $(ev.target).prop("checked");
 				});
 
 				// show reply
-				let show_reply_cb = $('<input type="checkbox"/>');
-				show_reply_cb.prop("checked", btn.show_reply);
-				let show_reply_label = $('<label title="Service reply will be shown as notification">Show reply</label>');
-				show_reply_label.prepend(show_reply_cb);
-				show_reply_cb.change((ev) => {
-					btn.show_reply = $(ev.target).prop("checked");
+				let silent_reply_cb = $('<input type="checkbox"/>');
+				silent_reply_cb.prop("checked", btn.silent_reply);
+				let silent_reply_label = $('<label title="Service reply will not be shown as notification">Silent reply</label>');
+				silent_reply_label.prepend(silent_reply_cb);
+				silent_reply_cb.change((ev) => {
+					btn.silent_reply = $(ev.target).prop("checked");
 				});
 
 				// colors
 				let color_line = $('<div class="colors"></div>');
-				["blue", "green", "red", "orange", "magenta", "black"].forEach((clr) => {
+				[ "blue", "green", "red", "orange", "magenta", "black", "white" ].forEach((clr) => {
 					let btn_clr = $('<button title="' + clr + '" class="color-btn ' + clr + '"></button>');
 					if (clr == btn.color) btn_clr.addClass("selected");
 					color_line.append(btn_clr);
@@ -591,8 +672,8 @@ export class ServiceInputDialog {
 					.empty()
 					.append([
 						rename_btn, cl,
-						show_request_label,
-						show_reply_label, cl,
+						silent_request_label,
+						silent_reply_label, cl,
 						color_line, cl,
 						rem_btn, cl,
 						arrow
@@ -658,7 +739,7 @@ export class ServiceInputDialog {
 
 				if (!btn_menu_toggle_active)
 					return;
-				
+
 				btn_menu_toggle_active = false;
 				ev.stopPropagation();
 				ev.cancelBubble = true;
