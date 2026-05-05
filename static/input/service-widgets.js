@@ -35,7 +35,7 @@ export class UserButtonsServiceInput extends ServiceInput {
 		btns.forEach((btn) => {
 
 			if (!btn.el) {
-				btn.el = $('<button class="service_button fancy_worker ' + btn.color + '">' + btn.label + "</button>");
+				btn.el = $('<button class="service_button fancy-worker ' + btn.color + '">' + btn.label + "</button>");
 				if (is_action)
 					btn.el.addClass('action');
 			} else {
@@ -92,7 +92,7 @@ export class UserButtonsServiceInput extends ServiceInput {
 // std_srvs/srv/Empty and std_srvs/srv/Trigger
 export class ServiceInput_Empty extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn = $('<button class="service_button fancy_worker blue">Call</button>');
+		let btn = $('<button class="service_button fancy-worker blue">Call</button>');
 
 		btn.click((ev) => {
 			client.ui.serviceButtonSimplePayloadCall(service.service, null, btn);
@@ -105,8 +105,8 @@ export class ServiceInput_Empty extends ServiceInput {
 // std_srvs/srv/SetBool
 export class ServiceInput_Bool extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn_true = $('<button class="service_button fancy_worker green">True</button>');
-		let btn_false = $('<button class="service_button fancy_worker red">False</button>');
+		let btn_true = $('<button class="service_button fancy-worker green">True</button>');
+		let btn_false = $('<button class="service_button fancy-worker red">False</button>');
 
 		btn_true.click((ev) => {
 			client.ui.serviceButtonSimplePayloadCall(service.service, { data: true }, btn_true);

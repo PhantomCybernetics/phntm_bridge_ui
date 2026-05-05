@@ -3163,7 +3163,7 @@ export class InputManager {
 					let wrap_el = $("<li></li>");
 					let label = btn.src_label.trim();
 					if (!label) label = "&nbsp;";
-					let btn_el = $('<span class="btn fancy_worker ' + (btn.touch_ui_style ? btn.touch_ui_style : "") + '" tabindex="-1">' + label + "</span>");
+					let btn_el = $('<span class="btn fancy-worker ' + (btn.touch_ui_style ? btn.touch_ui_style : "") + '" tabindex="-1">' + label + "</span>");
 					let cont = null;
 
 					if ((btn.driver_axis || btn.driver_btn) && !c.enabled)
@@ -3463,8 +3463,10 @@ export class InputManager {
 		btn.row_el = row_el;
 
 		// raw val
-		let raw_val_el = $('<span class="btn-val" title="Button input"></span>');
+		let raw_val_el = $('<span class="btn-val fancy-worker" title="Button input"></span>');
 		raw_val_el.appendTo(row_el);
+		if (btn.service_working)
+			raw_val_el.addClass('working');
 
 		let close_listening = () => {
 			btn.listening = false;
@@ -3785,21 +3787,27 @@ export class InputManager {
 					console.warn("Skipping service " + btn.ros_srv_id + " call (previous call unfinished)");
 					local_error = true;
 				}
+
+				// show activity / err on touch button or input button name
+				let get_current_btn_el = () => {
+					return btn.touch_btn_el ? btn.touch_btn_el : btn.raw_val_el;
+				}
+				let btn_el = get_current_btn_el();
+
 				if (local_error) {
-					if (btn.touch_btn_el) {
-						// do the error btn wobble
-						btn.touch_btn_el.addClass("btn_err");
-						setTimeout(() => {
-							btn.touch_btn_el.removeClass("btn_err");
-						}, WOBBLE_DURATION);
-					}
+					
+					// do the error btn wobble
+					btn_el.addClass("btn_err");
+					setTimeout(() => {
+						btn_el.removeClass("btn_err");
+					}, WOBBLE_DURATION);
 					return;
 				}
 
 				if (!btn.ros_srv_is_action) { // service
 
-					if (btn.touch_btn_el)
-						btn.touch_btn_el.addClass("working");
+					btn_el.addClass("working");
+					btn.service_working = true;
 
 					btn.service_blocked = true;
 					this.client.serviceCall(
@@ -3809,10 +3817,12 @@ export class InputManager {
 						this.client.default_service_timeout_sec,
 						(reply) => {
 							btn.service_blocked = false;
+							btn.service_working = false;
 							if (reply !== undefined)
 								// undefined means service call was cancelled here (by a callback)
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
 								that.ui.serviceReplyNotification(
-									btn.touch_btn_el,
+									btn_el,
 									btn.ros_srv_id,
 									btn.ros_srv_silent_reply,
 									reply,
@@ -3820,8 +3830,9 @@ export class InputManager {
 						},
 						() => { // connection lost
 							btn.service_blocked = false;
-							if (btn.touch_btn_el)
-								btn.touch_btn_el.removeClass("working");
+							btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+							btn_el.removeClass("working");
+							btn.service_working = false;
 						}
 					);
 
@@ -3831,41 +3842,51 @@ export class InputManager {
 
 					if (!btn.action_goal_uuid) { // set goal
 
-						if (btn.touch_btn_el) btn.touch_btn_el.addClass("working");
+						btn_el.addClass("working");
+						btn.service_working = true;
 
 						let goal_accepted = false;
 						this.client.actionCall(btn.ros_srv_id, btn.ros_srv_val ? btn.ros_srv_val : {}, btn.ros_srv_silent_request, this.client.default_service_timeout_sec,
 							(action_goal_reply) => { // goal accepted / refused
 								btn.service_blocked = false;
-								if (action_goal_reply && action_goal_reply.goal_uuid) {
-									btn.action_goal_uuid = action_goal_reply.goal_uuid;
+								if (action_goal_reply) {
+									if (action_goal_reply.goal_uuid)
+										btn.action_goal_uuid = action_goal_reply.goal_uuid;
+									if (action_goal_reply.accepted === false)
+										btn.service_working = false;
 								}
 								goal_accepted = action_goal_reply && action_goal_reply.accepted;
-								that.ui.serviceReplyNotification(btn.touch_btn_el, btn.ros_srv_id, btn.ros_srv_silent_reply, action_goal_reply);
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								that.ui.serviceReplyNotification(btn_el, btn.ros_srv_id, btn.ros_srv_silent_reply, action_goal_reply);
 							},
 							(action_result_reply) => { // result / cancel
-								if (goal_accepted)
-									that.ui.actionResultReplyNotification(btn.touch_btn_el, btn.ros_srv_id, btn.action_goal_uuid, btn.ros_srv_silent_reply, action_result_reply);
+								if (goal_accepted) {
+									btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+									that.ui.actionResultReplyNotification(btn_el, btn.ros_srv_id, btn.action_goal_uuid, btn.ros_srv_silent_reply, action_result_reply);
+								}
 								btn.service_blocked = false;
+								btn.service_working = false;
 								btn.action_goal_uuid = null;
 							},
 							() => { // connection lost
 								btn.service_blocked = false;
+								btn.service_working = false;
 								btn.action_goal_uuid = null;
-								if (btn.touch_btn_el)
-									btn.touch_btn_el.removeClass("working");
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								btn_el.removeClass("working");
 							}
 						);
 
 					} else { // cancel goal
 
-						if (btn.touch_btn_el)
-							btn.touch_btn_el.removeClass("working");
+						btn_el.removeClass("working");
+						btn.service_working = false;
 
 						this.client.cancelActionCall(btn.ros_srv_id, btn.action_goal_uuid,
 							(id_cancel_service, cancel_service_reply) => {
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
 								that.ui.serviceReplyNotification(
-									btn.touch_btn_el,
+									btn_el,
 									id_cancel_service,
 									true, // silent
 									cancel_service_reply);
@@ -3873,10 +3894,8 @@ export class InputManager {
 						);
 
 					}
-
 				}
 				
-
 				break;
 			case "ctrl-enabled":
 				let state = false;

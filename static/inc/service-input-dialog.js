@@ -31,7 +31,7 @@ export class ServiceInputDialog {
 			silent_reply: false,
 			value: {},
 			sort_index: sort_index,
-			test_call_btn_el: $('<button class="btn-call fancy_worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
+			test_call_btn_el: $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
 		};
 		if (is_action)
 			btn.test_call_btn_el.addClass('action');
@@ -310,7 +310,7 @@ export class ServiceInputDialog {
 
 		this.btns.forEach((btn)=>{ // one test btn per actual button (to keep track on working state)
 			if (!btn.test_call_btn_el) {
-				btn.test_call_btn_el = $('<button class="btn-call fancy_worker">Test<span class="wide"> '+(is_action?'Action':'Service')+'</span></button>');
+				btn.test_call_btn_el = $('<button class="btn-call fancy-worker">Test<span class="wide"> '+(is_action?'Action':'Service')+'</span></button>');
 				if (is_action)
 					btn.test_call_btn_el.addClass('action');
 			}
@@ -417,7 +417,7 @@ export class ServiceInputDialog {
 			that.hide();
 		});
 
-		let btn_test_call = $('<button class="btn-call fancy_worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>');
+		let btn_test_call = $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>');
 		if (is_action)
 			btn_test_call.addClass('action');
 		btn_test_call.click((ev) => {

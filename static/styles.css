@@ -3845,6 +3845,10 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
 	overflow: hidden;
 }
 
+#gamepad_settings .btn-val.working {
+	color: #fff;
+}
+
 #gamepad_settings .btn-val.touched {
 	background: cyan;
 }
@@ -5176,6 +5180,7 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 	font-size: 14px;
 	line-height: 44px;
 	position: relative;
+	box-sizing: border-box;
 }
 
 .touch_buttons .btn.working {
@@ -5190,11 +5195,12 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing
 	animation-name: wobble;
 	animation-duration: 0.2s;
 	animation-iteration-count: infinite;
-	height: 40px;
-	line-height: 40px;
 	background-color: black !important;
 	border: 2px solid #033669;
 	color: white !important;
+	line-height: 40px;
+	padding-left: 8px;
+	padding-right: 8px;
 }
 
 /* .touch_buttons .btn:active,
@@ -5227,13 +5233,14 @@ BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons .
 
 BODY.touch-bottom-buttons.touch-gamepad .touch_buttons#touch-ui-bottom-buttons.ui-sortable .btn {
 	top: 5px;
+	line-height: 36px !important;
 }
 
 BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-bottom-buttons .btn {
 	top: 4px;
-	height: 38px;
+	height: 40px;
 	font-size: 14px;
-	line-height: 38px;
+	line-height: 40px;
 }
 
 .touch_buttons .btn.red { background-color: red; }
@@ -6057,14 +6064,14 @@ BUTTON#trigger_wifi_roam.working {
 	filter: grayscale(0) opacity(1) !important;
 }
 
-.fancy_worker {
+.fancy-worker {
     border: none;
     outline: none;
     position: relative;
     z-index: 0;
 }
 
-.fancy_worker.working:before {
+.fancy-worker.working:before {
     content: '';
     background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
     position: absolute;
@@ -6081,21 +6088,9 @@ BUTTON#trigger_wifi_roam.working {
     border-radius: 5px;
 }
 
-.touch_buttons .btn.fancy_worker.working:before  {
+.touch_buttons .btn.fancy-worker.working:before  {
 	border-radius: 10px;
 }
-
-/* .fancy_worker.working:after {
-    z-index: -1;
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #111;
-    left: 0;
-    top: 0;
-    border-radius: 10px;
-} */
 
 @keyframes glowing {
     0% { background-position: 0 0; }
@@ -6390,6 +6385,10 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 
 #service-input-dialog .btn-menu BUTTON.color-btn.selected {
 	border: 3px solid white;
+}
+
+#service-input-dialog .btn-menu BUTTON.color-btn.white.selected {
+	border-color: rgb(162 161 161);
 }
 
 #service-input-dialog .btn-tab.blue INPUT.btn-inp {
