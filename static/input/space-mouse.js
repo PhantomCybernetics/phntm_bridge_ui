@@ -12,7 +12,7 @@ export class SpaceMouse {
         this.space_mouse = null;
         this.initialized = false;
 
-        this.debug = true;
+        this.debug = false;
         this.debug_verbose = false;
 
         this._camera_right = new THREE.Vector3();
