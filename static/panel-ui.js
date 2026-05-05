@@ -2942,6 +2942,10 @@ export class PanelUI {
 		});
 	}
 
+	getMaximizedPanel() {
+		return this.maximized_panel;
+	}
+
 	updateTouchGamepadIcon() {
 		if (this.input_manager.touch_gamepad_on) {
 			if (
@@ -3768,6 +3772,11 @@ export class PanelUI {
 
 	/* Close fullscreen */
 	closeFullscreen() {
+
+		if (this.getMaximizedPanel()) {
+			this.getMaximizedPanel().maximize(false);
+		}
+
 		if (document.exitFullscreen) {
 			document.exitFullscreen();
 		} else if (document.webkitExitFullscreen) {
