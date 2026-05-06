@@ -1,3 +1,3 @@
 #!/bin/bash
 
-bun ./src/main.ts "$@"
+/home/daniel/.bun/bin/bun ./src/main.ts "$@"

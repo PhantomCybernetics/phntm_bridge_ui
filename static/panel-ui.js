@@ -123,6 +123,7 @@ export class PanelUI {
 
 		this.num_services = 0;
 		this.num_cameras = 0;
+		this.num_microphones = 0;
 		this.num_docker_containers = 0;
 		this.docker_hosts = {};
 		this.num_widgets = 0;
@@ -468,6 +469,9 @@ export class PanelUI {
 			setTimeout(() => {
 				that.camerasMenuFromNodesAndDevices();
 			}, 0);
+			setTimeout(() => {
+				that.microphonesMenuFromNodes();
+			}, 0);
 		});
 
 		client.on("cameras", (cameras) => {
@@ -661,7 +665,7 @@ export class PanelUI {
 					el.removeClass('hover_waiting');
 			});
 		});
-		$('#battery-bar, #network-info, #graph_controls, #service_controls, #camera_controls, #docker_controls, #widget_controls').on('mousemove', (e) => {
+		$('#battery-bar, #network-info, #graph_controls, #service_controls, #camera_controls, #microphone_controls, #docker_controls, #widget_controls').on('mousemove', (e) => {
 			[ $("#graph_controls"), $("#service_controls"), $("#network-info-wrapper") ].forEach((el)=>{
 				if (el.hasClass('hover_waiting'))
 					el.removeClass('hover_waiting');
@@ -680,6 +684,9 @@ export class PanelUI {
 		});
 		$("#cameras_heading").click(() => {
 			that.burgerMenuAction("#cameras_list");
+		});
+		$("#microphones_heading").click(() => {
+			that.burgerMenuAction("#microphones_list");
 		});
 		$("#docker_heading").click(() => {
 			that.burgerMenuAction("#docker_list");
@@ -1147,6 +1154,9 @@ export class PanelUI {
 				case "#cameras_list":
 					label = this.num_cameras + " Cameras";
 					break;
+				case "#microphones_list":
+					label = this.num_microphones + " Microphones";
+					break;
 				case "#docker_list":
 					label = this.num_docker_containers + " Containers";
 					break;
@@ -1376,6 +1386,88 @@ export class PanelUI {
 
 			row_el.append(cam_cb);
 			$("#cameras_list").append(row_el);
+		}
+	}
+
+	microphonesMenuFromNodes() {
+		$("#microphones_list").empty();
+
+		let microphones = [];
+		if (this.latest_nodes) {
+			let node_ids = Object.keys(this.latest_nodes);
+			node_ids.forEach((id_node) => {
+				let node = this.latest_nodes[id_node];
+				if (node.publishers) {
+					Object.keys(node.publishers).forEach((id_topic) => {
+						let msg_type = node.publishers[id_topic].msg_type;
+						if (msg_type == "std_msgs/msg/Int16MultiArray") {
+							microphones.push({
+								src_id: id_topic,
+								msg_type: msg_type,
+								label: id_node + " / " + id_topic,
+							});
+						}
+					});
+				}
+			});
+		}
+
+		this.num_microphones = microphones.length;
+		$("#microphones_heading .full-w").html(microphones.length == 1 ? "Microphone" : "Microphones");
+		$("#microphones_heading B").html(microphones.length);
+
+		if (microphones.length > 0) {
+			$("#microphone_controls").addClass("active");
+		} else {
+			$("#microphone_controls").removeClass("active");
+		}
+
+		for (let i = 0; i < microphones.length; i++) {
+			let mic = microphones[i];
+
+			let row_el = $(
+				'<label for="cb_microphone_' +
+					i +
+					'" class="prevent-select camera" data-src="' +
+					mic.src_id +
+					'">' +
+					mic.label +
+					"</label>",
+			);
+
+			let is_selected = this.client.subscribers && this.client.subscribers[mic.src_id];
+			let mic_cb = $(
+				'<input type="checkbox" class="enabled" id="cb_microphone_' +
+					i +
+					'"' +
+					(is_selected ? " checked" : "") +
+					"/>",
+			);
+
+			let that = this;
+			mic_cb.change((ev) => {
+				let state = $(ev.target).prop("checked");
+
+				if (state) {
+					that.client.createSubscriber(mic.src_id);
+					if (window.__MISS_MIC_AUDIO_PLAYER__) {
+						window.__MISS_MIC_AUDIO_PLAYER__.startAudio();
+					}
+				} else {
+					that.client.removeSubscriber(mic.src_id);
+					if (window.__MISS_MIC_AUDIO_PLAYER__) {
+						window.__MISS_MIC_AUDIO_PLAYER__.closeTopic(mic.src_id);
+						window.__MISS_MIC_AUDIO_PLAYER__.stopAudio();
+					}
+				}
+
+				if (state && $("BODY").hasClass("hamburger")) {
+					that.setBurgerMenuState(false, false);
+				}
+			});
+
+			row_el.append(mic_cb);
+			$("#microphones_list").append(row_el);
 		}
 	}
 
@@ -3113,6 +3205,7 @@ export class PanelUI {
 				graph_controls: 210,
 				service_controls: 115,
 				camera_controls: 95,
+				microphone_controls: 115,
 				docker_controls: 115,
 				widget_controls: 10,
 			},
@@ -3120,6 +3213,7 @@ export class PanelUI {
 				graph_controls: 210,
 				service_controls: 70,
 				camera_controls: 60,
+				microphone_controls: 70,
 				docker_controls: 65,
 				widget_controls: 10,
 			},
@@ -3127,6 +3221,7 @@ export class PanelUI {
 				graph_controls: 170,
 				service_controls: 70,
 				camera_controls: 60,
+				microphone_controls: 70,
 				docker_controls: 65,
 				widget_controls: 10,
 			},
@@ -3244,6 +3339,7 @@ export class PanelUI {
 			let hh = h - 95;
 			$("#service_list").css("height", hh);
 			$("#cameras_list").css("height", hh + 10); // less padding
+			$("#microphones_list").css("height", hh + 10); // less padding
 			$("#docker_list").css("height", hh);
 			$("#widget_list").css("height", hh + 10); // less padding
 			$("#graph_display").css("height", hh);
@@ -3291,6 +3387,7 @@ export class PanelUI {
 
 			$("#service_list").css("height", ""); //unset
 			$("#cameras_list").css("height", ""); //unset
+			$("#microphones_list").css("height", ""); //unset
 			$("#docker_list").css("height", ""); //unset
 			$("#widget_list").css("height", ""); //unset
 

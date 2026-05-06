@@ -1,4 +1,8 @@
+import https from "node:https";
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import axios, { AxiosResponse, AxiosError } from "axios";
 import express from "express";
@@ -7,6 +11,8 @@ import fs from "fs"
 
 import type { Debugger } from "./lib/debugger";
 import type { BridgeUiConfig } from "./config";
+
+const execFileAsync = promisify(execFile);
 
 export function printStartupMessage(
 	{ uiVersion }: { uiVersion: string },
@@ -78,7 +84,68 @@ export function createWebUIServerExpressApp(
 		return /^[0-9a-fA-F]{24}$/.test(id);
 	}
 
-	webExpressApp.get(config.path + ":ID", (req: express.Request, res: express.Response) => {
+	async function locateRobot(
+		idRobot: string,
+		config: BridgeUiConfig,
+	): Promise<{ status: number; data: Record<string, unknown> }> {
+		try {
+			const response: AxiosResponse = await axios.post(
+				config.bridgeLocateUrl,
+				{
+					id_robot: idRobot,
+					app_id: config.appId,
+					app_key: config.appKey,
+				},
+				{ timeout: 5000, httpsAgent },
+			);
+			return { status: response.status, data: response.data };
+		} catch (error) {
+			const axiosError = error as AxiosError;
+			if (axiosError.code !== "ECONNREFUSED") {
+				throw error;
+			}
+
+			const payload = JSON.stringify({
+				id_robot: idRobot,
+				app_id: config.appId,
+				app_key: config.appKey,
+			});
+
+			const { stdout } = await execFileAsync(
+				"curl",
+				[
+					"-ksS",
+					"-X",
+					"POST",
+					config.bridgeLocateUrl,
+					"-H",
+					"Content-Type: application/json",
+					"-d",
+					payload,
+					"-w",
+					"\n%{http_code}",
+				],
+				{ timeout: 5000 },
+			);
+
+			const splitAt = stdout.lastIndexOf("\n");
+			const body = splitAt >= 0 ? stdout.slice(0, splitAt) : stdout;
+			const statusText = (splitAt >= 0 ? stdout.slice(splitAt + 1) : "").trim();
+			const status = Number.parseInt(statusText, 10);
+
+			let data: Record<string, unknown> = {};
+			if (body.trim().length > 0) {
+				data = JSON.parse(body);
+			}
+
+			return {
+				status: Number.isFinite(status) ? status : 500,
+				data,
+			};
+		}
+	}
+
+	webExpressApp.get(config.path + ":ID", async (req: express.Request, res: express.Response) => {
 			res.setHeader("Content-Type", "text/html; charset=utf-8");
 
 			// query the Bridge Server (closest) for the registered instance of this robot
@@ -93,98 +160,104 @@ export function createWebUIServerExpressApp(
 				});
 				return;
 			}
-			axios.post( // REST request
-					config.bridgeLocateUrl,
-					{
-						id_robot: idRobot,
-						app_id: config.appId,
-						app_key: config.appKey,
-					},
-					{ timeout: 5000 },
-				)
-				.then((response: AxiosResponse) => {
-					if (response.status != 200) {
-						$d.err("Locate returned code " + response.status + " for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.status(500).render("error", {
-							title: 'Error 500 @ PHNTM Bridge',
-							code: 500,
-							error: 'Error locating robot on Bridge Server <span class="detail">Web UI credentials misconfigured, server returned: ' + response.status + '</span>',
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-						return;
-					}
-					if (response.data["id_robot"] != idRobot) {
-						$d.err("Locate returned code wrong robot id for " + idRobot + ":", response.data);
-						//res.send("Error locating robot on Bridge Server");
-						res.status(500).render("error", {
-							title: 'Error 500 @ PHNTM Bridge',
-							code: 500,
-							error: "Error locating robot on Bridge Server",
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-						return;
-					}
-					let bridge_socket_url: string = response.data["bridge_server"] + ":" + config.bridgeSocketPort;
-					let bridge_server: string = new URL(response.data["bridge_server"]).hostname;
-					let robot_bridge_files_url: string = response.data["bridge_server"] + ":" + config.bridgeFilesPort + "/%SECRET%/%ROBOT_ID%/%URL%";
-					let robot_custom_css:string[] = response.data["ui_custom_css"] ? response.data["ui_custom_css"] : [];
-					let robot_custom_js:string[] = response.data["ui_custom_js"] ? response.data["ui_custom_js"] : [];
-					let background_disconnect_sec:number = response.data["ui_background_disconnect_sec"] ? response.data["ui_background_disconnect_sec"] : 0.0;
-					$d.l('Locate returned:', response.data);
-					res.render("robot_ui", {
-						id_robot: req.params.ID,
-						bridge_socket_url: bridge_socket_url, //
-						bridge_files_url: robot_bridge_files_url,
-						app_id: config.appId,
-						bridge_server: bridge_server,
+			try {
+				const response = await locateRobot(idRobot, config);
+				if (response.status != 200) {
+					$d.err("Locate returned code " + response.status + " for " + idRobot + " (" + config.bridgeLocateUrl + ")");
+					res.status(500).render("error", {
+						title: 'Error 500 @ PHNTM Bridge',
+						code: 500,
+						error: 'Error locating robot on Bridge Server <span class="detail">Web UI credentials misconfigured, server returned: ' + response.status + '</span>',
 						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-						ui_git_version: uiVersion,
-						custom_css: robot_custom_css,
-                    	custom_js: robot_custom_js,
-						background_disconnect_sec: background_disconnect_sec,
+						ui_git_version: uiVersion
 					});
-				})
-				.catch((error: AxiosError) => {
-					if (error.code === "ECONNABORTED") {
-						$d.err("Locating request timed out for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.status(408).render("error", {
-							title: 'Error 408 @ PHNTM Bridge',
-							code: 408,
-							error: "Timed out locating robot on Bridge Server",
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-					} else if (error.code === "ECONNREFUSED") {
-						$d.err("Locating request refused for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.status(403).render("error", {
-							title: 'Error 403 @ PHNTM Bridge',
-							code: 403,
-							error: 'Error connecing to Bridge Server <span class="detail">Connection refused</span>',
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-					} else if (error.status == 404) {
-						$d.err("Locate returned code 404 for " + idRobot + " (" + config.bridgeLocateUrl + ")");
-						res.status(404).render("error", {
-							title: 'Error 404 @ PHNTM Bridge',
-							code: 404,
-							error: "Robot not found on Bridge Server",
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-					} else {
-						$d.err("Error locating robot " + idRobot + " at " + config.bridgeLocateUrl + ":", error.message);
-						res.status(500).render("error", {
-							title: 'Error 500 @ PHNTM Bridge',
-							code: 500,
-							error: 'Error locating robot on Bridge Server <span class="detail">Web UI seems misconfigured, server returned: ' + error.code + '</span>',
-							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
-						});
-					}
+					return;
+				}
+				if (response.data["id_robot"] != idRobot) {
+					$d.err("Locate returned code wrong robot id for " + idRobot + ":", response.data);
+					res.status(500).render("error", {
+						title: 'Error 500 @ PHNTM Bridge',
+						code: 500,
+						error: "Error locating robot on Bridge Server",
+						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+						ui_git_version: uiVersion
+					});
+					return;
+				}
+				const bridge_server_url = new URL(String(response.data["bridge_server"]));
+				const bridge_socket_url_obj = new URL(bridge_server_url.toString());
+				if (!bridge_socket_url_obj.port) {
+					bridge_socket_url_obj.port = String(config.bridgeSocketPort);
+				}
+				bridge_socket_url_obj.pathname = "";
+				bridge_socket_url_obj.search = "";
+				bridge_socket_url_obj.hash = "";
+
+				const bridge_files_url_obj = new URL(bridge_server_url.toString());
+				bridge_files_url_obj.port = String(config.bridgeFilesPort);
+				bridge_files_url_obj.pathname = "/%SECRET%/%ROBOT_ID%/%URL%";
+				bridge_files_url_obj.search = "";
+				bridge_files_url_obj.hash = "";
+
+				let bridge_socket_url: string = bridge_socket_url_obj.toString().replace(/\/$/, "");
+				let bridge_server: string = bridge_server_url.hostname;
+				let robot_bridge_files_url: string = bridge_files_url_obj.toString();
+				let robot_custom_css:string[] = response.data["ui_custom_css"] ? response.data["ui_custom_css"] as string[] : [];
+				let robot_custom_js:string[] = response.data["ui_custom_js"] ? response.data["ui_custom_js"] as string[] : [];
+				let background_disconnect_sec:number = response.data["ui_background_disconnect_sec"] ? Number(response.data["ui_background_disconnect_sec"]) : 0.0;
+				$d.l('Locate returned:', response.data);
+				res.render("robot_ui", {
+					id_robot: req.params.ID,
+					bridge_socket_url: bridge_socket_url,
+					bridge_files_url: robot_bridge_files_url,
+					app_id: config.appId,
+					bridge_server: bridge_server,
+					analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+					ui_git_version: uiVersion,
+					custom_css: robot_custom_css,
+					custom_js: robot_custom_js,
+					background_disconnect_sec: background_disconnect_sec,
 				});
+			} catch (error) {
+				const axiosError = error as AxiosError;
+				if (axiosError.code === "ECONNABORTED") {
+					$d.err("Locating request timed out for " + idRobot + " (" + config.bridgeLocateUrl + ")");
+					res.status(408).render("error", {
+						title: 'Error 408 @ PHNTM Bridge',
+						code: 408,
+						error: "Timed out locating robot on Bridge Server",
+						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+						ui_git_version: uiVersion
+					});
+				} else if (axiosError.code === "ECONNREFUSED") {
+					$d.err("Locating request refused for " + idRobot + " (" + config.bridgeLocateUrl + ")");
+					res.status(403).render("error", {
+						title: 'Error 403 @ PHNTM Bridge',
+						code: 403,
+						error: 'Error connecing to Bridge Server <span class="detail">Connection refused</span>',
+						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+						ui_git_version: uiVersion
+					});
+				} else if (axiosError.status == 404) {
+					$d.err("Locate returned code 404 for " + idRobot + " (" + config.bridgeLocateUrl + ")");
+					res.status(404).render("error", {
+						title: 'Error 404 @ PHNTM Bridge',
+						code: 404,
+						error: "Robot not found on Bridge Server",
+						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+						ui_git_version: uiVersion
+					});
+				} else {
+					$d.err("Error locating robot " + idRobot + " at " + config.bridgeLocateUrl + ":", axiosError.message);
+					res.status(500).render("error", {
+						title: 'Error 500 @ PHNTM Bridge',
+						code: 500,
+						error: 'Error locating robot on Bridge Server <span class="detail">Web UI seems misconfigured, server returned: ' + axiosError.code + '</span>',
+						analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
+						ui_git_version: uiVersion
+					});
+				}
+			}
 		},
 	);
 

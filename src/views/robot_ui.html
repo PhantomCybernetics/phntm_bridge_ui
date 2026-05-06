@@ -1,4 +1,5 @@
 <%- include('partial/header.html'); %>
+	<script src="/static/miss_mic_audio_player.js"></script>
 
 <div id="page_message"></div>
 
@@ -177,6 +178,17 @@
 						<!--
 
                     -->
+						<div id="microphone_controls">
+							<h3 id="microphones_heading">
+								<b>0</b>
+								<span class="full-w">Microphones</span>
+								<span class="narrow-w narrower-w">Mic</span>
+							</h3>
+							<div id="microphones_list" data-min-width="350"></div>
+						</div>
+						<!--
+
+                    -->
 						<div id="docker_controls">
 							<h3 id="docker_heading">
 								<b>0</b>
@@ -276,6 +288,11 @@
 		force_turn: window.location.search.indexOf("force_turn") !== -1, // force TURN connection with ?force_turn=1 (debug)
 	});
 	window.robot = robot; // make available to analytics
+	if (window.__MISS_MIC_AUDIO_PLAYER__) {
+		window.__MISS_MIC_AUDIO_PLAYER__.bindToRobot(robot, {
+			autoButton: false,
+		});
+	}
 
 	let input_manager = new InputManager(robot);
 	input_manager.registerDriver(JoyInputDriver);

@@ -332,6 +332,10 @@ BODY.hamburger #menubar_items #cameras_list {
 	max-height: unset;
 	max-width: unset;
 }
+BODY.hamburger #menubar_items #microphones_list {
+	max-height: unset;
+	max-width: unset;
+}
 BODY.hamburger #menubar_items #docker_list {
 	max-height: unset;
 	border-top: 0px;
@@ -342,7 +346,8 @@ BODY.hamburger #menubar_items #widget_list {
 }
 
 BODY.hamburger #menubar_items #widget_list .widget LABEL,
-BODY.hamburger #menubar_items #cameras_list .camera LABEL {
+BODY.hamburger #menubar_items #cameras_list .camera LABEL,
+BODY.hamburger #menubar_items #microphones_list .camera LABEL {
 	line-height: 22px;
 	padding: 15px 0px 15px 40px;
 	display: block;
@@ -352,7 +357,8 @@ BODY.hamburger #menubar_items #cameras_list .camera LABEL {
 }
 
 BODY.hamburger #menubar_items #widget_list .widget,
-BODY.hamburger #menubar_items #cameras_list .camera {
+BODY.hamburger #menubar_items #cameras_list .camera,
+BODY.hamburger #menubar_items #microphones_list .camera {
 	border-bottom: 1px solid #3d52c7;
 	display: block;
 	position: relative;
@@ -364,8 +370,13 @@ BODY.hamburger #menubar_items #cameras_list .camera {
 	border-bottom: 1px solid #138408;
 }
 
+BODY.hamburger #menubar_items #microphones_list .camera {
+	border-bottom: 1px solid #0f5d4d;
+}
+
 BODY.hamburger #menubar_items #widget_list .widget INPUT,
-BODY.hamburger #menubar_items #cameras_list .camera INPUT {
+BODY.hamburger #menubar_items #cameras_list .camera INPUT,
+BODY.hamburger #menubar_items #microphones_list .camera INPUT {
 	position: absolute;
 	left: 10px;
 	top: 18px;
@@ -817,6 +828,7 @@ BODY.top-menu #graph_controls.active.hover_waiting #graph_display {
 #widget_controls,
 #service_controls,
 #camera_controls,
+#microphone_controls,
 #docker_controls {
 	margin-top: 0px;
 	background: #6f98c4;
@@ -835,6 +847,7 @@ BODY.hamburger #topic_controls,
 BODY.hamburger #widget_controls,
 BODY.hamburger #service_controls,
 BODY.hamburger #camera_controls,
+BODY.hamburger #microphone_controls,
 BODY.hamburger #docker_controls {
 	border-radius: 5px 5px 5px 5px;
 	font-size: 16px;
@@ -853,6 +866,7 @@ BODY.hamburger #docker_controls {
 #widget_controls:hover,
 #service_controls:hover,
 #camera_controls:hover,
+#microphone_controls:hover,
 #docker_controls:hover {
 	z-index: 2;
 }
@@ -880,6 +894,9 @@ BODY.hamburger #graph_controls {
 }
 #camera_controls {
 	background-color: #82b727;
+}
+#microphone_controls {
+	background-color: #1f7a66;
 }
 #docker_controls {
 	background-color: #de5a30;
@@ -925,6 +942,7 @@ BODY.narrower #docker_controls { width: 65px;} */
 #graph_controls H3,
 #service_controls H3,
 #camera_controls H3,
+#microphone_controls H3,
 #docker_controls H3,
 #widget_controls H3,
 #topic_controls H3 {
@@ -990,6 +1008,9 @@ BODY.top-menu #widget_controls.active:hover {
 BODY.top-menu #camera_controls.active:hover {
 	border-color: #82b727 !important;
 }
+BODY.top-menu #microphone_controls.active:hover {
+	border-color: #1f7a66 !important;
+}
 BODY.top-menu #docker_controls.active:hover {
 	border-color: #de5a30 !important;
 }
@@ -1002,6 +1023,7 @@ BODY.top-menu #graph_controls.active:hover,
 BODY.top-menu #graph_controls.active.hover_waiting,
 BODY.top-menu #service_controls.active:hover,
 BODY.top-menu #camera_controls.active:hover,
+BODY.top-menu #microphone_controls.active:hover,
 BODY.top-menu #docker_controls.active:hover,
 BODY.top-menu #topic_controls.active:hover,
 BODY.top-menu #widget_controls.active:hover,
@@ -1013,6 +1035,7 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 }
 
 #cameras_list,
+#microphones_list,
 #docker_list,
 #service_list,
 #widget_list,
@@ -1034,6 +1057,18 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 	padding: 0px;
 	border-radius: 5px 0px 5px 5px;
 	border-top: 3px solid #82b727;
+	max-width: 420px;
+}
+
+#microphones_list {
+	overflow-x: hidden;
+	overflow: scroll;
+	background: #9ec65a;
+	right: 0px;
+	max-height: 520px;
+	padding: 0px;
+	border-radius: 5px 0px 5px 5px;
+	border-top: 3px solid #1f7a66;
 	max-width: 420px;
 }
 
@@ -1080,6 +1115,7 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 }
 
 #cameras_list LABEL.camera,
+#microphones_list LABEL.camera,
 #widget_list LABEL.widget {
 	position: relative;
 	display: block;
@@ -1096,6 +1132,7 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 }
 
 #cameras_list LABEL.camera:first-of-type,
+#microphones_list LABEL.camera:first-of-type,
 #widget_list LABEL.widget:first-of-type {
 	margin-top: 0px;
 }
@@ -1105,12 +1142,18 @@ BODY.desktop-ui #cameras_list .camera:hover {
 	color: #fff;
 }
 
+BODY.desktop-ui #microphones_list .camera:hover {
+	background-color: #1f7a66;
+	color: #fff;
+}
+
 BODY.desktop-ui #widget_list .widget:hover {
 	color: #fff;
 	background: #112eb391;
 }
 
 #cameras_list .camera INPUT,
+#microphones_list .camera INPUT,
 #widget_list .widget INPUT {
 	position: absolute;
 	left: 10px;
@@ -1319,6 +1362,7 @@ BODY.top-menu #service_controls.active:hover #service_list,
 BODY.top-menu #topic_controls.active:hover #topic_list,
 BODY.top-menu #widget_controls.active:hover #widget_list,
 BODY.top-menu #camera_controls.active:hover #cameras_list,
+BODY.top-menu #microphone_controls.active:hover #microphones_list,
 BODY.top-menu #docker_controls.active:hover #docker_list,
 BODY.top-menu #service_controls.active.setting_shortcuts #service_list,
 BODY.top-menu #service_controls.hover_waiting #service_list {
@@ -1330,6 +1374,7 @@ BODY.hamburger #service_controls H3,
 BODY.hamburger #topic_controls H3,
 BODY.hamburger #widget_controls H3,
 BODY.hamburger #camera_controls H3,
+BODY.hamburger #microphone_controls H3,
 BODY.hamburger #docker_controls H3 {
 	padding: 15px 10px;
 }
@@ -1339,6 +1384,7 @@ BODY.hamburger #service_controls H3,
 BODY.hamburger #topic_controls H3,
 BODY.hamburger #widget_controls H3,
 BODY.hamburger #camera_controls H3,
+BODY.hamburger #microphone_controls H3,
 BODY.hamburger #docker_controls H3 {
 	cursor: pointer;
 	text-align: left;

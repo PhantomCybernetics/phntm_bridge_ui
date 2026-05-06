@@ -119,6 +119,7 @@ export class BrowserClient extends EventTarget {
 
 	topic_streams = {}; // topic/cam => id_stream
 	open_media_streams = {}; // id_stream => { mid: string, stream: MediaStream } 
+	read_audio_channels = [];
 
 	event_calbacks = {};
 	topic_calbacks = {};
@@ -1293,6 +1294,12 @@ export class BrowserClient extends EventTarget {
 				// 	that.emitTopicConfig(topic, null);
 				// }
 			});
+		}
+
+		if (robot_data["read_audio_channels"]) {
+			console.log("Got read audio channels", robot_data["read_audio_channels"]);
+			this.read_audio_channels = robot_data["read_audio_channels"];
+			this.emit("read_audio_channels", this.read_audio_channels);
 		}
 
 		if (robot_data["write_data_channels"]) {
