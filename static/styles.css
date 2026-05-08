@@ -1508,6 +1508,14 @@ BODY.hamburger #docker_controls H3 {
 	border-color: transparent;
 }
 
+#service_list .error {
+	padding: 0px 10px;
+    margin: 9px 5px 0px 1px;
+    height: 35px;
+    line-height: 36px;
+    display: inline-block;
+}
+
 .service_button {
 	background: #0051ff;
 	color: white;

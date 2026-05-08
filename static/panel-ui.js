@@ -1948,7 +1948,9 @@ export class PanelUI {
 
 			let service_buttons_inline_el = $('<div class="service_buttons_inline"></div>');
 			let service_buttons_wrapped_el = $('<div class="service_buttons_wrapped"></div>');
-			this.service_btn_containers[service.service] = [ service_buttons_inline_el, service_buttons_wrapped_el ] ;
+			this.service_btn_containers[service.service] = [
+				service_buttons_inline_el, service_buttons_wrapped_el
+			] ;
 
 			service_content.append([ service_buttons_inline_el, service_buttons_wrapped_el ]);
 
@@ -2051,6 +2053,9 @@ export class PanelUI {
 								that.service_widget_map[id_service].widget.updateDisplay(null, true);
 						}
 					);
+				} else {
+					console.error('Service input widget class '+widget_class_name+' not found');
+					inline_controls_cont.html('<span class="error">Widget error!</span>');
 				}
 			} else {
 				this.service_widget_map[id_service].widget.makeElements(inline_controls_cont); // render first
