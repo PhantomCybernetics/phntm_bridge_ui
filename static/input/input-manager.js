@@ -436,9 +436,7 @@ export class InputManager {
 		if (!force && Object.keys(this.profiles).length < 2) return;
 		if (!force && this.current_profile == this.last_profile_notification) return;
 		this.last_profile_notification = this.current_profile;
-		this.ui.showNotification(
-			"Input profile is " + this.profiles[this.current_profile].label,
-		);
+		this.ui.showNotification("Input profile is " + this.profiles[this.current_profile].label);
 	}
 
 	initController(c) {
@@ -455,10 +453,7 @@ export class InputManager {
 				// robot defaults
 				let profile_default_cfg = {};
 				if (this.robot_defaults[id_profile]) {
-					if (
-						this.robot_defaults[id_profile][c.type] &&
-						(c.type != "gamepad" || !c.likely_not_gamepad)
-					)
+					if (this.robot_defaults[id_profile][c.type] && (c.type != "gamepad" || !c.likely_not_gamepad))
 						// robot defaults per type (ignoring suspicions non-gamepads on mobile devices)
 						profile_default_cfg = this.robot_defaults[id_profile][c.type];
 					if (this.robot_defaults[id_profile][c.id]) {
@@ -468,10 +463,7 @@ export class InputManager {
 				}
 
 				// overwrite with user's defaults
-				if (
-					this.saved_user_profiles[id_profile] &&
-					this.saved_user_profiles[id_profile][c.id]
-				) {
+				if (this.saved_user_profiles[id_profile] && this.saved_user_profiles[id_profile][c.id]) {
 					let user_defaults = this.saved_user_profiles[id_profile][c.id];
 					console.log(
 						c.id + " loaded user defults for " + id_profile,
@@ -497,13 +489,9 @@ export class InputManager {
 						: [],
 				};
 
-				if (
-					profile_default_cfg.driver_config &&
-					driver == profile_default_cfg.driver
-				) {
+				if (profile_default_cfg.driver_config && driver == profile_default_cfg.driver) {
 					//only using driver defaults if the driver matches
-					c_profile.default_driver_config[driver] =
-						profile_default_cfg.driver_config;
+					c_profile.default_driver_config[driver] = profile_default_cfg.driver_config;
 				}
 
 				c.profiles[id_profile] = c_profile;
@@ -1244,6 +1232,12 @@ export class InputManager {
 							new_btn.ros_srv_val = default_config.ros_srv_val;
 						}
 						break;
+					case "ros-srv-btn":
+						new_btn.action = default_config.action;
+						new_btn.ros_srv_id = default_config.ros_srv_id;
+						new_btn.ros_srv_btn_id = default_config.ros_srv_btn_id;
+						new_btn.assigned = true;
+						break;
 					case "ctrl-enabled":
 						new_btn.action = default_config.action;
 						new_btn.assigned = true;
@@ -1311,20 +1305,28 @@ export class InputManager {
 				let p = c.profiles[id_profile];
 				Object.values(p.driver_instances).forEach((d) => {
 					d.buttons.forEach((btn) => {
-						if (btn.action == "ros-srv") {
-							// update missing message type
-							if (btn.ros_srv_id && !btn.ros_srv_msg_type && discovered_services[btn.ros_srv_id]) {
-								btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
-								btn.ros_srv_msg_type_request = discovered_services[btn.ros_srv_id].msg_type_request;
-								btn.ros_srv_is_action = discovered_services[btn.ros_srv_id].is_action;
-								console.log("Message type discovered for " + btn.ros_srv_id + ": " + btn.ros_srv_msg_type);
-							}
+						switch (btn.action) {
+							case "ros-srv":
+								// update missing message type
+								if (btn.ros_srv_id && !btn.ros_srv_msg_type && discovered_services[btn.ros_srv_id]) {
+									btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+									btn.ros_srv_msg_type_request = discovered_services[btn.ros_srv_id].msg_type_request;
+									btn.ros_srv_is_action = discovered_services[btn.ros_srv_id].is_action;
+									console.log("Message type discovered for " + btn.ros_srv_id + ": " + btn.ros_srv_msg_type);
+								}
 
-							// update ros-srv btn config ui
-							if (that.edited_controller == c && that.current_profile == id_profile) {
-								// console.log('Updating btn config ui (services changed)', btn);
-								that.renderBtnConfig(d, btn);
-							}
+								// update ros-srv btn config ui
+								if (that.edited_controller == c && that.current_profile == id_profile) {
+									// console.log('Updating btn config ui (services changed)', btn);
+									that.renderBtnConfig(d, btn);
+								}
+								break;
+							case "ros-srv-btn":
+								if (that.edited_controller == c && that.current_profile == id_profile) {
+									// console.log('Updating btn config ui (services changed)', btn);
+									that.renderBtnConfig(d, btn);
+								}
+								break;
 						}
 					});
 				});
@@ -1468,6 +1470,10 @@ export class InputManager {
 					btn_data["ros_srv_val"] = btn.ros_srv_val;
 					btn_data["ros_srv_silent_request"] = btn.ros_srv_silent_request;
 					btn_data["ros_srv_silent_reply"] = btn.ros_srv_silent_reply;
+					break;
+				case "ros-srv-btn":
+					btn_data["ros_srv_id"] = btn.ros_srv_id;
+					btn_data["ros_srv_btn_id"] = btn.ros_srv_btn_id;
 					break;
 				case "ctrl-enabled":
 					switch (btn.set_ctrl_state) {
@@ -1654,6 +1660,10 @@ export class InputManager {
 							if (btn_live.ros_srv_silent_reply != btn_saved.ros_srv_silent_reply)
 								return false;
 							break;
+						case "ros-srv-btn":
+							if (btn_live.ros_srv_id != btn_saved.ros_srv_id) return false;
+							if (btn_live.ros_srv_btn_id != btn_saved.ros_srv_btn_id) return false;
+							break;
 						case "ctrl-enabled":
 							if (btn_live.ctrl_state != btn_saved.ctrl_state) return false;
 							break;
@@ -1690,9 +1700,7 @@ export class InputManager {
 				});
 				this.profiles[id_profile].saved = all_saved;
 			}
-			console.log(
-				"Profile " + id_profile + " saved: " + this.profiles[id_profile].saved,
-			);
+			console.log("Profile " + id_profile + " saved: " + this.profiles[id_profile].saved);
 			if (update_ui) this.makeProfileSelectorUI();
 		}
 
@@ -1727,7 +1735,7 @@ export class InputManager {
 		this.checkControllerProfileSaved(
 			this.edited_controller,
 			this.current_profile,
-			true,
+			true
 		);
 	}
 
@@ -1740,40 +1748,19 @@ export class InputManager {
 	}
 
 	saveUserControllerEnabled(c) {
-		localStorage.setItem(
-			"controller-enabled:" + this.client.id_robot + ":" + c.id,
-			c.enabled,
-		);
-		console.log(
-			"Saved controller enabled for robot " +
-				this.client.id_robot +
-				', id="' +
-				c.id +
-				'": ' +
-				c.enabled,
-		);
+		localStorage.setItem("controller-enabled:" + this.client.id_robot + ":" + c.id, c.enabled);
+		console.log("Saved controller enabled for robot " + this.client.id_robot + ', id="' + c.id + '": ' + c.enabled);
 	}
 
 	loadUserControllerEnabled(id_controller) {
-		let state = localStorage.getItem(
-			"controller-enabled:" + this.client.id_robot + ":" + id_controller,
-		);
+		let state = localStorage.getItem("controller-enabled:" + this.client.id_robot + ":" + id_controller);
 		state = state === "true";
-		console.log(
-			"Loaded controller enabled for robot " +
-				this.client.id_robot +
-				', id="' +
-				id_controller +
-				'": ' +
-				state,
-		);
+		console.log("Loaded controller enabled for robot " + this.client.id_robot + ', id="' + id_controller + '": ' + state);
 		return state;
 	}
 
 	loadUserProfile(id_profile) {
-		let val = localStorage.getItem(
-			"input-profile:" + this.client.id_robot + ":" + id_profile,
-		);
+		let val = localStorage.getItem("input-profile:" + this.client.id_robot + ":" + id_profile);
 		return val ? JSON.parse(val) : null;
 	}
 
@@ -1784,10 +1771,7 @@ export class InputManager {
 
 	saveUserProfileIds(user_profiles) {
 		//[ { id: 'id_profile', label: 'label'}, ... ]
-		localStorage.setItem(
-			"input-profiles:" + this.client.id_robot,
-			JSON.stringify(user_profiles),
-		);
+		localStorage.setItem("input-profiles:" + this.client.id_robot, JSON.stringify(user_profiles));
 	}
 
 	saveUserProfile(id_profile) {
@@ -1811,25 +1795,15 @@ export class InputManager {
 		if (live_profile.id_saved != id_profile) {
 			// moving cookies on profile id change
 			if (live_profile.id_saved) {
-				console.warn(
-					"Moving saved input profile from " +
-						live_profile.id_saved +
-						" => " +
-						id_profile,
-				);
+				console.warn("Moving saved input profile from " + live_profile.id_saved + " => " + id_profile);
 				let old_pos = this.saved_user_profile_ids.indexOf(live_profile.id_saved);
 				if (old_pos > -1) this.saved_user_profile_ids.splice(old_pos, 1);
-				localStorage.removeItem(
-					"input-profile:" + this.client.id_robot + ":" + live_profile.id_saved,
-				);
+				localStorage.removeItem("input-profile:" + this.client.id_robot + ":" + live_profile.id_saved);
 			}
 			live_profile.id_saved = id_profile;
 		}
 
-		localStorage.setItem(
-			"input-profile:" + this.client.id_robot + ":" + id_profile,
-			JSON.stringify(this.saved_user_profiles[id_profile]),
-		);
+		localStorage.setItem("input-profile:" + this.client.id_robot + ":" + id_profile, JSON.stringify(this.saved_user_profiles[id_profile]));
 
 		this.saveUserProfileIds(this.saved_user_profile_ids);
 
@@ -1845,10 +1819,7 @@ export class InputManager {
 			// copy robot defaults
 			Object.keys(this.robot_defaults[id_profile_saved]).forEach(
 				(id_controller) => {
-					if (
-						all_controller_ids.indexOf(id_controller) < 0 &&
-						id_controller != "label"
-					)
+					if (all_controller_ids.indexOf(id_controller) < 0 && id_controller != "label")
 						all_controller_ids.push(id_controller);
 				},
 			);
@@ -1858,10 +1829,7 @@ export class InputManager {
 			Object.keys(this.saved_user_profiles[id_profile_saved]).forEach(
 				(id_controller) => {
 					if (id_controller == "label") return;
-					if (
-						all_controller_ids.indexOf(id_controller) < 0 &&
-						id_controller != "label"
-					)
+					if (all_controller_ids.indexOf(id_controller) < 0 && id_controller != "label")
 						all_controller_ids.push(id_controller);
 				},
 			);
@@ -2750,6 +2718,95 @@ export class InputManager {
 		btn.config_details_el.append(srv_details_el);
 	}
 
+	renderROSSrvButtonRefButtonConfig(driver, btn) {
+		let that = this;
+
+		btn.config_details_el.append(this.makeBtnTriggerSel(btn, true)); //+repeat
+
+		let srv_el = $('<div class="config-row"><span class="label">Service:</span></div>');
+		let srv_opts = ['<option value="">Select service...</option>'];
+
+		let nodes = this.client.discovered_nodes;
+		if (!Object.keys(nodes).length) return;
+
+		let nodes_sorted = Object.values(nodes).sort((a, b) => {
+			return a.node.toLowerCase().localeCompare(b.node.toLowerCase());
+		});
+
+		let service_button_ids = {}; // id_service = []
+		let services_menu_el = $('#service_list');
+		nodes_sorted.forEach((node) => {
+			let service_ids = Object.keys(node.services);
+			if (!service_ids.length) return;
+
+			let node_opts = [];
+			service_ids.forEach((id_srv) => {
+				let button_ids = [];
+				let srv_menu_buttons_cont_el = services_menu_el.find("[data-service='"+id_srv+"']");
+				if (!srv_menu_buttons_cont_el.length)
+					return; // ignore
+				let srv_menu_button_els = srv_menu_buttons_cont_el.find(".service_buttons_inline .service_button, .service_buttons_wrapped .service_button");
+				srv_menu_button_els.each((index, srv_btn_el)=>{
+					let btn_id = $(srv_btn_el).data('button-id');
+					if (!btn_id)
+						return; // ignore '{}' and other unmarked
+					button_ids.push( [btn_id, $(srv_btn_el).text()]); // [ id, label ] per button
+				});
+				if (!button_ids.length)
+					return; // no buttons found
+				service_button_ids[id_srv] = button_ids;
+				node_opts.push('<option value="' + id_srv + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
+			});
+
+			if (node_opts.length) {
+				srv_opts.push('<optgroup label="' + node.node + '"></optgroup>');
+				srv_opts = srv_opts.concat(node_opts);
+				srv_opts.push("</optgroup>");
+			}
+		});
+
+		let srv_id_inp = $("<select>" + srv_opts.join("") + "</select>");
+		srv_id_inp.appendTo(srv_el);
+
+		let srv_buttons_el = $('<div class="srv-buttons"></div>');
+		let render_srv_buttons = (id_service) => {
+			srv_buttons_el.empty();
+			if (id_service) {
+				let btns_el = $('<div class="config-row"><span class="label">Button:</span></div>');
+				let btn_opts = ['<option value="">Select button...</option>'];
+
+				service_button_ids[id_service].forEach((btn_info)=>{
+					let btn_id = btn_info[0];
+					let btn_label = btn_info[1];
+					btn_opts.push('<option value="' + btn_id + '"' + (btn.ros_srv_btn_id == btn_id ? " selected" : "") + ">" + btn_label + "</option>");
+				});
+
+				let btn_id_inp = $("<select>" + btn_opts.join("") + "</select>");
+				btn_id_inp.appendTo(btns_el);
+				btns_el.appendTo(srv_buttons_el);
+
+				btn_id_inp.change((ev) => {
+					let btn_id = $(ev.target).val();
+					btn.ros_srv_btn_id = btn_id ? btn_id : null;
+				});
+			}
+		};
+		render_srv_buttons(btn.ros_srv_id);
+
+		srv_id_inp.change((ev) => {
+		 	let id_service = $(ev.target).val();
+		 	if (id_service) {
+		 		btn.ros_srv_id = id_service;
+		 	} else {
+		 		btn.ros_srv_id = null;;
+		 	}
+			render_srv_buttons(btn.ros_srv_id);
+		});
+
+		btn.config_details_el.append(srv_el);
+		btn.config_details_el.append(srv_buttons_el);
+	}
+
 	renderCtrlEnabledButtonConfig(driver, btn) {
 		let that = this;
 
@@ -3268,7 +3325,7 @@ export class InputManager {
 			placement_inp.change((ev) => {
 				let placement = parseInt($(ev.target).val());
 				// set max sort index
-				let max_sort_index = -1;
+				let max_sort_index = -1;	
 				for (let i = 0; i < driver.buttons.length; i++) {
 					if (driver.buttons[i].touch_ui_placement == placement && btn != driver.buttons[i] && driver.buttons[i].touch_ui_placement > max_sort_index)
 						max_sort_index = driver.buttons[i].touch_ui_placement;
@@ -3358,6 +3415,9 @@ export class InputManager {
 				switch (btn.action) {
 					case "ros-srv":
 						this.renderROSSrvButtonConfig(driver, btn);
+						break;
+					case "ros-srv-btn":
+						this.renderROSSrvButtonRefButtonConfig(driver, btn);
 						break;
 					case "ctrl-enabled":
 						this.renderCtrlEnabledButtonConfig(driver, btn);
@@ -3538,7 +3598,7 @@ export class InputManager {
 		let opts = [
 			'<option value="">Not in use</option>',
 			'<option value="ros-srv"' + (btn.action == "ros-srv" ? " selected" : "") + ">Call ROS Service</option>",
-			'<option value="ros-srv-btn"' + (btn.action == "ros-srv-btn" ? " selected" : "") + ">Call ROS Service (Use Button)</option>",
+			'<option value="ros-srv-btn"' + (btn.action == "ros-srv-btn" ? " selected" : "") + ">Call ROS Service (use Button)</option>",
 			'<option value="ctrl-enabled"' + (btn.action == "ctrl-enabled" ? " selected" : "") + ">Set Controller Enabled</option>",
 			'<option value="input-profile"' + (btn.action == "input-profile" ? " selected" : "") + ">Set Input Profile</option>",
 			'<option value="ui-profile"' + (btn.action == "ui-profile" ? " selected" : "") + ">Set UI Layout</option>",
@@ -3550,13 +3610,9 @@ export class InputManager {
 		for (let j = 0; j < dri_btns_ids.length; j++) {
 			let id_btn = dri_btns_ids[j];
 			opts.push(
-				'<option value="btn:' +
-					id_btn +
-					'"' +
-					(btn.driver_btn == id_btn ? " selected" : "") +
-					">" +
-					dri_btns[id_btn] +
-					"</option>",
+				'<option value="btn:' + id_btn + '"' + (btn.driver_btn == id_btn ? " selected" : "") + ">"
+					+ dri_btns[id_btn] +
+				"</option>",
 			);
 		}
 		let dri_axes = driver.getAxes();
@@ -3564,13 +3620,9 @@ export class InputManager {
 		for (let j = 0; j < dri_axes_ids.length; j++) {
 			let id_axis = dri_axes_ids[j];
 			opts.push(
-				'<option value="axis:' +
-					id_axis +
-					'"' +
-					(btn.driver_axis == id_axis ? " selected" : "") +
-					">" +
-					dri_axes[id_axis] +
-					"</option>",
+				'<option value="axis:' + id_axis + '"' + (btn.driver_axis == id_axis ? " selected" : "") + ">"
+					+ dri_axes[id_axis] +
+				"</option>",
 			);
 		}
 		let assignment_sel_el = $("<select>" + opts.join("") + "</select>");
@@ -3603,11 +3655,7 @@ export class InputManager {
 		btn.conf_toggle_el.appendTo(line_1_el);
 
 		// collapsable details
-		btn.config_details_el = $(
-			'<div class="btn-config-details' +
-				(btn.edit_open ? " open" : "") +
-				'"></div>',
-		);
+		btn.config_details_el = $('<div class="btn-config-details' + (btn.edit_open ? " open" : "") + '"></div>');
 
 		assignment_sel_el.change((ev) => {
 			let val_btn_assigned = $(ev.target).val();
@@ -3895,7 +3943,18 @@ export class InputManager {
 
 					}
 				}
-				
+				break;
+			case "ros-srv-btn":
+				let btn_el_to_click = $('#service_list .service[data-service="' + btn.ros_srv_id + '"] .service_button[data-button-id="' + btn.ros_srv_btn_id + '"]');
+				if (btn_el_to_click) {
+					btn_el_to_click.trigger('click');
+				} else {
+					that.ui.showNotification(
+						'Assigned button not found',
+						'error',
+						'Service ' + btn.ros_srv_id
+					);
+				}
 				break;
 			case "ctrl-enabled":
 				let state = false;

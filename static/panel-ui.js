@@ -1878,15 +1878,16 @@ export class PanelUI {
 		});
 	}
 
-	saveServiceButtons(service, btns) {
+	saveServiceButtons(id_service, btns) {
 		let saved_btn_data = [];
 
 		let new_service_buttons = [];
 
 		btns.forEach((btn) => {
-			let one_btn_data = {
-				//clear of el refs
+			if (!btn.id) btn.id = crypto.randomUUID();
+			let one_btn_data = { // data so save
 				label: btn.label,
+				id: btn.id,
 				color: btn.color,
 				silent_request: btn.silent_request,
 				silent_reply: btn.silent_reply,
@@ -1901,13 +1902,13 @@ export class PanelUI {
 			}
 			new_service_buttons.push(new_btn);
 		});
-		this.service_btns[service] = new_service_buttons;
+		this.service_btns[id_service] = new_service_buttons;
 		let json_btns = JSON.stringify(saved_btn_data);
 		localStorage.setItem(
-			"service-btns:" + this.client.id_robot + ":" + service,
+			"service-btns:" + this.client.id_robot + ":" + id_service,
 			json_btns,
 		);
-		console.log("Saved " + btns.length + " btns for " + service, btns);
+		console.log("Saved " + btns.length + " btns for " + id_service, btns);
 	}
 
 	renderNodeServicesMenu(node, node_cont_el) {

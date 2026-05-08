@@ -44,14 +44,17 @@ export class UserButtonsServiceInput extends ServiceInput {
 					.removeClass( [ "blue", "green", "red", "orange", "magenta", "black" ] )
 					.addClass(btn.color);
 			}
+			btn.el
+				.data('button-id', btn.id)
+				.attr('data-button-id', btn.id);
 
-			if (inline_btn) {
+			if (inline_btn) { // button on the same line as the service/action name
 				btn.el.css({
 					'position': 'absolute',
 					'visibility': 'hidden',
 				});
 
-				btn.el.appendTo($("BODY"));
+				btn.el.appendTo($("BODY")); // for measuring
 
 				running_width += btn.el.width() + 5 + 5 + 5; // padding + one margin
 		
@@ -64,7 +67,7 @@ export class UserButtonsServiceInput extends ServiceInput {
 					inline_btn = false;
 
 				btn.el.appendTo(inline_btn ? inline_controls_cont : wrapped_controls_cont);
-			} else { // wrapped
+			} else { // buttons wrapped into a separate line
 				btn.el.appendTo(wrapped_controls_cont);
 			}
 
@@ -92,7 +95,7 @@ export class UserButtonsServiceInput extends ServiceInput {
 // std_srvs/srv/Empty and std_srvs/srv/Trigger
 export class ServiceInput_Empty extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn = $('<button class="service_button fancy-worker blue">Call</button>');
+		let btn = $('<button class="service_button fancy-worker blue" data-button-id="auto">Call</button>');
 
 		btn.click((ev) => {
 			client.ui.serviceButtonSimplePayloadCall(service.service, null, btn);
@@ -105,8 +108,8 @@ export class ServiceInput_Empty extends ServiceInput {
 // std_srvs/srv/SetBool
 export class ServiceInput_Bool extends ServiceInput {
 	static MakeMenuControls(target_el, service, client) {
-		let btn_true = $('<button class="service_button fancy-worker green">True</button>');
-		let btn_false = $('<button class="service_button fancy-worker red">False</button>');
+		let btn_true = $('<button class="service_button fancy-worker green" data-button-id="true">True</button>');
+		let btn_false = $('<button class="service_button fancy-worker red" data-button-id="false">False</button>');
 
 		btn_true.click((ev) => {
 			client.ui.serviceButtonSimplePayloadCall(service.service, { data: true }, btn_true);

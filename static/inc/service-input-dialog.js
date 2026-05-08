@@ -216,8 +216,10 @@ export class ServiceInputDialog {
 
 			val[service.service] = [];
 			that.btns.forEach((btn) => {
+				if (!btn.id) btn.id = crypto.randomUUID();
 				val[service.service].push({
 					label: btn.label,
+					id: btn.id,
 					color: btn.color,
 					silent_request: btn.silent_request,
 					silent_reply: btn.silent_reply,
@@ -253,8 +255,10 @@ export class ServiceInputDialog {
 				if (!that.client.ui.service_btns[srv].length) return;
 				val[srv] = [];
 				that.client.ui.service_btns[srv].forEach((btn) => {
+					if (!btn.id) btn.id = crypto.randomUUID();
 					val[srv].push({
 						label: btn.label,
+						id: btn.id,
 						color: btn.color,
 						silent_request: btn.silent_request,
 						silent_reply: btn.silent_reply,
