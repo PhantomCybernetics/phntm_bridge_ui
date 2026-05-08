@@ -2350,24 +2350,11 @@ export class PanelUI {
 		}
 	}
 
-	makePanelFromConfig(
-		id_source,
-		w,
-		h,
-		x = null,
-		y = null,
-		panel_vars = {},
-	) {
+	makePanelFromConfig(id_source, w, h, x = null, y = null, panel_vars = {}) {
 		if (this.panels[id_source]) return this.panels[id_source];
 
 		//msg type unknown here
-		let panel = new Panel(
-			id_source,
-			this,
-			w, h,
-			x, y,
-			panel_vars,
-		);
+		let panel = new Panel(id_source, this, w, h, x, y, panel_vars);
 		panel.init(null, false);
 
 		if (isTouchDevice()) {

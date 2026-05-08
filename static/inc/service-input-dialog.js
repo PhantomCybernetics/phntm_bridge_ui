@@ -76,12 +76,12 @@ export class ServiceInputDialog {
 
 		this.editor.empty();
 
-		let [msg, block_before, block_el, block_after] = this.processMsgTemplate(
+		let [ msg, block_before, block_el, block_after ] = this.processMsgTemplate(
 			this.service['msg_type_request'],
 			btn.value,
 			"",
-			true,
-		); //$('<div class="block" style="margin-left:'+20+'px"></div>');
+			true
+		);
 		this.msg = msg;
 		btn.value = msg;
 
@@ -108,6 +108,7 @@ export class ServiceInputDialog {
 		});
 	}
 
+	// dialog used by the services menu
 	showDialogServicesMenu(service, node, node_cont_el) {
 		this.service = service;
 
@@ -162,6 +163,7 @@ export class ServiceInputDialog {
 			that.hide();
 		});
 
+		// json menu
 		let btn_json = $('<button class="btn-json">JSON</button>');
 		btn_json.click(() => {
 			if (!btn_json.hasClass("open")) {
@@ -182,9 +184,11 @@ export class ServiceInputDialog {
 		json_menu.click((ev) => {
 			ev.stopPropagation();
 		});
+
+		// copy json payload
 		let btn_json_copy_btn = $("<button>Copy Button Payload</button>");
 		btn_json_copy_btn.click(() => {
-			btn_json.trigger("click"); // hide
+			btn_json.trigger("click"); // hide menu
 
 			let val = JSON.stringify(that.msg, null, 4);
 			navigator.clipboard.writeText(val);
@@ -195,19 +199,50 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+
+		// paste json payload
 		let btn_json_paste_btn = $("<button>Paste Button Payload</button>");
 		btn_json_paste_btn.click(() => {
-			btn_json.trigger("click"); // hide
+			btn_json.trigger("click"); // hide menu
 
-			// let val = JSON.stringify(that.msg, null, 4);
-			// navigator.clipboard.writeText(val);
-			// console.log("Copied button call json:", val);
-			// that.client.ui.showNotification(
-			// 	"Message JSON copied",
-			// 	null,
-			// 	"<pre>" + val + "</pre>",
-			// );
+			navigator.clipboard.readText()
+			.then((val)=>{
+				console.log('Pasted text:', val);
+				let json = null;
+				try {
+					json = JSON.parse(val);
+					console.log('Parsed json:', json);
+				} catch (e) {
+					that.client.ui.showNotification("Error parsing JSON", 'error');
+					return;
+				}
+
+				try {
+					let [ msg, block_before, block_el, block_after ] = that.processMsgTemplate(
+						that.service['msg_type_request'],
+						json,
+						"",
+						true
+					);
+
+					that.msg = msg;
+					that.selected_btn.value = msg;
+
+					that.editor.empty();
+					that.editor.append([block_before, block_el, block_after]);
+					that.editor.scrollTop(0);
+				} catch (e) {
+					console.error(e);
+					that.client.ui.showNotification("Error", 'error');
+					return;
+				}
+			})
+			.catch(()=>{
+				that.client.ui.showNotification("Error reading clipboard", 'error', 'This page needs the permission to read clipboard');
+			});
 		});
+
+		// copy current service/action as json
 		let btn_json_copy_service_btns = $("<button>Copy "+(is_action?"Action":"Service")+" Config (all buttons)</button>");
 		btn_json_copy_service_btns.click(() => {
 			btn_json.trigger("click"); // hide
@@ -245,6 +280,8 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+
+		// copy all services as json
 		let btn_json_copy_all_services = $("<button>Copy All Services &amp; Actions</button>");
 		btn_json_copy_all_services.click(() => {
 			btn_json.trigger("click"); // hide
@@ -373,6 +410,7 @@ export class ServiceInputDialog {
 		$("BODY").addClass("no-scroll");
 	}
 
+	// dialog used by the input manager
 	showDialogInputManager(id_service, msg_type, msg_type_request, initial_value, silet_request, silent_reply, cb) {
 		this.service = {
 			'service': id_service,
@@ -402,14 +440,12 @@ export class ServiceInputDialog {
 
 		this.editor.empty();
 
-		let [msg_ref, block_before, block_el, block_after] = this.processMsgTemplate(
+		let [ msg_ref, block_before, block_el, block_after ] = this.processMsgTemplate(
 			this.service['msg_type_request'],
 			initial_value,
 			"",
-			true,
+			true
 		);
-		// this.msg = msg_ref;
-		// btn.value = msg;
 
 		this.editor.append([block_before, block_el, block_after]);
 		this.editor.scrollTop(0);
@@ -443,6 +479,7 @@ export class ServiceInputDialog {
 			}
 		});
 
+		// json menu
 		let btn_json = $('<button class="btn-json">JSON</button>');
 		btn_json.click(() => {
 			if (!btn_json.hasClass("open")) {
@@ -463,9 +500,11 @@ export class ServiceInputDialog {
 		json_menu.click((ev) => {
 			ev.stopPropagation();
 		});
+
+		// copy payload
 		let json_copy_btn = $("<button>Copy Payload</button>");
 		json_copy_btn.click(() => {
-			btn_json.trigger("click"); // hide
+			btn_json.trigger("click"); // hide menu
 
 			let val = JSON.stringify(msg_ref ? msg_ref : undefined, null, 4);
 			navigator.clipboard.writeText(val);
@@ -476,19 +515,49 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+
+		// paste payload
 		let json_paste_btn = $("<button>Paste Payload</button>");
 		json_paste_btn.click(() => {
-			btn_json.trigger("click"); // hide
+			btn_json.trigger("click"); // hide menu
 
-			// let val = JSON.stringify(that.msg, null, 4);
-			// navigator.clipboard.writeText(val);
-			// console.log("Copied button call json:", val);
-			// that.client.ui.showNotification(
-			// 	"Message JSON copied",
-			// 	null,
-			// 	"<pre>" + val + "</pre>",
-			// );
+			navigator.clipboard.readText()
+			.then((val)=>{
+				console.log('Pasted text:', val);
+				let json = null;
+				try {
+					json = JSON.parse(val);
+					console.log('Parsed json:', json);
+				} catch (e) {
+					that.client.ui.showNotification("Error parsing JSON", 'error');
+					return;
+				}
+
+				try {
+					let [ msg, block_before, block_el, block_after ] = that.processMsgTemplate(
+						that.service['msg_type_request'],
+						json,
+						"",
+						true
+					);
+
+					msg_ref = msg;
+
+					that.editor.empty();
+					that.editor.append([block_before, block_el, block_after]);
+					that.editor.scrollTop(0);
+				} catch (e) {
+					console.error(e);
+					that.client.ui.showNotification("Error", 'error');
+					return;
+				}
+			})
+			.catch(()=>{
+				that.client.ui.showNotification("Error reading clipboard", 'error', 'This page needs the permission to read clipboard');
+			});
+
 		});
+
 		json_menu.append([
 			json_copy_btn,
 			json_paste_btn
@@ -1151,8 +1220,6 @@ export class ServiceInputDialog {
 	}
 
 	processMsgTemplate(msg_type, value, label, last_in_block = true) {
-		// let def_els = [];
-		// let indent = l*30;
 		let that = this;
 
 		const msg = {};
@@ -1209,17 +1276,16 @@ export class ServiceInputDialog {
 							(value && value[field.name] ? value[field.name].length : 0);
 
 						for (let j = 0; j < arrayLength; j++) {
-							const [nestedMsg, nestedBefore, nestedBlock, nestedAfter] =
-								this.processMsgTemplate(
-									field.type,
-									value &&
-										value[field.name] &&
-										value[field.name][j] !== undefined
-										? value[field.name][j]
-										: null,
-									null,
-									j == arrayLength - 1,
-								);
+							const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.processMsgTemplate(
+								field.type,
+								value &&
+									value[field.name] &&
+									value[field.name][j] !== undefined
+									? value[field.name][j]
+									: null,
+								null,
+								j == arrayLength - 1
+							);
 							let nested_block = $("<div></div>").append([
 								nestedBefore,
 								nestedBlock,
@@ -1239,13 +1305,12 @@ export class ServiceInputDialog {
 						arr_block.append($('<div class="cleaner"/>'));
 
 						add_btn.click((ev) => {
-							const [nestedMsg, nestedBefore, nestedBlock, nestedAfter] =
-								this.processMsgTemplate(
-									field.type,
-									value ? value[field.name] : null,
-									null,
-									true,
-								);
+							const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.processMsgTemplate(
+								field.type,
+								value ? value[field.name] : null,
+								null,
+								true
+							);
 							let nested_block = $("<div></div>").append([
 								nestedBefore,
 								nestedBlock,
@@ -1295,14 +1360,12 @@ export class ServiceInputDialog {
 						]);
 					} else {
 						// only one of complex types
-
-						const [nestedMsg, nestedBefore, nestedBlock, nestedAfter] =
-							this.processMsgTemplate(
-								field.type,
-								value ? value[field.name] : null,
-								field.name,
-								i == msg_class.definitions.length - 1,
-							);
+						const [ nestedMsg, nestedBefore, nestedBlock, nestedAfter ] = this.processMsgTemplate(
+							field.type,
+							value ? value[field.name] : null,
+							field.name,
+							i == msg_class.definitions.length - 1
+						);
 						msg[field.name] = nestedMsg;
 						block.append([nestedBefore, nestedBlock, nestedAfter]);
 					}
