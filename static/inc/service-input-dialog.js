@@ -27,6 +27,7 @@ export class ServiceInputDialog {
 		let btn = {
 			label: "Call",
 			color: "blue",
+			is_action: is_action,
 			silent_request: true,
 			silent_reply: false,
 			value: {},
