@@ -2771,7 +2771,7 @@ export class InputManager {
 		let srv_buttons_el = $('<div class="srv-buttons"></div>');
 		let render_srv_buttons = (id_service) => {
 			srv_buttons_el.empty();
-			if (id_service) {
+			if (id_service && service_button_ids[id_service]) {
 				let btns_el = $('<div class="config-row"><span class="label">Button:</span></div>');
 				let btn_opts = ['<option value="">Select button...</option>'];
 

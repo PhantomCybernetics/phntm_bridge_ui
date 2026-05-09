@@ -135,7 +135,7 @@ export class PanelUI {
 		this.default_service_btns = null; // from the robot
 		this.service_btns = {}; // id srv => btn[]
 		this.service_btns_edited = {}; // editor's working copy
-		this.service_btn_containers = {}; // id_servcie => [ inline_container_el, wrapped_container_el ]
+		this.service_btn_containers = {}; // id_service => [ inline_container_el, wrapped_container_el ]
 
 		this.conn_dot_els = [];
 		for (let i = 0; i < 3; i++) {
@@ -2054,8 +2054,13 @@ export class PanelUI {
 						}
 					);
 				} else {
-					console.error('Service input widget class '+widget_class_name+' not found');
-					inline_controls_cont.html('<span class="error">Widget error!</span>');
+					if (!this.error_service_widget_logged)
+						this.error_service_widget_logged = {};
+					if (!this.error_service_widget_logged[widget_class_name]) {
+						this.error_service_widget_logged[widget_class_name] = true;
+						console.error('Service input widget class '+widget_class_name+' not found');
+						inline_controls_cont.html('<span class="error">Widget error!</span>');
+					}
 				}
 			} else {
 				this.service_widget_map[id_service].widget.makeElements(inline_controls_cont); // render first

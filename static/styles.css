@@ -3740,6 +3740,21 @@ BUTTON#delete-input-profile .icon {
 	}
 }
 
+/* "remove" icons should wobble more to be noticeable */
+@keyframes wobble-icon {
+	0% {
+		rotate: 10deg;
+	}
+	/* 25%  {rotate: -5deg} */
+	50% {
+		rotate: -10deg;
+	}
+	/* 75%  {rotate: -5deg} */
+	100% {
+		rotate: 10deg;
+	}
+}
+
 .monitor_menu_content .menu_line.warn A .icon,
 #service-input-dialog .btn-menu BUTTON.rem.warn .icon,
 BUTTON#delete-input-profile.warn .icon {
@@ -3754,7 +3769,7 @@ BUTTON#delete-input-profile.warn .icon {
 	background-position: 0px 0px;
 	background-size: 17px;
 	left: unset;
-	animation-name: wobble;
+	animation-name: wobble-icon;
 	animation-duration: 0.2s;
 	animation-iteration-count: infinite;
 }

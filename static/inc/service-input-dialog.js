@@ -22,19 +22,19 @@ export class ServiceInputDialog {
 		else this.cont_el.removeClass("thin");
 	}
 
-	makeDefaultBtn(is_action) {
+	makeDefaultBtn() {
 		let sort_index = Object.keys(this.btns).length;
 		let btn = {
 			label: "Call",
 			color: "blue",
-			is_action: is_action,
+			is_action: this.is_action,
 			silent_request: true,
 			silent_reply: false,
 			value: {},
 			sort_index: sort_index,
-			test_call_btn_el: $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
+			test_call_btn_el: $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (this.is_action ? 'Action' : 'Service') + '</span></button>')
 		};
-		if (is_action)
+		if (this.is_action)
 			btn.test_call_btn_el.addClass('action');
 		return btn;
 	}
@@ -75,6 +75,7 @@ export class ServiceInputDialog {
 			}
 		});
 
+		this.setupJSONMenuForDialogServicesMenu();
 		this.editor.empty();
 
 		let [ msg, block_before, block_el, block_after ] = this.processMsgTemplate(
@@ -109,11 +110,19 @@ export class ServiceInputDialog {
 		});
 	}
 
+	setButtonsEmpty() {
+		this.editor.empty();
+		this.editor.append($('<span class="empty-label">No payload buttons defined</span>'));
+		this.selected_btn = null;
+		this.btn_call_cont.empty();
+		this.setupJSONMenuForDialogServicesMenu();
+	}
+
 	// dialog used by the services menu
 	showDialogServicesMenu(service, node, node_cont_el) {
 		this.service = service;
 
-		let is_action = this.client.discovered_services[service.service] && this.client.discovered_services[service.service].is_action;
+		this.is_action = this.client.discovered_services[service.service] && this.client.discovered_services[service.service].is_action;
 
 		// clone edit btns, written back on save
 		if (!this.client.ui.service_btns_edited[service.service]) {
@@ -122,8 +131,8 @@ export class ServiceInputDialog {
 				this.client.ui.service_btns[service.service].forEach((live_btn) => {
 					let btn = JSON.parse(JSON.stringify(live_btn));  // make a copy
 					btn.src_ref = live_btn; // keep ref to source
-					btn.is_action = is_action;
-					btn.action_cancel_service = is_action ? service.service + '/_action/cancel_goal': null;
+					btn.is_action = this.is_action;
+					btn.action_cancel_service = this.is_action ? service.service + '/_action/cancel_goal': null;
 					this.client.ui.service_btns_edited[service.service].push(
 						btn,
 					);
@@ -134,7 +143,7 @@ export class ServiceInputDialog {
 		this.btns = this.client.ui.service_btns_edited[service.service];
 
 		if (!this.btns.length) {
-			this.btns.push(this.makeDefaultBtn(is_action));
+			this.btns.push(this.makeDefaultBtn());
 		}
 
 		let that = this;
@@ -165,95 +174,176 @@ export class ServiceInputDialog {
 		});
 
 		// json menu
-		let btn_json = $('<button class="btn-json">JSON</button>');
-		btn_json.click(() => {
-			if (!btn_json.hasClass("open")) {
-				btn_json.addClass("open");
+		this.btn_json = $('<button class="btn-json">JSON</button>');
+		this.btn_json.click(() => {
+			if (!that.btn_json.hasClass("open")) {
+				that.btn_json.addClass("open");
 				that.menu_underlay
 					.unbind()
 					.show()
 					.click(() => {
-						btn_json.removeClass("open");
+						that.btn_json.removeClass("open");
 						that.menu_underlay.unbind().hide();
 					});
 			} else {
-				btn_json.removeClass("open");
+				that.btn_json.removeClass("open");
 				that.menu_underlay.unbind().hide();
 			}
 		});
-		let json_menu = $('<div class="json-menu"><span class="arrow"></span></div>');
-		json_menu.click((ev) => {
-			ev.stopPropagation();
+
+		this.btns.forEach((btn)=>{ // one test btn per actual button (to keep track on working state)
+			if (!btn.test_call_btn_el) {
+				btn.test_call_btn_el = $('<button class="btn-call fancy-worker">Test<span class="wide"> '+(this.is_action?'Action':'Service')+'</span></button>');
+				if (this.is_action)
+					btn.test_call_btn_el.addClass('action');
+			}
+		});
+		this.btn_call_cont = $('<span id="btn-call-cont"/>');
+
+		let btn_save = $('<button class="btn-save">Save</button>');
+		btn_save.click((ev) => {
+			btn_save.addClass("working");
+
+			that.client.ui.saveServiceButtons(service.service, this.btns);
+			that.client.ui.renderNodeServicesMenu(node, node_cont_el);
+
+			setTimeout(() => {
+				btn_save.removeClass("working");
+				that.hide();
+			}, 100);
 		});
 
-		// copy json payload
-		let btn_json_copy_btn = $("<button>Copy Button Payload</button>");
-		btn_json_copy_btn.click(() => {
-			btn_json.trigger("click"); // hide menu
-
-			let val = JSON.stringify(that.msg, null, 4);
-			navigator.clipboard.writeText(val);
-			console.log("Copied button call json:", val);
-			that.client.ui.showNotification(
-				"Message JSON copied",
-				null,
-				"<pre>" + val + "</pre>",
-			);
+		this.btns_line_el = $('<div class="btns-line"></div>');
+		this.btns_line_el.on('wheel mousewheel touchmove', (ev)=>{
+			// cancel movement when menu is open
+			if (this.btns_line_el.hasClass('no-move')) {
+				ev.preventDefault();
+				ev.stopPropagation();
+			}
 		});
 
-		// paste json payload
-		let btn_json_paste_btn = $("<button>Paste Button Payload</button>");
-		btn_json_paste_btn.click(() => {
-			btn_json.trigger("click"); // hide menu
+		this.renderButtonTabs();
 
-			navigator.clipboard.readText()
-			.then((val)=>{
-				console.log('Pasted text:', val);
-				let json = null;
-				try {
-					json = JSON.parse(val);
-					console.log('Parsed json:', json);
-				} catch (e) {
-					that.client.ui.showNotification("Error parsing JSON", 'error');
-					return;
-				}
+		this.bottom_btns_el.append([
+			btn_save,
+			this.btn_call_cont,
+			this.btn_json,
+			btn_close
+		]);
+		this.cont_el.append([
+			this.btns_line_el,
+			$('<div class="cleaner"/>'),
+			this.editor,
+			this.bottom_btns_el,
+		]);
 
-				try {
-					let [ msg, block_before, block_el, block_after ] = that.processMsgTemplate(
-						that.service['msg_type_request'],
-						json,
-						"",
-						true
-					);
+		this.cont_el.draggable({
+			handle: "h3",
+			cursor: "move",
+		});
 
-					that.msg = msg;
-					that.selected_btn.value = msg;
+		this.cont_el.show();
+		this.json_menu = null; // foce rebuild
+		this.selectButton(this.btns[0]);
 
-					that.editor.empty();
-					that.editor.append([block_before, block_el, block_after]);
-					that.editor.scrollTop(0);
-				} catch (e) {
-					console.error(e);
-					that.client.ui.showNotification("Error", 'error');
-					return;
-				}
-			})
-			.catch(()=>{
-				that.client.ui.showNotification("Error reading clipboard", 'error', 'This page needs the permission to read clipboard');
+		this.bg
+			.unbind()
+			.show()
+			.click((ev) => this.hide());
+		$("BODY").addClass("no-scroll");
+	}
+
+	setupJSONMenuForDialogServicesMenu() {
+		let that = this;
+
+		if (!this.json_menu) {
+			this.json_menu = $('<div class="json-menu"></div>');
+			this.json_menu.click((ev) => {
+				ev.stopPropagation();
 			});
-		});
+			this.json_menu.appendTo(this.btn_json);
+		} else {
+			this.json_menu.empty();
+		}
+
+		this.json_menu.append($('<span class="arrow"></span>'));
+
+		if (this.selected_btn) {
+
+			// copy json payload
+			let btn_json_copy_btn = $("<button>Copy Button Payload</button>");
+			btn_json_copy_btn.click(() => {
+				that.btn_json.trigger("click"); // hide menu
+
+				let val = JSON.stringify(that.msg, null, 4);
+				navigator.clipboard.writeText(val);
+				console.log("Copied button call json:", val);
+				that.client.ui.showNotification(
+					"Message JSON copied",
+					null,
+					"<pre>" + val + "</pre>",
+				);
+			});
+			this.json_menu.append(btn_json_copy_btn);
+
+			// paste json payload
+			let btn_json_paste_btn = $("<button>Paste Button Payload</button>");
+			btn_json_paste_btn.click(() => {
+				that.btn_json.trigger("click"); // hide menu
+
+				navigator.clipboard.readText()
+				.then((val)=>{
+					console.log('Pasted text:', val);
+					let json = null;
+					try {
+						json = JSON.parse(val);
+						console.log('Parsed json:', json);
+					} catch (e) {
+						that.client.ui.showNotification("Error parsing JSON", 'error');
+						return;
+					}
+
+					try {
+						let [ msg, block_before, block_el, block_after ] = that.processMsgTemplate(
+							that.service['msg_type_request'],
+							json,
+							"",
+							true
+						);
+
+						that.msg = msg;
+						that.selected_btn.value = msg;
+
+						that.editor.empty();
+						that.editor.append([block_before, block_el, block_after]);
+						that.editor.scrollTop(0);
+					} catch (e) {
+						console.error(e);
+						that.client.ui.showNotification("Error", 'error');
+						return;
+					}
+				})
+				.catch(()=>{
+					that.client.ui.showNotification("Error reading clipboard", 'error', 'This page needs the permission to read clipboard');
+				});
+			});
+			this.json_menu.append(btn_json_paste_btn);
+
+		}
+
+		let id_service = this.service.service;
 
 		// copy current service/action as json
-		let btn_json_copy_service_btns = $("<button>Copy "+(is_action?"Action":"Service")+" Config (all buttons)</button>");
+		let btn_json_copy_service_btns = $("<button>Copy "+(this.is_action?"Action":"Service")+" Config (all buttons)</button>");
 		btn_json_copy_service_btns.click(() => {
-			btn_json.trigger("click"); // hide
+			that.btn_json.trigger("click"); // hide menu
 
 			let val = {};
 
-			val[service.service] = [];
+			val[id_service] = [];
 			that.btns.forEach((btn) => {
 				if (!btn.id) btn.id = crypto.randomUUID();
-				val[service.service].push({
+				val[id_service].push({
 					label: btn.label,
 					id: btn.id,
 					color: btn.color,
@@ -264,11 +354,11 @@ export class ServiceInputDialog {
 				});
 			});
 
-			val[service.service].sort((a, b) => {
+			val[id_service].sort((a, b) => {
 				// sort and remove sort index
 				return a.sort_index - b.sort_index;
 			});
-			Object.values(val[service.service]).forEach((one_srv_btn) => {
+			Object.values(val[id_service]).forEach((one_srv_btn) => {
 				delete one_srv_btn.sort_index;
 			});
 
@@ -281,11 +371,12 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+		this.json_menu.append(btn_json_copy_service_btns);
 
 		// copy all services as json
 		let btn_json_copy_all_services = $("<button>Copy All Services &amp; Actions</button>");
 		btn_json_copy_all_services.click(() => {
-			btn_json.trigger("click"); // hide
+			that.btn_json.trigger("click"); // hide menu
 
 			let val = {};
 
@@ -306,9 +397,9 @@ export class ServiceInputDialog {
 				});
 			});
 
-			val[service.service] = []; // this service from edit vals
+			val[id_service] = []; // this service from edit vals
 			that.btns.forEach((btn) => {
-				val[service.service].push({
+				val[id_service].push({
 					label: btn.label,
 					color: btn.color,
 					silent_request: btn.silent_request,
@@ -341,74 +432,7 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
-
-		json_menu.append([
-			btn_json_copy_btn,
-			btn_json_paste_btn,
-			btn_json_copy_service_btns,
-			btn_json_copy_all_services,
-		]);
-		json_menu.appendTo(btn_json);
-
-		this.btns.forEach((btn)=>{ // one test btn per actual button (to keep track on working state)
-			if (!btn.test_call_btn_el) {
-				btn.test_call_btn_el = $('<button class="btn-call fancy-worker">Test<span class="wide"> '+(is_action?'Action':'Service')+'</span></button>');
-				if (is_action)
-					btn.test_call_btn_el.addClass('action');
-			}
-		});
-		this.btn_call_cont = $('<span id="btn-call-cont"/>');
-
-		let btn_save = $('<button class="btn-save">Save</button>');
-		btn_save.click((ev) => {
-			btn_save.addClass("working");
-
-			that.client.ui.saveServiceButtons(service.service, this.btns);
-			that.client.ui.renderNodeServicesMenu(node, node_cont_el);
-
-			setTimeout(() => {
-				btn_save.removeClass("working");
-				that.hide();
-			}, 100);
-		});
-
-		this.btns_line_el = $('<div class="btns-line"></div>');
-		this.btns_line_el.on('wheel mousewheel touchmove', (ev)=>{
-			// cancel movement when menu is open
-			if (this.btns_line_el.hasClass('no-move')) {
-				ev.preventDefault();
-				ev.stopPropagation();
-			}
-		});
-
-		this.renderButtonTabs(is_action);
-
-		this.bottom_btns_el.append([
-			btn_save,
-			this.btn_call_cont,
-			btn_json,
-			btn_close
-		]);
-		this.cont_el.append([
-			this.btns_line_el,
-			$('<div class="cleaner"/>'),
-			this.editor,
-			this.bottom_btns_el,
-		]);
-
-		this.cont_el.draggable({
-			handle: "h3",
-			cursor: "move",
-		});
-
-		this.cont_el.show();
-		this.selectButton(this.btns[0]);
-
-		this.bg
-			.unbind()
-			.show()
-			.click((ev) => this.hide());
-		$("BODY").addClass("no-scroll");
+		this.json_menu.append(btn_json_copy_all_services);
 	}
 
 	// dialog used by the input manager
@@ -591,8 +615,8 @@ export class ServiceInputDialog {
 			.click((ev) => this.hide());
 		$("BODY").addClass("no-scroll");
 	}
-
-	renderButtonTabs(is_action) {
+		
+	renderButtonTabs() {
 		let that = this;
 
 		this.btns_line_el.empty();
@@ -704,13 +728,15 @@ export class ServiceInputDialog {
 					close_button_menu();
 
 					that.btns.splice(i_btn, 1);
-					if (!that.btns.length) {
-						that.btns.push(that.makeDefaultBtn(is_action)); // replace with default
+					that.renderButtonTabs();
+					if (that.btns.length) {
+						let btn_to_sel = i_btn;
+						if (that.btns.length - 1 < i_btn)
+							btn_to_sel = that.btns.length - 1;
+						that.selectButton(that.btns[btn_to_sel]);	
+					} else {
+						that.setButtonsEmpty();
 					}
-					that.renderButtonTabs(is_action);
-					let btn_to_sel = i_btn;
-					if (that.btns.length - 1 < i_btn) btn_to_sel = that.btns.length - 1;
-					that.selectButton(that.btns[btn_to_sel]);
 				})
 				.blur((ev) => {
 					rem_btn.removeClass("warn");
@@ -840,9 +866,9 @@ export class ServiceInputDialog {
 
 		let btn_add = $('<span class="add-btn">Add<span class="wide"> button</span></span>');
 		btn_add.click((ev) => {
-			that.btns.push(that.makeDefaultBtn(is_action));
+			that.btns.push(that.makeDefaultBtn());
 			that.confirmBtnLabelEdit();
-			that.renderButtonTabs(is_action);
+			that.renderButtonTabs();
 			that.selectButton(that.btns[that.btns.length - 1]);
 		});
 		this.btns_line_el.append(btn_add);
