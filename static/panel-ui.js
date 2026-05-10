@@ -1,6 +1,6 @@
 import { GraphMenu } from "/static/graph-menu.js";
 import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "/static/browser-client.js";
-import { Gamepad as TouchGamepad } from "/static/touch-gamepad/gamepad.js";
+import { Gamepad as TouchGamepad, Joystick as TouchJoystick} from "/static/touch-gamepad/dist/gamepad.js";
 import { GOAL_STATUS, WOBBLE_DURATION } from "/static/inc/const.js";
 // import { QRCodeStyling } from '/static/qr-code-styling/qr-code-styling.common.js';
 
@@ -2975,44 +2975,46 @@ export class PanelUI {
 				$("#touch-gamepad-left").appendTo($("BODY"));
 				$("#touch-gamepad-right").appendTo($("BODY"));
 			}
+			this.left_touch_joystick = new TouchJoystick({
+				id: "touch-left-stick", // MANDATORY
+				// type: "joystick", // Optional (Default is "joystick")
+				parentElement: document.querySelector("#touch-gamepad-left"), // Where to append the controller
+				fixed: false, // Change position on touch-start
+				position: {
+					// Initial position on inside parent
+					left: "50%",
+					top: "60%",
+				},
+				onInput(state) {
+					// triggered on angle or value change.
+					that.input_manager.setTouchGamepadInput(
+						"left",
+						state.value,
+						state.angle,
+					);
+				},
+			});
+			this.right_touch_joystick = new TouchJoystick({
+				id: "touch-right-stick", // MANDATORY
+				// type: "button", // Since type is "joystick" by default
+				parentElement: document.querySelector("#touch-gamepad-right"),
+				fixed: false,
+				position: {
+					// Anchor point position
+					right: "50%",
+					top: "60%",
+				},
+				onInput(state) {
+					that.input_manager.setTouchGamepadInput(
+						"right",
+						state.value,
+						state.angle,
+					);
+				},
+			});
 			this.touch_gamepad = new TouchGamepad([
-				{
-					id: "touch-left-stick", // MANDATORY
-					// type: "joystick", // Optional (Default is "joystick")
-					parent: "#touch-gamepad-left", // Where to append the controller
-					fixed: false, // Change position on touch-start
-					position: {
-						// Initial position on inside parent
-						left: "50%",
-						top: "60%",
-					},
-					onInput() {
-						// triggered on angle or value change.
-						that.input_manager.setTouchGamepadInput(
-							"left",
-							this.value,
-							this.angle,
-						);
-					},
-				},
-				{
-					id: "touch-right-stick", // MANDATORY
-					// type: "button", // Since type is "joystick" by default
-					parent: "#touch-gamepad-right",
-					fixed: false,
-					position: {
-						// Anchor point position
-						right: "50%",
-						top: "60%",
-					},
-					onInput() {
-						that.input_manager.setTouchGamepadInput(
-							"right",
-							this.value,
-							this.angle,
-						);
-					},
-				},
+				this.left_touch_joystick,
+				this.right_touch_joystick
 			]);
 
 			this.input_manager.setTouchGamepadOn(true);
@@ -3040,6 +3042,8 @@ export class PanelUI {
 			this.updateTouchGamepadIcon();
 
 			this.touch_gamepad.destroy();
+			this.left_touch_joystick.destroy();
+			this.right_touch_joystick.destroy();
 			console.log("Touch Gamepad off");
 			$("BODY").removeClass("touch-gamepad");
 		}
@@ -3461,11 +3465,11 @@ export class PanelUI {
 			if (service_reply && show_reply === null) { // auto (only show when there is something interesting in the reply)
 				let reply_keys = Object.keys(service_reply);
 				reply_keys = reply_keys.filter(
-					(item) => ["success", "successful", "err", "error"].indexOf(item) === -1,
+					(item) => ["success", "successful", "err", "error", "structure_needs_at_least_one_member"].indexOf(item) === -1,
 				);
-				if (service_reply.message && service_reply.message.length) {
+				if (service_reply.message && service_reply.message.length) { // show message, if present
 					show_reply = true;
-				} else if (reply_keys.length) {
+				} else if (reply_keys.length) { // anything else that was not filtered out
 					show_reply = true;
 				} else {
 					show_reply = false;

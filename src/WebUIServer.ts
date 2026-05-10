@@ -4,6 +4,7 @@ import axios, { AxiosResponse, AxiosError } from "axios";
 import express from "express";
 import ejs from "ejs";
 import fs from "fs"
+import { Gamepad, Button, Joystick } from "@rbuljan/gamepad";
 
 import type { Debugger } from "./lib/debugger";
 import type { BridgeUiConfig } from "./config";
@@ -53,7 +54,19 @@ export function createWebUIServerExpressApp(
 	else // free version with copyright
 		webExpressApp.use("/static/canvasjs-charts/", express.static("node_modules/@canvasjs/charts"));
 
-	webExpressApp.use("/static/touch-gamepad/", express.static("node_modules/@rbuljan/gamepad/"));
+	webExpressApp.use("/static/touch-gamepad/dist/", express.static("node_modules/@rbuljan/gamepad/dist/"));
+	webExpressApp.use("/static/touch-gamepad/dist/controllers/controller", express.static("node_modules/@rbuljan/gamepad/dist/controllers/controller.js"));
+	webExpressApp.use("/static/touch-gamepad/dist/controllers/button", express.static("node_modules/@rbuljan/gamepad/dist/controllers/button.js"));
+	webExpressApp.use("/static/touch-gamepad/dist/controllers/joystick", express.static("node_modules/@rbuljan/gamepad/dist/controllers/joystick.js"));
+	webExpressApp.use("/static/touch-gamepad/dist/controllers/utils", express.static("node_modules/@rbuljan/gamepad/dist/controllers/utils.js"));
+	webExpressApp.use("/static/touch-gamepad/src/", express.static("node_modules/@rbuljan/gamepad/src/"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/controller", express.static("node_modules/@rbuljan/gamepad/src/controllers/controller.ts"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/ControllerOptions", express.static("node_modules/@rbuljan/gamepad/src/controllers/ControllerOptions.ts"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/ControllerState", express.static("node_modules/@rbuljan/gamepad/src/controllers/ControllerState.ts"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/button", express.static("node_modules/@rbuljan/gamepad/src/controllers/button.ts"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/joystick", express.static("node_modules/@rbuljan/gamepad/src/controllers/joystick.ts"));
+	webExpressApp.use("/static/touch-gamepad/src/controllers/utils", express.static("node_modules/@rbuljan/gamepad/src/controllers/utils.ts"));
+
 	webExpressApp.use("/static/qr-code-styling/", express.static("node_modules/qr-code-styling/lib/"));
 
 	webExpressApp.get("/favicon.ico", (req: express.Request, res: express.Response) => {
