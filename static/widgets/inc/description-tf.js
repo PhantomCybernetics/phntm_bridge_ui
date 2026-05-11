@@ -268,7 +268,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			"/tf_static",
 			1,
 			(topic, tf) => {
-				that.onTFData(topic, tf);
+				that.onStaticTFData(topic, tf);
 			},
 		);
 		this.sources.add(
@@ -277,7 +277,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			"/tf",
 			-1,
 			(topic, tf) => {
-				that.onTFData(topic, tf);
+				that.onFastTFData(topic, tf);
 			},
 		);
 		this.sources.add(
@@ -1250,6 +1250,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		console.log("Robot desc received, model: ", this.robot_model);
 
 		this.applyStoredTFStatic();
+		this.makeRobotMarkers();
 		this.getAutofocusTarget();
 		this.renderDirty();
 	}
@@ -1357,6 +1358,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.robot_model = null;
 		this.last_processed_desc = null;
 		this.robot_pose_initialized = {};
+		this.joint_markers = [];
+		this.link_markers = [];
+		this.tf_logged = false;
 		while (this.labelRenderer.domElement.children.length > 0) {
 			this.labelRenderer.domElement.removeChild(
 				this.labelRenderer.domElement.children[0],
@@ -1367,30 +1371,32 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	getAutofocusTarget() { // called in onDescriptionData()
 		let robot = this.robot_model;
 
-		if (this.camera_selection_key && robot.joints[this.camera_selection_key]) {
-			this.setCameraSelectionObject(
-				robot.joints[this.camera_selection_key],
-				this.camera_selection_key,
-				false,
-			);
-			return;
-		}
-		if (this.camera_selection_key && robot.links[this.camera_selection_key]) {
-			this.setCameraSelectionObject(
-				robot.links[this.camera_selection_key],
-				this.camera_selection_key,
-				false,
-			);
-			return;
-		}
+		if (this.vars.camera_follows_selection) {
+			if (this.camera_selection_key && robot.joints[this.camera_selection_key]) {
+				this.setCameraSelectionObject(
+					robot.joints[this.camera_selection_key],
+					this.camera_selection_key,
+					false,
+				);
+				return;
+			}
+			if (this.camera_selection_key && robot.links[this.camera_selection_key]) {
+				this.setCameraSelectionObject(
+					robot.links[this.camera_selection_key],
+					this.camera_selection_key,
+					false,
+				);
+				return;
+			}
 
-		if (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY) {
-			this.setCameraSelectionObject(
-				this.ros_space,
-				DescriptionTFWidget.ROS_SPACE_KEY,
-				false,
-			);
-			return;
+			if (this.camera_selection_key == DescriptionTFWidget.ROS_SPACE_KEY) {
+				this.setCameraSelectionObject(
+					this.ros_space,
+					DescriptionTFWidget.ROS_SPACE_KEY,
+					false,
+				);
+				return;
+			}
 		}
 
 		let wp = new Vector3();
@@ -1438,11 +1444,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		let model_size_approx = num_distances ? pt_distances[Math.round(num_distances*0.9)] : 2.0; // use ~90th percentile to avoid outliers
 
 		console.log('[AutofocusTarget] Model size estimated at '+model_size_approx+"; auto central joint is "+central_joint_key);
-		if (central_joint && central_joint_key)
+		if (central_joint && central_joint_key && this.vars.camera_follows_selection)
 			this.setCameraSelectionObject(central_joint, central_joint_key, false); // saves last selection
 
 		// set initial distance proportional to model size
-		if (!this.set_camera_view) {
+		if (!this.set_camera_view && !this.camera_pose_initialized) {
 
 			let initial_dist = model_size_approx * DescriptionTFWidget.INITIAL_CAMERA_DISTANCE_MULTIPLIER;
 			console.log('[AutofocusTarget] Setting initial camera distance to '+initial_dist);
@@ -1464,6 +1470,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				'camera_pos': camera_ref_frame_pos,
 				'cam_axis_angle': 0.0 // horizon level
 			};
+
+			console.log('Set camera view:', this.set_camera_view);
 		}
 	}
 
@@ -1674,22 +1682,32 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		return [axesHelper, label_el];
 	}
 
-	onTFData(topic, tf) {
+	onStaticTFData(topic, tf) {
 		if (this.panel.paused || !this.robot_model) {
-			if (topic == '/tf_static') {
-				console.log('Got /tf_static before model (or when paused):', tf);
-				this.tf_static_to_apply[topic] = tf;
-			}
+			console.log('Got static tf before model (or paused):', tf);
+			this.tf_static_to_apply[topic] = tf; // store
 			return; //wait for the model
 		}
 
-		if (topic == '/tf_static') {
-			console.log('Got /tf_static:', tf);
-		} else if (!this.tf_logged) {
+		console.log('Got tf_static from '+topic+':', tf);
+
+		this._processTFData(topic, tf);
+	}
+
+	onFastTFData(topic, tf) {
+		if (this.panel.paused || !this.robot_model) {
+			return; //wait for the model
+		}
+		
+		if (!this.tf_logged) {
 			this.tf_logged = true;
-			console.log('Got /tf:', tf);
+			console.log('Got fast tf from '+topic+':', tf);
 		}
 
+		this._processTFData(topic, tf);
+	}
+
+	_processTFData(topic, tf) {
 		for (let i = 0; i < tf.transforms.length; i++) {
 			let ns_stamp = tf.transforms[i].header.stamp.sec * 1000000000 + tf.transforms[i].header.stamp.nanosec;
 			let id_child = tf.transforms[i].child_frame_id;
@@ -1801,7 +1819,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		topics.forEach((t)=>{
 			let tf = this.tf_static_to_apply[t];
 			delete this.tf_static_to_apply[t]
-			this.onTFData(t, tf);
+			this._processTFData(t, tf);
 		});
 	}
 
