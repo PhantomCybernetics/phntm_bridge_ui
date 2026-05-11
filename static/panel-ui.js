@@ -2054,12 +2054,12 @@ export class PanelUI {
 						}
 					);
 				} else {
+					inline_controls_cont.html('<span class="error">Widget error!</span>');
 					if (!this.error_service_widget_logged)
 						this.error_service_widget_logged = {};
 					if (!this.error_service_widget_logged[widget_class_name]) {
 						this.error_service_widget_logged[widget_class_name] = true;
 						console.error('Service input widget class '+widget_class_name+' not found');
-						inline_controls_cont.html('<span class="error">Widget error!</span>');
 					}
 				}
 			} else {
