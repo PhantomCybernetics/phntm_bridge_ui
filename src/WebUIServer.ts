@@ -155,7 +155,8 @@ export function createWebUIServerExpressApp(
 					$d.l('Locate returned:', response.data);
 					res.render("robot_ui", {
 						id_robot: req.params.ID,
-						bridge_socket_url: bridge_socket_url, //
+						title: response.data && response.data.name ? response.data.name + " @ PHNTM Bridge" : undefined,
+						bridge_socket_url: bridge_socket_url,
 						bridge_files_url: robot_bridge_files_url,
 						app_id: config.appId,
 						bridge_server: bridge_server,
