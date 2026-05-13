@@ -12,6 +12,7 @@ const envConfigSchema = z
 	.object({
 		UI_HTTPS: booleanString(),
 		UI_HOST: z.string(),
+		UI_CDN_PREFIX: z.string(),
 		UI_PORT: z.coerce.number(),
 		UI_PATH: z.string(),
 		BRIDGE_LOCATE_URL: z.string().url(),
@@ -30,6 +31,7 @@ const fullConfigSchema = z.object({
 	ssl: z.object({ private: z.string(), public: z.string() }).optional(),
 	port: z.number().positive().int(),
 	host: z.string().default("unknown"),
+	cdnPrefix: z.string().default(""),
 	path: z.string().default("/"),
 	bridgeLocateUrl: z.string().url(),
 	bridgeSocketPort: z.number().positive().int().default(1337),
@@ -51,6 +53,7 @@ export async function getConfig() {
 	const envConfigRenamed = {
 		...(env.UI_HTTPS !== undefined && { https: env.UI_HTTPS }),
 		...(env.UI_HOST !== undefined && { host: env.UI_HOST }),
+		...(env.UI_CDN_PREFIX !== undefined && { cdnPrefix: env.UI_CDN_PREFIX }),
 		...(env.UI_PORT !== undefined && { port: env.UI_PORT }),
 		...(env.UI_PATH !== undefined && { path: env.UI_PATH }),
 		...(env.BRIDGE_LOCATE_URL !== undefined && {

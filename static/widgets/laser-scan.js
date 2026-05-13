@@ -1,5 +1,5 @@
-import { deg2rad } from "../inc/lib.js";
-import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
+import { deg2rad } from "lib";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
 
 // Laser scan visualization
 

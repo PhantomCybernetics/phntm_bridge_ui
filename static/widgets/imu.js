@@ -3,8 +3,8 @@ import { AxesHelper2 } from 'axes-helper2';
 import { Line2 } from 'line2';
 import { LineMaterial } from "line-material2";
 import { LineGeometry } from 'line-geometry2';
-import "/static/canvasjs-charts/canvasjs.min.js";
-import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
+import "canvasjs-charts";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
 
 // Imu rotation visualization with linear acceleration graph
 

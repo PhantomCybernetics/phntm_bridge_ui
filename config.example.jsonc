@@ -8,6 +8,7 @@
 	"port": 443,
 	"host": "bridge.example.com", // Only informational, included in startup logs
 	"path": "/", // base address of the UI (ID_ROBOT will be appended)
+	"cdnPrefix": "https://some-distribution.cdn-provider.com", // cdn prefix to use for web assets ('/' + ui version id will be appended)
 
 	// address where robot's Bridge Server instance will be requested
 	"bridgeLocateUrl": "https://register.phntm.io/locate",

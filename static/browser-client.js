@@ -1,4 +1,4 @@
-import { uuidToBytes } from "./inc/lib.js";
+import { uuidToBytes } from "lib";
 
 class TopicWriter {
 	constructor(client, topic, msg_type) {

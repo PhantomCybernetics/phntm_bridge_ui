@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as TDx from "3dconnexion";
-import { DescriptionTFWidget } from '../widgets/inc/description-tf.js'
+import { DescriptionTFWidget } from 'widgets/description-tf'
 
 // const global = globalThis;
 // global._3DCONNEXION_DEBUG = true;

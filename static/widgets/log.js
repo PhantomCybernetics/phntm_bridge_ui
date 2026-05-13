@@ -1,4 +1,4 @@
-import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
 
 // Log console for /rosout, etc
 

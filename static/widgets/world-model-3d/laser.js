@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { LineSegments2 } from "line-segments2";
 import { LineMaterial } from "line-material2";
 import { LineSegmentsGeometry as LineSegmentsGeometry2} from "line-segments-geometry2";
-import { WorldModel3DPluginBase } from "./world-model-plugin-base.js";
+import { WorldModel3DPluginBase } from "widgets/world-model-plugin-base";
 
 export class WorldModel3DWidget_Laser extends WorldModel3DPluginBase {
 

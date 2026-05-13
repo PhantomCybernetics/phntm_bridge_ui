@@ -1,6 +1,6 @@
-import { IsImageTopic } from "/static/browser-client.js";
+import { IsImageTopic } from "browser-client";
 import * as THREE from "three";
-import { linkifyURLs, escapeHtml, isTouchDevice, isSafari } from "./inc/lib.js";
+import { linkifyURLs, escapeHtml, isTouchDevice, isSafari } from "lib";
 
 BigInt.prototype.toJSON = function () {
 	return this.toString();

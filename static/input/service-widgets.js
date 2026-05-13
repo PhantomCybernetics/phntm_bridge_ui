@@ -1,7 +1,4 @@
-import {
-	uuidToBytes,
-} from "../inc/lib.js";
-
+import { uuidToBytes } from "lib";
 
 class ServiceInput {
 	static MakeMenuControls(target_el, service, client) {}

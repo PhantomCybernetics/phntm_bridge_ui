@@ -27,6 +27,7 @@ export function printStartupMessage(
 	console.log((" App ID: " + config.appId + "").green);
 	console.log((" App Key: " + config.appKey + "").green);
 	console.log((" UI version: #" + uiVersion).green);
+	console.log((" CDN prefix: " + config.cdnPrefix ).green);
 	console.log(" ".green);
 	console.log("----------------------------------------------------------------------".yellow);
 }
@@ -36,41 +37,44 @@ export function createWebUIServerExpressApp(
 	config: BridgeUiConfig,
 	webExpressApp: express.Express,
 ) {
+	const CDN_PUB_PREFIX = uiVersion == '?' ? '/v/dev' : '/v/' + uiVersion; // publishing versioned assets here for CDN to cache
+	const CDN_INC_PREFIX = config.cdnPrefix ? config.cdnPrefix + (uiVersion == '?' ? '/dev' : '/' + uiVersion) : CDN_PUB_PREFIX; // reading versioned assets here
+
+	let static_routes = [];
+	static_routes.push([ "/static/", "static/" ]);
+	static_routes.push([ "/static/socket.io/", "node_modules/socket.io-client/dist/" ]);
+	static_routes.push([ "/static/gridstack/", "node_modules/gridstack/dist/" ]);
+	static_routes.push([ "/static/three/", "node_modules/three/build/" ]);
+	static_routes.push([ "/static/three/examples/", "node_modules/three/examples/" ]);
+	static_routes.push([ "/static/urdf-loader/", "node_modules/urdf-loader/src/" ]);
+	static_routes.push([ "/static/qr-code-styling/", "node_modules/qr-code-styling/lib/" ]);
+	static_routes.push([ "/static/canvasjs-charts/", fs.existsSync('static/lib/canvasjs-commercial/canvasjs.min.js') ? "static/lib/canvasjs-commercial" : "node_modules/@canvasjs/charts" ]); // paid commercial version or open-source with copyright
+
+	static_routes.push([ "/static/touch-gamepad/dist/", "node_modules/@rbuljan/gamepad/dist/" ]);
+	static_routes.push([ "/static/touch-gamepad/dist/controllers/controller", "node_modules/@rbuljan/gamepad/dist/controllers/controller.js" ]);
+	static_routes.push([ "/static/touch-gamepad/dist/controllers/button", "node_modules/@rbuljan/gamepad/dist/controllers/button.js" ]);
+	static_routes.push([ "/static/touch-gamepad/dist/controllers/joystick", "node_modules/@rbuljan/gamepad/dist/controllers/joystick.js" ]);
+	static_routes.push([ "/static/touch-gamepad/dist/controllers/utils", "node_modules/@rbuljan/gamepad/dist/controllers/utils.js" ]);
+	static_routes.push([ "/static/touch-gamepad/src/", "node_modules/@rbuljan/gamepad/src/" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/controller", "node_modules/@rbuljan/gamepad/src/controllers/controller.ts" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/ControllerOptions", "node_modules/@rbuljan/gamepad/src/controllers/ControllerOptions.ts" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/ControllerState", "node_modules/@rbuljan/gamepad/src/controllers/ControllerState.ts" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/button", "node_modules/@rbuljan/gamepad/src/controllers/button.ts" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/joystick", "node_modules/@rbuljan/gamepad/src/controllers/joystick.ts" ]);
+	static_routes.push([ "/static/touch-gamepad/src/controllers/utils", "node_modules/@rbuljan/gamepad/src/controllers/utils.ts" ]);
+
 	webExpressApp.engine(".html", ejs.renderFile);
 	webExpressApp.set("views", path.join(__dirname, "../src/views"));
 	webExpressApp.set("view engine", "html");
 	webExpressApp.use(express.urlencoded({ extended: true })); // for form data
 
-	webExpressApp.use("/static/", express.static("static/"));
-	webExpressApp.use("/static/socket.io/", express.static("node_modules/socket.io-client/dist/"));
-	webExpressApp.use("/static/gridstack/", express.static("node_modules/gridstack/dist/"));
-
-	webExpressApp.use("/static/three/", express.static("node_modules/three/build/"));
-	webExpressApp.use("/static/three/examples/", express.static("node_modules/three/examples/"));
-	webExpressApp.use("/static/urdf-loader/", express.static("node_modules/urdf-loader/src/"));
-
-	if (fs.existsSync('static/lib/canvasjs-commercial/canvasjs.min.js')) // paid commercial version
-		webExpressApp.use("/static/canvasjs-charts/", express.static("static/lib/canvasjs-commercial"));
-	else // free version with copyright
-		webExpressApp.use("/static/canvasjs-charts/", express.static("node_modules/@canvasjs/charts"));
-
-	webExpressApp.use("/static/touch-gamepad/dist/", express.static("node_modules/@rbuljan/gamepad/dist/"));
-	webExpressApp.use("/static/touch-gamepad/dist/controllers/controller", express.static("node_modules/@rbuljan/gamepad/dist/controllers/controller.js"));
-	webExpressApp.use("/static/touch-gamepad/dist/controllers/button", express.static("node_modules/@rbuljan/gamepad/dist/controllers/button.js"));
-	webExpressApp.use("/static/touch-gamepad/dist/controllers/joystick", express.static("node_modules/@rbuljan/gamepad/dist/controllers/joystick.js"));
-	webExpressApp.use("/static/touch-gamepad/dist/controllers/utils", express.static("node_modules/@rbuljan/gamepad/dist/controllers/utils.js"));
-	webExpressApp.use("/static/touch-gamepad/src/", express.static("node_modules/@rbuljan/gamepad/src/"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/controller", express.static("node_modules/@rbuljan/gamepad/src/controllers/controller.ts"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/ControllerOptions", express.static("node_modules/@rbuljan/gamepad/src/controllers/ControllerOptions.ts"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/ControllerState", express.static("node_modules/@rbuljan/gamepad/src/controllers/ControllerState.ts"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/button", express.static("node_modules/@rbuljan/gamepad/src/controllers/button.ts"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/joystick", express.static("node_modules/@rbuljan/gamepad/src/controllers/joystick.ts"));
-	webExpressApp.use("/static/touch-gamepad/src/controllers/utils", express.static("node_modules/@rbuljan/gamepad/src/controllers/utils.ts"));
-
-	webExpressApp.use("/static/qr-code-styling/", express.static("node_modules/qr-code-styling/lib/"));
+	static_routes.forEach((route)=>{
+		webExpressApp.use(CDN_PUB_PREFIX + route[0], express.static(route[1]));
+		webExpressApp.use('/uncached' + route[0], express.static(route[1])); // for debugging reasons only, do no include in code
+	})
 
 	webExpressApp.get("/favicon.ico", (req: express.Request, res: express.Response) => {
-		res.redirect("/static/favicons/favicon-yellow-16x16.png");
+		res.redirect(CDN_INC_PREFIX + "/static/favicons/favicon-yellow-16x16.png");
 	});
 
 	webExpressApp.get("/", async function (req: express.Request, res: express.Response) {
@@ -95,14 +99,15 @@ export function createWebUIServerExpressApp(
 			res.setHeader("Content-Type", "text/html; charset=utf-8");
 
 			// query the Bridge Server (closest) for the registered instance of this robot
-			let idRobot: string = req.params.ID;
+			let idRobot: string = req.params.ID as string;
 			if (!isValidObjectId(idRobot)) {
 				res.status(400).render("error", {
 					title: 'Error 400 @ PHNTM Bridge',
 					code: 400,
 					error: "Invalid Robot ID",
 					analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-					ui_git_version: uiVersion
+					ui_git_version: uiVersion,
+					cdn_prefix: CDN_INC_PREFIX
 				});
 				return;
 			}
@@ -123,7 +128,8 @@ export function createWebUIServerExpressApp(
 							code: 500,
 							error: 'Error locating robot on Bridge Server <span class="detail">Web UI credentials misconfigured, server returned: ' + response.status + '</span>',
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 						return;
 					}
@@ -135,7 +141,8 @@ export function createWebUIServerExpressApp(
 							code: 500,
 							error: "Error locating robot on Bridge Server",
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 						return;
 					}
@@ -157,6 +164,7 @@ export function createWebUIServerExpressApp(
 						custom_css: robot_custom_css,
                     	custom_js: robot_custom_js,
 						background_disconnect_sec: background_disconnect_sec,
+						cdn_prefix: CDN_INC_PREFIX
 					});
 				})
 				.catch((error: AxiosError) => {
@@ -167,7 +175,8 @@ export function createWebUIServerExpressApp(
 							code: 408,
 							error: "Timed out locating robot on Bridge Server",
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 					} else if (error.code === "ECONNREFUSED") {
 						$d.err("Locating request refused for " + idRobot + " (" + config.bridgeLocateUrl + ")");
@@ -176,7 +185,8 @@ export function createWebUIServerExpressApp(
 							code: 403,
 							error: 'Error connecing to Bridge Server <span class="detail">Connection refused</span>',
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 					} else if (error.status == 404) {
 						$d.err("Locate returned code 404 for " + idRobot + " (" + config.bridgeLocateUrl + ")");
@@ -185,7 +195,8 @@ export function createWebUIServerExpressApp(
 							code: 404,
 							error: "Robot not found on Bridge Server",
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 					} else {
 						$d.err("Error locating robot " + idRobot + " at " + config.bridgeLocateUrl + ":", error.message);
@@ -194,7 +205,8 @@ export function createWebUIServerExpressApp(
 							code: 500,
 							error: 'Error locating robot on Bridge Server <span class="detail">Web UI seems misconfigured, server returned: ' + error.code + '</span>',
 							analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-							ui_git_version: uiVersion
+							ui_git_version: uiVersion,
+							cdn_prefix: CDN_INC_PREFIX
 						});
 					}
 				});
@@ -209,7 +221,8 @@ export function createWebUIServerExpressApp(
 			code: 404,
 			error: "Page not found",
 			analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
-			ui_git_version: uiVersion
+			ui_git_version: uiVersion,
+			cdn_prefix: CDN_INC_PREFIX
 		});
 	});
 

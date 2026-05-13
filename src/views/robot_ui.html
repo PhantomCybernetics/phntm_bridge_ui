@@ -208,56 +208,50 @@
 <div id="grid-stack-container"><div class="grid-stack" id="grid-stack"></div></div>
 
 <script type="module">
-	import { BatteryStateWidget } from "/static/widgets/battery.js";
+	import { BatteryStateWidget } from "<%= cdn_prefix %>/static/widgets/battery.js";
 
-	import { RangeWidget } from "/static/widgets/range.js";
-	import { LaserScanWidget } from "/static/widgets/laser-scan.js";
-	import { ImuWidget } from "/static/widgets/imu.js";
-	import { LogWidget } from "/static/widgets/log.js";
-	import { SystemLoadWidget } from "/static/widgets/system-load.js";
+	import { RangeWidget } from "<%= cdn_prefix %>/static/widgets/range.js";
+	import { LaserScanWidget } from "<%= cdn_prefix %>/static/widgets/laser-scan.js";
+	import { ImuWidget } from "<%= cdn_prefix %>/static/widgets/imu.js";
+	import { LogWidget } from "<%= cdn_prefix %>/static/widgets/log.js";
+	import { SystemLoadWidget } from "<%= cdn_prefix %>/static/widgets/system-load.js";
 	
-	import { BrowserClient } from "/static/browser-client.js";
-	import { InputManager } from "/static/input/input-manager.js";
-	import { PanelUI } from "/static/panel-ui.js";
+	import { BrowserClient } from "browser-client";
+	import { InputManager } from "<%= cdn_prefix %>/static/input/input-manager.js";
+	import { PanelUI } from "panel-ui";
 
-	// import { LaserOdometryWidget } from "/static/widgets/experimental/laser-odo.js";
-	// import { DescriptionTFWidget } from "/static/widgets/inc/description-tf.js";
-	// import { NavigationWidget } from "/static/widgets/experimental/navigation.js";
-	// import { OccupancyGrid } from "/static/widgets/experimental/occupacy-grid.js";
-	// import { PointCloudWidget } from "/static/widgets/experimental/pointcloud.js";
+	// import { LaserOdometryWidget } from "<%= cdn_prefix %>/static/widgets/experimental/laser-odo.js";
+	// import { NavigationWidget } from "<%= cdn_prefix %>/static/widgets/experimental/navigation.js";
+	// import { OccupancyGrid } from "<%= cdn_prefix %>/static/widgets/experimental/occupacy-grid.js";
+	// import { PointCloudWidget } from "<%= cdn_prefix %>/static/widgets/experimental/pointcloud.js";
 
-	import { VideoWidget } from "/static/widgets/video/video-base.js";
-	import { VideoWidget_Detections2D } from '/static/widgets/video/detections2d.js'
+	import { VideoWidget } from "<%= cdn_prefix %>/static/widgets/video/video-base.js";
+	import { VideoWidget_Detections2D } from '<%= cdn_prefix %>/static/widgets/video/detections2d.js'
 
-	import { WorldModel3DWidget } from "/static/widgets/world-model-3d/world-model-base.js";
-	import { WorldModel3DWidget_Laser } from "/static/widgets/world-model-3d/laser.js";
-	import { WorldModel3DWidget_Range } from "/static/widgets/world-model-3d/range.js";
-	import { WorldModel3DWidget_CameraInfo } from "/static/widgets/world-model-3d/camera-info.js";
-	import { WorldModel3DWidget_Detections3D } from "/static/widgets/world-model-3d/detections3d.js";
+	import { WorldModel3DWidget } from "<%= cdn_prefix %>/static/widgets/world-model-3d/world-model-base.js";
+	import { WorldModel3DWidget_Laser } from "<%= cdn_prefix %>/static/widgets/world-model-3d/laser.js";
+	import { WorldModel3DWidget_Range } from "<%= cdn_prefix %>/static/widgets/world-model-3d/range.js";
+	import { WorldModel3DWidget_CameraInfo } from "<%= cdn_prefix %>/static/widgets/world-model-3d/camera-info.js";
+	import { WorldModel3DWidget_Detections3D } from "<%= cdn_prefix %>/static/widgets/world-model-3d/detections3d.js";
 
-	import { InputDriverBase } from "/static/input/input-driver-base.js";
-	import { JoyInputDriver } from "/static/input/joy-driver.js";
-	import { TwistInputDriver } from "/static/input/twist-driver.js";
+	import { InputDriverBase } from "input/input-driver-base";
+	import { JoyInputDriver } from "input/joy-driver";
+	import { TwistInputDriver } from "input/twist-driver";
+	import { ServiceInput_Empty, ServiceInput_Bool } from "input/service-widgets";
+	import { ServiceInputBase } from 'input/service-input-base'
 
-	import { ServiceInput_Empty, ServiceInput_Bool } from "/static/input/service-widgets.js";
+	import { SingleTypePanelWidgetBase } from 'widgets/single-type-widget-base';
+	import { CompositePanelWidgetBase } from 'widgets/composite-widget-base';
+	import { WorldModel3DPluginBase } from 'widgets/world-model-plugin-base';
+	import { VideoPluginBase } from 'widgets/video-plugin-base';
 
-	import { ServiceInputBase } from '/static/input/service-input-base.js'
-	import { SingleTypePanelWidgetBase } from '/static/widgets/inc/single-type-widget-base.js';
-	import { CompositePanelWidgetBase } from '/static/widgets/inc/composite-widget-base.js';
-	import { WorldModel3DPluginBase } from '/static/widgets/world-model-3d/world-model-plugin-base.js';
-	import { VideoPluginBase } from '/static/widgets/video/video-plugin-base.js';
+	import { isSubclassOf, errorToHTMLString } from 'lib';
 
-	import { isSubclassOf } from '/static/inc/lib.js';
-	let custom_modules = []; // used for accessing custom extension classes
-	<% for (let i = 0; i < custom_js.length; i++) { %>
-		import * as CustomModule_<%=i %> from '<%= custom_js[i] %>';
-		custom_modules.push(CustomModule_<%=i %>);
-	<% }; %>
+	// add an element into the DOM with known ID that custom CSS can refer to as an image preloader 
 	let custom_css_urls = [];
 	<% for (let i = 0; i < custom_css.length; i++) { %>
    		custom_css_urls.push('<%= custom_css[i] %>');
     <% }; %>
-	// add an element into the DOM with known ID that custom CSS can refer to as an image preloader 
 	custom_css_urls.forEach((css_url)=>{
 		const fileNameWithExt = css_url.split('/').pop().split('\\').pop();
 		const lastDotIndex = fileNameWithExt.lastIndexOf('.');
@@ -265,119 +259,157 @@
 		$('<span id="preloader-'+fname+'"/>').appendTo('BODY');
 	});
 
-	let robot = new BrowserClient({
-		socket_url: "<%= bridge_socket_url %>",
-		socket_path: "/app/socket.io/",
-		socket_auto_connect: false,
-		bridge_files_url: "<%= bridge_files_url %>",
-		app_id: "<%= app_id %>",
-		bridge_server: "<%= bridge_server %>",
-		id_robot: "<%= id_robot %>",
-		force_turn: window.location.search.indexOf("force_turn") !== -1, // force TURN connection with ?force_turn=1 (debug)
-	});
-	window.robot = robot; // make available to analytics
+	let custom_modules = []; // used for accessing custom extension classes
+	let custom_modules_loading_errors = [];
+	let num_modules_finished = 0;
 
-	let input_manager = new InputManager(robot);
-	input_manager.registerDriver(JoyInputDriver);
-	input_manager.registerDriver(TwistInputDriver);
-	custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriverBase)
-		for (const key in module) {
-			if (isSubclassOf(module[key], InputDriverBase)) {
-				input_manager.registerDriver(module[key]);
+	function run() {
+		let robot = new BrowserClient({
+			socket_url: "<%= bridge_socket_url %>",
+			socket_path: "/app/socket.io/",
+			socket_auto_connect: false,
+			bridge_files_url: "<%= bridge_files_url %>",
+			app_id: "<%= app_id %>",
+			bridge_server: "<%= bridge_server %>",
+			id_robot: "<%= id_robot %>",
+			force_turn: window.location.search.indexOf("force_turn") !== -1 // force TURN connection with ?force_turn=1 (debug)
+		});
+		window.robot = robot; // make available to analytics
+
+		let input_manager = new InputManager(robot);
+		input_manager.registerDriver(JoyInputDriver);
+		input_manager.registerDriver(TwistInputDriver);
+		custom_modules.forEach((module) => { // loads custom input drivers (must be a subclass of InputDriverBase)
+			for (const key in module) {
+				if (isSubclassOf(module[key], InputDriverBase)) {
+					input_manager.registerDriver(module[key]);
+				}
 			}
-		}
-	});
+		});
 
-	let background_disconnect_sec = parseFloat('<%= background_disconnect_sec %>');
-	let panel_ui = new PanelUI(robot, 32, input_manager, background_disconnect_sec);
+		let background_disconnect_sec = parseFloat('<%= background_disconnect_sec %>');
+		let panel_ui = new PanelUI(robot, 32, input_manager, background_disconnect_sec, '<%= cdn_prefix %>');
 
-	// add core single type panel widgets
-	let single_type_panel_classes = [ BatteryStateWidget,
+		// add core single type panel widgets
+		let single_type_panel_classes = [ BatteryStateWidget,
 										RangeWidget,
 										LaserScanWidget,
 										ImuWidget,
 										LogWidget,
 										SystemLoadWidget
-									];
-	// find custom single type panel widgets
-	custom_modules.forEach((module) => {
-		for (const key in module) {
-			if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
-				single_type_panel_classes.push(module[key]);
+										];
+		// find custom single type panel widgets
+		custom_modules.forEach((module) => {
+			for (const key in module) {
+				if (isSubclassOf(module[key], SingleTypePanelWidgetBase)) {
+					single_type_panel_classes.push(module[key]);
+				}
 			}
-		}
-	});
-	single_type_panel_classes.forEach((widget_class)=>{
-		widget_class.HANDLED_MSG_TYPES.forEach((msg_type) => {
-			panel_ui.addTypeWidget(msg_type, widget_class);
 		});
-	});
-	
-	// add video widget with overlay plugins
-	let video_plugin_classes = [ VideoWidget_Detections2D ];
-	// find custom video overlays
-	custom_modules.forEach((module) => {
-		for (const key in module) {
-			if (isSubclassOf(module[key], VideoPluginBase)) {
-				video_plugin_classes.push(module[key]);
+		single_type_panel_classes.forEach((widget_class)=>{
+			widget_class.HANDLED_MSG_TYPES.forEach((msg_type) => {
+				panel_ui.addTypeWidget(msg_type, widget_class);
+			});
+		});
+		
+		// add video widget with overlay plugins
+		let video_plugin_classes = [ VideoWidget_Detections2D ];
+		// find custom video overlays
+		custom_modules.forEach((module) => {
+			for (const key in module) {
+				if (isSubclassOf(module[key], VideoPluginBase)) {
+					video_plugin_classes.push(module[key]);
+				}
 			}
-		}
-	});
-	VideoWidget.HANDLED_MSG_TYPES.forEach((msg_type) => {
-		panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
-	});
+		});
+		VideoWidget.HANDLED_MSG_TYPES.forEach((msg_type) => {
+			panel_ui.addTypeWidget(msg_type, VideoWidget, video_plugin_classes);
+		});
 
-	// add world model 3d with overlat plugins
-	let world_model_3d_plugin_classes = [
-		WorldModel3DWidget_Laser,
-		WorldModel3DWidget_Range,
-		WorldModel3DWidget_CameraInfo,
-		WorldModel3DWidget_Detections3D
-	];
-	custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPluginBase)
-		for (const key in module) {
-			if (isSubclassOf(module[key], WorldModel3DPluginBase)) {
-				world_model_3d_plugin_classes.push(module[key]);
+		// add world model 3d with overlat plugins
+		let world_model_3d_plugin_classes = [
+			WorldModel3DWidget_Laser,
+			WorldModel3DWidget_Range,
+			WorldModel3DWidget_CameraInfo,
+			WorldModel3DWidget_Detections3D
+		];
+		custom_modules.forEach((module) => { // loads custom world model 3d plugins (must be a subclass of WorldModel3DPluginBase)
+			for (const key in module) {
+				if (isSubclassOf(module[key], WorldModel3DPluginBase)) {
+					world_model_3d_plugin_classes.push(module[key]);
+				}
 			}
-		}
-	});
-	panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
+		});
+		panel_ui.addCustomWidget(WorldModel3DWidget, world_model_3d_plugin_classes);
 
-	// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
-	custom_modules.forEach((module) => { 
-		for (const key in module) {
-			if (isSubclassOf(module[key], CompositePanelWidgetBase)) {
-				panel_ui.addCustomWidget(module[key]);
+		// add custom composite panel widgets (must be a subclass of CompositePanelWidgetBase)
+		custom_modules.forEach((module) => { 
+			for (const key in module) {
+				if (isSubclassOf(module[key], CompositePanelWidgetBase)) {
+					panel_ui.addCustomWidget(module[key]);
+				}
 			}
-		}
-	});
+		});
 
-	panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
-	panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
-	panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
-		// load custom service widgets (must be a subclass of ServiceInputBase)
-	custom_modules.forEach((module) => {
-		for (const key in module) {
-			if (isSubclassOf(module[key], ServiceInputBase)) {
-				panel_ui.addCustomServiceWidget(key, module[key]);
+		panel_ui.addServiceTypeWidget("std_srvs/srv/Empty", ServiceInput_Empty);
+		panel_ui.addServiceTypeWidget("std_srvs/srv/Trigger", ServiceInput_Empty);
+		panel_ui.addServiceTypeWidget("std_srvs/srv/SetBool", ServiceInput_Bool);
+			// load custom service widgets (must be a subclass of ServiceInputBase)
+		custom_modules.forEach((module) => {
+			for (const key in module) {
+				if (isSubclassOf(module[key], ServiceInputBase)) {
+					panel_ui.addCustomServiceWidget(key, module[key]);
+				}
 			}
+		});
+
+		// init panel setup from url, also subscribes to topics and cameras required by panel widgets
+		panel_ui.panelsFromURLHash(window.location.hash);
+
+		robot.on("error", (err, msg) => {
+			console.error("Robot returned error: " + err, msg);
+		});
+
+		//connects socket.io, then runs handshake with the robot
+		robot.connect();
+
+		custom_modules_loading_errors.forEach((module_err)=>{
+			panel_ui.showNotification(
+				'Error loading '+module_err[0],
+				'error',
+				errorToHTMLString(module_err[1])
+			);
+		});
+
+		// if (navigator.userAgent.toLowerCase().includes("firefox")) {
+		// 	panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
+		// }
+	}
+
+	// load all custom modules
+	<% if (!custom_js.length) { %>
+		run();
+	<% } else {
+		for (let i = 0; i < custom_js.length; i++) { %>
+			(async () => {
+				try {
+					const m = await import('<%= custom_js[i] %>');
+					custom_modules.push(m);
+					num_modules_finished++;
+					if (num_modules_finished == <%= custom_js.length %>)
+						run();
+				} catch (err) {
+					console.error('Custom module load failed', err);
+					custom_modules_loading_errors.push([ '<%= custom_js[i] %>', err ]);
+					num_modules_finished++;
+					if (num_modules_finished == <%= custom_js.length %>)
+						run();
+				}
+			})();
+		<% };
 		}
-	});
+	%>
 
-	// init panel setup from url, also subscribes to topics and cameras required by panel widgets
-	panel_ui.panelsFromURLHash(window.location.hash);
-
-	robot.on("error", (err, msg) => {
-		console.error("Robot returned error: " + err, msg);
-	});
-
-	//connects socket.io, then runs handshake with the robot
-	robot.connect();
-
-	// if (navigator.userAgent.toLowerCase().includes("firefox")) {
-	// 	panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
-	// }
-	
 </script>
 
 <%- include('partial/footer.html'); %>

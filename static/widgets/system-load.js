@@ -1,5 +1,5 @@
-import { formatBytes } from "../inc/lib.js";
-import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
+import { formatBytes } from "lib";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
 
 // System load ala htop
 

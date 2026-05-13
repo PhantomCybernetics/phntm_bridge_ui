@@ -276,3 +276,21 @@ export function uuidToBytes(uuid_str) {
   }
   return Array.from(bytes);
 }
+
+export function errorToHTMLString(err) {
+  try {
+    if (err instanceof Error) {
+      return err.stack || `${err.name}: ${err.message}`;
+    }
+    if (err && typeof err === 'object' && typeof err.message === 'string') {
+      return err.message;
+    }
+    try {
+      return '<pre>' + JSON.stringify(err) + '</pre>';
+    } catch (_) {
+      return String(err);
+    }
+  } catch (outer) {
+    try { return String(err); } catch { return '<unstringifiable error>'; }
+  }
+}

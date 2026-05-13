@@ -1,4 +1,4 @@
-import { InputDriverBase } from "./input-driver-base.js";
+import { InputDriverBase } from "input/input-driver-base";
 
 export class JoyInputDriver extends InputDriverBase {
 	static LABEL = "Joy";

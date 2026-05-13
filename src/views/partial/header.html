@@ -11,55 +11,73 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-    <link rel="icon" type="image/png" href="/static/favicons/favicon-yellow-16x16.png">
-    <link rel="stylesheet" href="/static/normalize.css"/>
-    <link rel="stylesheet" href="/static/styles.css"/>
+    <link rel="icon" type="image/png" href="<%= cdn_prefix %>/static/favicons/favicon-yellow-16x16.png">
+    <link rel="stylesheet" href="<%= cdn_prefix %>/static/normalize.css"/>
+    <link rel="stylesheet" href="<%= cdn_prefix %>/static/styles.css"/>
 
+    <!-- both internal classes and 3rd party extension use these specifiers -->
     <script type="importmap">
         {
           "imports": {
-            "three":                    "/static/three/three.module.js",
-            "urdf-loader":              "/static/urdf-loader/URDFLoader.js",
-            "three/examples/":          "/static/three/examples/",
-            "css-2d-renderer":          "/static/three/examples/jsm/renderers/CSS2DRenderer.js",
-            "stl-loader":               "/static/three/examples/jsm/loaders/STLLoader.js",
-            "collada-loader":           "/static/three/examples/jsm/loaders/ColladaLoader.js",
-            "line2":                    "/static/lib/three-lines/Line2.js",
-            "line-segments2":           "/static/lib/three-lines/LineSegments2.js",
-            "line-material2":           "/static/lib/three-lines/LineMaterial.js",
-            "line-segments-geometry2":  "/static/lib/three-lines/LineSegmentsGeometry.js",
-            "line-geometry2":           "/static/lib/three-lines/LineGeometry.js",
-            "axes-helper2":             "/static/lib/three-lines/AxesHelper2.js",
-            "line2":                    "/static/lib/three-lines/Line2.js",
-            "3dconnexion":              "/static/lib/3dconnexion.module.js"
+            "three":                   "<%= cdn_prefix %>/static/three/three.module.js",
+            "urdf-loader":             "<%= cdn_prefix %>/static/urdf-loader/URDFLoader.js",
+            "three/examples/":         "<%= cdn_prefix %>/static/three/examples/",
+            "css-2d-renderer":         "<%= cdn_prefix %>/static/three/examples/jsm/renderers/CSS2DRenderer.js",
+            "stl-loader":              "<%= cdn_prefix %>/static/three/examples/jsm/loaders/STLLoader.js",
+            "collada-loader":          "<%= cdn_prefix %>/static/three/examples/jsm/loaders/ColladaLoader.js",
+            "line2":                   "<%= cdn_prefix %>/static/lib/three-lines/Line2.js",
+            "line-segments2":          "<%= cdn_prefix %>/static/lib/three-lines/LineSegments2.js",
+            "line-material2":          "<%= cdn_prefix %>/static/lib/three-lines/LineMaterial.js",
+            "line-segments-geometry2": "<%= cdn_prefix %>/static/lib/three-lines/LineSegmentsGeometry.js",
+            "line-geometry2":          "<%= cdn_prefix %>/static/lib/three-lines/LineGeometry.js",
+            "axes-helper2":            "<%= cdn_prefix %>/static/lib/three-lines/AxesHelper2.js",
+            "3dconnexion":             "<%= cdn_prefix %>/static/lib/3dconnexion.module.js",
+            "canvasjs-charts":         "<%= cdn_prefix %>/static/canvasjs-charts/canvasjs.min.js",
+
+            "lib":            "<%= cdn_prefix %>/static/inc/lib.js",
+            "const":          "<%= cdn_prefix %>/static/inc/const.js",
+            "browser-client": "<%= cdn_prefix %>/static/browser-client.js",
+            "multitopic":     "<%= cdn_prefix %>/static/widgets/inc/multitopic.js",
+            "panel":          "<%= cdn_prefix %>/static/panel.js",
+            "panel-ui":       "<%= cdn_prefix %>/static/panel-ui.js",
+
+            "widgets/single-type-widget-base": "<%= cdn_prefix %>/static/widgets/inc/single-type-widget-base.js",
+            "widgets/composite-widget-base":   "<%= cdn_prefix %>/static/widgets/inc/composite-widget-base.js",
+            "widgets/world-model-plugin-base": "<%= cdn_prefix %>/static/widgets/world-model-3d/world-model-plugin-base.js",
+            "widgets/description-tf"         : "<%= cdn_prefix %>/static/widgets/inc/description-tf.js",
+            "widgets/video-plugin-base":       "<%= cdn_prefix %>/static/widgets/video/video-plugin-base.js",
+
+            "input/service-widgets":    "<%= cdn_prefix %>/static/input/service-widgets.js",
+            "input/service-input-base": "<%= cdn_prefix %>/static/input/service-input-base.js",
+            "input/input-driver-base":  "<%= cdn_prefix %>/static/input/input-driver-base.js",
+            "input/joy-driver":         "<%= cdn_prefix %>/static/input/joy-driver.js",
+            "input/twist-driver":       "<%= cdn_prefix %>/static/input/twist-driver.js"
           }
         }
     </script>
 
-    <script src="/static/lib/jquery-3.7.0.min.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/jquery-3.7.0.min.js"></script>
 
-    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-    <script src="/static/lib/jquery.ui.touch-punch.min.js"></script>
-    <script type="text/javascript" src="/static/qr-code-styling/qr-code-styling.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/jquery-ui-1.13.2.js"></script>
+    <link rel="stylesheet" href="<%= cdn_prefix %>/static/lib/jquery-ui-1.13.2.css">
+    <script type="text/javascript" src="<%= cdn_prefix %>/static/qr-code-styling/qr-code-styling.js"></script>
 
-    <script src="/static/socket.io/socket.io.min.js"></script>
+    <script src="<%= cdn_prefix %>/static/socket.io/socket.io.min.js"></script>
 
-    <script src="/static/lib/linkify.min.js"></script>
-    <script src="/static/lib/linkify-string.min.js"></script>
-    <script src="/static/lib/linkify-html.min.js"></script>
-    <script src="/static/lib/rosmsg2-serialization.browserify.js"></script>
-    <script src="/static/lib/xml-formatter-singleton.js"></script>
-    <script src="/static/lib/autobahn.js"></script>
-    <script src=""></script>
+    <script src="<%= cdn_prefix %>/static/lib/linkify.min.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/linkify-string.min.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/linkify-html.min.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/rosmsg2-serialization.browserify.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/xml-formatter-singleton.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/autobahn.js"></script>
 
-    <script src="/static/lib/d3.v4.js"></script>
+    <script src="<%= cdn_prefix %>/static/lib/d3.v4.js"></script>
 
-    <link rel="stylesheet" href="/static/gridstack/gridstack.min.css"/>
-    <script src="/static/gridstack/gridstack-all.js"></script>
+    <link rel="stylesheet" href="<%= cdn_prefix %>/static/gridstack/gridstack.min.css"/>
+    <script src="<%= cdn_prefix %>/static/gridstack/gridstack-all.js"></script>
 
     <% if (typeof custom_css != 'undefined') { custom_css.forEach(function(inc) { %>
-    <link rel="stylesheet" href="<%= inc %>"/>
+        <link rel="stylesheet" href="<%= inc %>"/>
     <% })}; %>
 
 </head>

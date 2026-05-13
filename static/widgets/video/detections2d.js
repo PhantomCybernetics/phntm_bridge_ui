@@ -1,4 +1,4 @@
-import { VideoPluginBase } from "./video-plugin-base.js";
+import { VideoPluginBase } from "widgets/video-plugin-base";
 import * as THREE from "three";
 
 export class VideoWidget_Detections2D extends VideoPluginBase {

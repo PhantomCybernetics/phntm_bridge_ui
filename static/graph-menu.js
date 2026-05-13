@@ -1,5 +1,5 @@
-import { IsImageTopic } from "/static/browser-client.js";
-import { isTouchDevice } from "./inc/lib.js";
+import { IsImageTopic } from "browser-client";
+import { isTouchDevice } from "lib";
 
 export class GraphMenu {
 	constructor(ui) {

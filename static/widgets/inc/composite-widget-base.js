@@ -1,4 +1,4 @@
-import { MultiTopicSource } from "./multitopic.js";
+import { MultiTopicSource } from "multitopic";
 
 export class CompositePanelWidgetBase extends EventTarget {
 

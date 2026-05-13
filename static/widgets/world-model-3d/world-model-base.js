@@ -1,5 +1,5 @@
-import { DescriptionTFWidget } from "../inc/description-tf.js";
-import { MultiTopicSource } from "../inc/multitopic.js";
+import { DescriptionTFWidget } from "widgets/description-tf";
+import { MultiTopicSource } from "multitopic";
 import { SpaceMouse } from '../../input/space-mouse.js'
 
 export class WorldModel3DWidget extends DescriptionTFWidget {

@@ -1,14 +1,13 @@
-import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg, signedAngle } from "/static/inc/lib.js";
+import { lerpColor, linkifyURLs, lerp, deg2rad, rad2deg, signedAngle, isTouchDevice } from "lib";
 import * as THREE from "three";
 import { STLLoader } from "stl-loader";
 import { ColladaLoader } from "collada-loader";
-//import { OrbitControls } from "/static/input/OrbitControls.js";
-import { TrackballControls } from "/static/input/TrackballControls.js";
+//import { OrbitControls } from "../../input/OrbitControls.js";
+import { TrackballControls } from "../../input/TrackballControls.js";
 import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
 import { Vector3, Quaternion, LoadingManager } from "three";
-import { CompositePanelWidgetBase } from './composite-widget-base.js'
-import { isTouchDevice } from "../../inc/lib.js";
+import { CompositePanelWidgetBase } from 'widgets/composite-widget-base'
 
 export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static LABEL = "Robot description (URFD) + Transforms";
@@ -941,6 +940,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		}
 
 		if (tex_url) {
+			tex_url = this.ui.cdn_prefix + tex_url;
 			this.tex_loader.load(tex_url, (plane_tex) => {
 				const plane_material = new THREE.MeshPhongMaterial({
 					color: 0xffffff,
@@ -963,18 +963,18 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	}
 
 	setSkybox(type_no) {
-		let url_base = DescriptionTFWidget.SKYBOXES[type_no].url;
+		let url_base = this.ui.cdn_prefix + DescriptionTFWidget.SKYBOXES[type_no].url;
 		let color = DescriptionTFWidget.SKYBOXES[type_no].color ? new THREE.Color(DescriptionTFWidget.SKYBOXES[type_no].color) : new THREE.Color('black');
-
+		console.log('Loading skybox from ', url_base);
 		if (this.vars.perspective_camera && url_base) { //skybox doesn't work with otrho cameras
 			if (!this.skybox_textures[type_no]) {
 				this.skybox_textures[type_no] = this.cube_loader.load([
-					url_base + "/cubemap_0.png",
-					url_base + "/cubemap_1.png",
-					url_base + "/cubemap_2.png",
-					url_base + "/cubemap_3.png",
-					url_base + "/cubemap_4.png",
-					url_base + "/cubemap_5.png",
+					url_base + "cubemap_0.png",
+					url_base + "cubemap_1.png",
+					url_base + "cubemap_2.png",
+					url_base + "cubemap_3.png",
+					url_base + "cubemap_4.png",
+					url_base + "cubemap_5.png",
 				], () => {
 					this.scene.background = this.skybox_textures[type_no];
 					this.setLight(this.vars.render_light);

@@ -1,5 +1,5 @@
-import { MultiTopicSource } from "../inc/multitopic.js";
-import { SingleTypePanelWidgetBase } from "../inc/single-type-widget-base.js";
+import { MultiTopicSource } from "multitopic";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
 
 // Video panel with possible overlays
 

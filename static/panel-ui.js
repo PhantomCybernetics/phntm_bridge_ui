@@ -1,10 +1,10 @@
-import { GraphMenu } from "/static/graph-menu.js";
-import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "/static/browser-client.js";
-import { Gamepad as TouchGamepad, Joystick as TouchJoystick} from "/static/touch-gamepad/dist/gamepad.js";
-import { GOAL_STATUS, WOBBLE_DURATION } from "/static/inc/const.js";
+import { GraphMenu } from "./graph-menu.js";
+import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "browser-client";
+import { Gamepad as TouchGamepad, Joystick as TouchJoystick} from "./touch-gamepad/dist/gamepad.js";
+import { GOAL_STATUS, WOBBLE_DURATION } from "const";
 // import { QRCodeStyling } from '/static/qr-code-styling/qr-code-styling.common.js';
 
-import { Panel } from "./panel.js";
+import { Panel } from "panel";
 import {
 	isPortraitMode,
 	isTouchDevice,
@@ -12,8 +12,8 @@ import {
 	msToTime,
 	formatBytes,
 	nl2br,
-} from "./inc/lib.js";
-import { UserButtonsServiceInput, ServiceInput_Empty } from "./input/service-widgets.js";
+} from "lib";
+import { UserButtonsServiceInput, ServiceInput_Empty } from "input/service-widgets";
 
 import { ServiceInputDialog } from "./inc/service-input-dialog.js";
 import { NodeParamsDialog } from "./inc/node-params-dialog.js";
@@ -67,7 +67,7 @@ export class PanelUI {
 		};
 	}
 
-	constructor(client, grid_cell_height, input_manager, background_disconnect_sec) {
+	constructor(client, grid_cell_height, input_manager, background_disconnect_sec, cdn_prefix) {
 		this.client = client;
 		this.client.ui = this;
 
@@ -80,6 +80,8 @@ export class PanelUI {
 		this.background_disconnect_delay_ms = background_disconnect_sec * 1000; // * 60 * 2; // 2 min
 		// document.querySelector("body").requestFullscreen();
 		this.grid_cell_height = grid_cell_height;
+
+		this.cdn_prefix = cdn_prefix;
 
 		let GridStack = window.exports.GridStack;
 		GridStack.renderCB = (el, w) => {

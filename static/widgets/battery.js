@@ -1,6 +1,6 @@
-import { lerpColor } from "./../inc/lib.js";
-import { SingleTypePanelWidgetBase } from "./inc/single-type-widget-base.js";
-import "/static/canvasjs-charts/canvasjs.min.js";
+import { lerpColor } from "lib";
+import { SingleTypePanelWidgetBase } from "widgets/single-type-widget-base";
+import "canvasjs-charts";
 
 // Battery visualisation
 

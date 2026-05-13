@@ -1,6 +1,6 @@
-import { isIOS, lerp, isTouchDevice } from "/static/inc/lib.js";
+import { isIOS, lerp, isTouchDevice } from "lib";
 import * as THREE from "three";
-import { WOBBLE_DURATION } from "/static/inc/const.js";
+import { WOBBLE_DURATION } from "const";
 
 export class InputManager {
 	constructor(client) {
@@ -2013,8 +2013,10 @@ export class InputManager {
 
 					for (let i = 0; i < this.enabled_drivers.length; i++) {
 						let id_driver = this.enabled_drivers[i];
-						let label = this.registered_drivers[id_driver].LABEL;
-						driver_opts.push('<option value="' + id_driver + '"' + (c_profile.driver == id_driver ? " selected" : "") + ">" + label + "</option>");
+						if (this.registered_drivers && this.registered_drivers[id_driver]) {
+							let label = this.registered_drivers[id_driver].LABEL;
+							driver_opts.push('<option value="' + id_driver + '"' + (c_profile.driver == id_driver ? " selected" : "") + ">" + label + "</option>");
+						}
 					}
 					let inp_driver = $('<select id="gamepad-profile-driver-select">' + driver_opts.join("") + "</select>");
 

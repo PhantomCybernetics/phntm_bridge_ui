@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { lerpColor } from "../../inc/lib.js";
-import { WorldModel3DPluginBase } from "./world-model-plugin-base.js";
+import { lerpColor } from "lib";
+import { WorldModel3DPluginBase } from "widgets/world-model-plugin-base";
 
 export class WorldModel3DWidget_Range extends WorldModel3DPluginBase {
 
