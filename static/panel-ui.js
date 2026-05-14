@@ -1400,7 +1400,7 @@ export class PanelUI {
 				if (node.publishers) {
 					Object.keys(node.publishers).forEach((id_topic) => {
 						let msg_type = node.publishers[id_topic].msg_type;
-						if (msg_type == "std_msgs/msg/Int16MultiArray") {
+						if (msg_type == "audio_common_msgs/msg/AudioData") {
 							microphones.push({
 								src_id: id_topic,
 								msg_type: msg_type,

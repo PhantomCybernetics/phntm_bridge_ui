@@ -87,7 +87,7 @@ sudo systemctl enable phntm_bridge_ui.service # will launch on boot
 
 ## Resumo
 
-Implementação de reprodução de áudio do tópico `/microphone_data` (Int16MultiArray) na interface web do robô. O sistema inclui:
+Implementação de reprodução de áudio do tópico `/microphone_data` (audio_common_msgs/msg/AudioData) na interface web do robô. O sistema inclui:
 - Reprodução de áudio PCM 16-bit 16kHz via WebAudio API
 - Menu de seleção/deselecção de microfones idêntico ao padrão de câmeras
 - Integração responsiva com o layout GridStack existente
@@ -238,7 +238,7 @@ setTimeout(() => that.microphonesMenuFromNodes(), 0);
 #### c) Função: `microphonesMenuFromNodes()`
 
 **Lógica:**
-1. Filtra publishers do nó por tipo `std_msgs/msg/Int16MultiArray`
+1. Filtra publishers do nó por tipo `audio_common_msgs/msg/AudioData`
 2. Conta microphones e atualiza counter
 3. Gera HTML com checkbox para cada microfone
 4. Vincula handler de mudança para subscribe/unsubscribe
