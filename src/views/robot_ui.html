@@ -1,5 +1,7 @@
 <%- include('partial/header.html'); %>
 
+<span id="page-loading-indicator"></span>
+
 <div id="page_message"></div>
 
 <div id="notifications"></div> <!-- z-index: 220 -->
@@ -264,6 +266,9 @@
 	let num_modules_finished = 0;
 
 	function run() {
+
+		$('BODY').removeClass('loading');
+
 		let robot = new BrowserClient({
 			socket_url: "<%= bridge_socket_url %>",
 			socket_path: "/app/socket.io/",

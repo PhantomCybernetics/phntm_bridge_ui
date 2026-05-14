@@ -19,6 +19,7 @@ body::after {
 	overflow: hidden;
 	z-index: -1;
 	content:
+		url('./graph/loading.svg')
 		url("./graph/icon-menu.png")
 		url("./graph/battery.png")
 		url("./graph/discovery_stopped.svg")
@@ -175,6 +176,28 @@ BUTTON {
 	height: 55px;
 	overscroll-behavior: contain;
 }
+
+BODY.loading #fixed-header {
+	display: none;
+}
+
+#page-loading-indicator {
+	display: none;
+	z-index: 2000;
+	position: fixed;
+	width: 50px;
+	height: 50px;
+	background-image: url('./graph/loading.svg');
+	background-size: 50px 50px;
+	background-repeat: no-repeat;
+	left: calc(50% - 25px);
+	top: calc(50vh - 25px);
+}
+
+BODY.loading #page-loading-indicator {
+	display: block;
+}
+
 
 BODY.desktop-ui.menu-cancels-scroll {
 	overflow: hidden; /* no body scrolling when mouse is over fixed-header */
