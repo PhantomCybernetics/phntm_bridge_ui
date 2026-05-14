@@ -83,6 +83,7 @@ export function createWebUIServerExpressApp(
 			analytics_code: config.analyticsCode ? config.analyticsCode.join("\n") : '',
 			ui_git_version: uiVersion,
 			login: req.query.login ? req.query.login : '',
+			cdn_prefix: CDN_INC_PREFIX,
 		});
 	});
 
