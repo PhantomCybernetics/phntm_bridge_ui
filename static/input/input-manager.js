@@ -589,6 +589,9 @@ export class InputManager {
 		// 	state = false; // keep disabled; topic locked by somebody else
 		// }
 
+		if (!d) // driver not loaded
+			return;
+
 		let that = this;
 		if (state) {
 			console.log('Locking input into ' + d.output_topic);
@@ -4280,10 +4283,12 @@ export class InputManager {
 
 		if (!this.controllers[id_gamepad]) {
 			let id_lowcase = id_gamepad.toLowerCase();
-			let likely_not_gamepad =
-				isTouchDevice() &&
-				(id_lowcase.indexOf("keyboard") > -1 || // ¯\_(ツ)_/¯
-					id_lowcase.indexOf("mouse") > -1); // not using gamepad defaults
+
+			if (id_lowcase.indexOf("spacemouse") > -1)
+				return; // ignore here
+
+			let likely_not_gamepad = isTouchDevice() && (id_lowcase.indexOf("keyboard") > -1 || // ¯\_(ツ)_/¯
+			                                             id_lowcase.indexOf("mouse") > -1); // not using gamepad defaults
 
 			console.warn("Gamepad connected:", id_gamepad, ev.gamepad, gp, ev);
 			let gamepad = {
