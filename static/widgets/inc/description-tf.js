@@ -139,7 +139,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.missing_transform_error_logged = {};
 
 		this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
-			console.log("Loaded mesh from " + path);
+			console.log("Loading mesh from " + path);
 
 			if (/\.stl$/i.test(path)) {
 				const loader = new STLLoader(manager);
@@ -169,6 +169,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			} else {
 				console.error(`Could not load model at ${path}.\nNo loader available`);
 			}
+			
 		};
 		this.loading_manager.onLoad = () => {
 			console.info("Robot URDF loader done loading", that.robot_model);
@@ -220,7 +221,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.labels_btn = $('<span class="panel-btn labels-btn" title="Display model labels"></span>');
 		this.panel.panel_btns_el.append(this.labels_btn);
 
-		[panel.widget_width, panel.widget_height] = panel.getAvailableWidgetSize();
+		[ panel.widget_width, panel.widget_height ] = panel.getAvailableWidgetSize();
 
 		this.scene = new THREE.Scene();
 
@@ -240,7 +241,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.labelRenderer.domElement.style.position = "absolute";
 		this.labelRenderer.domElement.style.top = "0px";
 		document.getElementById("panel_widget_" + panel.n).appendChild(this.labelRenderer.domElement);
-
+		this.labelRenderer.domElement.addEventListener("pointerdown", (ev) => {
+			if (that.ui.space_mouse) {
+				that.ui.space_mouse.setWidget(that);
+			}
+		});
 		//this.initial_camera_world_position = new THREE.Vector3(1, 0.5, 1);
 		
 		this.ros_space = new THREE.Object3D();
@@ -426,6 +431,9 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.controls.keys = []; // disable ASD controls
 		//this.controls.enablePan = !this.vars.camera_follows_selection;
 		this.renderer.domElement.addEventListener("pointerdown", (ev) => {
+			if (that.ui.space_mouse) {
+				that.ui.space_mouse.setWidget(that);
+			}
 			ev.preventDefault(); // stop from moving the panel
 		});
 		this.controls.addEventListener("change", () => {
@@ -491,13 +499,13 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
   			polygonOffsetUnits: -2
 		});
 
+		this.ui.space_mouse.setWidget(this);
+
 		if (start_rendering_loop) {
 			this.rendering = true;
 			this.renderDirty();
 			requestAnimationFrame((t) => this.renderingLoop(t));
 		}
-
-		this.space_mouse = null; // set in child class (only one panel can be controlled by space mouse at the time)
 	}
 
 	onResize() {
@@ -1086,9 +1094,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	onClose() {
 		super.onClose();
 
-		if (this.space_mouse) {
-			this.space_mouse.destroy();
-			delete this.space_mouse;
+		if (this.ui.space_mouse) {
+			this.ui.space_mouse.removeWidget(this);
 		}
 
 		this.rendering = false; //kills the loop
@@ -1293,7 +1300,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			if (force_material) {
 				obj.material = force_material;
 			} else if (!obj.material) { //material not set
-                console.log('Obj didn\t have material ('+debug_source_name+'): ', obj);
+                //console.log('Obj didn\t have material ('+debug_source_name+'): ', obj);
                 obj.material = new THREE.MeshStandardMaterial({
                     color: 0xffffff,
 					depthTest: true,
@@ -1305,7 +1312,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
                 });
                 obj.material.needsUpdate = true;
             } else { // tweak existing material
-                console.log('Obj "' + obj.name + '" had own material ('+debug_source_name+'): ', obj);
+                //console.log('Obj "' + obj.name + '" had own material ('+debug_source_name+'): ', obj);
                 obj.material.depthWrite = true;
 				obj.material.depthTest = true;
                 obj.material.side = THREE.DoubleSide;
@@ -1444,7 +1451,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		let model_size_approx = num_distances ? pt_distances[Math.round(num_distances*0.9)] : 2.0; // use ~90th percentile to avoid outliers
 
 		console.log('[AutofocusTarget] Model size estimated at '+model_size_approx+"; auto central joint is "+central_joint_key);
-		if (central_joint && central_joint_key && this.vars.camera_follows_selection)
+		if (central_joint && central_joint_key)
 			this.setCameraSelectionObject(central_joint, central_joint_key, false); // saves last selection
 
 		// set initial distance proportional to model size
@@ -1963,15 +1970,15 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		} else if (this.camera_pose_initialized) {
 
-			if (this.space_mouse && this.space_mouse.initialized && this.space_mouse.space_mouse) {
-				this.space_mouse.space_mouse.update3dcontroller({
+			let space_mouse_animating = false;
+			if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this)) {
+				this.ui.space_mouse.proxy.update3dcontroller({
            			'frame': { 'time': now }
 				});
+				space_mouse_animating = this.ui.space_mouse.animating;
 			}
-			if (!this.space_mouse || !this.space_mouse.animating)
-			{
+			if (!space_mouse_animating)
 				this.controls.update();
-			}
 
 		}
 
@@ -1983,8 +1990,10 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				this.camera_selection_ref.attach(this.camera_controls_target);
 				this.camera_selection_ref.attach(this.camera_selection);
 				this.camera_selection.position.set(0,0,0);
-				if (this.space_mouse && this.space_mouse.pivot_position)
-					this.camera_selection_ref.attach(this.space_mouse.pivot_position);
+				if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this)) {
+					if (this.ui.space_mouse.pivot_position)
+						this.camera_selection_ref.attach(this.ui.space_mouse.pivot_position);
+ 				}
 			}
 
 			let transform_ch_frames = Object.keys(this.transforms_queue);
@@ -2111,8 +2120,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.scene.attach(this.camera);
 			this.scene.attach(this.camera_controls_target);
 			this.scene.attach(this.camera_selection);
-			if (this.space_mouse && this.space_mouse.pivot_position)
-				this.scene.attach(this.space_mouse.pivot_position);
+
+			if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this)) {
+				if (this.ui.space_mouse.pivot_position)
+					this.scene.attach(this.ui.space_mouse.pivot_position);
+			}
 		}
 
 		this.transforms_queue = {};

@@ -4761,6 +4761,7 @@ export class InputManager {
 				if (!c.profiles) return;
 				let p = c.profiles[that.current_profile];
 				let d = p.driver_instances[p.driver];
+				if (!d) return;
 				if (d.on_button_press) {
 					d.on_button_press(ev.code, ev);
 				}

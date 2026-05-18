@@ -364,17 +364,21 @@ BODY.hamburger #menubar_items #widget_list {
 	max-width: unset;
 }
 
-BODY.hamburger #menubar_items #widget_list .widget LABEL,
+BODY.hamburger #menubar_items #widget_list BUTTON,
 BODY.hamburger #menubar_items #cameras_list .camera LABEL {
-	line-height: 22px;
-	padding: 15px 0px 15px 40px;
+	padding-left: 40px;
 	display: block;
-	/* background: red; */
 	white-space: normal;
 	word-wrap: break-word;
 }
 
-BODY.hamburger #menubar_items #widget_list .widget,
+BODY.hamburger #menubar_items #cameras_list .camera LABEL {
+	line-height: 22px;
+	padding-top: 15px;
+	padding-bottom: 15px;
+}
+
+BODY.hamburger #menubar_items #widget_list BUTTON,
 BODY.hamburger #menubar_items #cameras_list .camera {
 	border-bottom: 1px solid #3d52c7;
 	display: block;
@@ -387,10 +391,16 @@ BODY.hamburger #menubar_items #cameras_list .camera {
 	border-bottom: 1px solid #138408;
 }
 
-BODY.hamburger #menubar_items #widget_list .widget INPUT,
 BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 	position: absolute;
 	left: 10px;
+}
+
+BODY.hamburger #menubar_items #widget_list BUTTON SPAN {
+	left: 18px;
+}
+
+BODY.hamburger #menubar_items #cameras_list .camera INPUT {
 	top: 18px;
 }
 
@@ -1103,7 +1113,7 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 }
 
 #cameras_list LABEL.camera,
-#widget_list LABEL.widget {
+#widget_list BUTTON.widget {
 	position: relative;
 	display: block;
 	display: block;
@@ -1118,8 +1128,30 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 	cursor: pointer;
 }
 
+#widget_list BUTTON.widget {
+	max-width: unset;
+	border: 0px;
+	background-color: transparent;
+	width: 100%;
+    text-align: left;
+}
+
+#widget_list BUTTON SPAN {
+	position: absolute;
+	left: 10px;
+	left: 12px;
+    top: 0px;
+}
+
+#widget_list BUTTON.widget SPAN::before {
+	width: 16px;
+	height: 16px;
+	content: "+";
+	font-weight: bold;
+}
+
 #cameras_list LABEL.camera:first-of-type,
-#widget_list LABEL.widget:first-of-type {
+#widget_list BUTTON.widget:first-of-type {
 	margin-top: 0px;
 }
 
@@ -1128,17 +1160,19 @@ BODY.desktop-ui #cameras_list .camera:hover {
 	color: #fff;
 }
 
-BODY.desktop-ui #widget_list .widget:hover {
+BODY.desktop-ui #widget_list BUTTON:hover,
+BODY.touch-ui #widget_list BUTTON:active {
 	color: #fff;
 	background: #112eb391;
 }
 
-#cameras_list .camera INPUT,
-#widget_list .widget INPUT {
+#cameras_list .camera INPUT {
 	position: absolute;
 	left: 10px;
 	top: 13px;
 }
+
+
 
 #docker_list .docker_cont {
 	color: #fff;

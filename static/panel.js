@@ -62,8 +62,11 @@ export class Panel {
 
 		this.n = Panel.PANEL_NO++;
 
+		let title = "Loading...";
+		if (id_source.indexOf('/') !== -1)
+			title = id_source;
 		let html = '<div class="grid_panel" data-source="' + id_source + '">' +
-				       '<h3 class="panel-title" id="panel_title_' + this.n + '" title="' + id_source + '">' + id_source + "</h3>" +
+				       '<h3 class="panel-title" id="panel_title_' + this.n + '" title="' + id_source + '">' + title + '</h3>' +
 				   	   '<span class="notes"></span>' +
 				   	   '<span class="panel_btns">' +
 					       '<span class="panel-btns-gradient"></span>' +
@@ -79,37 +82,34 @@ export class Panel {
 					   '<div class="cleaner"></div>' +
 				   '</div>';
 
-		let widget_opts = {
+		let grid_widget_opts = {
 			w: w, h: h,
 			minW: 1, minH: 4,
 			content: html,
 			lazyLoad: false
 		};
-		if (x != null && x != undefined) widget_opts.x = x;
-		if (y != null && y != undefined) widget_opts.y = y;
+		if (x != null && x != undefined) grid_widget_opts.x = x;
+		if (y != null && y != undefined) grid_widget_opts.y = y;
 
 		if (x == null && y == null) {
 			x = 0;
 			y = 0;
-			// let cols = $('#grid-stack').attr('gs-column');
-			// console.error('Cols='+cols)
 			for (let _x = 0; _x < 12 - w; _x++) {
 				if (grid.isAreaEmpty(_x, y, w, h)) {
 					x = _x;
-					// console.log('Grid area empty at ['+x+'; '+y+'] for '+w+'x'+h+']');
 					break;
 				}
 			}
-			widget_opts.x = x;
-			widget_opts.y = y;
+			grid_widget_opts.x = x;
+			grid_widget_opts.y = y;
 		}
 
 		panels[id_source] = this;
 
-		console.log("Adding widget " + id_source + ": ", widget_opts);
-		this.grid_widget = grid.addWidget(widget_opts);
+		console.log("Adding widget " + id_source + " w grid opts: ", grid_widget_opts);
+		this.grid_widget = grid.addWidget(grid_widget_opts);
 	
-		if (id_source.indexOf('/') === 0)
+		if (id_source.indexOf('/') === 0) // topic widget
 			this.ui.client.onTopicData(id_source, this.onDataContextWrapper);
 
 		// setTimeout(() => {
@@ -237,16 +237,16 @@ export class Panel {
 			// set w/h before widget constructors
 			[this.widget_width, this.widget_height] = this.getAvailableWidgetSize();
 
-			// composite widget (like World Model)
+			// composite widget (World Model 3D etc)
 			if (this.ui.widgets[msg_type]) {
 
 				if (!this.display_widget) { // only once
-					this.display_widget = new this.ui.widgets[this.id_source].class(
+					this.display_widget = new this.ui.widgets[msg_type].class(
 						this,
 						null, // widget_css_class passed only to super 
-						this.ui.widgets[this.id_source].plugin_classes // world model plugins
+						this.ui.widgets[msg_type].plugin_classes // world model plugins
 					); //no data yet
-					this.title_el.text(this.ui.widgets[this.id_source].class.LABEL);
+					this.title_el.text(this.ui.widgets[msg_type].class.LABEL);
 					fallback_show_src = false;
 				}
 			

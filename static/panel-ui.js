@@ -2,6 +2,7 @@ import { GraphMenu } from "./graph-menu.js";
 import { IsImageTopic, IsVideoTopic, IsFastVideoTopic } from "browser-client";
 import { Gamepad as TouchGamepad, Joystick as TouchJoystick} from "./touch-gamepad/dist/gamepad.js";
 import { GOAL_STATUS, WOBBLE_DURATION } from "const";
+import { SpaceMouse } from './input/space-mouse.js'
 // import { QRCodeStyling } from '/static/qr-code-styling/qr-code-styling.common.js';
 
 import { Panel } from "panel";
@@ -103,6 +104,8 @@ export class PanelUI {
 
 		this.input_manager = input_manager;
 		this.input_manager.ui = this;
+
+		this.space_mouse = new SpaceMouse();
 
 		this.latest_nodes = null;
 		this.latest_cameras = null;
@@ -1251,21 +1254,27 @@ export class PanelUI {
 		if (!this.topics_received || !this.config_received)
 			return;
 		let that = this;
-		let topic_ids = Object.keys(this.topics_received);
+
 		console.log('Initializing panels...');
-		topic_ids.forEach((id_topic) => {
-			if (!that.panels[id_topic] || that.panels[id_topic].initiated) return;
-			let msg_type = this.topics_received[id_topic].msg_type;
-			that.panels[id_topic].init(msg_type, false); //init w message type
-		});
-		let widget_ids = Object.keys(this.widgets);
-		widget_ids.forEach((id_source)=>{
-			if (topic_ids.indexOf(id_source) != -1)
-				return; // topic already done
-			if (!this.panels[id_source])
+
+		let panel_ids = Object.keys(this.panels);
+		panel_ids.forEach((id_panel)=>{
+			if (this.panels[id_panel].initiated)
 				return;
-			this.panels[id_source].init(id_source, false);
-		})
+
+			if (this.topics_received[id_panel]) {
+				let id_topic = id_panel;
+				let msg_type = this.topics_received[id_topic].msg_type;
+				this.panels[id_topic].init(msg_type, false); //init w message type
+			} else { // check if this is a compound widget
+				let widget_type = id_panel;
+				let dash_pos = widget_type.indexOf('-');
+				if (dash_pos > -1)
+					widget_type = widget_type.slice(0, dash_pos); 
+				if (this.widgets[widget_type])
+					this.panels[id_panel].init(widget_type, false);
+			}
+		});
 	}
 
 	camerasMenuFromNodesAndDevices() {
@@ -1823,25 +1832,25 @@ export class PanelUI {
 		Object.keys(this.widgets).forEach((widget_class) => {
 			let widget = that.widgets[widget_class];
 
-			let row_el = $('<label for="cb_widget_' + i + '" class="prevent-select widget">' + widget.label + "</label>");
-			let w_cb = $('<input type="checkbox" class="enabled" id="cb_widget_' + i + '"' + (that.panels[widget_class] ? " checked" : "") + "/>");
-			w_cb.change((ev) => {
-				let state = $(ev.target).prop("checked");
-
+			let add_widget_btn = $('<button class="prevent-select widget"><span></span>' + widget.label + "</button>");
+			add_widget_btn.click(()=>{
 				let w = that.widgets[widget_class].class.DEFAULT_WIDTH;
 				let h = that.widgets[widget_class].class.DEFAULT_HEIGHT;
 
-				that.togglePanel(widget_class, widget_class, state, w, h);
-				// client.SetCameraSubscription(id_robot, [ cam ], state);
-
-				if (state && $("BODY").hasClass("hamburger")) {
-					//close burger menu
+				let instance_id = 0;
+				let id_widget = widget_class + '-' + instance_id;
+				while (that.panels[id_widget]) {
+					instance_id++;
+					id_widget = widget_class + '-' + instance_id;
+				}
+				that.togglePanel(id_widget, widget_class, true, w, h);
+			
+				if ($("BODY").hasClass("hamburger")) { //close burger menu
 					that.setBurgerMenuState(false, false);
 				}
 			});
-
-			row_el.append(w_cb);
-			$("#widget_list").append(row_el);
+		
+			$("#widget_list").append(add_widget_btn);
 
 			i++;
 		});
@@ -2588,9 +2597,15 @@ export class PanelUI {
 							p.x, p.y,
 							p.panel_vars,
 						);
-						if (this.widgets[p.id_panel]) {
-							this.panels[p.id_panel].init(p.id_panel, false);
-						}
+
+						// init, if this is a compound widget
+						let widget_type = p.id_panel;
+						let dash_pos = widget_type.indexOf('-');
+						if (dash_pos > -1)
+							widget_type = widget_type.slice(0, dash_pos); 
+						if (this.widgets[widget_type])
+							this.panels[p.id_panel].init(widget_type, false);
+
 						break;
 					}
 				}

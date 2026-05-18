@@ -6,10 +6,10 @@ import { DescriptionTFWidget } from 'widgets/description-tf'
 // global._3DCONNEXION_DEBUG = true;
 
 export class SpaceMouse {
-    constructor(widget) {
-        this.widget = widget;
+    constructor() {
+        this.widget = null;
         this.animating = false;
-        this.space_mouse = null;
+        this.proxy = null;
         this.initialized = false;
 
         this.debug = false;
@@ -50,23 +50,41 @@ export class SpaceMouse {
     }
 
     initProxy() {
-        console.warn('3Dconnexion initializing...');
-        this.space_mouse = new TDx._3Dconnexion(this);
-        this.space_mouse.debug = this.debug_verbose;
-        if (!this.space_mouse.connect()) {
+        console.warn('3Dconnexion initializing proxy...');
+        this.proxy = new TDx._3Dconnexion(this);
+        this.proxy.debug = this.debug_verbose;
+        if (!this.proxy.connect()) {
             console.warn('Cannot connect to 3Dconnexion NL-Proxy');
+        }
+    }
+
+    setWidget(widget) {
+        console.log('3Dconnexion setting widget', widget);
+        this.widget = widget;
+    }
+
+    isControllingWidget(widget) {
+        if (!this.initialized) return false;
+        if (!this.proxy) return false;
+        return this.widget === widget;
+    }
+
+    removeWidget(widget) {
+        if (this.widget === widget) {
+            console.log('3Dconnexion removing widget', widget);
+            this.widget = null;
         }
     }
 
     onConnect() {
         console.log('3Dconnexion NL-Proxy connected');
         let name = 'Phntm Bridge 3D View'; // name to identify the application for the 3D mouse property panels
-        if (!this.space_mouse) {
-            console.log('3Dconnexion Missing space_mouse instance');
+        if (!this.proxy) {
+            console.log('3Dconnexion Missing proxy instance');
             return;
         }
         this.was_once_connected = true;
-        this.space_mouse.create3dmouse(window, name); // we need to pass in a focusable object, we can use the <div /> if it has a tabindex
+        this.proxy.create3dmouse(window, name); // we need to pass in a focusable object, we can use the <div /> if it has a tabindex
     }
 
     onError(err) {
@@ -78,36 +96,27 @@ export class SpaceMouse {
     }
 
     onFocus() {
-        if (!this.space_mouse)
+        if (!this.proxy)
             return;
 
-        if (!this.space_mouse.session && this.was_once_connected) {
+        if (!this.proxy.session && this.was_once_connected) {
             return this.initProxy();
         }
 
-        // this.space_mouse = new TDx._3Dconnexion(this);
-        //  if (!this.space_mouse.connect()) {
-        //     console.warn('Cannot connect to 3Dconnexion NL-Proxy');
-        // }
-
-        this.space_mouse.focus();
+        this.proxy.focus();
         
         if (this.debug)
-            console.log("3Dconnexion onFocus", this.space_mouse);
+            console.log("3Dconnexion onFocus", this.proxy);
     }
 
     onBlur() {
         if (this.debug)
             console.log("3Dconnexion onBlur");
-        // this.space_mouse.delete3dmouse();
-        // this.space_mouse = null;
-        // this.initialized = false;
-        // this.animating = false;
 
-        if (!this.space_mouse)
+        if (!this.proxy)
             return;
 
-        this.space_mouse.blur();
+        this.proxy.blur();
     }
 
     on3dmouseCreated() {
@@ -116,7 +125,7 @@ export class SpaceMouse {
         try {
 
             // set ourselves as the timing source for the animation frames
-            this.space_mouse.update3dcontroller({
+            this.proxy.update3dcontroller({
                 'frame': {
                     'timingSource': 1
                 }
@@ -126,7 +135,7 @@ export class SpaceMouse {
 
             let actionImages = new TDx._3Dconnexion.ImageCache();
             actionImages.onload = function () {
-                that.space_mouse.update3dcontroller({
+                that.proxy.update3dcontroller({
                     'images': actionImages.images
                 });
             };
@@ -140,7 +149,7 @@ export class SpaceMouse {
             this._getApplicationCommands(buttonBank, actionImages);
 
             // Expose the commands to 3Dxware and specify the active buttonbank / action set
-            this.space_mouse.update3dcontroller({
+            this.proxy.update3dcontroller({
                 'commands': {
                     'activeSet': 'PHMTM_BRIDGE_ACTIONS',
                     'tree': actionTree
@@ -187,9 +196,10 @@ export class SpaceMouse {
     setActiveCommand(cmd_id) {
         if (!cmd_id)
             return;
+        if (!this.widget || !this.widget.handleSpaceMouseCommand)
+            return;
         if (this.debug)
             console.warn("3Dconnexion command to execute= ", cmd_id);
-
         this.widget.handleSpaceMouseCommand(cmd_id);
     }
 
@@ -604,9 +614,9 @@ export class SpaceMouse {
     }
 
     destroy() {
-        if (this.space_mouse) {
-            this.space_mouse.delete3dmouse();
-            delete this.space_mouse;
+        if (this.proxy) {
+            this.proxy.delete3dmouse();
+            delete this.proxy;
         }
     }
 }

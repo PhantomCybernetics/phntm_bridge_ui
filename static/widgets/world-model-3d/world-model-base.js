@@ -12,10 +12,6 @@ export class WorldModel3DWidget extends DescriptionTFWidget {
 
 		let that = this;
 
-		this.space_mouse = new SpaceMouse(this);
-
-		//$("#panel_title_" + panel.n).text(WorldModel3DWidget.label);
-
 		this.overlay_topics = {};
 		this.sources.on("change", (topics) => this.onSourcesChange(topics));
 
