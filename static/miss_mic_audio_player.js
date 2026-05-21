@@ -1,7 +1,7 @@
 (function () {
   class MissMicAudioPlayer {
     constructor(options = {}) {
-      this.defaultSampleRate = options.defaultSampleRate || 16000;
+      this.defaultSampleRate = options.defaultSampleRate || 44100;
       this.defaultChannels = options.defaultChannels || 1;
       this.maxQueueChunks = options.maxQueueChunks || 120;
       this.gainValue = options.gain ?? 1.0;

@@ -451,6 +451,7 @@ export class PanelUI {
 		client.on("topics", (topics) => {
 			that.topics_received = topics;
 			that.initPanels();
+			that.microphonesMenuFromNodes();
 		});
 
 		client.on("ui_config", (ui_config) => { // prefixed configs trigger before this, so at this point we should have all the configs
@@ -1393,6 +1394,18 @@ export class PanelUI {
 		$("#microphones_list").empty();
 
 		let microphones = [];
+		let microphones_by_topic = {};
+		let addMicrophone = (topic_id, msg_type, label) => {
+			if (!topic_id || microphones_by_topic[topic_id]) return;
+			let mic = {
+				src_id: topic_id,
+				msg_type: msg_type,
+				label: label,
+			};
+			microphones_by_topic[topic_id] = mic;
+			microphones.push(mic);
+		};
+
 		if (this.latest_nodes) {
 			let node_ids = Object.keys(this.latest_nodes);
 			node_ids.forEach((id_node) => {
@@ -1401,13 +1414,20 @@ export class PanelUI {
 					Object.keys(node.publishers).forEach((id_topic) => {
 						let msg_type = node.publishers[id_topic].msg_type;
 						if (msg_type == "audio_common_msgs/msg/AudioData") {
-							microphones.push({
-								src_id: id_topic,
-								msg_type: msg_type,
-								label: id_node + " / " + id_topic,
-							});
+							addMicrophone(id_topic, msg_type, id_node + " / " + id_topic);
 						}
 					});
+				}
+			});
+		}
+
+		// Fallback to the discovered topic list so audio topics still show up
+		// while node introspection is still converging.
+		if (this.topics_received) {
+			Object.keys(this.topics_received).forEach((id_topic) => {
+				let topic = this.topics_received[id_topic];
+				if (topic && topic.msg_type == "audio_common_msgs/msg/AudioData") {
+					addMicrophone(id_topic, topic.msg_type, id_topic);
 				}
 			});
 		}
