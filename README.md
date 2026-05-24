@@ -171,7 +171,7 @@ Novo arquivo completo com player de áudio em WebAudio API (362 linhas).
 
 **Parâmetros de Áudio:**
 - **Formato**: PCM 16-bit signed little-endian
-- **Taxa de amostragem**: 16.000 Hz
+- **Taxa de amostragem**: 44.100 Hz (44100 Hz)
 - **Canais**: 1 (mono)
 - **Volume padrão**: 1.0 (100%)
 
