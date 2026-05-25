@@ -368,7 +368,7 @@ export class NodeParamsDialog {
 					that.client.ui.serviceReplyNotification(
 						btn_reload,
 						node["_srvGetParameters"],
-						false,
+						true, // silent
 						value_reply,
 					);
 					btn_reload.removeClass("working");
@@ -525,7 +525,7 @@ export class NodeParamsDialog {
 					that.client.ui.serviceReplyNotification(
 						btn_set,
 						node["_srvSetParameters"],
-						false,
+						true, // silent
 						set_reply,
 					);
 					btn_set.removeClass("working");

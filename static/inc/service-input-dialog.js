@@ -1,6 +1,4 @@
-import {
-	uuidToBytes,
-} from "../inc/lib.js";
+import { isTouchDevice } from "../inc/lib.js";
 
 export class ServiceInputDialog {
 	constructor(client) {
@@ -29,11 +27,11 @@ export class ServiceInputDialog {
 		let btn = {
 			label: "Call",
 			color: "blue",
-			show_request: true,
-			show_reply: true,
+			silent_request: true,
+			silent_reply: false,
 			value: {},
 			sort_index: sort_index,
-			test_call_btn_el: $('<button class="btn-call fancy_worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
+			test_call_btn_el: $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>')
 		};
 		if (is_action)
 			btn.test_call_btn_el.addClass('action');
@@ -93,25 +91,24 @@ export class ServiceInputDialog {
 		this.btn_call_cont.empty();
 		btn.test_call_btn_el.appendTo(this.btn_call_cont);
 		let that = this;
-		btn.test_call_btn_el.unbind().click((ev) => {
-			let is_action = btn.is_action;
-			let uuid = is_action ? btn.test_call_btn_el.attr('data-goal_uuid') : null;
-			if (btn.test_call_btn_el.hasClass('working') && is_action && uuid) {
-				btn.test_call_btn_el.removeClass('working'); // wobbles on cancel fail, otherwise goes unlit immediatelly for feedback
-				let cancel_msg = {
-					'goal_uuid': uuidToBytes(uuid)
-				}		
-				//client.serviceUserPayloadCall(action_cancel_service, cancel_btn, btn.el);
-				that.client.serviceCall(btn.action_cancel_service, cancel_msg, true, that.client.default_service_timeout_sec, (service_reply) => {
-					that.client.ui.serviceReplyNotification(btn.test_call_btn_el, btn.action_cancel_service, false, service_reply);
-				});
-			} else {
-				that.client.ui.serviceUserPayloadCall(that.service.service, btn, btn.test_call_btn_el);
+		btn.test_call_btn_el.unbind().click((ev) => {			
+			if (btn.is_action && btn.test_call_btn_el.hasClass('working')) {
+				that.client.ui.cancelButtonActionCall(that.service.service, btn.test_call_btn_el);
+			} else if (!btn.is_action) { // service
+				that.client.ui.serviceButtonUserPayloadCall(
+					that.service.service, btn.value,
+					btn.silent_request, btn.silent_reply,
+					btn.test_call_btn_el);
+			} else { // action
+				that.client.ui.actionButtonUserPayloadCall(
+					that.service.service, btn.value,
+					btn.silent_request, btn.silent_reply,
+					btn.test_call_btn_el);
 			}
 		});
 	}
 
-	show(service, node, node_cont_el) {
+	showDialogServicesMenu(service, node, node_cont_el) {
 		this.service = service;
 
 		let is_action = this.client.discovered_services[service.service] && this.client.discovered_services[service.service].is_action;
@@ -150,7 +147,11 @@ export class ServiceInputDialog {
 		this.msg_type = this.client.findMessageType(this.service.msg_type + "_Request");
 
 		this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
-		this.cont_el.append(this.menu_underlay);
+		this.btn_menu = $('<div class="btn-menu"></div>');
+		this.btn_menu.click((ev) => {
+			ev.stopPropagation();
+		});
+		this.cont_el.append([ this.menu_underlay, this.btn_menu ]);
 
 		this.editor = $('<div class="json-editor"></div>');
 
@@ -194,6 +195,19 @@ export class ServiceInputDialog {
 				"<pre>" + val + "</pre>",
 			);
 		});
+		let btn_json_paste_btn = $("<button>Paste Button Payload</button>");
+		btn_json_paste_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			// let val = JSON.stringify(that.msg, null, 4);
+			// navigator.clipboard.writeText(val);
+			// console.log("Copied button call json:", val);
+			// that.client.ui.showNotification(
+			// 	"Message JSON copied",
+			// 	null,
+			// 	"<pre>" + val + "</pre>",
+			// );
+		});
 		let btn_json_copy_service_btns = $("<button>Copy "+(is_action?"Action":"Service")+" Config (all buttons)</button>");
 		btn_json_copy_service_btns.click(() => {
 			btn_json.trigger("click"); // hide
@@ -205,8 +219,8 @@ export class ServiceInputDialog {
 				val[service.service].push({
 					label: btn.label,
 					color: btn.color,
-					show_request: btn.show_request,
-					show_reply: btn.show_reply,
+					silent_request: btn.silent_request,
+					silent_reply: btn.silent_reply,
 					value: btn.value,
 					sort_index: btn.sort_index,
 				});
@@ -242,8 +256,8 @@ export class ServiceInputDialog {
 					val[srv].push({
 						label: btn.label,
 						color: btn.color,
-						show_request: btn.show_request,
-						show_reply: btn.show_reply,
+						silent_request: btn.silent_request,
+						silent_reply: btn.silent_reply,
 						value: btn.value,
 						sort_index: btn.sort_index,
 					});
@@ -255,8 +269,8 @@ export class ServiceInputDialog {
 				val[service.service].push({
 					label: btn.label,
 					color: btn.color,
-					show_request: btn.show_request,
-					show_reply: btn.show_reply,
+					silent_request: btn.silent_request,
+					silent_reply: btn.silent_reply,
 					value: btn.value,
 					sort_index: btn.sort_index,
 				});
@@ -288,6 +302,7 @@ export class ServiceInputDialog {
 
 		json_menu.append([
 			btn_json_copy_btn,
+			btn_json_paste_btn,
 			btn_json_copy_service_btns,
 			btn_json_copy_all_services,
 		]);
@@ -295,7 +310,7 @@ export class ServiceInputDialog {
 
 		this.btns.forEach((btn)=>{ // one test btn per actual button (to keep track on working state)
 			if (!btn.test_call_btn_el) {
-				btn.test_call_btn_el = $('<button class="btn-call fancy_worker">Test<span class="wide"> '+(is_action?'Action':'Service')+'</span></button>');
+				btn.test_call_btn_el = $('<button class="btn-call fancy-worker">Test<span class="wide"> '+(is_action?'Action':'Service')+'</span></button>');
 				if (is_action)
 					btn.test_call_btn_el.addClass('action');
 			}
@@ -316,10 +331,22 @@ export class ServiceInputDialog {
 		});
 
 		this.btns_line_el = $('<div class="btns-line"></div>');
+		this.btns_line_el.on('wheel mousewheel touchmove', (ev)=>{
+			// cancel movement when menu is open
+			if (this.btns_line_el.hasClass('no-move')) {
+				ev.preventDefault();
+				ev.stopPropagation();
+			}
+		});
 
 		this.renderButtonTabs(is_action);
 
-		this.bottom_btns_el.append([btn_save, this.btn_call_cont, btn_json, btn_close]);
+		this.bottom_btns_el.append([
+			btn_save,
+			this.btn_call_cont,
+			btn_json,
+			btn_close
+		]);
 		this.cont_el.append([
 			this.btns_line_el,
 			$('<div class="cleaner"/>'),
@@ -342,24 +369,27 @@ export class ServiceInputDialog {
 		$("BODY").addClass("no-scroll");
 	}
 
-	showInputManagerDialog(id_service, msg_type, initial_value, cb) {
+	showDialogInputManager(id_service, msg_type, msg_type_request, initial_value, silet_request, silent_reply, cb) {
 		this.service = {
-			service: id_service,
-			msg_type: msg_type,
+			'service': id_service,
+			'msg_type': msg_type,
+			'msg_type_request': msg_type_request
 		};
+
+		let is_action = this.client.discovered_services[id_service] && this.client.discovered_services[id_service].is_action;
 
 		let that = this;
 
 		this.cont_el.empty().addClass("input-manager");
-		let msg_type_link = $(
-			'<span class="msg_type">' + this.service.msg_type + "</span>",
-		);
+		let msg_type_link = $('<span class="msg_type">' + this.service.msg_type + "</span>");
 		msg_type_link.click(() => {
 			that.client.ui.messageTypeDialog(this.service.msg_type);
 		});
 
 		this.cont_el.append([$("<h3>" + this.service.service + "</h3>"), msg_type_link]);
 		this.msg_type = this.client.findMessageType(this.service.msg_type + "_Request");
+
+		console.log('msg_type', this.msg_type, this.service);
 
 		this.menu_underlay = $('<div id="service-input-dialog-menu-underlay"></div>');
 		this.cont_el.append(this.menu_underlay);
@@ -369,7 +399,7 @@ export class ServiceInputDialog {
 		this.editor.empty();
 
 		let [msg_ref, block_before, block_el, block_after] = this.processMsgTemplate(
-			this.service.msg_type + "_Request",
+			this.service['msg_type_request'],
 			initial_value,
 			"",
 			true,
@@ -387,33 +417,92 @@ export class ServiceInputDialog {
 			that.hide();
 		});
 
-		let btn_call = $(
-			'<button class="btn-call fancy_worker">Test<span class="wide"> Service</span></button>',
-		);
-		btn_call.click((ev) => {
-			that.client.serviceCall(
-				that.service.service,
-				msg_ref ? msg_ref : undefined,
-				false,
-				that.client.default_service_timeout_sec,
-				(test_reply) => {
-					that.client.ui.serviceReplyNotification(
-						btn_call,
-						that.service.service,
-						true,
-						test_reply,
-					);
-				},
-			);
+		let btn_test_call = $('<button class="btn-call fancy-worker">Test<span class="wide"> ' + (is_action ? 'Action' : 'Service') + '</span></button>');
+		if (is_action)
+			btn_test_call.addClass('action');
+		btn_test_call.click((ev) => {
+
+			if (is_action && btn_test_call.hasClass('working')) {
+				that.client.ui.cancelButtonActionCall(that.service.service, btn_test_call);				
+			} else if (!is_action){ // service
+				that.client.ui.serviceButtonUserPayloadCall(
+					that.service.service, msg_ref ? msg_ref : undefined,
+					silet_request, silent_reply, 
+					btn_test_call
+				);
+			} else { // action
+				that.client.ui.actionButtonUserPayloadCall(
+					that.service.service, msg_ref ? msg_ref : undefined,
+					silet_request, silent_reply,
+					btn_test_call
+				);
+			}
 		});
 
-		let btn_set = $('<button class="btn-save">Set</button>');
-		btn_set.click((ev) => {
+		let btn_json = $('<button class="btn-json">JSON</button>');
+		btn_json.click(() => {
+			if (!btn_json.hasClass("open")) {
+				btn_json.addClass("open");
+				that.menu_underlay
+					.unbind()
+					.show()
+					.click(() => {
+						btn_json.removeClass("open");
+						that.menu_underlay.unbind().hide();
+					});
+			} else {
+				btn_json.removeClass("open");
+				that.menu_underlay.unbind().hide();
+			}
+		});
+		let json_menu = $('<div class="json-menu"><span class="arrow"></span></div>');
+		json_menu.click((ev) => {
+			ev.stopPropagation();
+		});
+		let json_copy_btn = $("<button>Copy Payload</button>");
+		json_copy_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			let val = JSON.stringify(msg_ref ? msg_ref : undefined, null, 4);
+			navigator.clipboard.writeText(val);
+			console.log("Copied button call json:", val);
+			that.client.ui.showNotification(
+				"Message JSON copied",
+				null,
+				"<pre>" + val + "</pre>",
+			);
+		});
+		let json_paste_btn = $("<button>Paste Payload</button>");
+		json_paste_btn.click(() => {
+			btn_json.trigger("click"); // hide
+
+			// let val = JSON.stringify(that.msg, null, 4);
+			// navigator.clipboard.writeText(val);
+			// console.log("Copied button call json:", val);
+			// that.client.ui.showNotification(
+			// 	"Message JSON copied",
+			// 	null,
+			// 	"<pre>" + val + "</pre>",
+			// );
+		});
+		json_menu.append([
+			json_copy_btn,
+			json_paste_btn
+		]);
+		json_menu.appendTo(btn_json);
+
+		let btn_save = $('<button class="btn-save">Save</button>');
+		btn_save.click((ev) => {
 			that.hide();
 			cb(msg_ref); // TODO
 		});
 
-		this.bottom_btns_el.append([btn_set, btn_call, btn_close]);
+		this.bottom_btns_el.append([
+			btn_save,
+			btn_test_call,
+			btn_json,
+			btn_close
+		]);
 		this.cont_el.append([this.editor, this.bottom_btns_el]);
 
 		this.cont_el.draggable({
@@ -433,8 +522,8 @@ export class ServiceInputDialog {
 		let that = this;
 
 		this.btns_line_el.empty();
-		this.btns_sortable_el = $('<div class="btn-tabs-sortable"></div>');
-
+		this.btns_sortable_el = $('<div class="btn-tabs" oncontextmenu="return false;"></div>');
+		
 		this.btns.sort((a, b) => {
 			return a.sort_index - b.sort_index;
 		});
@@ -442,12 +531,177 @@ export class ServiceInputDialog {
 		for (let i_btn = 0; i_btn < this.btns.length; i_btn++) {
 			let btn = this.btns[i_btn];
 
-			let btn_tab = $('<div class="btn-tab ' + btn.color + '"></div>');
+			let btn_tab = $('<div class="btn-tab ' + btn.color + '" ></div>');
 			let btn_label = $('<span class="label">' + btn.label + "</span>");
 
-			btn_tab.append(btn_label);
+			// hold aby button for 2s on touch devices to start sorting
+			let touch_timer = null;
+			btn_tab.on('touchstart', (ev) => {
+				console.log('tab touchstart');
+				if (btn_tab.hasClass('touch-sortable'))
+					return;
+				that.cancelTabsSortable(); // cancel all others
+				
+				const start_event = ev.originalEvent.touches[0];
+				touch_timer = setTimeout(()=>{
+					
+					that.btns_sortable_el.addClass('sortable');
+					btn_tab.addClass('touch-sortable');
+					that.btns_sortable_el.sortable('enable');
 
-			let btn_inp = $('<input type="text" class="btn-inp""></input>');
+					btn_tab.trigger(ev); // start the drag
+				}, 2000);
+			});
+
+			btn_tab.on('touchend', (ev) => {
+				console.log('tab touchend');
+				if (touch_timer)
+					clearTimeout(touch_timer);
+				if (btn_tab.hasClass('touch-sortable'))
+					that.cancelTabsSortable();
+			});
+
+			let close_button_menu = (ignored_ev) => {
+				that.menu_underlay.unbind().hide();
+				that.btns_line_el.removeClass('no-move');
+				that.btn_menu.empty().removeClass("open");
+				btn_tab.removeClass("menu-open");
+				window.removeEventListener('resize', close_button_menu);		
+			};
+
+			let open_button_menu = () => {
+				
+				window.addEventListener('resize', close_button_menu);
+
+				let cl = $('<div class="cleaner"></div>');
+
+				// rename btn
+				let rename_btn = $("<button>Edit label</button>");
+				rename_btn.click(() => {
+					close_button_menu();
+					btn_tab.addClass("editing");
+					btn_inp.trigger("change");
+					btn_inp.focus();
+					btn.editing = true;
+				});
+
+				// show request
+				let silent_request_cb = $('<input type="checkbox"/>');
+				silent_request_cb.prop("checked", btn.silent_request);
+				let silent_request_label = $('<label title="Service request will not be shown as notification">Silent request</label>');
+				silent_request_label.prepend(silent_request_cb);
+				silent_request_cb.change((ev) => {
+					btn.silent_request = $(ev.target).prop("checked");
+				});
+
+				// show reply
+				let silent_reply_cb = $('<input type="checkbox"/>');
+				silent_reply_cb.prop("checked", btn.silent_reply);
+				let silent_reply_label = $('<label title="Service reply will not be shown as notification">Silent reply</label>');
+				silent_reply_label.prepend(silent_reply_cb);
+				silent_reply_cb.change((ev) => {
+					btn.silent_reply = $(ev.target).prop("checked");
+				});
+
+				// colors
+				let color_line = $('<div class="colors"></div>');
+				[ "blue", "green", "red", "orange", "magenta", "black", "white" ].forEach((clr) => {
+					let btn_clr = $('<button title="' + clr + '" class="color-btn ' + clr + '"></button>');
+					if (clr == btn.color) btn_clr.addClass("selected");
+					color_line.append(btn_clr);
+					btn_clr.click((ev) => {
+						color_line.children().removeClass("selected");
+						btn_clr.addClass("selected");
+						btn_tab.removeClass(btn.color);
+						btn.color = clr;
+						btn_tab.addClass(btn.color);
+					});
+				});
+				color_line.append(cl);
+
+				// remove
+				let rem_btn = $('<button class="rem">Remove button<span class="icon"></span></button>');
+				rem_btn.click((ev) => {
+					if (!rem_btn.hasClass("warn")) {
+						rem_btn.addClass("warn");
+						return;
+					}
+
+					close_button_menu();
+
+					that.btns.splice(i_btn, 1);
+					if (!that.btns.length) {
+						that.btns.push(that.makeDefaultBtn(is_action)); // replace with default
+					}
+					that.renderButtonTabs(is_action);
+					let btn_to_sel = i_btn;
+					if (that.btns.length - 1 < i_btn) btn_to_sel = that.btns.length - 1;
+					that.selectButton(that.btns[btn_to_sel]);
+				})
+				.blur((ev) => {
+					rem_btn.removeClass("warn");
+				});
+				
+				let toggle_icon_left = btn_menu_toggle_btn.offset().left; // window space
+				let dialog_left = that.cont_el.offset().left; // window space
+				let dialog_width = that.cont_el.width();
+				let menu_width = 170;
+				let screen_width = $(window).width();
+				let arrow_left = 120; // menu space
+				let menu_left = toggle_icon_left - dialog_left - arrow_left; // dialog space
+				if (menu_left < 5 && that.cont_el.hasClass('narrow')) {
+					arrow_left = toggle_icon_left - dialog_left - 5;
+					menu_left = 5;
+				} else if (dialog_left + menu_left < 0) {
+					menu_left = -dialog_left + 5;
+					arrow_left = toggle_icon_left - dialog_left - menu_left;
+				} else if ((menu_left + menu_width) > (screen_width - 10)) {
+					menu_left = screen_width - menu_width - 20;
+				} else if (menu_left + arrow_left > dialog_width - 20) {
+					arrow_left -= 10;
+				}
+				if (arrow_left < 5)
+					arrow_left = 5;
+
+				let arrow = $('<span class="menu-arrow"><span></span></span>');
+				arrow.click((ev) => {
+					ev.stopPropagation();
+				}).css('left', arrow_left+'px');
+				
+				that.btn_menu
+					.empty()
+					.append([
+						rename_btn, cl,
+						silent_request_label,
+						silent_reply_label, cl,
+						color_line, cl,
+						rem_btn, cl,
+						arrow
+					])
+					.css('left', menu_left+'px')
+					.addClass("open");
+				
+				btn_tab.addClass("menu-open");
+				that.btns_line_el.addClass('no-move');
+				that.menu_underlay
+					.unbind()
+					.show()
+					.click(close_button_menu);			
+			};
+
+			btn_tab.append(btn_label);
+			
+			btn_label.on("mousedown", (ev) => {
+				console.log('label mousedown');
+				if (that.btn_menu.hasClass("open")) {
+					close_button_menu();
+					return;
+				}
+				that.selectButton(btn); // init editor
+			});
+
+			// button rename input 
+			let btn_inp = $('<input type="text" class="btn-inp"/>');
 			let btn_inp_wh = $('<span class="btn-inp-wh"></span>');
 			btn_inp.on("change keydown keypress keyup blur", (ev) => {
 				let val = btn_inp.val();
@@ -470,117 +724,35 @@ export class ServiceInputDialog {
 			});
 			btn_tab.append([btn_inp, btn_inp_wh, btn_edit_confirm]);
 
-			let btn_menu_btn = $('<span class="btn-menu-btn"></span>');
-
-			let btn_menu = $('<div class="btn-menu"><span class="arrow"></span></div>');
-			btn_menu.click((ev) => {
+			// button menu
+			let btn_menu_toggle_btn = $('<span class="btn-menu-btn"></span>');
+			let btn_menu_toggle_active = false;
+			btn_menu_toggle_btn.on('mousedown', (ev) => { // click to open only active when tab already active on down
+				btn_menu_toggle_active = btn_tab.hasClass('selected');
+				console.debug('DOWN', btn_menu_toggle_active, ev);
 				ev.stopPropagation();
+				ev.cancelBubble = true;
 			});
-			let rename_btn = $("<button>Edit label</button>");
-			rename_btn.click(() => {
-				that.menu_underlay.unbind().hide();
-				btn_menu.removeClass("open");
-				btn_tab.addClass("editing");
-				btn_inp.trigger("change");
-				btn_inp.focus();
-				btn.editing = true;
-			});
+			btn_menu_toggle_btn.on('mouseup', (ev) => {
 
-			let show_request_cb = $('<input type="checkbox"/>');
-			show_request_cb.prop("checked", btn.show_request);
-			let show_request_label = $('<label title="Service request will be shown as notification">Show request</label>');
-			show_request_label.prepend(show_request_cb);
-			show_request_cb.change((ev) => {
-				btn.show_request = $(ev.target).prop("checked");
-			});
+				console.debug('UP', btn_menu_toggle_active, ev);
 
-			let show_reply_cb = $('<input type="checkbox"/>');
-			show_reply_cb.prop("checked", btn.show_reply);
-			let show_reply_label = $('<label title="Service reply will be shown as notification">Show reply</label>');
-			show_reply_label.prepend(show_reply_cb);
-			show_reply_cb.change((ev) => {
-				btn.show_reply = $(ev.target).prop("checked");
-			});
+				if (!btn_menu_toggle_active)
+					return;
 
-			let color_line = $('<div class="colors"></div>');
-			["blue", "green", "red", "orange", "magenta", "black"].forEach((clr) => {
-				let btn_clr = $('<button title="' + clr + '" class="color-btn ' + clr + '"></button>');
-				if (clr == btn.color) btn_clr.addClass("selected");
-				color_line.append(btn_clr);
-				btn_clr.click((ev) => {
-					color_line.children().removeClass("selected");
-					btn_clr.addClass("selected");
-					btn_tab.removeClass(btn.color);
-					btn.color = clr;
-					btn_tab.addClass(btn.color);
-				});
-			});
-			color_line.append($('<div class="cleaner"></div>'));
-			let rem_btn = $('<button class="rem">Remove button<span class="icon"></span></button>');
-			rem_btn
-				.click((ev) => {
-					if (!rem_btn.hasClass("warn")) {
-						rem_btn.addClass("warn");
-						return;
-					}
-					that.btns.splice(i_btn, 1);
-					if (!that.btns.length) {
-						that.btns.push(that.makeDefaultBtn(is_action)); // replace with default
-					}
-					that.renderButtonTabs(is_action);
-					let btn_to_sel = i_btn;
-					if (that.btns.length - 1 < i_btn) btn_to_sel = that.btns.length - 1;
+				btn_menu_toggle_active = false;
+				ev.stopPropagation();
+				ev.cancelBubble = true;
 
-					that.menu_underlay.unbind().hide();
-					that.selectButton(that.btns[btn_to_sel]);
-				})
-				.blur((ev) => {
-					rem_btn.removeClass("warn");
-				});
-			let cl = $('<div class="cleaner"></div>');
-			btn_menu.append([
-				rename_btn,
-				cl,
-				show_request_label,
-				show_reply_label,
-				cl,
-				color_line,
-				cl,
-				rem_btn,
-				cl,
-			]);
-
-			btn_menu_btn.click(() => {
-				if (!btn_menu.hasClass("open")) {
-					btn_menu.addClass("open");
-				
-					btn_tab.addClass("menu-open");
-					that.menu_underlay
-						.unbind()
-						.show()
-						.click(() => {
-							btn_menu.removeClass("open");
-							btn_tab.removeClass("menu-open");
-							that.menu_underlay.unbind().hide();
-						});
-				} else {
-					btn_menu.removeClass("open");
-					btn_tab.removeClass("menu-open");
-					that.menu_underlay.unbind().hide();
-				}
-			});
-
-			btn_label.on("mousedown touchstart", (ev) => {
-				if (btn_menu.hasClass("open")) {
-					btn_menu_btn.trigger("click");
+				if (that.btn_menu.hasClass("open")) { // close btn menu
+					close_button_menu();
 					return;
 				}
-				that.selectButton(btn); //init editor
+
+				open_button_menu();
 			});
 
-			btn_menu.appendTo(btn_menu_btn);
-
-			btn_tab.append(btn_menu_btn);
+			btn_tab.append(btn_menu_toggle_btn);
 
 			// save refs
 			btn.btn_inp = btn_inp;
@@ -592,9 +764,7 @@ export class ServiceInputDialog {
 
 		this.btns_line_el.append(this.btns_sortable_el);
 
-		let btn_add = $(
-			'<span class="add-btn">Add<span class="wide"> button</span></span>',
-		);
+		let btn_add = $('<span class="add-btn">Add<span class="wide"> button</span></span>');
 		btn_add.click((ev) => {
 			that.btns.push(that.makeDefaultBtn(is_action));
 			that.confirmBtnLabelEdit();
@@ -602,23 +772,43 @@ export class ServiceInputDialog {
 			that.selectButton(that.btns[that.btns.length - 1]);
 		});
 		this.btns_line_el.append(btn_add);
-
+		
 		this.makeTabsSortable();
 	}
 
-	makeTabsSortable(c) {
+	makeTabsSortable() {
 		let that = this;
-		this.btns_sortable_el.sortable({
-			axis: "x",
-			handle: ".label",
-			cursor: "move",
-			stop: () => {
-				for (let i = 0; i < that.btns.length; i++) {
-					let btn = that.btns[i];
-					let index = btn.tab_el.index();
-					btn.sort_index = index;
-				}
-			},
+		this.btns_sortable_el
+			.sortable({
+				axis: "x",
+				handle: ".label",
+				cursor: "move",
+				stop: (ev, ui) => {
+					for (let i = 0; i < that.btns.length; i++) {
+						let btn = that.btns[i];
+						let index = btn.tab_el.index();
+						btn.sort_index = index;
+					}
+					if (isTouchDevice()) {
+						that.btns_sortable_el.removeClass('sortable');
+						that.btns_sortable_el.sortable("disable");
+						ui.item.removeClass('touch-sortable');
+					}
+				},
+			});
+		
+		if (isTouchDevice()) // touch devices need hold
+			this.btns_sortable_el.sortable("disable");
+		else
+			this.btns_sortable_el.addClass('sortable');
+	}
+
+	cancelTabsSortable() {
+	 	this.btns_sortable_el.removeClass('sortable');
+		this.btns_sortable_el.sortable("disable");
+		this.btns_sortable_el.children('.touch-sortable').each((index, btn_tab) => {
+			console.log('child '+index, btn_tab);
+			$(btn_tab).removeClass('touch-sortable');
 		});
 	}
 

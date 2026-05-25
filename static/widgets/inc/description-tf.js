@@ -8,6 +8,7 @@ import URDFLoader from "urdf-loader";
 import { CSS2DRenderer, CSS2DObject } from "css-2d-renderer";
 import { Vector3, Quaternion, LoadingManager } from "three";
 import { CompositePanelWidgetBase } from './composite-widget-base.js'
+import { isTouchDevice } from "../../inc/lib.js";
 
 export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	static LABEL = "Robot description (URFD) + Transforms";
@@ -444,7 +445,8 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		// 	this.controls.update();
 		// }
 
-		this.setLight(this.vars.render_light);
+		this.light_to_set_in_rendering_loop = -1;
+		this.setLight(this.vars.render_light, true); // set now
 		if (this.light)
 			this.light.lookAt(this.camera_selection);
 
@@ -796,7 +798,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		// ground plane type
 		let render_grnd_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_grnd_label = $('<label></label>');
+		let render_grnd_label = $('<span class="label"></span>');
 		let render_grnd_label_value = $('<span></span>');
 		let render_grnd_btn_left = $('<button class="left">&laquo;</button>');
 		let render_grnd_btn_right = $('<button class="right">&raquo;</button>');
@@ -815,8 +817,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
 			setGroundMenuLabel();
-			that.setGroundPlane(that.vars.render_ground_plane);
-			that.renderDirty();
+
+			setTimeout(() => {
+				that.setGroundPlane(that.vars.render_ground_plane);
+				that.renderDirty();
+			}, 0);
 		});
 		render_grnd_btn_right.click(()=>{
 			if (that.vars.render_ground_plane >= DescriptionTFWidget.GROUND_PLANES.length-1) that.vars.render_ground_plane = 0;
@@ -824,14 +829,17 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('grnd', that.vars.render_ground_plane);
 			setGroundMenuLabel();
-			that.setGroundPlane(that.vars.render_ground_plane);
-			that.renderDirty();
+
+			setTimeout(() => {
+				that.setGroundPlane(that.vars.render_ground_plane);
+				that.renderDirty();
+			}, 0);
 		});
 		
 		
 		// ground plane type
 		let render_skybox_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_skybox_label = $('<label></label>');
+		let render_skybox_label = $('<span class="label"></span>');
 		let render_skybox_label_value = $('<span></span>');
 		let render_skybox_btn_left = $('<button class="left">&laquo;</button>');
 		let render_skybox_btn_right = $('<button class="right">&raquo;</button>');
@@ -850,8 +858,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
 			setSkyboxMenuLabel();
-			that.setSkybox(that.vars.render_skybox);
-			that.renderDirty();
+
+			setTimeout(() => {
+				that.setSkybox(that.vars.render_skybox);
+				that.renderDirty();
+			}, 0);
 		});
 		render_skybox_btn_right.click(()=>{
 			if (that.vars.render_skybox >= DescriptionTFWidget.SKYBOXES.length-1) that.vars.render_skybox = 0;
@@ -859,14 +870,16 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('sky', that.vars.render_skybox);
 			setSkyboxMenuLabel();
-			that.setSkybox(that.vars.render_skybox);
-			that.renderDirty();
-		});
 
+			setTimeout(() => {
+				that.setSkybox(that.vars.render_skybox);
+				that.renderDirty();
+			}, 0); 
+		});
 
 		// light type
 		let render_light_line_el = $('<div class="menu_line buttons_right"></div>');
-		let render_light_label = $('<label></label>');
+		let render_light_label = $('<span class="label"></span>');
 		let render_light_label_value = $('<span></span>');
 		let render_light_btn_left = $('<button class="left">&laquo;</button>');
 		let render_light_btn_right = $('<button class="right">&raquo;</button>');
@@ -885,8 +898,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
 			setLightMenuLabel();
-			that.setLight(that.vars.render_light);
-			that.renderDirty();
+
+			setTimeout(() => {
+				that.setLight(that.vars.render_light);
+				that.renderDirty();
+			}, 0);
 		});
 		render_light_btn_right.click(()=>{
 			if (that.vars.render_light >= DescriptionTFWidget.LIGHT_AMBIENT_ONLY) that.vars.render_light = DescriptionTFWidget.LIGHT_WIDE_SPOTLIGHT;
@@ -894,8 +910,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 			that.panel.storePanelVarAsInt('lght', that.vars.render_light);
 			setLightMenuLabel();
-			that.setLight(that.vars.render_light);
-			that.renderDirty();
+
+			setTimeout(() => {
+				that.setLight(that.vars.render_light);
+				that.renderDirty();
+			}, 0);
 		});
 	}
 
@@ -956,16 +975,31 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 					url_base + "/cubemap_3.png",
 					url_base + "/cubemap_4.png",
 					url_base + "/cubemap_5.png",
-				]);
+				], () => {
+					this.scene.background = this.skybox_textures[type_no];
+					this.setLight(this.vars.render_light);
+				});
+			} else {
+				this.scene.background = this.skybox_textures[type_no];
+				this.setLight(this.vars.render_light);
 			}
-			this.scene.background = this.skybox_textures[type_no];
 		} else {
 			this.scene.background = color;
+			this.setLight(this.vars.render_light);
 		}
-		this.setLight(this.vars.render_light);
 	}
 
-	setLight(type_no) {
+	setLight(type_no, now=false) {
+		if (now) {
+			this._setLight(type_no);
+			this.light_to_set_in_rendering_loop = -1;
+		} 
+		else {
+			this.light_to_set_in_rendering_loop = type_no; // rendering loop
+		}
+	}
+
+	_setLight(type_no) {
 		if (this.light) {
 			this.light.removeFromParent();
 			this.light = null;
@@ -1039,8 +1073,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		if (this.light) {
 			this.light.castShadow = true; // default false
-			this.light.shadow.mapSize.width = 10 * 1024; // default
-			this.light.shadow.mapSize.height = 10 * 1024; // default
+			// shadow map affects shadow quality
+			// too large shadow map crashes mobile devices on light update (frame update takes too long and we get "aw snap")
+			let shadow_map_size = isTouchDevice() ? 1024 : 10 * 1024;
+			this.light.shadow.mapSize.width = shadow_map_size;
+			this.light.shadow.mapSize.height = shadow_map_size;
 			this.light.shadow.camera.near = 0.5; // default
 			this.light.shadow.camera.far = 20; // default
 		}
@@ -1780,6 +1817,13 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 	renderingLoop(now) {
 		if (!this.rendering || !this.robot_model || (this.vars.camera_follows_selection && !this.camera_selection_ref)) {
+			requestAnimationFrame((t) => this.renderingLoop(t));
+			return;
+		}
+
+		if (this.light_to_set_in_rendering_loop > -1) {
+			this._setLight(this.light_to_set_in_rendering_loop);
+			this.light_to_set_in_rendering_loop = -1;
 			requestAnimationFrame((t) => this.renderingLoop(t));
 			return;
 		}

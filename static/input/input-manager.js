@@ -1,5 +1,6 @@
-import { isIOS, lerp, isTouchDevice } from "../inc/lib.js";
+import { isIOS, lerp, isTouchDevice } from "/static/inc/lib.js";
 import * as THREE from "three";
+import { WOBBLE_DURATION } from "/static/inc/const.js";
 
 export class InputManager {
 	constructor(client) {
@@ -941,13 +942,9 @@ export class InputManager {
 
 			//init driver
 			c_profile.driver_instances[c_profile.driver] = new this.registered_drivers[c_profile.driver](this);
-			if (
-				c_profile.default_driver_config &&
-				c_profile.default_driver_config[c_profile.driver]
+			if (c_profile.default_driver_config && c_profile.default_driver_config[c_profile.driver]
 			) {
-				c_profile.driver_instances[c_profile.driver].setConfig(
-					c_profile.default_driver_config[c_profile.driver],
-				);
+				c_profile.driver_instances[c_profile.driver].setConfig(c_profile.default_driver_config[c_profile.driver]);
 			} else {
 				c_profile.driver_instances[c_profile.driver].setConfig({}); // init writer
 			}
@@ -971,10 +968,7 @@ export class InputManager {
 					}
 				}
 				let empty_buttons_to_make = 3;
-				if (
-					c_profile.default_buttons_config &&
-					c_profile.default_buttons_config.length
-				) {
+				if (c_profile.default_buttons_config && c_profile.default_buttons_config.length) {
 					empty_buttons_to_make = 0;
 					let sort_indexes = []; // by placmenet
 					for (let i = 0; i < c_profile.default_buttons_config.length; i++) {
@@ -984,20 +978,14 @@ export class InputManager {
 							c_profile.default_buttons_config[i],
 						);
 						if (new_btn.touch_ui_placement) {
-							if (
-								c_profile.default_buttons_config[i].sort_index !==
-								undefined
-							) {
-								new_btn.sort_index =
-									c_profile.default_buttons_config[i].sort_index;
+							if (c_profile.default_buttons_config[i].sort_index !== undefined) {
+								new_btn.sort_index = c_profile.default_buttons_config[i].sort_index;
 							} else {
-								if (
-									sort_indexes[new_btn.touch_ui_placement] === undefined
-								)
+								if (sort_indexes[new_btn.touch_ui_placement] === undefined)
 									sort_indexes[new_btn.touch_ui_placement] = 0;
-								else sort_indexes[new_btn.touch_ui_placement]++;
-								new_btn.sort_index =
-									sort_indexes[new_btn.touch_ui_placement];
+								else
+									sort_indexes[new_btn.touch_ui_placement]++;
+								new_btn.sort_index = sort_indexes[new_btn.touch_ui_placement];
 							}
 						}
 					}
@@ -1145,7 +1133,9 @@ export class InputManager {
 			assigned: false,
 			trigger: 1, // 0=touch (gp only), 1=press, 2=release
 			repeat: undefined,
-			touch_ui_placement: null, // 1=top, 2=bottom in touch gamepad overlay
+			touch_ui_placement: 1, // 1=top, 2=bottom in touch gamepad overlay
+			ros_srv_silent_request: true,
+			ros_srv_silent_reply: false,
 
 			pressed: false,
 			touched: false, // gamepad only
@@ -1235,19 +1225,21 @@ export class InputManager {
 					case "ros-srv":
 						new_btn.action = default_config.action;
 						new_btn.ros_srv_id = default_config.ros_srv_id;
-						new_btn.ros_srv_silent_req = default_config.ros_srv_silent_req ? true : false;
-						new_btn.ros_srv_silent_res = default_config.ros_srv_silent_res ? true : false;
+						new_btn.ros_srv_silent_request = default_config.ros_srv_silent_request ? true : true;
+						new_btn.ros_srv_silent_reply = default_config.ros_srv_silent_reply ? true : false;
 						new_btn.assigned = true;
 
 						new_btn.ros_srv_msg_type = null;
 						if (this.client.discovered_services[new_btn.ros_srv_id]) {
 							new_btn.ros_srv_msg_type = this.client.discovered_services[new_btn.ros_srv_id].msg_type;
+							new_btn.ros_srv_msg_type_request = this.client.discovered_services[new_btn.ros_srv_id].msg_type_request;
+							new_btn.ros_srv_is_action = this.client.discovered_services[new_btn.ros_srv_id].is_action;
 						} else {
 							// otherwise checked on services update
 							console.log("ros-srv btn action missing message type, service " + new_btn.ros_srv_id + " not discovered yet?");
 							// this.client.runIntrospection();
 						}
-
+						
 						if (default_config.ros_srv_val !== undefined) {
 							new_btn.ros_srv_val = default_config.ros_srv_val;
 						}
@@ -1323,6 +1315,8 @@ export class InputManager {
 							// update missing message type
 							if (btn.ros_srv_id && !btn.ros_srv_msg_type && discovered_services[btn.ros_srv_id]) {
 								btn.ros_srv_msg_type = discovered_services[btn.ros_srv_id].msg_type;
+								btn.ros_srv_msg_type_request = discovered_services[btn.ros_srv_id].msg_type_request;
+								btn.ros_srv_is_action = discovered_services[btn.ros_srv_id].is_action;
 								console.log("Message type discovered for " + btn.ros_srv_id + ": " + btn.ros_srv_msg_type);
 							}
 
@@ -1472,8 +1466,8 @@ export class InputManager {
 				case "ros-srv":
 					btn_data["ros_srv_id"] = btn.ros_srv_id;
 					btn_data["ros_srv_val"] = btn.ros_srv_val;
-					btn_data["ros_srv_silent_req"] = btn.ros_srv_silent_req;
-					btn_data["ros_srv_silent_res"] = btn.ros_srv_silent_res;
+					btn_data["ros_srv_silent_request"] = btn.ros_srv_silent_request;
+					btn_data["ros_srv_silent_reply"] = btn.ros_srv_silent_reply;
 					break;
 				case "ctrl-enabled":
 					switch (btn.set_ctrl_state) {
@@ -1653,20 +1647,11 @@ export class InputManager {
 					switch (btn_live.action) {
 						case "ros-srv":
 							if (btn_live.ros_srv_id != btn_saved.ros_srv_id) return false;
-							if (
-								JSON.stringify(btn_live.ros_srv_val) !=
-								JSON.stringify(btn_saved.ros_srv_val)
-							)
+							if (JSON.stringify(btn_live.ros_srv_val) != JSON.stringify(btn_saved.ros_srv_val))
 								return false;
-							if (
-								btn_live.ros_srv_silent_req !=
-								btn_saved.ros_srv_silent_req
-							)
+							if (btn_live.ros_srv_silent_request != btn_saved.ros_srv_silent_request)
 								return false;
-							if (
-								btn_live.ros_srv_silent_res !=
-								btn_saved.ros_srv_silent_res
-							)
+							if (btn_live.ros_srv_silent_reply != btn_saved.ros_srv_silent_reply)
 								return false;
 							break;
 						case "ctrl-enabled":
@@ -2533,9 +2518,7 @@ export class InputManager {
 
 	makeBtnTriggerSel(btn, allows_repeat) {
 		// modifier selection
-		let trigger_el = $(
-			'<div class="config-row"><span class="label">Trigger:</span></div>',
-		);
+		let trigger_el = $('<div class="config-row"><span class="label">Trigger:</span></div>');
 
 		let opts = {
 			gamepad: {
@@ -2558,15 +2541,7 @@ export class InputManager {
 		vals.forEach((val) => {
 			let val_int = parseInt(val);
 			if (val_int === 2 && btn.driver_btn) return;
-			trigger_opts.push(
-				'<option value="' +
-					val +
-					'"' +
-					(btn.trigger === val_int ? " selected" : "") +
-					">" +
-					c_opts[val] +
-					"</option>",
-			);
+			trigger_opts.push('<option value="' + val + '"' + (btn.trigger === val_int ? " selected" : "") + ">" + c_opts[val] + "</option>");
 		});
 
 		let trigger_inp = $(
@@ -2674,10 +2649,11 @@ export class InputManager {
 
 			let node_opts = [];
 			service_ids.forEach((id_srv) => {
-				let msg_type = node.services[id_srv].msg_type;
+				let msg_type = this.client.discovered_services[id_srv].msg_type;
+				let msg_type_request = this.client.discovered_services[id_srv].msg_type_request;
 				// if (that.ui.ignored_service_types.includes(msg_type))
 				//     return; // not rendering ignored
-				node_opts.push('<option value="' + id_srv + ":" + msg_type + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
+				node_opts.push('<option value="' + id_srv + ':' + msg_type + ':' + msg_type_request + '"' + (btn.ros_srv_id == id_srv ? " selected" : "") + ">" + id_srv + "</option>");
 			});
 
 			if (node_opts.length) {
@@ -2696,10 +2672,13 @@ export class InputManager {
 			if (btn.ros_srv_msg_type) {
 				let srv_val_btn = $('<button class="srv-val" title="Set service call data">{}</button>');
 				srv_val_btn.click(() => {
-					that.ui.service_input_dialog.showInputManagerDialog(
+					that.ui.service_input_dialog.showDialogInputManager(
 						btn.ros_srv_id,
 						btn.ros_srv_msg_type,
+						btn.ros_srv_msg_type_request,
 						btn.ros_srv_val,
+						btn.ros_srv_silent_request,
+						btn.ros_srv_silent_reply,
 						(srv_payload) => {
 							console.warn("Setting srv payload for " + btn.ros_srv_id + ":", srv_payload);
 							btn.ros_srv_val = srv_payload;
@@ -2712,23 +2691,23 @@ export class InputManager {
 				});
 
 				let silent_req_el = $('<div class="config-row"><label for="' + btn.i + '_silent_req_cb" class="small-settings-cb-label">Silent request</label></div>');
-				let silent_req_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_req ? " checked" : "") + ' id="' + btn.i + '_silent_req_cb" class="small-settings-cb"/>');
+				let silent_req_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_request ? " checked" : "") + ' id="' + btn.i + '_silent_req_cb" class="small-settings-cb"/>');
 				silent_req_inp.prependTo(silent_req_el);
 				silent_req_inp.change((ev) => {
 					let val = $(ev.target).prop("checked") ? true : false;
-					btn.ros_srv_silent_req = val;
+					btn.ros_srv_silent_request = val;
 					that.checkControllerProfileSaved(
 						that.edited_controller,
 						that.current_profile,
 					);
 				});
 
-				let silent_res_el = $('<div class="config-row"><label for="' + btn.i + '_silent_res_cb" class="small-settings-cb-label">Silent response</label></div>');
-				let silent_res_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_res ? " checked" : "") + ' id="' + btn.i + '_silent_res_cb" class="small-settings-cb"/>');
+				let silent_res_el = $('<div class="config-row"><label for="' + btn.i + '_silent_res_cb" class="small-settings-cb-label">Silent reply</label></div>');
+				let silent_res_inp = $('<input type="checkbox" ' + (btn.ros_srv_silent_reply ? " checked" : "") + ' id="' + btn.i + '_silent_res_cb" class="small-settings-cb"/>');
 				silent_res_inp.prependTo(silent_res_el);
 				silent_res_inp.change((ev) => {
 					let val = $(ev.target).prop("checked") ? true : false;
-					btn.ros_srv_silent_res = val;
+					btn.ros_srv_silent_reply = val;
 					that.checkControllerProfileSaved(
 						that.edited_controller,
 						that.current_profile,
@@ -2750,9 +2729,13 @@ export class InputManager {
 				let vals = val.split(":");
 				btn.ros_srv_id = vals[0];
 				btn.ros_srv_msg_type = vals[1];
+				btn.ros_srv_msg_type_request = vals[2];
+				btn.ros_srv_is_action = that.client.discovered_services[btn.ros_srv_id] && that.client.discovered_services[btn.ros_srv_id].is_action;
 			} else {
 				btn.ros_srv_id = null;
 				btn.ros_srv_msg_type = null;
+				btn.ros_srv_msg_type_request = null;
+				btn.ros_srv_is_action = null;
 			}
 			btn.ros_srv_val = null; // remove val
 			console.log("btn set to ros srv " + btn.ros_srv_id + " msg type=" + btn.ros_srv_msg_type);
@@ -3180,13 +3163,7 @@ export class InputManager {
 					let wrap_el = $("<li></li>");
 					let label = btn.src_label.trim();
 					if (!label) label = "&nbsp;";
-					let btn_el = $(
-						'<span class="btn ' +
-							(btn.touch_ui_style ? btn.touch_ui_style : "") +
-							'" tabindex="-1">' +
-							label +
-							"</span>",
-					);
+					let btn_el = $('<span class="btn fancy-worker ' + (btn.touch_ui_style ? btn.touch_ui_style : "") + '" tabindex="-1">' + label + "</span>");
 					let cont = null;
 
 					if ((btn.driver_axis || btn.driver_btn) && !c.enabled)
@@ -3280,21 +3257,11 @@ export class InputManager {
 
 		setTimeout(() => {
 			// ui placement
-			let placement_el = $(
-				'<div class="config-row"><span class="label">Placement:</span></div>',
-			);
+			let placement_el = $('<div class="config-row"><span class="label">Placement:</span></div>');
 			let placement_opts = [];
 			placement_opts.push('<option value="">None</option>');
-			placement_opts.push(
-				'<option value="1"' +
-					(btn.touch_ui_placement === 1 ? " selected" : "") +
-					">Top menu</option>",
-			);
-			placement_opts.push(
-				'<option value="2"' +
-					(btn.touch_ui_placement === 2 ? " selected" : "") +
-					">Bottom overlay</option>",
-			);
+			placement_opts.push('<option value="1"' + (btn.touch_ui_placement === 1 ? " selected" : "") + ">Top menu</option>");
+			placement_opts.push('<option value="2"' + (btn.touch_ui_placement === 2 ? " selected" : "") + ">Bottom overlay</option>");
 			let placement_inp = $("<select>" + placement_opts.join("") + "</select>");
 			placement_inp.appendTo(placement_el);
 
@@ -3303,11 +3270,7 @@ export class InputManager {
 				// set max sort index
 				let max_sort_index = -1;
 				for (let i = 0; i < driver.buttons.length; i++) {
-					if (
-						driver.buttons[i].touch_ui_placement == placement &&
-						btn != driver.buttons[i] &&
-						driver.buttons[i].touch_ui_placement > max_sort_index
-					)
+					if (driver.buttons[i].touch_ui_placement == placement && btn != driver.buttons[i] && driver.buttons[i].touch_ui_placement > max_sort_index)
 						max_sort_index = driver.buttons[i].touch_ui_placement;
 				}
 				btn.touch_ui_placement = placement;
@@ -3320,12 +3283,8 @@ export class InputManager {
 			});
 			btn.config_details_el.append(placement_el);
 
-			let label_el = $(
-				'<div class="config-row"><span class="label">Label:</span></div>',
-			);
-			let label_inp = $(
-				'<input type="text" value="' + btn.src_label + '" class="half"/>',
-			);
+			let label_el = $('<div class="config-row"><span class="label">Label:</span></div>');
+			let label_inp = $('<input type="text" value="' + btn.src_label + '" class="half"/>');
 			label_inp.appendTo(label_el);
 			label_inp.change((ev) => {
 				btn.src_label = $(ev.target).val();
@@ -3340,9 +3299,7 @@ export class InputManager {
 			btn.config_details_el.append(label_el);
 
 			// color placement
-			let color_el = $(
-				'<div class="config-row"><span class="label">Style:</span></div>',
-			);
+			let color_el = $('<div class="config-row"><span class="label">Style:</span></div>');
 			let color_opts = [];
 			color_opts.push('<option value="">Default</option>');
 			let styles = {
@@ -3353,17 +3310,11 @@ export class InputManager {
 				orange: "Orange",
 				magenta: "Magenta",
 				cyan: "Cyan",
+				black: "Black",
+				white: "White",
 			};
 			Object.keys(styles).forEach((style) => {
-				color_opts.push(
-					'<option value="' +
-						style +
-						'" ' +
-						(btn.touch_ui_style == style ? "selected" : "") +
-						">" +
-						styles[style] +
-						"</option>",
-				);
+				color_opts.push('<option value="' + style + '" ' + (btn.touch_ui_style == style ? "selected" : "") + ">" + styles[style] + "</option>");
 			});
 			let color_inp = $("<select>" + color_opts.join("") + "</select>");
 			color_inp.appendTo(color_el);
@@ -3512,8 +3463,10 @@ export class InputManager {
 		btn.row_el = row_el;
 
 		// raw val
-		let raw_val_el = $('<span class="btn-val" title="Button input"></span>');
+		let raw_val_el = $('<span class="btn-val fancy-worker" title="Button input"></span>');
 		raw_val_el.appendTo(row_el);
+		if (btn.service_working)
+			raw_val_el.addClass('working');
 
 		let close_listening = () => {
 			btn.listening = false;
@@ -3584,18 +3537,11 @@ export class InputManager {
 		// btn assignment selection
 		let opts = [
 			'<option value="">Not in use</option>',
-			'<option value="ros-srv"' +
-				(btn.action == "ros-srv" ? " selected" : "") +
-				">Call ROS Service</option>",
-			'<option value="ctrl-enabled"' +
-				(btn.action == "ctrl-enabled" ? " selected" : "") +
-				">Set Controller Enabled</option>",
-			'<option value="input-profile"' +
-				(btn.action == "input-profile" ? " selected" : "") +
-				">Set Input Profile</option>",
-			'<option value="ui-profile"' +
-				(btn.action == "ui-profile" ? " selected" : "") +
-				">Set UI Layout</option>",
+			'<option value="ros-srv"' + (btn.action == "ros-srv" ? " selected" : "") + ">Call ROS Service</option>",
+			'<option value="ros-srv-btn"' + (btn.action == "ros-srv-btn" ? " selected" : "") + ">Call ROS Service (Use Button)</option>",
+			'<option value="ctrl-enabled"' + (btn.action == "ctrl-enabled" ? " selected" : "") + ">Set Controller Enabled</option>",
+			'<option value="input-profile"' + (btn.action == "input-profile" ? " selected" : "") + ">Set Input Profile</option>",
+			'<option value="ui-profile"' + (btn.action == "ui-profile" ? " selected" : "") + ">Set UI Layout</option>",
 		];
 
 		// let dri = profile.driver_instance;
@@ -3841,38 +3787,115 @@ export class InputManager {
 					console.warn("Skipping service " + btn.ros_srv_id + " call (previous call unfinished)");
 					local_error = true;
 				}
+
+				// show activity / err on touch button or input button name
+				let get_current_btn_el = () => {
+					return btn.touch_btn_el ? btn.touch_btn_el : btn.raw_val_el;
+				}
+				let btn_el = get_current_btn_el();
+
 				if (local_error) {
-					if (btn.touch_btn_el) {
-						// do the error btn wobble
-						btn.touch_btn_el.addClass("btn_err");
-						setTimeout(() => {
-							btn.touch_btn_el.removeClass("btn_err");
-						}, 600);
-					}
+					
+					// do the error btn wobble
+					btn_el.addClass("btn_err");
+					setTimeout(() => {
+						btn_el.removeClass("btn_err");
+					}, WOBBLE_DURATION);
 					return;
 				}
 
-				if (btn.touch_btn_el) btn.touch_btn_el.addClass("working");
+				if (!btn.ros_srv_is_action) { // service
 
-				btn.service_blocked = true;
-				this.client.serviceCall(
-					btn.ros_srv_id,
-					btn.ros_srv_val ? btn.ros_srv_val : {},
-					btn.ros_srv_silent_req,
-					this.client.default_service_timeout_sec,
-					(reply) => {
-						btn.service_blocked = false;
-						if (reply !== undefined)
-							// undefined means service call was cancelled here (by a callback)
-							that.ui.serviceReplyNotification(
-								btn.touch_btn_el,
-								btn.ros_srv_id,
-								!btn.ros_srv_silent_res,
-								reply,
-							);
-					},
-				);
+					btn_el.addClass("working");
+					btn.service_working = true;
 
+					btn.service_blocked = true;
+					this.client.serviceCall(
+						btn.ros_srv_id,
+						btn.ros_srv_val ? btn.ros_srv_val : {},
+						btn.ros_srv_silent_request,
+						this.client.default_service_timeout_sec,
+						(reply) => {
+							btn.service_blocked = false;
+							btn.service_working = false;
+							if (reply !== undefined)
+								// undefined means service call was cancelled here (by a callback)
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								that.ui.serviceReplyNotification(
+									btn_el,
+									btn.ros_srv_id,
+									btn.ros_srv_silent_reply,
+									reply,
+								);
+						},
+						() => { // connection lost
+							btn.service_blocked = false;
+							btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+							btn_el.removeClass("working");
+							btn.service_working = false;
+						}
+					);
+
+				} else { // action
+
+					btn.service_blocked = true;
+
+					if (!btn.action_goal_uuid) { // set goal
+
+						btn_el.addClass("working");
+						btn.service_working = true;
+
+						let goal_accepted = false;
+						this.client.actionCall(btn.ros_srv_id, btn.ros_srv_val ? btn.ros_srv_val : {}, btn.ros_srv_silent_request, this.client.default_service_timeout_sec,
+							(action_goal_reply) => { // goal accepted / refused
+								btn.service_blocked = false;
+								if (action_goal_reply) {
+									if (action_goal_reply.goal_uuid)
+										btn.action_goal_uuid = action_goal_reply.goal_uuid;
+									if (action_goal_reply.accepted === false)
+										btn.service_working = false;
+								}
+								goal_accepted = action_goal_reply && action_goal_reply.accepted;
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								that.ui.serviceReplyNotification(btn_el, btn.ros_srv_id, btn.ros_srv_silent_reply, action_goal_reply);
+							},
+							(action_result_reply) => { // result / cancel
+								if (goal_accepted) {
+									btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+									that.ui.actionResultReplyNotification(btn_el, btn.ros_srv_id, btn.action_goal_uuid, btn.ros_srv_silent_reply, action_result_reply);
+								}
+								btn.service_blocked = false;
+								btn.service_working = false;
+								btn.action_goal_uuid = null;
+							},
+							() => { // connection lost
+								btn.service_blocked = false;
+								btn.service_working = false;
+								btn.action_goal_uuid = null;
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								btn_el.removeClass("working");
+							}
+						);
+
+					} else { // cancel goal
+
+						btn_el.removeClass("working");
+						btn.service_working = false;
+
+						this.client.cancelActionCall(btn.ros_srv_id, btn.action_goal_uuid,
+							(id_cancel_service, cancel_service_reply) => {
+								btn_el = get_current_btn_el(); // refresh as ui may have re-rendered
+								that.ui.serviceReplyNotification(
+									btn_el,
+									id_cancel_service,
+									true, // silent
+									cancel_service_reply);
+							}
+						);
+
+					}
+				}
+				
 				break;
 			case "ctrl-enabled":
 				let state = false;
