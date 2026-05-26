@@ -1061,13 +1061,13 @@ export class BrowserClient extends EventTarget {
 		this.heartbeat_timer = null;
 	}
 
-	getBridgeFileUrl(url) {
-		let res = this.bridge_files_url
-			.replace("%ROBOT_ID%", this.id_robot)
-			.replace("%SECRET%", this.bridge_files_secret)
-			.replace("%URL%", encodeURIComponent(url));
-		return res;
-	}
+	// getBridgeFileUrl(url) {
+	// 	let res = this.bridge_files_url
+	// 		.replace("%ROBOT_ID%", this.id_robot)
+	// 		.replace("%SECRET%", this.bridge_files_secret)
+	// 		.replace("%URL%", encodeURIComponent(url));
+	// 	return res;
+	// }
 
 	_loadExternalScript(url, class_to_load) {
 		let that = this;
@@ -1994,5 +1994,40 @@ export class BrowserClient extends EventTarget {
 			}
 		}
 		return null;
+	}
+
+	requestRobotFileDownloadURL(path, cb, cb_err) {
+		let that = this;
+		this.socket.emit(
+			"robot-file-url",
+			{
+				id_robot: this.id_robot,
+				path: path
+			},
+			(res) => {
+				if ((!res || res['err'] || !res['url']) && res['err'] != -1) { // err=-1 => ignore repeated errors in replies for the same request
+					let detail = null;
+					if (res && res['msg'])
+						detail = "<pre>" + JSON.stringify(res['msg'], null, 2) + "</pre>";
+					if (res && res['msgs'])
+						detail = "<pre>" + JSON.stringify(res['msgs'], null, 2) + "</pre>";
+					if (!res)
+						detail = "Empty result";
+					that.ui.showNotification(
+						"Error requesting robot file '"+path+"'",
+						'error',
+						detail,
+					);
+					console.error('Error requesting robot file url for "'+path+'": ', res);
+				}
+				if (res.url) {
+					if (cb)
+						cb(res.url);
+				} else {
+					if (cb_err)
+						cb_err()
+				}
+			},
+		);
 	}
 }

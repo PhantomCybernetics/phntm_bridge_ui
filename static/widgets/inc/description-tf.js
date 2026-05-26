@@ -108,22 +108,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 
 		let that = this;
 
-		function LoadingManagerURLMofifier(url) {
-
-			if (url.indexOf("http:/") === 0 || url.indexOf("https:/") === 0)
-				return url;
-
-			if (url.indexOf("package:/") !== 0 && url.indexOf("file:/") !== 0)
-				return url;
-
-			let url_fw = panel.ui.client.getBridgeFileUrl(url);
-			console.log(">> Loader requesting " + url + " > " + url_fw);
-
-			return url_fw;
-		}
-
 		this.loading_manager = new THREE.LoadingManager();
-		this.loading_manager.setURLModifier(LoadingManagerURLMofifier);
 		this.tex_loader = new THREE.TextureLoader(this.loading_manager);
 		this.urdf_loader = new URDFLoader(this.loading_manager);
 		this.urdf_loader.parseCollision = true;
@@ -137,48 +122,67 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.link_markers = [];
 
 		this.missing_transform_error_logged = {};
+		this.robot_files_loading = {};
 
 		this.urdf_loader.loadMeshCb = (path, manager, done_cb) => {
 			console.log("Loading mesh from " + path);
 
-			if (/\.stl$/i.test(path)) {
-				const loader = new STLLoader(manager);
-				loader.load(path, (geom) => {
-					let stl_base_mat = new THREE.MeshStandardMaterial({
-						color: 0xffffff,
-						side: THREE.DoubleSide,
-						depthWrite: true,
+			// if (path != 'package://phntm_gazebo/meshes/camera.dae')
+			// 	return;
+
+			that.startRobotFileWaiting(path);
+			that.ui.client.requestRobotFileDownloadURL(path, (url) => {
+				console.log('Got robot file url: ', url);
+
+				that.updateRobotFileWaiting(path, url);
+				if (/\.stl$/i.test(path)) {
+					const loader = new STLLoader(manager);
+					loader.load(url, (geom) => {
+						let stl_base_mat = new THREE.MeshStandardMaterial({
+							color: 0xffffff,
+							side: THREE.DoubleSide,
+							depthWrite: true,
+						});
+						let clean_model = new THREE.Mesh(geom, stl_base_mat);
+						that.cleanModelTree(clean_model, path);
+						done_cb(clean_model); // adds loaded to the tree
+						that.fixModelTreeMaterials(clean_model, path); // call when the loaded obj has a parent (might be in collider / visual)
+						that.resolveRobotFileWaiting(path);
 					});
-					let clean_model = new THREE.Mesh(geom, stl_base_mat);
-					that.cleanModelTree(clean_model, path);
-					done_cb(clean_model); // adds loaded to the tree
-					that.fixModelTreeMaterials(clean_model, path); // call when the loaded obj has a parent (might be in collider / visual)
-				});
-			} else if (/\.dae$/i.test(path)) {
-				const loader = new ColladaLoader(manager);
-				loader.load(path, (dae) => {
-					if (!dae || !dae.scene) {
-						that.panel.ui.showNotification("Error loading resource, DAE scene not found", "error", url);
-						return;
-					}
-					let clean_model = dae.scene;
-					that.cleanModelTree(clean_model, path);
-					done_cb(clean_model);
-					that.fixModelTreeMaterials(clean_model, path);
-				});
-			} else {
-				console.error(`Could not load model at ${path}.\nNo loader available`);
-			}
-			
+				} else if (/\.dae$/i.test(path)) {
+					const loader = new ColladaLoader(manager);
+					loader.load(url, (dae) => {
+						if (!dae || !dae.scene) {
+							that.panel.ui.showNotification("Error loading resource, DAE scene not found", "error", url);
+							return;
+						}
+						let clean_model = dae.scene;
+						that.cleanModelTree(clean_model, path);
+						done_cb(clean_model);
+						that.fixModelTreeMaterials(clean_model, path);
+						that.resolveRobotFileWaiting(path);
+					});
+				} else {
+					console.error(`Could not load model at ${path}.\nNo loader available`);
+					that.resolveRobotFileWaiting(path);
+				}
+
+			}, () => { that.resolveRobotFileWaiting(path); });
 		};
 		this.loading_manager.onLoad = () => {
 			console.info("Robot URDF loader done loading", that.robot_model);
 			that.renderDirty();
 		};
 		this.loading_manager.onError = (url) => {
+			if (!DescriptionTFWidget.loading_errors_logged)
+				DescriptionTFWidget.loading_errors_logged = {};
+			if (DescriptionTFWidget.loading_errors_logged[url])
+				return;
+			DescriptionTFWidget.loading_errors_logged[url] = true;
 			console.error("Error loading resource for: " + url);
-			that.panel.ui.showNotification("Error loading resource", "error", url);
+			that.panel.ui.showNotification("Error loading '"+url+"'", "error", url);
 			that.renderDirty();
+			that.resolveRobotFileWaiting(null, url);
 		};
 
 		this.widget_el.data("gs-no-move", "yes");
@@ -505,6 +509,45 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			this.rendering = true;
 			this.renderDirty();
 			requestAnimationFrame((t) => this.renderingLoop(t));
+		}
+	}
+
+
+	startRobotFileWaiting(path) {
+		this.robot_files_loading[path] = true;
+		this.updateLoadingIcon();
+	}
+
+	updateRobotFileWaiting(path, url) {
+		this.robot_files_loading[path] = url;
+		this.updateLoadingIcon();
+	}
+
+	resolveRobotFileWaiting(path, url) {
+		if (path)
+			delete this.robot_files_loading[path];
+		else if (url) {
+			let paths = Object.keys(this.robot_files_loading);
+			paths.forEach((path)=>{
+				if (this.robot_files_loading[path] == url) {
+					delete this.robot_files_loading[path];
+					return;
+				}
+			});
+		}
+		this.updateLoadingIcon();
+	}
+
+	clearRobotFilesWaiting() {
+		this.robot_files_loading = {};
+		this.updateLoadingIcon();
+	}
+
+	updateLoadingIcon() {
+		if (Object.keys(this.robot_files_loading).length) {
+			$(this.panel.grid_widget).addClass("loading");
+		} else {
+			$(this.panel.grid_widget).removeClass("loading");
 		}
 	}
 
@@ -1361,6 +1404,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		console.warn("Removing robot model, clearing ros_space");
 		// this.ros_space.clear(); // this.ros_space.remove(this.robot);
 		// this.markRosOrigin(); //removed, put back
+		DescriptionTFWidget.loading_errors_logged = {};
 		this.robot_model.removeFromParent(); // not changing or moving this.robot
 		this.robot_model = null;
 		this.last_processed_desc = null;
@@ -1368,6 +1412,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		this.joint_markers = [];
 		this.link_markers = [];
 		this.tf_logged = false;
+		this.clearRobotFilesWaiting();
 		while (this.labelRenderer.domElement.children.length > 0) {
 			this.labelRenderer.domElement.removeChild(
 				this.labelRenderer.domElement.children[0],

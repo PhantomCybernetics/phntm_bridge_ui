@@ -59,6 +59,8 @@ export class SpaceMouse {
     }
 
     setWidget(widget) {
+        if (this.widget === widget)
+            return;
         console.log('3Dconnexion setting widget', widget);
         this.widget = widget;
     }
@@ -319,6 +321,8 @@ export class SpaceMouse {
     }
 
     getPerspective() {
+        if (!this.widget || !this.widget.camera)
+            return false;
         return !this.widget.camera.isOrthographicCamera;
     }
 
@@ -371,6 +375,8 @@ export class SpaceMouse {
     // getViewExtents is called when the navlib requests the bounding box
     // of the view. This occurs in orthographic view projections
     getViewExtents() {
+        if (!this.widget || !this.widget.camera)
+            return null;
         return [ this.widget.camera.left, this.widget.camera.bottom, -this.widget.camera.far,
                  this.widget.camera.right, this.widget.camera.top, -this.widget.camera.near ];
     }
@@ -411,7 +417,7 @@ export class SpaceMouse {
 
     // getModelExtents is called when the navlib requests the bounding box of the model
     getModelExtents() {
-        if (!this.widget.robot_model) {
+        if (!this.widget || !this.widget.robot_model) {
             return [0, 0, 0, 0, 0, 0]; // return dummy bounds
         }
         const layers_selection = new THREE.Layers();
@@ -429,6 +435,8 @@ export class SpaceMouse {
 
     getSelectionExtents() {
         const boundingBox = new THREE.Box3();
+        if (!this.widget || !this.widget.camera_selection)
+            return null;
         boundingBox.setFromObject(this.widget.camera_selection);
         return [ boundingBox.min.x, boundingBox.min.y, boundingBox.min.z,
                  boundingBox.max.x, boundingBox.max.y, boundingBox.max.z ];
@@ -465,6 +473,8 @@ export class SpaceMouse {
     // getViewMatrix is called when the navlib requests the view matrix
     // THREE.js matrices are column major (same as openGL)
     getViewMatrix() {
+        if (!this.widget || !this.widget.camera)
+            return null;
         return this.widget.camera.matrixWorld.toArray();
     }
 

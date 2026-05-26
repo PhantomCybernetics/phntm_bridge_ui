@@ -108,7 +108,8 @@ export class Panel {
 
 		console.log("Adding widget " + id_source + " w grid opts: ", grid_widget_opts);
 		this.grid_widget = grid.addWidget(grid_widget_opts);
-	
+		$(this.grid_widget).addClass("loading");
+
 		if (id_source.indexOf('/') === 0) // topic widget
 			this.ui.client.onTopicData(id_source, this.onDataContextWrapper);
 
@@ -214,6 +215,8 @@ export class Panel {
 		this.menu_content_el.on('touchmove', {passive: false}, (ev) => {
 		    ev.stopPropagation();
 		});
+
+
 	}
 
 	// init with message type when it's known
@@ -223,7 +226,7 @@ export class Panel {
 
 		if (!this.pause_el) {
 			// pause panel updates
-			this.pause_el = $('<span id="pause_panel_' + this.n + '" class="pause-panel-button paused" title="Waiting for data..."></span>');
+			this.pause_el = $('<span id="pause_panel_' + this.n + '" class="pause-panel-button" title="Waiting for data..."></span>');
 			this.pause_el.insertBefore("#monitor_menu_" + this.n);
 		}
 
@@ -359,6 +362,12 @@ export class Panel {
 				e.cancelBubble = true;
 				return false;
 			});
+
+			if (this.display_widget && this.display_widget.updateLoadingIcon) {
+				this.display_widget.updateLoadingIcon();
+			} else {
+				$(this.grid_widget).removeClass("loading");
+			}
 
 		} else if (!this.initiated) {
 			this.updateMenu(); //draw menu placeholder asap without the type

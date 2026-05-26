@@ -64,6 +64,7 @@ body::after {
 		url('./graph/icon-lock.svg')
 		url("./graph/icon-lock-horizon.svg")
 		url("./graph/icon-lock-horizon-on.svg")
+		url("./graph/panel-loading.svg")
 		;
 }
 
@@ -2840,13 +2841,30 @@ BODY.desktop-ui .pause-panel-button.paused:hover {
 	width: 20px;
 	height: 20px;
 	left: 0px;
-	top: 2px;
+	top: 4px;
 	z-index: 2;
 	background-image: url("./graph/icon-play-pause.png");
 	background-repeat: no-repeat;
 	background-position: -40px 0px;
 	background-size: 60px;
 }
+
+.grid-stack-item.loading .grid_panel .pause-panel-button {
+	background-image: url("./graph/panel-loading.svg");
+	background-size: 20px;
+    background-position: 0px 0px;
+	top: 2px;
+}
+
+BODY.touch-ui .grid-stack-item.loading .grid_panel .pause-panel-button {
+	left: 1px;
+}
+
+.grid-stack-item.loading.maximized .pause-panel-button {
+	top: 66px;
+    left: 14px !important;
+}
+
 
 BODY.desktop-ui .pause-panel-button:hover,
 BODY.desktop-ui .pause-panel-button.paused {

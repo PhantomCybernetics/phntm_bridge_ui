@@ -116,24 +116,35 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
         console.warn("ModelLoader: Loading model from path: ", loadPath);
         let that = this;		
         if (/\.stl$/i.test(loadPath)) {
-            const loader = new STLLoader(this.world_model.loading_manager);
-            loader.load(loadPath, (geom) => {
-                let stl_mat = that.getMaterialForColor(WorldModel3DWidget_Detections3D.DEFAULT_DETECTION_COLOR); // stl has no materials
-                let mesh = new THREE.Mesh(geom, stl_mat);
-				mesh.scale.copy(scale);
-                //that.world_model.cleanModel(clean_model, true);
-                let src_model = new THREE.Object3D();
-                src_model.add(mesh);
-                done_cb(src_model);
-            });
+			that.world_model.startRobotFileWaiting(loadPath);
+			that.ui.client.requestRobotFileDownloadURL(loadPath, (url) => {
+				const loader = new STLLoader(this.world_model.loading_manager);
+				that.world_model.updateRobotFileWaiting(loadPath, url);
+				loader.load(url, (geom) => {
+					let stl_mat = that.getMaterialForColor(WorldModel3DWidget_Detections3D.DEFAULT_DETECTION_COLOR); // stl has no materials
+					let mesh = new THREE.Mesh(geom, stl_mat);
+					mesh.scale.copy(scale);
+					//that.world_model.cleanModel(clean_model, true);
+					let src_model = new THREE.Object3D();
+					src_model.add(mesh);
+					that.world_model.resolveRobotFileWaiting(loadPath);
+					done_cb(src_model);
+				});
+			});
         } else if (/\.dae$/i.test(loadPath)) {
-            const loader = new ColladaLoader(this.world_model.loading_manager);
-            loader.load(loadPath, (dae) => {
-                let src_model = dae.scene; // has materials
-				src_model.scale.copy(scale); // scale from config
-                //that.world_model.cleanModel(clean_model, true, false, force_material); // dae might have materials
-                done_cb(src_model);
-            });
+			that.world_model.startRobotFileWaiting(loadPath);
+			that.ui.client.requestRobotFileDownloadURL(loadPath, (url) => {
+				const loader = new ColladaLoader(this.world_model.loading_manager);
+				that.world_model.updateRobotFileWaiting(loadPath, url);
+				loader.load(url, (dae) => {
+					console.log('ColladaLoader loaded '+loadPath, dae);
+					let src_model = dae.scene; // has materials
+					src_model.scale.copy(scale); // scale from config
+					//that.world_model.cleanModel(clean_model, true, false, force_material); // dae might have materials
+					that.world_model.resolveRobotFileWaiting(loadPath);
+					done_cb(src_model);
+				});
+			});
         } else if (loadPath.toLowerCase() == 'cylinder') {
             let mat = that.getMaterialForColor(WorldModel3DWidget_Detections3D.DEFAULT_DETECTION_COLOR);
             let primitive = new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1,32), mat);
