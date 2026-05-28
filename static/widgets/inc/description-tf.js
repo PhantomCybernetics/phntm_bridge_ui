@@ -2016,15 +2016,11 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		} else if (this.camera_pose_initialized) {
 
 			let space_mouse_animating = false;
-			if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this)) {
-				this.ui.space_mouse.proxy.update3dcontroller({
-           			'frame': { 'time': now }
-				});
-				space_mouse_animating = this.ui.space_mouse.animating;
-			}
+			if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this))
+				space_mouse_animating = this.ui.space_mouse.update(now);
 			if (!space_mouse_animating)
 				this.controls.update();
-
+			
 		}
 
 		// set model transforms

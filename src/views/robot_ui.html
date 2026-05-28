@@ -234,7 +234,7 @@
 	import { WorldModel3DPluginBase } from 'widgets/world-model-plugin-base';
 	import { VideoPluginBase } from 'widgets/video-plugin-base';
 
-	import { isSubclassOf, errorToHTMLString } from 'lib';
+	import { isSubclassOf, errorToHTMLString, checkClientVersion, fetchGitHubCommitsSorted, checkClientVersionLatest } from 'lib';
 
 	// add an element into the DOM with known ID that custom CSS can refer to as an image preloader 
 	let custom_css_urls = [];
@@ -362,6 +362,39 @@
 			console.error("Robot returned error: " + err, msg);
 		});
 
+		const min_supported_client_version = '<%= min_supported_client_version %>';
+		let client_version_checked = false;
+		robot.on('update', () => {
+			if (client_version_checked || !robot.client_version_git_hash)
+				return;
+			
+			fetchGitHubCommitsSorted('PhantomCybernetics', 'phntm_bridge_client')
+			.then(sorted_commits => {
+
+				console.log('sorted_commits', sorted_commits);
+
+				if (min_supported_client_version && !checkClientVersion(min_supported_client_version, robot.client_version_git_hash, sorted_commits)) {
+					console.error('The Bridge Client is older than the minimal supported version, please upgrade!');
+					panel_ui.showPageMessage(
+						'Please <a href="https://github.com/PhantomCybernetics/phntm_bridge_client#upgrading" target="_blank">upgrade</a> your Bridge Client, '
+						+ ' the installed version is no longer fully supported',
+						'error'
+					);
+				} else if (!checkClientVersionLatest(robot.client_version_git_hash, sorted_commits)) { // only suggest upgrade (remembers close)
+					panel_ui.showPageMessage(
+						'Newer version of Phantom Bridge Client is available, <a href="https://github.com/PhantomCybernetics/phntm_bridge_client#upgrading" target="_blank">consider upgrading</a>',
+						null,
+						"version-warning-closed:" + robot.id_robot + ":" + sorted_commits[0].hash // remember close
+					);
+				}
+
+			}).catch(err => {
+				console.error("Error fetching Bridge Client versions", err);
+			});
+
+			client_version_checked = true; // only once
+		});
+
 		//connects socket.io, then runs handshake with the robot
 		robot.connect();
 
@@ -372,10 +405,6 @@
 				errorToHTMLString(module_err[1])
 			);
 		});
-
-		// if (navigator.userAgent.toLowerCase().includes("firefox")) {
-		// 	panel_ui.showPageError('Firefox has serious WebRTC issues, your milage may vary. <a href="https://github.com/PhantomCybernetics/bridge_ui/issues/1">More here</a>');
-		// }
 	}
 
 	// load all custom modules

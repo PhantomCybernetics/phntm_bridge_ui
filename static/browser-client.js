@@ -1144,11 +1144,8 @@ export class BrowserClient extends EventTarget {
 		}
 
 		this.ros_distro = robot_data["ros_distro"];
-		this.client_version = robot_data["git_tag"]
-			? robot_data["git_tag"]
-			: robot_data["git_sha"]
-				? robot_data["git_sha"].slice(0, 7)
-				: null;
+		this.client_version_git_hash = robot_data["git_sha"] ? robot_data["git_sha"].slice(0, 7) : null;
+		this.client_version = robot_data["git_tag"] ? robot_data["git_tag"] : this.client_version_git_hash;
 
 		if (robot_data["wait"]) {
 			this.is_waiting = true;

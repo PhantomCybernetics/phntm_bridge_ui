@@ -887,11 +887,29 @@ export class PanelUI {
 		}
 	}
 
-	showPageError(msg_html) {
+	showPageMessage(msg_html, message_class, save_closed_state_id) {
+
+		if (save_closed_state_id && localStorage.getItem(save_closed_state_id)) {
+			return; // was closed
+		}
+
 		// console.log('Showing error', msg, error);
-		$("#page_message").html(msg_html).addClass("error");
+		$("#page_message").html('<div class="message_content">'
+									+ msg_html +
+								'</div>')
+		if (!message_class)
+			message_class = 'default';
+		$("#page_message").addClass(message_class);
+		let close_btn = $('<button class="close"></button>');
+		$("#page_message").append(close_btn);
+		close_btn.on('click', (ev) => {
+			$("#page_message").css('display', 'none');
+			$("BODY").removeClass("has-page-message");
+			if (save_closed_state_id) {
+				localStorage.setItem(save_closed_state_id, 'true'); // remember
+			}
+		});
 		$("BODY").addClass("has-page-message");
-		this.showing_page_message = true;
 	}
 
 	setBurgerMenuState(open, animate = true) {
@@ -3239,8 +3257,11 @@ export class PanelUI {
 			if (isTouchDevice() && isSafari()) {
 				h = $(window).height(); // TODO: still not very good
 			}
-			if (this.showing_page_message) {
+			if ($('BODY').hasClass('has-page-message')) {
 				h -= 50;
+				if ($('BODY').hasClass('portrait')) {
+					h -= 20;
+				}
 			}
 			$("#menubar_items").css({
 				height: h - 60 + "px", // bg fills screenheight

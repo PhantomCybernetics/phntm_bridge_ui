@@ -39,6 +39,7 @@ const fullConfigSchema = z.object({
 	appId: z.string(),
 	appKey: z.string(),
 	analyticsCode: z.array(z.string()).default([]),
+	minSupportedClientVersion: z.string().default(''),
 });
 
 export async function getConfig() {

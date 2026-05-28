@@ -167,7 +167,8 @@ export function createWebUIServerExpressApp(
                     	custom_js: robot_custom_js,
 						background_disconnect_sec: background_disconnect_sec,
 						cdn_prefix: CDN_INC_PREFIX,
-						body_class: 'loading'
+						body_class: 'loading',
+						min_supported_client_version: config.minSupportedClientVersion,
 					});
 				})
 				.catch((error: AxiosError) => {

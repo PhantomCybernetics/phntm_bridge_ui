@@ -90,11 +90,11 @@ export class SpaceMouse {
     }
 
     onError(err) {
-        console.error('3Dconnexion error', err);
+        console.warn('3Dconnexion proxy error', err);
     }
 
     onTimeout() {
-        console.error('3Dconnexion timed out');
+        console.warn('3Dconnexion proxy timed out');
     }
 
     onFocus() {
@@ -161,6 +161,21 @@ export class SpaceMouse {
         } catch (error) {
             console.error('Error in on3dmouseCreated:', error);
         }
+    }
+
+    update(now) {
+        let that = this;
+        try {
+            this.proxy.update3dcontroller({
+           	    'frame': { 'time': now }
+			}).catch(() =>{
+                that.animating = false;
+            });
+        } catch (err) {
+            that.animating = false;
+            return false;
+        }
+        return this.animating;
     }
 
     onDisconnect(reason) {

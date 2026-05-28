@@ -4642,33 +4642,109 @@ BODY.touch-ui .menu_line.buttons_right .right {
 
 #page_message {
 	font-size: 16px;
-	padding: 15px;
 	margin: 0px;
 	text-align: center;
 	display: none;
 	position: fixed;
-	width: 100%;
 	top: 0px;
-	height: 20px;
+	height: 50px;
+	line-height: 20px;
+	width: 100%;
 	z-index: 16; /* above hovered grid panel (15) */
+}
+
+#page_message.default {
+	background: #013669;
+    color: white;
+	display: block;
+}
+
+#page_message.error {
+	background-color: #cc0000;
+	color: white;
+	display: block;
+}
+
+#page_message.default A {
+	color: #fff;
+}
+
+#page_message.error A {
+	background-color: white;
+	color: #cc0000;
+	border-radius: 5px;
+	padding: 2px 5px;
+	margin: 0px 2px;
+	text-decoration: none;
+	font-weight: bold;
+}
+
+#page_message .message_content {
+	padding: 15px 50px;
+	position: absolute;
+	left: 0px;
+	top: 50%;
+	transform: translate(0px, -50%);
+    width: calc(100% - 100px);
+}
+
+#page_message BUTTON.close {
+	position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translate(0px, -50%);
+    background-color: transparent;
+    border: 0px;
+	background: url("./graph/remove.png");
+	background-repeat: no-repeat;
+	background-size: 20px;
+	width: 20px;
+	height: 20px;
 }
 
 #page_message.error {
 	background-color: #cc0000;
 	color: #fff;
-	display: block;
 }
 
 BODY.has-page-message {
 	padding-top: 50px;
 }
-
 BODY.has-page-message #fixed-header {
 	margin-top: 50px;
 }
+BODY.has-page-message #gamepad #gamepad_settings {
+	top: 105px;
+}
+BODY.has-page-message #input-underlay {
+	z-index: 2;
+	top: 105px;
+	height: calc(100% - 105px);
+}
+BODY.gamepad-editing.touch-gamepad.has-page-message #gamepad_settings {
+	top: 105px !important;
+}
 
-#page_message.error A {
-	color: #fff;
+/* portrait mode - message 2x hight */
+.portrait #page_message {
+	height: 70px;
+}
+BODY.portrait.has-page-message {
+	padding-top: 70px;
+}
+BODY.portrait.has-page-message #fixed-header {
+	margin-top: 70px;
+}
+BODY.portrait.has-page-message #gamepad #gamepad_settings {
+	top: 125px;
+}
+BODY.portrait.has-page-message #input-underlay {
+	z-index: 2;
+	top: 125px;
+	height: calc(100% - 105px);
+}
+BODY.portrait.gamepad-editing.touch-gamepad.has-page-message #gamepad_settings {
+	top: 125px !important;
 }
 
 BODY.desktop-ui #bottom-links {

@@ -294,3 +294,69 @@ export function errorToHTMLString(err) {
     try { return String(err); } catch { return '<unstringifiable error>'; }
   }
 }
+
+export async function fetchGitHubCommitsSorted(owner, repo, { branch = "main", token } = {}) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(branch)}&per_page=100`;
+  const res = await fetch(url, {
+    'headers': {
+      'Accept': 'application/vnd.github+json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
+  }
+
+  const commits = await res.json();
+
+  return commits
+    .map(c => ({
+      hash: c.sha,
+      date: c.commit?.committer?.date ?? c.commit?.author?.date,
+      message: c.commit?.message,
+      url: c.html_url
+    }))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
+export function checkClientVersion(min_supported_client_version, current_client_version, sorted_commits) {
+
+	let pos_min_suported = -1;
+	let pos_current = -1;
+	for (let i = 0; i < sorted_commits.length; i++) {
+		const commit = sorted_commits[i];
+		if (commit.hash.indexOf(min_supported_client_version) !== -1) {
+			pos_min_suported = i;
+		}
+		if (commit.hash.indexOf(current_client_version) !== -1) {
+			pos_current = i;
+		}
+		if (pos_current > -1 && pos_min_suported > -1)
+			break;
+	}
+
+	if (pos_min_suported > -1 && pos_current > -1) {
+		if (pos_current > pos_min_suported) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+export function checkClientVersionLatest(current_client_version, sorted_commits) {
+
+	let pos_current = -1;
+	for (let i = 0; i < sorted_commits.length; i++) {
+		const commit = sorted_commits[i];
+		if (commit.hash.indexOf(current_client_version) !== -1) {
+			pos_current = i;
+			break;
+		}	
+	}
+	if (pos_current == -1)
+		return true; // current not found on github
+
+	return sorted_commits[0].hash.indexOf(current_client_version) !== -1; // the newest is 0
+}
