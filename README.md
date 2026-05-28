@@ -1,6 +1,6 @@
 # Phantom Bridge UI
 
-This package contains web UI for the Phantom Bridge and a web server to serve it.
+This package contains Web UI for the Phantom Bridge and a web server to serve it.
 
 The web server itself does not connect to anything, it merely servers semi-static HTML and JavaScript to users. The UI in the web browser establishes connection to Bridge Server via Socket.io, and to the Bridge Client node on a robot via WebRTC P2P connection.
 
@@ -27,8 +27,12 @@ bun install
 
 ### Register a new App on the Bridge Server
 
-To Phantom Bridge, this UI represents an app, individual browser clients running web ui are considered app instances. New app needs to register with the Bridge Server server it intends to use. The following link will return a new appId/appKey pair, put these in your config.jsonc below.
-[https://register.phntm.io/app](https://register.phntm.io/app)
+To Phantom Bridge, this UI represents an App, individual browser clients running Web UI are considered to be App instances. New App needs to register with the Bridge Server it intends to use. Use the Phantom Bridge Registration Utility as shown below, select registration of a new App, then follow prompts:
+```bash
+sudo apt install curl
+bash <(curl -s https://register.phntm.io/register.sh)
+```
+A new APP_ID/APP_KEY pair will be generated and stored in a .json file for later reference.
 
 ### Create config file
 

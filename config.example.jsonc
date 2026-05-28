@@ -3,14 +3,14 @@
 	"ssl": {
 		// use certbot or the ssl/gen.sh script for self signed dev certificates
 		"private": "/your_ssl_dir/privkey.pem",
-		"public": "/your_ssl_dir/fullchain.pem",
+		"public": "/your_ssl_dir/fullchain.pem"
 	},
 	"port": 443,
-	"host": "bridge.example.com", // Only informational, included in startup logs
+	"host": "bridge.example.com",
 	"path": "/", // base address of the UI (ID_ROBOT will be appended)
-	"cdnPrefix": "https://some-distribution.cdn-provider.com", // cdn prefix to use for web assets ('/' + ui version id will be appended)
+	"cdnPrefix": "", // cdn prefix to use for web assets ('/' + ui version id will be appended), e.g. https://some-distribution.cdn-provider.com
 
-	// address where robot's Bridge Server instance will be requested
+	// address where robot's associated Bridge Server instance will be requested
 	"bridgeLocateUrl": "https://register.phntm.io/locate",
 
 	"bridgeSocketPort": 1337, // Bridge Server port for Socket.io
@@ -22,5 +22,5 @@
 	"name": "Phntm Bridge Web UI",
 
 	// lines of an analytics tracker code to be appended to HTML
-	"analyticsCode": [],
+	"analyticsCode": []
 }
