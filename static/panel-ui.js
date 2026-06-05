@@ -2323,6 +2323,27 @@ export class PanelUI {
 		return cb(true); //proceed
 	}
 
+	_renderWifiResults(scan_results) {
+		let t = $('<table class="wifi-scan-results">')
+		// expected to be sprted from teh best to the worst
+		let i = 0;
+		scan_results.forEach((one_res, i)=>{
+			let tr = $('<tr class="'+ (i % 2 === 0 ? 'odd-row' : 'even-row') +'"/>');
+			let essid = $('<td class="essid">'+one_res.essid+'</td>').appendTo(tr);
+			if (one_res.current)
+				essid.addClass('current');
+			if (one_res.roaming_candidate)
+				essid.append($('<span class="roaming-candidate" title="Roaming candidate">BEST</span>'));
+			let frequency = $('<td>'+one_res.frequency.toFixed(1)+' GHz</td>').appendTo(tr);
+			if (one_res.access_point && !one_res.essid)
+				essid.text(one_res.access_point);
+			essid.attr('title', one_res.access_point);
+			let signal = $('<td class="signal" title="RSSI">'+one_res.signal+' dBm</td>').appendTo(tr);
+			tr.appendTo(t);
+		});
+		return t;
+	}
+
 	onWifiScanReply(req_data, reply_data) {
 		if (!req_data) req_data = {};
 		let dropdown_btn = req_data.attempt_roam ? this.trigger_wifi_roam_el : this.trigger_wifi_scan_el;
@@ -2344,7 +2365,7 @@ export class PanelUI {
 				let num = reply_data.scan_results.length;
 				reply_data._notification = {
 					label: "Wi-Fi scan returned " + num + " result" + (num != 1 ? "s" : ""),
-					detail: "<pre>" + val + "</pre>",
+					detail: this._renderWifiResults(reply_data.scan_results),
 				};
 			} else {
 				reply_data._notification = {
@@ -2357,8 +2378,8 @@ export class PanelUI {
 				let val = JSON.stringify(reply_data.scan_results, null, 4);
 				let num = reply_data.scan_results.length;
 				reply_data._notification = {
-					label: reply.msg,
-					detail: "<pre>Scan results:\n" + val + "</pre>",
+					label: reply_data.msg,
+					detail: this._renderWifiResults(reply_data.scan_results),
 				};
 			} else {
 				reply_data._notification = {
@@ -3662,7 +3683,10 @@ export class PanelUI {
 			msg_el.append([pinEl, closeEl]);
 
 			if (detail_html) {
-				msg_el.append($('<span class="detail">' + detail_html + "</span>"));
+				if (typeof detail_html === 'string')
+					msg_el.append($('<span class="detail">' + detail_html + "</span>"));
+				else
+					msg_el.append($('<span class="detail"/>').append(detail_html));
 			}
 		});
 	}

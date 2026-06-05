@@ -7481,3 +7481,40 @@ BODY.waiting #waiting-dialog-underlay {
     border: 0px;
 	font-weight: bold;
 }
+
+TABLE.wifi-scan-results {
+	width: 100%;
+}
+
+TABLE.wifi-scan-results TD {
+	padding: 8px;
+}
+
+TABLE.wifi-scan-results .odd-row { background-color: #d9d902; }
+TABLE.wifi-scan-results .even-row { }
+
+TABLE.wifi-scan-results .essid {
+	max-width: 180px;
+	overflow: clip;
+    text-overflow: ellipsis;
+}
+
+TABLE.wifi-scan-results .essid.current  
+{
+	font-weight: bold;
+}
+
+TABLE.wifi-scan-results .essid .roaming-candidate  
+{	
+	background-color: #ff6900;
+    color: #fff;
+    font-weight: bold;
+    padding: 5px 6px;
+    margin-left: 5px;
+    border-radius: 5px;
+    font-size: 10px;
+}
+
+TABLE.wifi-scan-results .signal {
+	text-align: right;
+}  
