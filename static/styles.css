@@ -100,7 +100,7 @@ BODY.touch-ui.gamepad-editing {
 	color: yellow;
 }
 
-h1 {
+#fixed-header h1 {
 	margin: 0px;
 	color: #9bc200;
 	background: #013669;
@@ -112,7 +112,7 @@ h1 {
 	position: relative;
 }
 
-body.hamburger h1 {
+BODY.hamburger #fixed-header  h1 {
 	padding-left: 45px;
 }
 

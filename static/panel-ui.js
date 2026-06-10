@@ -3779,10 +3779,10 @@ export class PanelUI {
 		this.trigger_wifi_roam_el.css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
 
 		if (msg.supports_scanning) {
-			if (!this.wifi_scan_service) {
-				let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
-				this.wifi_scan_service = "/" + iw_node + "/iw_scan";
-
+			let hooks_initialized = this.wifi_scan_service ? true : false;
+			let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
+			this.wifi_scan_service = "/" + iw_node + "/iw_scan";
+			if (!hooks_initialized) {
 				this.client.registerServiceRequestHook(
 					this.wifi_scan_service,
 					(req_data, cb) => {
