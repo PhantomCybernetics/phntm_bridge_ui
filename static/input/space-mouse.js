@@ -482,6 +482,9 @@ export class SpaceMouse {
         if (this._releaseTimeout)
 			clearTimeout(this._releaseTimeout);
 
+        if (this.widget.SHOW_CONTROLS_FOCUS && this.widget.camera_selection)
+            this.widget.camera_selection.visible = true;
+
         this.widget.renderDirty();
     }
 
@@ -565,6 +568,9 @@ export class SpaceMouse {
         this.widget.controls.update();
         this.widget.controls.enabled = true;  // enable OrbitControls
         this.widget.storeCameraPosePanelVars(); // saves camera pos in url
+
+        if (this.widget.SHOW_CONTROLS_FOCUS && this.widget.camera_selection)
+            this.widget.camera_selection.visible = false;
     }
 
     setTarget(data) {

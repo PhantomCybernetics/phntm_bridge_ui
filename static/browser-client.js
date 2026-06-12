@@ -52,6 +52,9 @@ class Subscriber {
 }
 
 class TopicReader {
+
+	static missing_message_type_logged = {};
+
 	constructor(opts) {
 		this.topic = opts.topic;
 		this.msg_type = opts.msg_type;
@@ -70,9 +73,13 @@ class TopicReader {
 			client.supported_msg_types,
 		);
 		if (!msg_type_class) {
-			console.warn("Msg type def " + this.msg_type + " not yet awailable for " + this.topic);
+			if (!TopicReader.missing_message_type_logged[this.msg_type]) {
+				TopicReader.missing_message_type_logged[this.msg_type] = true;
+				console.warn("Msg type def " + this.msg_type + " not yet awailable for " + this.topic);
+			}
 			return false;
 		}
+		delete TopicReader.missing_message_type_logged[this.msg_type];
 
 		let Reader = window.Serialization.MessageReader;
 		this.msg_reader = new Reader([msg_type_class].concat(client.supported_msg_types));

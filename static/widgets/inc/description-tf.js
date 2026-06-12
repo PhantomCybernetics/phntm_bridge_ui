@@ -299,6 +299,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 		);
 
 		this.DEBUG_CAMERA = false;
+		this.SHOW_CONTROLS_FOCUS = false;
 
 		this.camera_controls_target = new THREE.Mesh(new THREE.SphereGeometry(0.01, 32, 16), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
 		this.camera_controls_target.position.set(0, 0, 0); // adjusted by url
@@ -440,12 +441,18 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			}
 			ev.preventDefault(); // stop from moving the panel
 		});
+		this.controls.addEventListener("start", () => {
+			if (that.SHOW_CONTROLS_FOCUS)
+				this.camera_controls_target.visible = true;
+		});
 		this.controls.addEventListener("change", () => {
 			that.controlsChanged();
 			//that.controls.update();
 		});
 		this.controls.addEventListener("end", () => {
 			that.storeCameraPosePanelVars(); // saves camera pos in url
+			if (that.SHOW_CONTROLS_FOCUS)
+				this.camera_controls_target.visible = false;
 		});
 		this.controls_dirty = false;
 
@@ -2013,14 +2020,14 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 				this.camera_pose_initialized = true; // lerp camera from now on
 			}
 
-		} else if (this.camera_pose_initialized) {
+		} else if (this.camera_pose_initialized) { // normal camera operation
 
 			let space_mouse_animating = false;
 			if (this.ui.space_mouse && this.ui.space_mouse.isControllingWidget(this))
 				space_mouse_animating = this.ui.space_mouse.update(now);
-			if (!space_mouse_animating)
+			if (!space_mouse_animating) {
 				this.controls.update();
-			
+			}
 		}
 
 		// set model transforms
