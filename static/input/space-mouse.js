@@ -86,11 +86,20 @@ export class SpaceMouse {
             return;
         }
         this.was_once_connected = true;
+        localStorage.setItem('using-spacemouse', 'true');
         this.proxy.create3dmouse(window, name); // we need to pass in a focusable object, we can use the <div /> if it has a tabindex
     }
 
     onError(err) {
         console.warn('3Dconnexion proxy error', err);
+        
+        if (this.was_once_connected || localStorage.getItem('using-spacemouse') == 'true') { // retry
+            let that = this;
+            setTimeout(()=>{
+                if (!that.proxy)
+                    that.initProxy();
+            }, 1000);
+        }
     }
 
     onTimeout() {
@@ -467,6 +476,30 @@ export class SpaceMouse {
         
         this.initialized = true;
 
+        if (!this.animating) {
+            // force trigger mouse/touch up so that 2d mouse doesn't get stuck
+            const evt_t = new PointerEvent('pointerup', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                pointerId: 1,
+                pointerType: 'touch',
+                isPrimary: true,
+                buttons: 1
+            });
+            this.widget.controls.domElement.dispatchEvent(evt_t);
+            const evt_m = new PointerEvent('pointerup', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                pointerId: 1,
+                pointerType: '', //any
+                isPrimary: true,
+                buttons: 1
+            });
+            this.widget.controls.domElement.dispatchEvent(evt_m);
+        }
+
         this.animating = true;
         this.widget.controls.enabled = false; // disable OrbitControls
         
@@ -544,7 +577,13 @@ export class SpaceMouse {
         this._releaseOnTimeout();
     }
 
-    // triggers onStopMotion motion after a delay (Spacenavd doens't trigger it)
+    onStopMotion() {
+        if (this._releaseTimeout)
+		    clearTimeout(this._releaseTimeout);
+        this._onStopMotion();
+    }
+
+    // triggers _onStopMotion motion after a delay (Spacenavd doens't trigger it)
     _releaseOnTimeout() {
         if (this._releaseTimeout)
 			clearTimeout(this._releaseTimeout);
