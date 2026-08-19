@@ -1,7 +1,7 @@
 (function () {
   class MissMicAudioPlayer {
     constructor(options = {}) {
-      this.defaultSampleRate = options.defaultSampleRate || 44100;
+      this.defaultSampleRate = options.defaultSampleRate || 16000;
       this.defaultChannels = options.defaultChannels || 1;
       this.maxQueueChunks = options.maxQueueChunks || 120;
       this.gainValue = options.gain ?? 1.0;
@@ -20,6 +20,9 @@
 
       this.channelConfigs = new Map(); // topic -> channelConfig
       this.activeChannels = new Map(); // topic -> { queue, droppedChunks, dc, dc_id }
+
+      this.playoutDelay = options.playoutDelay || 0.1; // 100ms de buffer de segurança contra oscilações de rede
+      this.maxAllowedDelay = options.maxAllowedDelay || 0.3; // Máximo de atraso tolerado (300ms) antes de ressincronizar
     }
 
     async startAudio() {
@@ -35,16 +38,23 @@
         this.gainNode.connect(this.audioContext.destination);
       }
 
+      // Tenta desmudar/resumir se o navegador permitir
       if (this.audioContext.state === "suspended") {
-        await this.audioContext.resume();
+        try {
+          await this.audioContext.resume();
+        } catch (e) {
+          console.warn("[miss_mic_audio] Aguardando clique do usuário para destravar AudioContext.");
+        }
       }
 
-      this.started = true;
-      if (this.nextPlaybackTime < this.audioContext.currentTime) {
-        this.nextPlaybackTime = this.audioContext.currentTime + 0.02;
+      // Se o contexto destravou e está rodando, marca como iniciado
+      if (this.audioContext.state === "running") {
+        this.started = true;
+        if (this.nextPlaybackTime < this.audioContext.currentTime) {
+          this.nextPlaybackTime = this.audioContext.currentTime + 0.02;
+        }
+        this.flushAllQueues();
       }
-
-      this.flushAllQueues();
     }
 
     stopAudio() {
@@ -233,12 +243,11 @@
 
       dataChannel.binaryType = "arraybuffer";
       dataChannel.onmessage = async (event) => {
-        if (!this.started) {
-          try {
-            await this.startAudio();
-          } catch (err) {
-            console.error("[miss_mic_audio] Falha ao iniciar áudio:", err);
-            return;
+        // Se o AudioContext ainda estiver suspenso, não tenta chamá-lo repetidamente em cada pacote
+        if (!this.started || (this.audioContext && this.audioContext.state === "suspended")) {
+          // Tenta inicializar uma única vez se ainda não tiver o áudio iniciado
+          if (!this.started) {
+            this.startAudio().catch(() => {});
           }
         }
 
@@ -252,7 +261,11 @@
           state.droppedChunks++;
         }
         state.queue.push(payload);
-        this.flushQueue(topic);
+
+        // Só tenta descarregar a fila se o AudioContext estiver de fato rodando
+        if (this.audioContext && this.audioContext.state === "running") {
+          this.flushQueue(topic);
+        }
       };
 
       dataChannel.onclose = () => {
@@ -307,14 +320,10 @@
 
     schedulePcmChunk(arrayBuffer, sampleRate, channels) {
       const int16 = new Int16Array(arrayBuffer);
-      if (int16.length === 0) {
-        return;
-      }
+      if (int16.length === 0) return;
 
       const frameCount = Math.floor(int16.length / channels);
-      if (frameCount <= 0) {
-        return;
-      }
+      if (frameCount <= 0) return;
 
       const audioBuffer = this.audioContext.createBuffer(channels, frameCount, sampleRate);
 
@@ -331,12 +340,39 @@
       src.connect(this.gainNode);
 
       const now = this.audioContext.currentTime;
-      if (this.nextPlaybackTime < now - 0.1) {
-        this.nextPlaybackTime = now + 0.02;
+
+      if (this.nextPlaybackTime < now) {
+        this.nextPlaybackTime = now + (this.playoutDelay || 0.1);
+      }
+
+      const currentLag = this.nextPlaybackTime - now;
+
+      let speed = 1.0;
+
+      if (currentLag > 0.25) {
+        speed = 1.25;
+      } else if (currentLag > 0.12) {
+        speed = 1.10;
+      } else {
+        speed = 1.0;
+      }
+
+      // --- PRESERVAÇÃO DE TOM DE VOZ (PITCH) ---
+      src.playbackRate.value = speed;
+
+      // Garante a compatibilidade com Chrome, Firefox, Safari e Edge para não afinar a voz:
+      if ('preservesPitch' in src) {
+        src.preservesPitch = true;
+      } else if ('webkitPreservesPitch' in src) {
+        src.webkitPreservesPitch = true;
+      } else if ('mozPreservesPitch' in src) {
+        src.mozPreservesPitch = true;
       }
 
       src.start(this.nextPlaybackTime);
-      this.nextPlaybackTime += audioBuffer.duration;
+
+      const actualDuration = audioBuffer.duration / speed;
+      this.nextPlaybackTime += actualDuration;
     }
 
     async toArrayBuffer(data) {
