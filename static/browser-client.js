@@ -2003,7 +2003,7 @@ export class BrowserClient extends EventTarget {
 			{
 				id_robot: this.id_robot,
 				path: path,
-				cdn: use_cdn
+				use_cdn: use_cdn
 			},
 			(res) => {
 				if ((!res || res['err'] || !res['url']) && res['err'] != -1) { // err=-1 => ignore repeated errors in replies for the same request
