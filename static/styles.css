@@ -5548,14 +5548,8 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 	white-space: nowrap;
 	margin-bottom: 2px;
 	width: max-content;
-
-	animation-name: msg_fade_in_out; /* fades out msg before js removes it */
-	animation-duration: 4s;
-	animation-iteration-count: 1;
-
 	pointer-events: auto;
 	filter: drop-shadow(10px 10px 10px rgba(0, 0, 0, 0.2));
-
 	cursor: pointer;
 }
 
@@ -5621,6 +5615,12 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 	filter: invert(1);
 }
 
+#notifications .msg.hiding {
+	animation-name: msg_fade_in_out; /* fades out msg before js removes it */
+	animation-duration: 4s;
+	animation-iteration-count: 1;
+}
+
 #notifications .msg.open {
 	cursor: unset;
 	white-space: unset;
@@ -5640,6 +5640,42 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 
 #notifications .msg.error A {
 	color: white;
+}
+
+#notifications .msg.image.loaded {
+	/* background-color: #000000cc; */
+	/* color: white; */
+	padding: 0px;
+	background: transparent;
+}
+
+#notifications .msg.image.loading {
+
+}
+
+#notifications .msg.image.loading .icon {
+	background-image: url(./graph/panel-loading.svg);
+    background-size: contain;
+    width: 20px;
+    height: 20px;
+    display: block;
+    float: left;
+    margin-right: 10px;
+	filter: invert();
+}
+
+#notifications .msg.image IMG {
+	max-width: 100%;
+	display: block;
+	border-radius: 10px;
+}
+
+/* #notifications .msg.image.loading .title {
+	margin-right: 20px;
+} */
+
+#notifications .msg.image.loaded .title {
+	margin-right: 0px;
 }
 
 #notifications .msg.open .close,

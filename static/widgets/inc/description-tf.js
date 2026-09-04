@@ -131,7 +131,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 			// 	return;
 
 			that.startRobotFileWaiting(path);
-			that.ui.client.requestRobotFileDownloadURL(path, (url) => {
+			that.ui.client.requestRobotFileDownloadURL(path, true, (url) => {
 				console.log('Got robot file url: ', url);
 
 				that.updateRobotFileWaiting(path, url);

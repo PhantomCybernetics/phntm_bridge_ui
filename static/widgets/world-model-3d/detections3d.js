@@ -117,7 +117,7 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
         let that = this;		
         if (/\.stl$/i.test(loadPath)) {
 			that.world_model.startRobotFileWaiting(loadPath);
-			that.ui.client.requestRobotFileDownloadURL(loadPath, (url) => {
+			that.ui.client.requestRobotFileDownloadURL(loadPath, true, (url) => {
 				const loader = new STLLoader(this.world_model.loading_manager);
 				that.world_model.updateRobotFileWaiting(loadPath, url);
 				loader.load(url, (geom) => {
@@ -133,7 +133,7 @@ export class WorldModel3DWidget_Detections3D extends WorldModel3DPluginBase {
 			});
         } else if (/\.dae$/i.test(loadPath)) {
 			that.world_model.startRobotFileWaiting(loadPath);
-			that.ui.client.requestRobotFileDownloadURL(loadPath, (url) => {
+			that.ui.client.requestRobotFileDownloadURL(loadPath, true, (url) => {
 				const loader = new ColladaLoader(this.world_model.loading_manager);
 				that.world_model.updateRobotFileWaiting(loadPath, url);
 				loader.load(url, (dae) => {

@@ -282,6 +282,8 @@ export class PanelUI {
 			panel.setMediaStream(stream, mid);
 		});
 
+		client.on("service_returned_file", (service, file_url) => this.handleServiceFile(service, file_url));
+
 		let last_saved_name = this.loadLastRobotName();
 		if (last_saved_name) {
 			client.name = last_saved_name;
@@ -3637,13 +3639,17 @@ export class PanelUI {
 
 		$("#notifications").prepend(msg_el);
 
-		let timer = setTimeout(() => {
+		const is_image = msg_el.hasClass('image');
+
+		msg_el.addClass('hiding');
+		msg_el.hide_timer = setTimeout(() => {
 			msg_el.remove();
 		}, 4000); // remove after css fadeout
 
 		msg_el.click((ev0) => {
 			if (msg_el.hasClass("open")) return;
-			clearTimeout(timer);
+			clearTimeout(msg_el.hide_timer);
+			msg_el.hide_timer = null;
 			msg_el.addClass("open");
 			let closeEl = $('<span class="close" title="Close"></span>');
 			closeEl.click((ev1) => {
@@ -3653,6 +3659,17 @@ export class PanelUI {
 			pinEl.click((ev1) => {
 				console.log("pin");
 				let pos = msg_el.position();
+				let resizeable_opts = {
+					grid: [20, 20]
+				}
+				if (is_image) {
+
+					resizeable_opts['aspectRatio'] = msg_el.img_el[0].naturalWidth / msg_el.img_el[0].naturalHeight;
+					resizeable_opts['resize'] = (ev_resize, ui) => {
+						console.log('resize', ev_resize);
+						msg_el.img_el.css('width', '100%');
+					};
+				}
 				msg_el
 					.css({
 						width: msg_el.width(),
@@ -3668,9 +3685,7 @@ export class PanelUI {
 						snapTolerance: 20,
 						grid: [20, 20],
 					})
-					.resizable({
-						grid: [20, 20],
-					})
+					.resizable(resizeable_opts)
 					.animate(
 						{
 							left: pos.left + 10,
@@ -3687,6 +3702,91 @@ export class PanelUI {
 					msg_el.append($('<span class="detail">' + detail_html + "</span>"));
 				else
 					msg_el.append($('<span class="detail"/>').append(detail_html));
+			}
+		});
+
+		return msg_el;
+	}
+
+	// auto-extract and display images in replies like these:
+	// {
+	//     success: true,
+	//     message: 'file:///some_container_path/file.[png|jpg|jpeg]'
+	// }
+	handleServiceFile(service, file_url) {
+		const last_dot = file_url.lastIndexOf('.');
+		if (!last_dot)
+			return;
+
+		const ext = file_url.slice(last_dot + 1).trim().toLowerCase();
+		if ([ 'png', 'jpg', 'jpeg', 'gif', 'webp' ].indexOf(ext) === -1)
+			return;
+		
+		let parts = file_url.split('/');
+		let fname = parts[parts.length-1];
+
+		let notification_el = this.showNotification('Loading '+fname, 'image loading');
+		let title_el = notification_el.find('.title');
+
+		clearTimeout(notification_el.hide_timer);
+		notification_el.hide_timer = null;
+		notification_el.removeClass('hiding');
+
+		// skip cdn for faster response
+		this.client.requestRobotFileDownloadURL(file_url, false, async (img_url)=>{
+
+			const response = await fetch(img_url);
+  			if (!response.ok) {
+				title_el.innerHTML = 'Error extracting file, HTTP ' + response.status;
+				notification_el.removeClass('image')
+					.removeClass('loading')
+					.addClass('error');
+
+				if (!notification_el.hasClass('open')) {
+					notification_el.addClass('hiding');
+					notification_el.hide_timer = setTimeout(() => {
+						notification_el.remove();
+					}, 4000); // remove after css fadeout
+				}
+				return;
+			}
+
+			const blob = await response.blob(); 
+  			const object_url = URL.createObjectURL(blob);
+
+			let img_el = $('<img src="'+object_url+'"/>');
+			notification_el.img_el = img_el;
+			img_el.css({ 'width': '30vw' }); // intial
+			img_el.on('load', (ev_load) => {
+				console.log('Image loaded', ev_load.target.naturalWidth, ev_load.target.naturalHeight);
+			});
+			let link_el = $('<a href="'+img_url+'" target="_blank"></a>');
+			img_el.appendTo(link_el);
+			
+			title_el.empty().append(link_el);
+			link_el.click((ev) => {
+				if (notification_el.hide_timer) {
+					ev.preventDefault();
+				}
+			});
+			notification_el.removeClass('loading').addClass('loaded');
+			if (!notification_el.hasClass('open')) {				
+				notification_el.addClass('hiding');
+				notification_el.hide_timer = setTimeout(() => {
+					notification_el.remove();
+				}, 4000); // remove after css fadeout
+			}
+		}, () => {
+			title_el.innerHTML = 'Error extracting file';
+			notification_el.removeClass('image')
+				.removeClass('loading')
+				.addClass('error');
+
+			if (!notification_el.hasClass('open')) {	
+				notification_el.addClass('hiding');
+				notification_el.hide_timer = setTimeout(() => {
+					notification_el.remove();
+				}, 4000); // remove after css fadeout
 			}
 		});
 	}

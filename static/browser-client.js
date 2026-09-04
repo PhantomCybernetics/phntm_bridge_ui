@@ -1068,14 +1068,6 @@ export class BrowserClient extends EventTarget {
 		this.heartbeat_timer = null;
 	}
 
-	// getBridgeFileUrl(url) {
-	// 	let res = this.bridge_files_url
-	// 		.replace("%ROBOT_ID%", this.id_robot)
-	// 		.replace("%SECRET%", this.bridge_files_secret)
-	// 		.replace("%URL%", encodeURIComponent(url));
-	// 	return res;
-	// }
-
 	_loadExternalScript(url, class_to_load) {
 		let that = this;
 		return new Promise((resolve, reject) => {
@@ -1962,6 +1954,10 @@ export class BrowserClient extends EventTarget {
 				}
 			}
 
+			if (reply.message && reply.success && reply.message.indexOf('file://') === 0) {
+			  	that.emit('service_returned_file', id_service, reply.message);
+			}
+
 			if (cb)
 				cb(reply);
 		});
@@ -2000,13 +1996,14 @@ export class BrowserClient extends EventTarget {
 		return null;
 	}
 
-	requestRobotFileDownloadURL(path, cb, cb_err) {
+	requestRobotFileDownloadURL(path, use_cdn, cb, cb_err) {
 		let that = this;
 		this.socket.emit(
 			"robot-file-url",
 			{
 				id_robot: this.id_robot,
-				path: path
+				path: path,
+				cdn: use_cdn
 			},
 			(res) => {
 				if ((!res || res['err'] || !res['url']) && res['err'] != -1) { // err=-1 => ignore repeated errors in replies for the same request
