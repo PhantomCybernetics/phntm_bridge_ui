@@ -155,6 +155,7 @@ export class PanelUI {
 		this.trigger_wifi_scan_el = $("#trigger_wifi_scan");
 		this.trigger_wifi_roam_el = $("#trigger_wifi_roam");
 		this.robot_wifi_info_el = $("#robot_wifi_info");
+		this.wireless_signal_type_el = $("#signal-type-label");
 
 		this.last_connected_time = null;
 		this.connection_uptime_timer = null;
@@ -302,8 +303,8 @@ export class PanelUI {
 			that.updateBatteryStatus(msg);
 		};
 
-		let iwStatusWrapper = (msg) => {
-			that.updateWifiStatus(msg);
+		let connectionStatusWrapper = (msg) => {
+			that.updateConnectionStatus(msg);
 		};
 
 		let dockerMonitorWrapper = (msg) => {
@@ -409,13 +410,13 @@ export class PanelUI {
 			// wifi status
 			let wifi_shown = false;
 			if (that.wifi_topic && that.wifi_topic != robot_ui_config["wifi_monitor_topic"]) {
-				client.offTopicData(that.wifi_topic, iwStatusWrapper);
+				client.offTopicData(that.wifi_topic, connectionStatusWrapper);
 				that.wifi_topic = null;
 				wifi_shown = false;
 			}
 			if (robot_ui_config["wifi_monitor_topic"]) {
 				that.wifi_topic = robot_ui_config["wifi_monitor_topic"];
-				client.onTopicData(that.wifi_topic, iwStatusWrapper);
+				client.onTopicData(that.wifi_topic, connectionStatusWrapper);
 				$("#signal-monitor").css("display", "block");
 				$("#network-details").css("display", "");
 				wifi_shown = true;
@@ -3851,7 +3852,7 @@ export class PanelUI {
 		);
 	}
 
-	updateWifiStatus(msg) {
+	updateConnectionStatus(msg) {
 		let qPercent = (msg.quality / msg.quality_max) * 100.0;
 		this.updateWifiSignal(qPercent);
 
@@ -3867,40 +3868,65 @@ export class PanelUI {
 			essidclass = "new";
 		}
 
-		let html = '<div class="section-label">Connected to Wi-Fi</div>' +
-				   '<span class="label space">SSID:</span> ' + msg.essid + "<br>" +
-				   '<span class="label">Access Point:</span> ' + msg.access_point + "<br>" +
-				   '<span class="label">Frequency:</span> ' + (msg.frequency ? msg.frequency.toFixed(3) : null) + " GHz<br>" +
-				   '<span class="label">BitRate:</span> ' + (msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + " Mb/s<br> " +
-				   '<span class="label" title="' + msg.quality + "/" + msg.quality_max + '" style="cursor:help;">Quality:</span> ' + qPercent.toFixed(0) + "%<br> " +
-				   '<span class="label">Level:</span> ' + msg.level + "<br> " +
-				   '<span class="label">Noise:</span> ' + msg.noise + " ";
-		this.trigger_wifi_scan_el.css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
-		this.trigger_wifi_roam_el.css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
+		let html = '';
+		let wireless_type = '';
 
-		if (msg.supports_scanning) {
-			let hooks_initialized = this.wifi_scan_service ? true : false;
-			let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
-			this.wifi_scan_service = "/" + iw_node + "/iw_scan";
-			if (!hooks_initialized) {
-				this.client.registerServiceRequestHook(
-					this.wifi_scan_service,
-					(req_data, cb) => {
-						this.onWifiScanRequest(req_data, cb);
-					},
-				);
-				this.client.registerServiceReplyHook(
-					this.wifi_scan_service,
-					(req_data, reply_data) => {
-						this.onWifiScanReply(req_data, reply_data);
-					},
-				);
+		// WI-FI
+		if (msg.device_type == 2) {
+			html = '<div class="section-label">Connected to Wi-Fi</div>' +
+					'<span class="label space">SSID:</span> ' + msg.essid + "<br>" +
+					'<span class="label">Access Point:</span> ' + msg.access_point + "<br>" +
+					'<span class="label">Frequency:</span> ' + (msg.frequency ? msg.frequency.toFixed(3) : null) + " GHz<br>" +
+					'<span class="label">BitRate:</span> ' + (msg.bit_rate ? msg.bit_rate.toFixed(1) : null) + " Mb/s<br> " +
+					'<span class="label" title="' + msg.quality + "/" + msg.quality_max + '" style="cursor:help;">Quality:</span> ' + qPercent.toFixed(0) + "%<br> " +
+					'<span class="label">Level:</span> ' + msg.level + "<br> " +
+					'<span class="label">Noise:</span> ' + msg.noise +
+					' ';
+
+			this.trigger_wifi_scan_el.css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
+			this.trigger_wifi_roam_el.css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
+
+			if (msg.supports_scanning) {
+				let hooks_initialized = this.wifi_scan_service ? true : false;
+				let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
+				this.wifi_scan_service = "/" + iw_node + "/iw_scan";
+				if (!hooks_initialized) {
+					this.client.registerServiceRequestHook(
+						this.wifi_scan_service,
+						(req_data, cb) => {
+							this.onWifiScanRequest(req_data, cb);
+						},
+					);
+					this.client.registerServiceReplyHook(
+						this.wifi_scan_service,
+						(req_data, reply_data) => {
+							this.onWifiScanReply(req_data, reply_data);
+						},
+					);
+				}
 			}
+		
+		// GSM
+		} else if (msg.device_type == 3) {
+
+			wireless_type = msg.gsm_tech;
+			html = '<div class="section-label">Connected to '+ msg.access_point +' ('+msg.gsm_tech+')</div>' +
+					'<span class="label">Signal:</span> ' + msg.quality + "%" +
+					' ';
+
+		// WIRED
+		} else if (msg.device_type == 1) { 
+
 		}
 
 		this.updateRTT();
 
 		this.robot_wifi_info_el.html(html).css("display", "block");
+
+		if (wireless_type)
+			this.wireless_signal_type_el.text(wireless_type).css("display", "block");
+		else
+			this.wireless_signal_type_el.css("display", "none");
 	}
 
 	/* View in fullscreen */

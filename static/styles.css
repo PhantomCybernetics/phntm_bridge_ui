@@ -1788,6 +1788,19 @@ BODY.hamburger #docker_controls H3 {
 	}
 }
 
+#signal-type-label {
+    display: block;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    position: absolute;
+    top: 8px;
+    left: -1px;
+    background: #020305;
+    padding: 0px 2px;
+}
+
+
 #network-info .network-info-dot {
 	display: block;
 	background-color: red;
