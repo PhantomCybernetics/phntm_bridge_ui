@@ -409,13 +409,17 @@ export class PanelUI {
 
 			// wifi status
 			let wifi_shown = false;
-			if (that.wifi_topic && that.wifi_topic != robot_ui_config["wifi_monitor_topic"]) {
+			let net_monitor_topic = robot_ui_config["net_monitor_topic"];
+			if (robot_ui_config["wifi_monitor_topic"]) // legacy compatibility
+				net_monitor_topic = robot_ui_config["wifi_monitor_topic"];
+
+			if (that.wifi_topic && that.wifi_topic != net_monitor_topic) {
 				client.offTopicData(that.wifi_topic, connectionStatusWrapper);
 				that.wifi_topic = null;
 				wifi_shown = false;
 			}
-			if (robot_ui_config["wifi_monitor_topic"]) {
-				that.wifi_topic = robot_ui_config["wifi_monitor_topic"];
+			if (net_monitor_topic) {
+				that.wifi_topic = net_monitor_topic;
 				client.onTopicData(that.wifi_topic, connectionStatusWrapper);
 				$("#signal-monitor").css("display", "block");
 				$("#network-details").css("display", "");
@@ -1402,8 +1406,8 @@ export class PanelUI {
 		}
 	}
 
-	dockerMenuFromAllHosts(msg_by_host) {
-		console.log("Got Docker containers: ", msg_by_host);
+	dockerMenuFromAllHosts(containers_by_host) {
+		console.log("Got Docker containers: ", containers_by_host);
 		this.docker_hosts = {}; // always redraw completely
 		this.num_docker_containers = 0;
 		$("#docker_list").empty();
@@ -1434,10 +1438,13 @@ export class PanelUI {
 			);
 		}
 
-		let hosts = Object.keys(msg_by_host);
+		let hosts = Object.keys(containers_by_host);
 		hosts.sort(); //keep sorted aphabetically
 		hosts.forEach((host) => {
-			let node_docker_srv = "/" + host + "/docker_command";
+
+			let msg_host_containers = containers_by_host[host];
+
+			let node_docker_srv = "/" + msg_host_containers.agent + "/docker_command";
 			that.client.registerServiceReplyHook(
 				node_docker_srv,
 				(req_data, reply_data) => {
@@ -1448,58 +1455,28 @@ export class PanelUI {
 			let grp_el = $('<div class="host-group"></div>');
 			let grp_containers_el = $('<div class="host-group-containers"></div>');
 			grp_containers_el.appendTo(grp_el);
-			if (msg_by_host[host].header.frame_id) {
-				//actual host
-				grp_el.prepend($("<h4>" + msg_by_host[host].header.frame_id + "</h4>"));
-			}
+			if (msg_host_containers.header.frame_id) // host name
+				grp_el.prepend($("<h4>" + msg_host_containers.header.frame_id + "</h4>"));
 
 			let container_els = {};
 
-			msg_by_host[host].containers.forEach((cont) => {
+			msg_host_containers.containers.forEach((cont) => {
 				let status = "";
 				switch (cont.status) {
-					case 0:
-						status = "exited";
-						break;
-					case 1:
-						status = "running";
-						break;
-					case 2:
-						status = "paused";
-						break;
-					case 3:
-						status = "restarting";
-						break;
+					case 0: status = "exited"; break;
+					case 1: status = "running"; break;
+					case 2: status = "paused"; break;
+					case 3: status = "restarting"; break;
 				}
 
-				let cont_el = $(
-					'<div class="docker_cont ' +
-						status +
-						'" id="docker_cont_' +
-						cont.id +
-						'"></div>',
-				);
-				let cont_name_el = $(
-					'<span class="docker_cont_name" title="' +
-						cont.name +
-						'">' +
-						cont.name +
-						"</span>",
-				);
-				let cont_status_el = $(
-					'<span class="docker_cont_status">[' + status + "]</span>",
-				);
+				let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '"></div>');
+				let cont_name_el = $('<span class="docker_cont_name" title="' + cont.name + '">' + cont.name + "</span>");
+				let cont_status_el = $('<span class="docker_cont_status">[' + status + "]</span>");
 
 				let cont_vars_el = $('<span class="docker_cont_vars"></span>');
-				let cont_cpu_el = $(
-					'<span class="docker_cpu" title="Container CPU"></span>',
-				);
-				let cont_io_el = $(
-					'<span class="docker_io" title="Container Block IO"></span>',
-				);
-				let cont_pids_el = $(
-					'<span class="docker_pids" title="Container PIDs"></span>',
-				);
+				let cont_cpu_el = $('<span class="docker_cpu" title="Container CPU"></span>');
+				let cont_io_el = $('<span class="docker_io" title="Container Block IO"></span>');
+				let cont_pids_el = $('<span class="docker_pids" title="Container PIDs"></span>');
 				cont_vars_el.append([cont_cpu_el, cont_io_el, cont_pids_el]);
 
 				cont_el.append([cont_name_el, cont_status_el, cont_vars_el]);
@@ -1507,9 +1484,7 @@ export class PanelUI {
 				let btns_el = $('<div class="docker_btns"></div>');
 				let btn_run = $('<button class="docker_run" title="Start"></button>');
 				let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
-				let btn_restart = $(
-					'<button class="docker_restart" title="Restart"></button>',
-				);
+				let btn_restart = $('<button class="docker_restart" title="Restart"></button>');
 				btns_el.append([btn_run, btn_stop, btn_restart]);
 
 				btn_run.click(function (event) {
@@ -1543,7 +1518,7 @@ export class PanelUI {
 				containers_els: container_els,
 			};
 
-			this.dockerMenuFromMonitorMessage(msg_by_host[host]); // update vals
+			this.dockerMenuFromMonitorMessage(msg_host_containers); // update vals
 		});
 
 		if (this.num_docker_containers > 0) $("#docker_controls").addClass("active");
@@ -2730,10 +2705,11 @@ export class PanelUI {
 		if (percent < 0) {
 			this.wifi_signal_el.attr("title", "Robot disconnected");
 			this.wifi_signal_el.removeClass("working");
+			this.wireless_signal_type_el.css("display", "none");
 		} else {
 			this.wifi_signal_el.attr(
 				"title",
-				"Robot's wi-fi signal quality: " + Math.round(percent) + "%",
+				"Robot's signal quality: " + Math.round(percent) + "%",
 			);
 		}
 
