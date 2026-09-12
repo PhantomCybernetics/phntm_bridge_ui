@@ -3858,7 +3858,7 @@ export class PanelUI {
 					'<span class="label">Level:</span> ' + msg.level + "<br> " +
 					'<span class="label">Noise:</span> ' + msg.noise +
 					' ';
-
+			this.wifi_signal_el.removeClass("wired");
 			this.trigger_wifi_scan_el.css("display", msg.supports_scanning && this.wifi_scan_enabled ? "inline-block" : "none");
 			this.trigger_wifi_roam_el.css("display", msg.supports_scanning && this.wifi_roam_enabled ? "inline-block" : "none");
 
@@ -3881,7 +3881,7 @@ export class PanelUI {
 					);
 				}
 			}
-		
+			
 		// GSM
 		} else if (msg.device_type == 3) {
 
@@ -3889,10 +3889,14 @@ export class PanelUI {
 			html = '<div class="section-label">Connected to '+ msg.access_point +' ('+msg.gsm_tech+')</div>' +
 					'<span class="label">Signal:</span> ' + msg.quality + "%" +
 					' ';
+			this.wifi_signal_el.removeClass("wired");
 
 		// WIRED
 		} else if (msg.device_type == 1) { 
 
+			html = '<div class="section-label">Wired connection</div>';
+			this.wifi_signal_el.addClass("wired");
+			
 		}
 
 		this.updateRTT();

@@ -65,6 +65,7 @@ body::after {
 		url("./graph/icon-lock-horizon.svg")
 		url("./graph/icon-lock-horizon-on.svg")
 		url("./graph/panel-loading.svg")
+		url("./graph/icon-ethernet.svg")
 		;
 }
 
@@ -1775,6 +1776,20 @@ BODY.hamburger #docker_controls H3 {
 #network-info #signal-monitor.working {
 	/* display: block; */
 	animation: wifi-anim-working 1s ease-in infinite;
+}
+
+#network-info #signal-monitor.wired {
+	background-image: url(./graph/icon-ethernet.svg);
+	background-position: center center;
+	background-size: 28px;
+	opacity: 0.8;
+}
+
+#network-info #signal-monitor.wired .q25,
+#network-info #signal-monitor.wired .q50,
+#network-info #signal-monitor.wired .q75,
+#network-info #signal-monitor.wired .q100 {
+	display: none !important;
 }
 
 @keyframes wifi-anim-working {
