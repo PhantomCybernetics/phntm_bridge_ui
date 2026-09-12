@@ -1021,7 +1021,7 @@ export class DescriptionTFWidget extends CompositePanelWidgetBase {
 	}
 
 	setSkybox(type_no) {
-		let url_base = this.ui.cdn_prefix + DescriptionTFWidget.SKYBOXES[type_no].url;
+		let url_base = DescriptionTFWidget.SKYBOXES[type_no].url ? this.ui.cdn_prefix + DescriptionTFWidget.SKYBOXES[type_no].url : '';
 		let color = DescriptionTFWidget.SKYBOXES[type_no].color ? new THREE.Color(DescriptionTFWidget.SKYBOXES[type_no].color) : new THREE.Color('black');
 		console.log('Loading skybox from ', url_base);
 		if (this.vars.perspective_camera && url_base) { //skybox doesn't work with otrho cameras
