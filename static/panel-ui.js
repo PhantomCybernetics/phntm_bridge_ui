@@ -2701,16 +2701,16 @@ export class PanelUI {
 			.attr("title", label);
 	}
 
-	updateWifiSignal(percent) {
+	updateWifiSignal(percent, device_type) {
 		if (percent < 0) {
 			this.wifi_signal_el.attr("title", "Robot disconnected");
 			this.wifi_signal_el.removeClass("working");
 			this.wireless_signal_type_el.css("display", "none");
 		} else {
-			this.wifi_signal_el.attr(
-				"title",
-				"Robot's signal quality: " + Math.round(percent) + "%",
-			);
+			if (device_type == 1)
+				this.wifi_signal_el.attr("title", "Wired connection");
+			else
+				this.wifi_signal_el.attr("title", "Robot's signal quality: " + Math.round(percent) + "%");
 		}
 
 		this.wifi_signal_el.removeClass(["q25", "q50", "q75", "q100"]);
@@ -3830,7 +3830,7 @@ export class PanelUI {
 
 	updateConnectionStatus(msg) {
 		let qPercent = (msg.quality / msg.quality_max) * 100.0;
-		this.updateWifiSignal(qPercent);
+		this.updateWifiSignal(qPercent, msg.device_type);
 
 		let apclass = "";
 		if (this.lastAP != msg.access_point) {
@@ -3896,7 +3896,7 @@ export class PanelUI {
 
 			html = '<div class="section-label">Wired connection</div>';
 			this.wifi_signal_el.addClass("wired");
-			
+
 		}
 
 		this.updateRTT();

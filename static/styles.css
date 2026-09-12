@@ -1783,6 +1783,8 @@ BODY.hamburger #docker_controls H3 {
 	background-position: center center;
 	background-size: 28px;
 	opacity: 0.8;
+	height: 23px;
+	border-radius: 3px;
 }
 
 #network-info #signal-monitor.wired .q25,
