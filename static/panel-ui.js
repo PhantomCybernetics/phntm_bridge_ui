@@ -451,7 +451,7 @@ export class PanelUI {
 
 		// we must open at least one webrtc channel to establish connection,
 		// so this subscribes every time
-		// client.on('/iw_status', iwStatusWrapper);
+		// client.on('/net_status', connectionStatusWrapper);
 
 		this.topics_received = null;
 		this.config_received = false;
@@ -3864,8 +3864,8 @@ export class PanelUI {
 
 			if (msg.supports_scanning) {
 				let hooks_initialized = this.wifi_scan_service ? true : false;
-				let iw_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
-				this.wifi_scan_service = "/" + iw_node + "/iw_scan";
+				let agent_node = msg.header.frame_id ? "phntm_agent_" + msg.header.frame_id : "phntm_agent";
+				this.wifi_scan_service = "/" + agent_node + "/wireless_scan";
 				if (!hooks_initialized) {
 					this.client.registerServiceRequestHook(
 						this.wifi_scan_service,

@@ -1961,7 +1961,7 @@ BUTTON#trigger_wifi_roam {
 	border-radius: 5px;
 	color: #fff;
 	background-color: #0051ff;
-	display: none; /* hidden until iw_stats msg */
+	display: none; /* hidden until net_stats msg */
 	padding: 5px 10px;
 	position: relative;
 	float: left;
