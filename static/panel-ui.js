@@ -90,6 +90,8 @@ export class PanelUI {
 		};
 		this.grid = GridStack.init({
 			float: false,
+			marginLeft: 0,
+			marginRight: 0,
 			animate: false,
 			cellHeight: grid_cell_height,
 			handle: ".panel-title",
@@ -1470,8 +1472,8 @@ export class PanelUI {
 				}
 
 				let cont_el = $('<div class="docker_cont ' + status + '" id="docker_cont_' + cont.id + '"></div>');
-				let cont_name_el = $('<span class="docker_cont_name" title="' + cont.name + '">' + cont.name + "</span>");
-				let cont_status_el = $('<span class="docker_cont_status">[' + status + "]</span>");
+				let cont_name_el = $('<span class="docker_cont_name" title="' + cont.name + ': ' + status + '">' + cont.name + "</span>");
+				// let cont_status_el = $('<span class="docker_cont_status">[' + status + "]</span>");
 
 				let cont_vars_el = $('<span class="docker_cont_vars"></span>');
 				let cont_cpu_el = $('<span class="docker_cpu" title="Container CPU"></span>');
@@ -1479,13 +1481,13 @@ export class PanelUI {
 				let cont_pids_el = $('<span class="docker_pids" title="Container PIDs"></span>');
 				cont_vars_el.append([cont_cpu_el, cont_io_el, cont_pids_el]);
 
-				cont_el.append([cont_name_el, cont_status_el, cont_vars_el]);
+				cont_el.append([cont_name_el, cont_vars_el]);
 				
 				let btns_el = $('<div class="docker_btns"></div>');
-				let btn_run = $('<button class="docker_run" title="Start"></button>');
-				let btn_stop = $('<button class="docker_stop" title="Stop"></button>');
 				let btn_restart = $('<button class="docker_restart" title="Restart"></button>');
-				btns_el.append([btn_run, btn_stop, btn_restart]);
+				let btn_run = $('<button class="docker_run" title="Start"></button>');
+				let btn_stop = $('<button class="docker_stop" title="Stop"></button>');				
+				btns_el.append([btn_restart, btn_run, btn_stop]);
 
 				btn_run.click(function (event) {
 					callDockerSrv(node_docker_srv, cont.name, 1, this);
@@ -1532,9 +1534,10 @@ export class PanelUI {
 	}
 
 	dockerMenuFromMonitorMessage(msg) {
-		let host = msg.header.frame_id
-			? "phntm_agent_" + msg.header.frame_id
-			: "phntm_agent"; // agent host
+
+		console.log('dockerMenuFromMonitorMessage', msg);
+
+		let host = msg.header.frame_id ? msg.header.frame_id : "phntm_agent";
 
 		if (!this.docker_hosts[host]) {
 			return; // wait for full update via socket
@@ -3136,8 +3139,8 @@ export class PanelUI {
 			full: {
 				graph_controls: 210,
 				service_controls: 115,
-				camera_controls: 95,
-				docker_controls: 115,
+				camera_controls: 115,
+				docker_controls: 125,
 				widget_controls: 10,
 			},
 			narrow: {

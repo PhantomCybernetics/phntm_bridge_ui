@@ -76,8 +76,8 @@ export class Panel {
 					       '<div class="monitor_menu_content" id="monitor_menu_content_' + this.n + '"></div>' +
 				   	   '</div>' +
 				   	   '<div class="panel_content_space" id="panel_content_space_' + this.n + '">' +
-					   '<div class="panel_widget' + (this.src_visible ? " source_visible" : "") + '" id="panel_widget_' + this.n + '"></div>' +
-					   '<div class="panel_source' + (this.src_visible ? " enabled" : "") + '" id="panel_source_' + this.n + '">Waiting for data...</div>' +
+					   '<div class="panel_widget' + (this.src_visible ? ' source_visible' : '') + '" id="panel_widget_' + this.n + '"></div>' +
+					   '<div class="panel_source' + (this.src_visible ? ' enabled' : '') + '" id="panel_source_' + this.n + '">Waiting for data...</div>' +
 					   '<div class="panel_fps" id="panel_fps_' + this.n + '"></div>' +
 					   '<div class="cleaner"></div>' +
 				   '</div>';
@@ -119,15 +119,17 @@ export class Panel {
 
 		this.panel_btns_el = $("#panel_btns_" + this.n);
 		this.fps_el = $("#panel_fps_" + this.n);
+		this.source_el = $("#panel_source_" + this.n);
+		this.widget_el = $("#panel_widget_" + this.n);
 
-		if (!this.editBtn) {
+		if (!this.edit_btn) {
 			// pause panel updates
-			this.editBtn = $('<span id="edit_panel_' + this.n + '" class="edit-panel-button" title="Edit panel"></span>');
-			this.editBtn.appendTo(this.panel_btns_el);
+			this.edit_btn = $('<span id="edit_panel_' + this.n + '" class="edit-panel-button" title="Edit panel"></span>');
+			this.edit_btn.appendTo(this.panel_btns_el);
 		}
 
 		let that = this;
-		this.editBtn.click(function (e) {
+		this.edit_btn.click(function (e) {
 			let w = $(that.grid_widget);
 			console.log("Edit clicked, editing=" + that.editing);
 			if (!that.editing) {
@@ -251,6 +253,7 @@ export class Panel {
 					); //no data yet
 					this.title_el.text(this.ui.widgets[msg_type].class.LABEL);
 					fallback_show_src = false;
+					this.source_el.addClass('widget_visible');
 				}
 			
 			// type widgets
@@ -303,6 +306,7 @@ export class Panel {
 							this.ui.type_widgets[this.msg_type].plugin_classes // video plugins
 						); //no data yet
 						fallback_show_src = false;
+						this.source_el.addClass('widget_visible');
 					
 					// make widget by topic type
 					} else if (this.ui.type_widgets[this.msg_type] != undefined) {
@@ -315,6 +319,7 @@ export class Panel {
 							this.ui.type_widgets[this.msg_type].plugin_classes // video plugins
 						); //no data yet
 						fallback_show_src = false;
+						this.source_el.addClass('widget_visible');
 					}
 				}
 
@@ -615,28 +620,26 @@ export class Panel {
 
 		if (this.msg_type != null && this.msg_type != "video") {
 			// message type info dialog
-			let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_' + this.n + '" class="msg_types" title="View message type definition">' + this.msg_type + "</a></div>");
-			msgTypesEl.click(function (ev) {
+			let msg_types_el = $('<div class="menu_line panel_msg_types_line"><a href="#" id="panel_msg_types_' + this.n + '" class="msg_types" title="View message type definition">' + this.msg_type + "</a></div>");
+			msg_types_el.click(function (ev) {
 				that.ui.messageTypeDialog(that.msg_type);
 
 				ev.cancelBubble = true;
 				ev.preventDefault();
 			});
-			els.push(msgTypesEl);
+			els.push(msg_types_el);
 
 			// display source for widgets
 			if (this.display_widget && !IsImageTopic(this.msg_type)) {
-				let showSourceEl = $('<div class="menu_line" id="display_panel_source_link_' + this.n +'"><label for="display_panel_source_' + this.n + '" class="display_panel_source_label" id="display_panel_source_label_' + this.n + '"><input type="checkbox" id="display_panel_source_' + this.n + '" class="panel_display_source"' + (this.src_visible ? " checked" : "") + ' title="Display source data"> Show source data</label></div>');
-				let source_el = $("#panel_source_" + this.n);
-				let widget_el = $("#panel_widget_" + this.n);
-				let showSourceCB = showSourceEl.find(".panel_display_source");
-				showSourceCB.change(function (ev) {
+				let show_source_el = $('<div class="menu_line" id="display_panel_source_link_' + this.n +'"><label for="display_panel_source_' + this.n + '" class="display_panel_source_label" id="display_panel_source_label_' + this.n + '"><input type="checkbox" id="display_panel_source_' + this.n + '" class="panel_display_source"' + (this.src_visible ? " checked" : "") + ' title="Display source data"> Show source data</label></div>');
+				let show_source_cb = show_source_el.find(".panel_display_source");
+				show_source_cb.change(function (ev) {
 					that.src_visible = $(this).prop("checked");
 					that.storePanelVarAsBool('src', that.src_visible);
 
 					if (that.src_visible) {
-						source_el.addClass("enabled");
-						widget_el.addClass("source_visible");
+						that.source_el.addClass(["enabled", "widget_visible"]);
+						that.widget_el.addClass("source_visible");
 						let w = parseInt($(that.grid_widget).attr("gs-w"));
 						that.panel_w_src_hidden = w;
 						if (w < 5) {
@@ -647,8 +650,8 @@ export class Panel {
 							that.ui.updateUrlHash();
 						}
 					} else {
-						source_el.removeClass("enabled");
-						widget_el.removeClass("source_visible");
+						that.source_el.removeClass(["enabled", "widget_visible"]);
+						that.widget_el.removeClass("source_visible");
 						let curr_w = parseInt($(that.grid_widget).attr("gs-w"));
 						let w = that.panel_w_src_hidden
 							? that.panel_w_src_hidden
@@ -657,12 +660,12 @@ export class Panel {
 						if (curr_w == w) that.onResize();
 					}
 				});
-				els.push(showSourceEl);
+				els.push(show_source_el);
 			}
 		} else if (this.msg_type == "video") {
 			// message type info dialog
-			let msgTypesEl = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
-			els.push(msgTypesEl);
+			let msg_types_el = $('<div class="menu_line panel_msg_types_line"><span class="msg_types">Video/H.264</span></div>');
+			els.push(msg_types_el);
 		}
 
 		// fps toggle button
@@ -741,8 +744,8 @@ export class Panel {
 		//console.warn('Panel w x h, grid_widget', w, h, ref);
 
 		if (!this.maximized) {
-			w -= 20;
-			h -= 56;
+			// w -= 20;
+			h -= 43;
 		}
 
 		return [w, h];

@@ -1,5 +1,11 @@
+:root {
+  --body-bg-color: #0b141f;
+  --panel-bg-color: #080d15;
+  --source-data-bg-color: #222222;
+}
+
 body {
-	background-color: #0b141f;
+	background-color: var(--body-bg-color);
 	color: black;
 	margin: 0px;
 	min-height: 100%;
@@ -26,6 +32,7 @@ body::after {
 		url("./graph/discovery.svg")
 		url("./graph/gamepad.png")
 		url("./graph/graph.png")
+		url("./graph/graph-white.png")
 		url("./graph/icon-check.png")
 		url("./graph/icon-config-thicker.png")
 		url("./graph/icon-edit.png")
@@ -66,6 +73,8 @@ body::after {
 		url("./graph/icon-lock-horizon-on.svg")
 		url("./graph/panel-loading.svg")
 		url("./graph/icon-ethernet.svg")
+		url('./graph/icon-power-switch.svg')
+		url('./graph/icon-reload.svg')
 		;
 }
 
@@ -1036,8 +1045,11 @@ BODY.top-menu #service_controls.active.setting_shortcuts {
 BODY.top-menu #graph_controls.active:hover,
 BODY.top-menu #graph_controls.active.hover_waiting,
 BODY.top-menu #service_controls.active:hover,
+BODY.top-menu #service_controls.active.hover_waiting,
 BODY.top-menu #camera_controls.active:hover,
+BODY.top-menu #camera_controls.active.hover_waiting,
 BODY.top-menu #docker_controls.active:hover,
+BODY.top-menu #docker_controls.active.hover_waiting,
 BODY.top-menu #topic_controls.active:hover,
 BODY.top-menu #widget_controls.active:hover,
 BODY.top-menu #service_controls.active.setting_shortcuts {
@@ -1260,12 +1272,12 @@ BODY.hamburger #docker_controls.control-disabled #docker_list .docker_cont_vars 
 
 #docker_list .docker_io {
 	left: calc(50% - 40px);
-	width: 100px;
+	width: 120px;
 	text-align: center;
 }
 
 #docker_list .docker_pids {
-	right: 0px;
+	right: -20px;
 	width: 30px;
 	text-align: center;
 }
@@ -1281,16 +1293,14 @@ BODY.hamburger #docker_controls.control-disabled #docker_list .docker_cont_vars 
 .docker_btns {
 	position: absolute;
 	right: -5px;
-	top: 5px;
+	top: 0px;
 	display: block;
 	width: 80px;
 	height: 100%;
 }
 
 BODY.hamburger .docker_btns {
-	top: 8px;
-	width: 135px;
-	right: -10px;
+	top: 0px;
 }
 
 .docker_btns button {
@@ -1307,9 +1317,8 @@ BODY.hamburger .docker_btns {
 }
 
 BODY.hamburger .docker_btns button {
-	width: 30px;
-	height: 30px;
-	margin: 0px 15px 0px 0px;
+	width: 40px;
+	margin: 0px 5px 0px 0px;
 }
 
 BODY.desktop-ui .docker_btns button:hover,
@@ -1893,10 +1902,14 @@ BODY.hamburger #docker_controls H3 {
 	right: -300px;
 	top: 50px;
 	background-color: #000000c6;
-	border-radius: 0px 5px 5px 5px;
+	border-radius: 0px 0px 5px 5px;
 	color: #fff;
 	padding: 10px;
 	width: 350px;
+}
+
+#battery-info #battery-details {
+	top: 48px;
 }
 
 #battery-info #battery-details {
@@ -2589,13 +2602,13 @@ SPAN.error {
 
 .grid_panel .panel_source {
 	min-height: 1em;
-	padding: 12px;
+	padding: 2px 12px;
 	word-wrap: break-word;
 	white-space: pre;
 	font-size: 12px;
 	font-family: monospace;
 	/* background: #073831; */
-	background: #222222;
+	background: var(--source-data-bg-color);
 	color: #fff;
 	border-radius: 5px;
 	overflow: scroll;
@@ -2606,6 +2619,8 @@ SPAN.error {
 	/* overflow: hidden; */
 	/* margin-bottom: 5px; */
 	/* margin-bottom: 15px; */
+	border-top: 10px solid var(--source-data-bg-color);
+    border-bottom: 10px solid var(--source-data-bg-color);
 }
 
 .grid_panel .panel_source.enabled {
@@ -2918,7 +2933,7 @@ BODY.touch-ui .pause-panel-button.paused {
 
 .panel_btns {
 	position: absolute;
-	right: 30px;
+	right: 32px;
 	top: -9px;
 	height: 39px;
 	z-index: 114; /* same as menu, above 2d labels */
@@ -6406,7 +6421,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 }
 
 #service-input-dialog .btn-tab.selected {
-	background: #d78ee0;
+	background: #5e53af;
 	/* padding-right: 5px; */
 	/* margin-left: 5px; */
 }
@@ -6482,7 +6497,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	position: absolute;
 	left: 0px;
 	top: 114px;
-	background: #fec2ff;
+	background: #5e53af;
 	width: auto;
 	z-index: 4;
 	border-radius: 5px;
@@ -6539,7 +6554,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
     width: 30px;
     height: 30px;
     display: block;
-    background: #fec2ff;
+    background: #5e53af;
     rotate: 45deg;
     top: 6px;
 }
@@ -6564,7 +6579,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	padding: 5px 10px;
 	border-radius: 5px;
 	border: 0px;
-	background-color: #bb61d07a;
+	background-color: #26214b;
 	font-size: 13px;
 	margin: 2px 0px 0px 0px;
 	display: block;
@@ -6596,7 +6611,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 #service-input-dialog .btn-menu BUTTON:hover,
 #service-input-dialog .btn-menu LABEL:hover,
 #service-input-dialog .json-menu BUTTON:hover {
-	background-color: #c879da;
+	background-color: #38316d;
 }
 
 #service-input-dialog .btn-menu BUTTON.rem.warn,
@@ -6811,48 +6826,46 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	border-bottom: 5px solid #d78ee0;
 }
 
-#service-input-dialog.input-manager {
+#service-input-dialog {
 	background-color: #5d53b0;
 }
 
-#service-input-dialog.input-manager H3 {
+#service-input-dialog H3 {
 	color: #fff;
 }
 
-#service-input-dialog.input-manager .json-editor {
-	top: 0px;
-	margin-bottom: 5px;
+#service-input-dialog .json-editor {
 	background-color: #3a3376;
 	border-color: #3a3376;
 }
 
-#service-input-dialog.input-manager .buttons BUTTON {
+#service-input-dialog .buttons BUTTON {
 	background-color: #26214b;
 	color: white;
 }
 
-#service-input-dialog.input-manager .buttons BUTTON:active,
-#service-input-dialog.input-manager .buttons BUTTON.btn-json.open {
+#service-input-dialog .buttons BUTTON:active,
+#service-input-dialog .buttons BUTTON.btn-json.open {
 	background-color: white;
 	color: black;
 }
 @media (hover: hover) {
-	#service-input-dialog.input-manager .buttons BUTTON:hover {
+	#service-input-dialog .buttons BUTTON:hover {
 		background-color: white;
 		color: black;
 	}
 }
 
-#service-input-dialog.input-manager .json-menu,
-#service-input-dialog.input-manager .json-menu .arrow {
-	background-color: #3a3376;
+#service-input-dialog .json-menu,
+#service-input-dialog .json-menu .arrow {
+	background-color: #5d53b0;
 }
 
-#service-input-dialog.input-manager .buttons BUTTON.btn-save {
+#service-input-dialog .buttons BUTTON.btn-save {
 	background-color: rgb(233 15 233);
 }
 
-#service-input-dialog.input-manager .buttons BUTTON.btn-save:hover {
+#service-input-dialog .buttons BUTTON.btn-save:hover {
 	background-color: rgb(246, 15, 246);
 	color: white;
 }
@@ -6955,8 +6968,8 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	border: 0px;
 }
 
-#service-input-dialog.input-manager .json-editor .add,
-#service-input-dialog.input-manager .json-editor .remove {
+#service-input-dialog .json-editor .add,
+#service-input-dialog .json-editor .remove {
 	background-color: #26214b;
 }
 
@@ -7025,9 +7038,9 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	right: 0px;
 }
 
-#service-input-dialog.input-manager .json-editor INPUT,
-#service-input-dialog.input-manager .json-editor TEXTAREA,
-#service-input-dialog.input-manager .json-editor SELECT {
+#service-input-dialog .json-editor INPUT,
+#service-input-dialog .json-editor TEXTAREA,
+#service-input-dialog .json-editor SELECT {
 	background-color: #26214b;
 }
 
@@ -7068,7 +7081,7 @@ BODY.touch-ui #service-input-dialog .btn-tabs.sortable .btn-tab:not(.touch-sorta
 	background-color: #bb61d0;
 }
 
-#service-input-dialog.input-manager .json-editor .val_wrap .hint {
+#service-input-dialog .json-editor .val_wrap .hint {
 	background-color: #26214b;
 }
 
@@ -7584,3 +7597,373 @@ TABLE.wifi-scan-results .essid .roaming-candidate
 TABLE.wifi-scan-results .signal {
 	text-align: right;
 }  
+
+
+
+
+/* menu decolorized */
+#graph_controls,
+#service_controls,
+#camera_controls,
+#docker_controls,
+#widget_controls {
+    background-color: #013669;
+}
+
+#graph_controls H3,
+#service_controls H3,
+#camera_controls H3,
+#docker_controls H3,
+#widget_controls H3,
+#topic_controls H3 {
+	color: white;
+	font-size: 18px;
+}
+#graph_controls {
+    background-image: url(./graph/graph-white.png);
+}
+
+#graph_controls:hover,
+#graph_controls.hover_waiting,
+#service_controls:hover,
+#service_controls.hover_waiting,
+#camera_controls:hover,
+#camera_controls.hover_waiting,
+#docker_controls:hover,
+#docker_controls.hover_waiting,
+#widget_controls:hover,
+#widget_controls.hover_waiting {
+    background-color: white;
+}
+
+#graph_controls:hover H3,
+#graph_controls.hover_waiting H3,
+#service_controls:hover H3,
+#service_controls.hover_waiting H3,
+#camera_controls:hover H3,
+#camera_controls.hover_waiting H3,
+#docker_controls:hover H3,
+#docker_controls.hover_waiting H3,
+#widget_controls:hover H3,
+#widget_controls.hover_waiting H3,
+#topic_controls:hover H3,
+#topic_controls.hover_waiting H3 {
+	color: black;
+}
+#graph_controls:hover,
+#graph_controls.hover_waiting {
+    background-image: url(./graph/graph.png);
+}
+
+BODY.top-menu #graph_controls.active:hover,
+BODY.top-menu #graph_controls.active.hover_waiting,
+BODY.top-menu #service_controls.active:hover,
+BODY.top-menu #service_controls.active.hover_waiting,
+BODY.top-menu #camera_controls.active:hover,
+BODY.top-menu #camera_controls.active.hover_waiting,
+BODY.top-menu #docker_controls.active:hover,
+BODY.top-menu #docker_controls.active.hover_waiting,
+BODY.top-menu #widget_controls.active:hover,
+BODY.top-menu #widget_controls.active.hover_waiting,
+#service_list,
+#cameras_list,
+#docker_list,
+#widget_list {
+	border-color: white !important;
+}
+
+#service_list,
+#graph_display,
+#cameras_list,
+#docker_list,
+#widget_list {
+	background-color: white;
+}
+
+#service_list,
+#cameras_list,
+#docker_list,
+#widget_list {
+	border-top: 10px solid white;
+	border-bottom: 10px solid white;
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+
+#service_list .node {
+	background-color: #5b5252; /* dark gray */ 
+}
+
+#service_list .node:first-child {
+	margin-top: 0px;
+}
+
+#service_list .service,
+#service_list .service_buttons_inline,
+#service_list .collapse-handle {
+	background-color: #b1adac; /* light gray */
+}
+
+#docker_list .docker_cont {
+	background-color: #5b5252;
+    border-radius: 5px;
+    margin-bottom: 3px;
+    padding-left: 5px;
+	color: white;
+	overflow: hidden;
+}
+
+#docker_list .docker_cont.running  {
+	background-color: #9bc200;
+}
+
+#docker_list .docker_cont.exited  {
+	background-color: black;
+}
+
+#docker_list .running .docker_cont_name,
+#docker_list .running .docker_cont_vars {
+    color: black !important;
+}
+
+#docker_list .docker_cont_vars  {
+	display: none;
+	left: 45%;
+    right: 90px;
+}
+#docker_list .running .docker_cont_vars  {
+	display: block;
+}
+
+#docker_list .docker_cont_name {
+    color: white !important;
+	max-width: calc(55% - 60px) !important;
+}
+
+#docker_list .docker_cont:last-child {
+	margin-bottom: 0px;
+}
+
+#docker_list .docker_cont.running BUTTON.docker_run,
+#docker_list .docker_cont.exited BUTTON.docker_stop,
+#docker_list .docker_cont.exited BUTTON.docker_restart,
+#docker_list .docker_cont.paused BUTTON.docker_stop,
+#docker_list .docker_cont.restarting BUTTON.docker_stop {
+	display: none;
+}
+
+ 
+
+.docker_btns button.docker_run,
+.docker_btns button.docker_stop,
+.docker_btns button.docker_restart {
+    filter: unset;
+	background-color: transparent;
+}
+
+.running .docker_btns button.docker_stop,
+.running .docker_btns button.docker_restart {
+	filter: invert(1);
+}
+
+.docker_btns button.docker_run:hover {
+	background-color: green;
+}
+.docker_btns button.docker_stop:hover {
+	background-color: red;
+	filter: unset;
+}
+.docker_btns button.docker_restart:hover {
+	background-color: blue;
+	filter: unset;
+}
+
+.docker_btns button {
+	width: 30px;
+	height: 100%;
+	margin: 0px;
+	position: relative;
+	border-radius: 0px;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.docker_btns button.docker_run,
+.docker_btns button.docker_stop {
+	background-image: url(./graph/icon-power-switch.svg);
+    background-size: 16px;
+}
+.docker_btns button.docker_restart {
+	background-image: url(./graph/icon-reload.svg);
+    background-size: 14px;
+}
+
+.docker_btns {
+	width: unset;
+	margin-right: 5px;
+}
+
+/* .docker_cont_status {
+	clear: left;
+} */
+
+/* .host-group-containers {
+	background-color: #013669;
+}
+
+.host-group-containers {
+	
+	padding-left: 12px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-right: 12px;
+} */
+
+BODY.desktop-ui #cameras_list .camera,
+BODY.touch-ui #cameras_list .camera {
+	background-color: #6f98c4; /* light blue */ 
+	color: white;
+}
+
+BODY.touch-ui #widget_list BUTTON,
+BODY.desktop-ui #widget_list BUTTON {
+	color: white;
+	background-color: #5b5252; /* dark gray */ 
+}
+
+BODY.desktop-ui #widget_list BUTTON {
+	text-align: right;
+}
+
+#docker_list h4 {
+	color: black;
+}
+
+BODY.desktop-ui #cameras_list .camera:hover,
+BODY.touch-ui #cameras_list .camera:active,
+BODY.desktop-ui #widget_list BUTTON:hover,
+BODY.touch-ui #widget_list BUTTON:active {
+    background-color: #003669; /* dark blue */
+	color: white;
+}
+#cameras_list,
+#widget_list {
+	padding-left: 10px;
+	padding-right: 10px;
+	border-bottom: 7px solid white;
+}
+#cameras_list LABEL.camera,
+#widget_list BUTTON.widget {
+	height: 29px;
+	line-height: 29px;
+	font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 3px;
+    border-radius: 5px;
+    color: #fff;
+}
+
+/* #cameras_list LABEL.camera:last-child,
+#widget_list BUTTON.widget:last-child {
+	margin-bottom: 0px;
+} */
+
+#cameras_list .camera INPUT {
+	top: 9px;
+}
+
+#widget_list BUTTON SPAN {
+	top: -1px;
+}
+
+.grid-stack-item-content {
+	background-color: var(--panel-bg-color);
+}
+
+.monitor_menu, .panel-btns-content {
+	background-color: var(--panel-bg-color);
+}
+
+.panel-btns-gradient {
+    background-image: linear-gradient(to right, transparent, var(--panel-bg-color));
+}
+
+.grid-stack-item-content {
+	padding: 9px 0px 0px 0px;
+}
+
+.panel_content_space {
+	padding-bottom: 0px;
+}
+
+.grid-stack-item>.ui-resizable-se {
+	right: 7px !important;
+	bottom: 7px !important;
+}
+
+.panel_widget canvas {
+	border-radius: 0px 0px 5px 5px;
+}
+
+.grid_panel .panel_widget {
+	border-radius: 0px 0px 5px 5px;
+}
+
+.grid_panel  .panel_widget.source_visible {
+	margin-left: 0px;
+	border-radius: 0px 0px 5px 0px;
+}
+
+.grid_panel  .panel_source.widget_visible {
+	border-radius: 0px 0px 0px 5px;
+}
+
+.grid_panel .panel_source {
+	border-radius: 0px 0px 5px 5px;
+}
+
+.grid_panel .panel_source {
+	border-radius: 0px 0px 5px 5px;
+}
+
+.panel-title {
+	margin-left: 5px;
+	font-weight: normal;
+}
+
+.pause-panel-button,
+BODY.desktop-ui .pause-panel-button.paused:hover {
+	left: 5px;
+}
+
+
+
+/* thinner panel titles on desktop */
+
+BODY.desktop-ui .panel-title {
+	height: 14px;
+    line-height: 14px;
+	font-size: 16px;
+}
+
+BODY.desktop-ui .pause-panel-button,
+BODY.desktop-ui .pause-panel-button.paused:hover {
+	top: -1px;
+}
+
+BODY.desktop-ui .grid-stack-item.loading .grid_panel .pause-panel-button {
+	top: -2px;
+}
+
+BODY.desktop-ui .panel_btns {
+	top: -9px;
+    height: 33px;
+}
+
+BODY.desktop-ui .panel-btn {
+	margin-top: 4px;
+}
+
+BODY.desktop-ui .monitor_menu {
+	top: -5px;
+}
