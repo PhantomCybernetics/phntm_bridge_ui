@@ -142,9 +142,7 @@ export class InputManager {
 			that.makeTouchButtonsEditable();
 		});
 
-		$(
-			"#graph_controls, #service_controls, #camera_controls, #docker_controls, #widget_controls",
-		).on("mouseenter", (ev) => {
+		$("#graph_controls, #service_controls, #camera_controls, #docker_controls, #widget_controls",).on("mouseenter", (ev) => {
 			if (that.open) {
 				console.log("hiding im");
 				that.input_status_icon.click();
@@ -152,9 +150,7 @@ export class InputManager {
 		});
 
 		window.addEventListener("gamepadconnected", (ev) => this.onGamepadConnected(ev));
-		window.addEventListener("gamepaddisconnected", (ev) =>
-			this.onGamepadDisconnected(ev),
-		);
+		window.addEventListener("gamepaddisconnected", (ev) => this.onGamepadDisconnected(ev) );
 
 		$("#gamepad_settings .tab").click((ev) => {
 			if ($(ev.target).hasClass("active")) return;
@@ -456,19 +452,16 @@ export class InputManager {
 					if (this.robot_defaults[id_profile][c.type] && (c.type != "gamepad" || !c.likely_not_gamepad))
 						// robot defaults per type (ignoring suspicions non-gamepads on mobile devices)
 						profile_default_cfg = this.robot_defaults[id_profile][c.type];
-					if (this.robot_defaults[id_profile][c.id]) {
+					if (this.robot_defaults[id_profile][c.id_conf]) {
 						// robot defaults per controller id
-						profile_default_cfg = this.robot_defaults[id_profile][c.id];
+						profile_default_cfg = this.robot_defaults[id_profile][c.id_conf];
 					}
 				}
 
 				// overwrite with user's defaults
-				if (this.saved_user_profiles[id_profile] && this.saved_user_profiles[id_profile][c.id]) {
-					let user_defaults = this.saved_user_profiles[id_profile][c.id];
-					console.log(
-						c.id + " loaded user defults for " + id_profile,
-						user_defaults,
-					);
+				if (this.saved_user_profiles[id_profile] && this.saved_user_profiles[id_profile][c.id_conf]) {
+					let user_defaults = this.saved_user_profiles[id_profile][c.id_conf];
+					console.log(c.id + " loaded user defults for " + id_profile, user_defaults);
 					profile_default_cfg = user_defaults;
 				}
 
@@ -509,7 +502,7 @@ export class InputManager {
 
 			this.setControllerEnabled(
 				c,
-				c.type == "touch" ? false : this.loadUserControllerEnabled(c.id),
+				c.type == "touch" ? false : this.loadUserControllerEnabled(c.id_conf),
 				false,
 			); // touch gets enabled by virtual gamepad
 
@@ -1751,7 +1744,7 @@ export class InputManager {
 	}
 
 	saveUserControllerEnabled(c) {
-		localStorage.setItem("controller-enabled:" + this.client.id_robot + ":" + c.id, c.enabled);
+		localStorage.setItem("controller-enabled:" + this.client.id_robot + ":" + c.id_conf, c.enabled);
 		console.log("Saved controller enabled for robot " + this.client.id_robot + ', id="' + c.id + '": ' + c.enabled);
 	}
 
@@ -4273,13 +4266,16 @@ export class InputManager {
 	}
 
 	onGamepadConnected(ev) {
-		let id_gamepad = ev.gamepad.id;
+		let id_gamepad = ev.gamepad.id + ev.gamepad.index;
 		const gp = navigator.getGamepads()[ev.gamepad.index];
 
 		if (!gp) {
 			console.warn("Error initiating gamepad", ev.gamepad);
 			return;
 		}
+
+		if (!ev.gamepad.connected)
+			return;
 
 		if (!this.controllers[id_gamepad]) {
 			let id_lowcase = id_gamepad.toLowerCase();
@@ -4294,6 +4290,7 @@ export class InputManager {
 			let gamepad = {
 				type: "gamepad",
 				id: id_gamepad,
+				id_conf: ev.gamepad.id,
 				gamepad: ev.gamepad,
 				num_gamepad_axes: gp.axes.length,
 				profiles: null,
@@ -4310,6 +4307,7 @@ export class InputManager {
 			console.info("Gamepad was already connected:", id_gamepad);
 		}
 
+		// console.warn('Gamepad connect: ' + ev.gamepad.index + ' / ' + ev.gamepad.connected);
 		let label = id_gamepad.split("(")[0]; // remove (Vendor: xxx)
 		this.ui.showNotification(label + " connected");
 
@@ -4317,10 +4315,13 @@ export class InputManager {
 	}
 
 	onGamepadDisconnected(ev) {
-		if (this.controllers[ev.gamepad.id]) {
+		// console.warn('Gamepad disconnect: ' + ev.gamepad.index + ' / ' + ev.gamepad.connected);
+		let id_gamepad = ev.gamepad.id + ev.gamepad.index;
+		if (this.controllers[id_gamepad] && !ev.gamepad.connected) {
 			console.log("Gamepad disconnected " + ev.gamepad.id);
-			this.controllers[ev.gamepad.id].gamepad = null;
-			this.controllers[ev.gamepad.id].connected = false;
+			this.controllers[id_gamepad].gamepad = null;
+			this.controllers[id_gamepad].connected = false;
+			//delete this.controllers[id_gamepad];
 
 			this.makeControllerIcons();
 
