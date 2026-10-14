@@ -130,25 +130,25 @@ export class VideoWidget_Detections2D extends VideoPluginBase {
 		let config = overlay.config;
 		if (!config) return;
 
-		if (this.video.videoWidth < 0 || this.video.videoHeight < 0)
+		if (this.video.video_width < 0 || this.video.video_height < 0)
 			return; // wait, video dimenstions still unknown
 
 		if (overlay.aspect_ratio > -1) {
-			let w = this.video.videoHeight * overlay.aspect_ratio;
-			if (w <= this.video.videoWidth) {
+			let w = this.video.video_height * overlay.aspect_ratio;
+			if (w <= this.video.video_width) {
 				overlay.display_w = w;
-				overlay.display_h = this.video.videoHeight;
+				overlay.display_h = this.video.video_height;
 			} else {
-				overlay.display_w = this.video.videoWidth;
+				overlay.display_w = this.video.video_width;
 				overlay.display_h =
-					this.video.videoWidth / overlay.aspect_ratio;
+					this.video.video_width / overlay.aspect_ratio;
 			}
 		} else {
-			overlay.display_w = this.video.videoWidth;
-			overlay.display_h = this.video.videoHeight;
+			overlay.display_w = this.video.video_width;
+			overlay.display_h = this.video.video_height;
 		}
 
-		overlay.xoff = (this.video.videoWidth - overlay.display_w) / 2.0;
+		overlay.xoff = (this.video.video_width - overlay.display_w) / 2.0;
 
 		if (overlay.container_el) {
 			// let svg = this.overlays[topic].svg.select(function() { return this.parentNode; })
@@ -160,13 +160,13 @@ export class VideoWidget_Detections2D extends VideoPluginBase {
 		let cont_id = "video_overlay_" + this.video.panel.n + "_" + this.video.next_overlay_id;
 		this.video.next_overlay_id++;
 		overlay.container_el = $('<div class="video_overlay_cont" id="' + cont_id + '"></div>');
-		overlay.container_el.css("left", (overlay.xoff / this.video.videoWidth) * 100 + "%");
+		overlay.container_el.css("left", (overlay.xoff / this.video.video_width) * 100 + "%");
 
 		overlay.container_el.appendTo(this.video.overlay_el);
 
 		overlay.svg = d3.select("#" + cont_id).append("svg");
 		overlay.svg
-			.attr("width", (overlay.display_w / this.video.videoWidth) * 100 + "%")
+			.attr("width", (overlay.display_w / this.video.video_width) * 100 + "%")
 			.attr("viewBox", "0 0 " + overlay.display_w + " " + overlay.display_h)
 			.append("g");
 		if (this.display_overlay_input_crop)

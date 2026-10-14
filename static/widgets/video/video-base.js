@@ -32,8 +32,8 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 		if (this.video_stats_enabled)
 			this.video_stats_el.addClass("enabled");
 
-		this.videoWidth = -1;
-		this.videoHeight = -1;
+		this.video_width = -1;
+		this.video_height = -1;
 
 		let that = this;
 
@@ -46,7 +46,7 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 
 		this.video_el.addEventListener("resize", () => {
 			// Safari sometimes doesn't load meta properly => wait for actual dimensions
-			if (that.videoWidth != -1 || that.videoHeight != -1) return;
+			if (that.video_width != -1 || that.video_height != -1) return;
 
 			if (!that.video_el.videoWidth || !that.video_el.videoHeight) {
 				console.log("Invalid video metadata loaded, ignoring; w, h = ", that.video_el.videoWidth, that.video_el.videoHeight);
@@ -54,8 +54,8 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 			}
 
 			console.log("Video meta loaded:", that.video_el.videoWidth, that.video_el.videoHeight);
-			that.videoWidth = that.video_el.videoWidth;
-			that.videoHeight = that.video_el.videoHeight;
+			that.video_width = that.video_el.videoWidth;
+			that.video_height = that.video_el.videoHeight;
 
 			Object.values(this.plugins).forEach((p)=>{
 				if (p.onResize)
@@ -73,27 +73,27 @@ export class VideoWidget extends SingleTypePanelWidgetBase {
 		this.next_overlay_id = 0;
 
 		this.sources = new MultiTopicSource(this);
-		this.sources.on("change", (topics) => that.onSourcesChange(topics));
+		this.sources.on("change", (topics) => { that.onSourcesChange(topics) } );
 
 		this.plugins = {};
 		if (Array.isArray(plugin_classes)) { 
-			plugin_classes.forEach((pluginClass)=>{
-				console.log('Video loading plugin:', pluginClass.name);
-				that.plugins[pluginClass.name] = new pluginClass(that);
+			plugin_classes.forEach((plugin_class)=>{
+				console.log('Video loading plugin:', plugin_class.name);
+				that.plugins[plugin_class.name] = new plugin_class(that);
 				that.sources.add(
-					pluginClass.SOURCE_TOPIC_TYPE,
-					pluginClass.SOURCE_DESCRIPTION,
-					pluginClass.SOURCE_DEFAULT_TOPIC,
-					pluginClass.SOURCE_MAX_NUM,
+					plugin_class.SOURCE_TOPIC_TYPE,
+					plugin_class.SOURCE_DESCRIPTION,
+					plugin_class.SOURCE_DEFAULT_TOPIC,
+					plugin_class.SOURCE_MAX_NUM,
 					// onData
 					(topic, msg) => {
 						if (!that.overlay_topics[topic])
 							return;
-						that.plugins[pluginClass.name].onTopicData(topic, msg)
+						that.plugins[plugin_class.name].onTopicData(topic, msg)
 					},
 					// onSourceRemoved
 					(topic) => {
-						that.plugins[pluginClass.name].clearTopic(topic);
+						that.plugins[plugin_class.name].clearTopic(topic);
 						delete that.overlay_topics[topic];
 					},
 				);

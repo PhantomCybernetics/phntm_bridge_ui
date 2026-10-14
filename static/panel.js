@@ -582,7 +582,7 @@ export class Panel {
             
         if (this.fps_visible) {
             this.fps_el.html(this.fps_string);
-            if (this.fps < this.low_fps && this.display_widget && this.display_widget.videoWidth) {
+            if (this.fps < this.low_fps && this.display_widget && this.display_widget.video_width) {
                 this.fps_el.addClass('error');
             } else {
                 this.fps_el.removeClass('error');
