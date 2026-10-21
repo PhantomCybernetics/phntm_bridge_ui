@@ -30,6 +30,7 @@ export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 			this.widget_el.empty();
 		}
 		this.chart = new CanvasJS.Chart("panel_widget_" + this.panel.n, {
+			backgroundColor: '#000000',
 			//Chart Options - Check https://canvasjs.com/docs/charts/chart-options/
 			// title:{
 			//   text: "Basic Column Chart in JavaScript"
@@ -41,20 +42,31 @@ export class BatteryStateWidget extends SingleTypePanelWidgetBase {
 					return e.entries[0].dataPoint.y.toFixed(2) + " V";
 				},
 			},
+			// legend: {
+			// 	dockInsidePlotArea: false,
+			// 	verticalAlign: 'top',
+			// },
 			axisX: {
 				labelFormatter: function (e) {
-					return "";
+					return '';
 				},
 				lineThickness: 0,
 				tickThickness: 0,
+				title: "",
+				labelFontSize: 0,
+				margin: -20,
 			},
 			axisY: {
 				minimum: this.min_voltage - 1.0,
 				maximum: this.max_voltage + 1.0,
 				// lineColor: "red",
-				gridColor: "#dddddd",
+				title: "",
+				gridColor: "#dddddd1c",
+				labelFontColor: "#808080",
 				labelFontSize: 12,
 				lineThickness: 0,
+				tickLength: 0,
+				margin: 10,
 				labelFormatter: function (e) {
 					return e.value.toFixed(1) + " V";
 				},

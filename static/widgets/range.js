@@ -28,15 +28,23 @@ export class RangeWidget extends SingleTypePanelWidgetBase {
 
 		let gage_val = 100.0 - (Math.min(Math.max(range, 0), msg.max_range) * 100.0) / msg.max_range;
 		gage_val = gage_val / 100.0;
-		let color = "";
-		if (gage_val < 0.5) color = lerpColor("#ffffff", "#2696FB", gage_val * 2.0);
-		else color = lerpColor("#2696FB", "#ff0000", (gage_val - 0.5) * 2.0);
+		let bg_color = "";
+		if (gage_val < 0.5)
+			bg_color = lerpColor("#00000", "#2696FB", gage_val * 2.0);
+		else
+			bg_color = lerpColor("#2696FB", "#ff0000", (gage_val - 0.5) * 2.0);
 
-		if (this.val > msg.max_range - 0.001)
-			this.label_el.html("> " + this.max_range.toFixed(1) + " m");
-		else this.label_el.html(this.val.toFixed(3) + " m"); //<br><span style=\"font-size:10px;\">("+gageVal.toFixed(1)+")</span>");
-
-		this.widget_el.css("background-color", color);
-		this.label_el.css("color", gage_val < 0.2 ? "black" : "white");
+		if (this.val > msg.max_range - 0.001) {
+			this.label_el
+				.html("> " + this.max_range.toFixed(1) + " m")
+				.css("color", '#ffffff2a');
+		} else {
+			this.label_el
+				.html(this.val.toFixed(3) + " m")
+				.css("color", '#fff');
+			//; //<br><span style=\"font-size:10px;\">("+gageVal.toFixed(1)+")</span>");
+		}
+		this.widget_el.css("background-color", bg_color);
+		// this.label_el.css("color", gage_val < 0.2 ? "black" : "white");
 	}
 }

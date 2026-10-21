@@ -1,5 +1,5 @@
 :root {
-  --body-bg-color: #0b141f;
+  --body-bg-color: #0d1620;
   --panel-bg-color: #080d15;
   --source-data-bg-color: #222222;
 }
@@ -8,9 +8,8 @@ body {
 	background-color: var(--body-bg-color);
 	color: black;
 	margin: 0px;
-	min-height: 100%;
 	position: relative;
-	padding: 0px 0px 10px 0px; /* make some space for panel resizing  */
+	padding: 0px 0px 0px 0px; /* make some space for panel resizing  */
 }
 
 HTML {
@@ -79,7 +78,7 @@ body::after {
 }
 
 BODY.desktop-ui {
-	min-height: calc(100% - 70px);
+	min-height: calc(100% - 60px);
 }
 
 BODY.no-scroll,
@@ -3387,7 +3386,7 @@ BODY.touch-ui .editing .grid-stack-item-content {
 
 .panel_widget.range .label {
 	color: #fff;
-	font-size: 20cqw;
+	font-size: max(18cqw, 20px);
 	top: 50%;
 	position: absolute;
 	text-align: center;
@@ -4461,7 +4460,7 @@ BODY.touch-gamepad #gamepad_settings .axis-row:last-of-type {
 
 #grid-stack-container {
 	position: relative;
-	margin-bottom: 50px;
+	padding-bottom: 50px;
 	margin-top: 60px;
 	/* padding: 0px 10px; */
 }
@@ -4796,22 +4795,31 @@ BODY.desktop-ui #bottom-links {
 	text-align: right;
 	/* margin-top: 20px; */
 	padding: 30px 10px 10px 10px;
-	color: #ffffff23;
 	font-size: 13px;
 }
 
 BODY.desktop-ui #bottom-links,
 BODY.simple #bottom-links  {
 	text-align: right;
-	padding: 7px 10px 7px 10px;
-	color: #ffffff23;
+	padding: 15px 15px 15px 15px;
+	color: #ffffff4a;
 	font-size: 13px;
+	height: 20px;
 	/* background: #000000d1; */
 	/* float: right; */
 	border-radius: 5px 0px 0px 0px;
 	position: absolute;
-	right: 0px;
-	top: calc(100% - 40px);
+	left: 0px;
+	bottom: 0px;
+	width: calc(100% - 30px);
+	background-color: var(--panel-bg-color);
+}
+BODY.hamburger #bottom-links {
+	background-color: unset;
+}
+
+BODY.hamburger #bottom-links .wide-only {
+	display: none;
 }
 
 #bottom-links.hidden {
@@ -4833,7 +4841,7 @@ BODY.hamburger #bottom-links I.bm-hide {
 
 BODY.hamburger #bottom-links SPAN {
 	display: inline-block;
-	margin-top: 5px;
+	margin-top: 2px;
 }
 
 BODY.hamburger SPAN#bridge-docs-link {
@@ -4853,6 +4861,22 @@ BODY.hamburger.touch-ui #bottom-links SPAN#fullscreen-toggle {
 	background-size: 70px;
 	background-repeat: no-repeat;
 	background-position: 0px 0px;
+}
+
+#bottom-links #donate-link {
+	padding-left: 22px;
+    background-image: url(./graph/icon-heart-red.svg);
+    background-size: 18px;
+    background-repeat: no-repeat;
+    background-position: 0px 1px;
+    position: absolute;
+    left: 15px;
+}
+
+BODY.hamburger #bottom-links #donate-link {
+	position: relative;
+	left: unset;
+	/* margin-top: px; */
 }
 
 @supports (-webkit-touch-callout: none) {
@@ -4876,7 +4900,7 @@ BODY.hamburger #bottom-links {
 	width: 245px;
 	bottom: 10px;
 	padding: 7px 10px 7px 0px;
-	color: #ffffff23;
+	color: #ffffff4a;
 	font-size: 12px;
 	line-height: 15px;
 	top: unset !important;
@@ -4895,16 +4919,20 @@ BODY.hamburger #bottom-links.inline {
 }
 
 #bottom-links A, #bottom-links A:hover {
-	color: #ffffff4a;
+	color: #ffffff75;
 	margin: 0px 4px 0px 0px;
 	line-height: 20px;
 	display: inline-block;
+	text-decoration: none;
+}
+
+#bottom-links A:hover {
 	text-decoration: underline;
 }
 
 #bridge-version-info A,
 #bridge-ui-version-info A {
-	color: #ffffff23;
+	color: #ffffff4a;
 	text-decoration: none;
 	font-size: 12px !important;
 }
@@ -4920,7 +4948,7 @@ BODY.hamburger #bottom-links A {
 #bottom-links A.credits {
 	background-image: url(./favicons/favicon-blue-purple-16x16.png);
 	background-repeat: no-repeat;
-	padding-left: 19px;
+	padding-left: 22px;
 	background-size: 16px;
 	/* filter: opacity(-0.5); */
 	background-position: 0px 2px;
