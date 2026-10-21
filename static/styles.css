@@ -5521,23 +5521,17 @@ BODY.touch-bottom-buttons.touch-gamepad.gamepad-editing .touch_buttons#touch-ui-
 .touch_buttons .btn.red { background-color: red; }
 .touch_buttons.ui-sortable .btn.red { border-color: red; }
 
-.touch_buttons .btn.green { background-color: lime; color: black; }
-.touch_buttons.ui-sortable .btn.green { border-color: lime; }
+.touch_buttons .btn.green { background-color: #00a900; }
+.touch_buttons.ui-sortable .btn.green { border-color: #00a900; }
 
 .touch_buttons .btn.blue { background-color: blue; }
 .touch_buttons.ui-sortable .btn.blue { border-color: blue; }
 
-.touch_buttons .btn.yellow { background-color: yellow; color: black; }
-.touch_buttons.ui-sortable .btn.yellow { border-color: yellow; }
-
-.touch_buttons .btn.orange { background-color: orange; /* color: black; */ }
-.touch_buttons.ui-sortable .btn.orange { border-color: orange; }
+.touch_buttons .btn.orange { background-color: #f96a00; /* color: black; */ }
+.touch_buttons.ui-sortable .btn.orange { border-color: #f96a00; }
 
 .touch_buttons .btn.magenta { background-color: magenta; /* color: black; */ }
 .touch_buttons.ui-sortable .btn.magenta { border-color: magenta; }
-
-.touch_buttons .btn.cyan { background-color: cyan; color: black; }
-.touch_buttons.ui-sortable .btn.cyan { border-color: cyan; }
 
 .touch_buttons .btn.white { background-color: white; color: black; }
 .touch_buttons.ui-sortable .btn.white { border-color: white; }

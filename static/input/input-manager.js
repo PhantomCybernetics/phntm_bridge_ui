@@ -3361,10 +3361,8 @@ export class InputManager {
 				red: "Red",
 				green: "Green",
 				blue: "Blue",
-				yellow: "Yellow",
 				orange: "Orange",
 				magenta: "Magenta",
-				cyan: "Cyan",
 				black: "Black",
 				white: "White",
 			};
